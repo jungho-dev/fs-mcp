@@ -1,0 +1,85 @@
+{
+  "name": "@jungho/mcp-commander",
+  "displayName": "mcp-commander",
+  "description": "MCP server for terminal operations and file editing",
+  "publisher": "JUNGHO",
+  "license": "Apache-2.0",
+  "version": "1.0.1",
+  "type": "module",
+  "main": "./dist/index.mjs",
+  "exports": {
+    ".": "./dist/index.mjs"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/jungho-dev/mcp-commander.git"
+  },
+  "homepage": "https://github.com/jungho-dev/mcp-commander#readme",
+  "bugs": {
+    "url": "https://github.com/jungho-dev/mcp-commander/issues"
+  },
+  "bin": {
+    "mcp-commander": "dist/index.mjs"
+  },
+  "files": [
+    "dist",
+    "architecture.md",
+    "changelog.md"
+  ],
+  "publishConfig": {
+    "access": "public"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "terminal",
+    "claude",
+    "ai",
+    "command-line",
+    "process-management",
+    "file-editing",
+    "code-editing",
+    "diff",
+    "patch",
+    "block-editing",
+    "file-system",
+    "text-manipulation",
+    "code-modification",
+    "surgical-edits",
+    "file-operations"
+  ],
+  "scripts": {
+    "git": "bun ~/.bootstrap/bootstrap-sync.mts --git",
+    "sync": "bun ~/.bootstrap/bootstrap-sync.mts --sync",
+    "tools": "bun ~/.bootstrap/bootstrap-sync.mts --tools",
+    "build": "bun run clean && tsc",
+    "check": "tsc --noEmit",
+    "watch": "tsc --watch",
+    "start": "bun dist/index.mjs",
+    "start:debug": "bun --inspect-brk=9229 dist/index.mjs",
+    "prepare": "bun run build",
+    "clean": "shx rm -rf dist",
+    "pack:dry-run": "npm pack --dry-run",
+    "prepublishOnly": "bun run check && bun run test && npm run pack:dry-run",
+    "test": "bun run build && bun src/tests/run-all-tests.js",
+    "test:debug": "bun --inspect src/tests/run-all-tests.js",
+    "link:local": "bun run build && bun link",
+    "unlink:local": "bun unlink",
+    "inspector": "bunx @modelcontextprotocol/inspector dist/index.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.9.0",
+    "@vscode/ripgrep": "^1.15.9",
+    "fastest-levenshtein": "^1.0.16",
+    "isbinaryfile": "^5.0.4",
+    "pizzip": "^3.2.0",
+    "zod": "^3.24.1",
+    "zod-to-json-schema": "^3.23.5"
+  },
+  "devDependencies": {
+    "@biomejs/biome": "^2.4.13",
+    "@types/node": "^20.17.24",
+    "shx": "^0.3.4",
+    "typescript": "^5.3.3"
+  }
+}
