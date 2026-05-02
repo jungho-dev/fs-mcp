@@ -65,8 +65,6 @@ src/
 |   |       |-- preview-file-types.mts
 |   |       |-- reader-factory.mts
 |   |       `-- text-reader.mts
-|   |-- history/
-|   |   `-- tool-history-store.mts
 |   |-- process/
 |   |   |-- command-policy.mts
 |   |   |-- process-runner.mts
@@ -82,7 +80,6 @@ src/
 |   |-- controllers/
 |   |   |-- edit-controller.mts
 |   |   |-- filesystem-controller.mts
-|   |   |-- history-controller.mts
 |   |   |-- index.mts
 |   |   |-- process-controller.mts
 |   |   |-- search-controller.mts
@@ -94,15 +91,13 @@ src/
 |   |   |-- config-schema.mts
 |   |   |-- edit-schema.mts
 |   |   |-- filesystem-schema.mts
-|   |   |-- history-schema.mts
 |   |   |-- index.mts
 |   |   |-- process-schema.mts
 |   |   `-- search-schema.mts
 |   `-- tools/
 |       |-- index.mts
 |       |-- tool-catalog.mts
-|       |-- tool-call-dispatcher.mts
-|       `-- tool-history-policy.mts
+|       `-- tool-call-dispatcher.mts
 tests/
 |-- run-all-tests.js
 |-- config/
@@ -142,7 +137,7 @@ tests -> out
 * 검색 실행은 `features/search/ripgrep-adapter.mts`를 통해 ripgrep에 위임합니다.
 * stdio transport는 의도치 않은 stdout/stderr 출력을 격리해 MCP JSON 출력이 섞이지 않도록 합니다.
 * 테스트는 npm에 배포되는 표면과 동일한 컴파일 산출물 `out`를 검증합니다.
-* `verify:tools`는 컴파일된 tool catalog, dispatcher registry, history exclusion의 이름 계약을 비교합니다.
+* `verify:tools`는 컴파일된 tool catalog와 dispatcher registry의 이름 계약을 비교합니다.
 * `verify:source`는 최적화된 `src`와 `tests` 루트 경계, 제거된 플랫폼 helper 문구의 재유입 여부를 확인합니다.
 * 최적화 보고서는 `.docs`에 누적하고 `verify:reports`로 확인합니다.
 

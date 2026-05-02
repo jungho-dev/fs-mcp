@@ -18,8 +18,6 @@ export const TOOL_DISPATCHERS: Readonly<Record<string, ToolDispatchHandler>> = {
   get_config: () => getConfig(),
   set_config_value: (args: unknown) => setConfigValue(args),
 
-  get_recent_tool_calls: (args: unknown) => handlers.handleGetRecentToolCalls(args),
-
   start_process: (args: unknown) => handlers.handleStartProcess(args),
   read_process_output: (args: unknown) => handlers.handleReadProcessOutput(args),
   interact_with_process: (args: unknown) => handlers.handleInteractWithProcess(args),

@@ -8,10 +8,9 @@
 import { type LogLevel, logger, logToStderr } from "@app/runtime/app-logger";
 import { capture } from "@app/runtime/output-capture";
 import { VERSION } from "@app/runtime/version";
-import { toolHistory } from "@features/history/tool-history-store";
 import { createErrorResponse } from "@mcp/responses/error-response";
 import { normalizeToolResult } from "@mcp/responses/tool-result-response";
-import { createToolCatalog, dispatchToolCall, shouldRecordToolHistory } from "@mcp/tools/tool-exports";
+import { createToolCatalog, dispatchToolCall } from "@mcp/tools/tool-exports";
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import {
   type CallToolRequest,
@@ -162,11 +161,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest)
       await updateCurrentClient(metadata.clientInfo);
     }
     const result = await dispatchToolCall(name, args);
-    const duration = Date.now() - startTime;
-
-    if (shouldRecordToolHistory(name)) {
-      toolHistory.addCall(name, args, result, duration);
-    }
     return result;
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

@@ -27,7 +27,6 @@ const EXPECTED_TOOL_NAMES = [
   "list_sessions",
   "list_processes",
   "kill_process",
-  "get_recent_tool_calls",
 ];
 
 function testToolCatalogShape() {

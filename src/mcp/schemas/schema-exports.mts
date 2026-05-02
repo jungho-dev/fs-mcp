@@ -8,6 +8,5 @@
 export * from "@mcp/schemas/config-schema";
 export * from "@mcp/schemas/edit-schema";
 export * from "@mcp/schemas/filesystem-schema";
-export * from "@mcp/schemas/history-schema";
 export * from "@mcp/schemas/process-schema";
 export * from "@mcp/schemas/search-schema";

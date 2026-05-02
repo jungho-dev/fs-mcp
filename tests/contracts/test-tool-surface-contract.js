@@ -6,7 +6,7 @@
  */
 
 import assert from "node:assert/strict";
-import { createToolCatalog, getDispatchableToolNames, HISTORY_EXCLUDED_TOOL_NAMES, shouldRecordToolHistory } from "../../out/mcp/tools/tool-exports.mjs";
+import { createToolCatalog, getDispatchableToolNames } from "../../out/mcp/tools/tool-exports.mjs";
 
 function sortedDifference(left, right) {
   const rightSet = new Set(right);
@@ -25,21 +25,9 @@ function testCatalogAndDispatcherAlignment() {
   assert.equal(new Set(catalogNames).size, catalogNames.length);
 }
 
-// 2. history exclusion alignment ――――――――――――――――――――――――――――――――――――――――――――――――――――
-function testHistoryExclusionAlignment() {
-  const catalogNames = createToolCatalog()
-    .map((tool) => tool.name)
-    .sort();
-
-  assert.deepEqual(sortedDifference([...HISTORY_EXCLUDED_TOOL_NAMES], catalogNames), []);
-  assert.equal(shouldRecordToolHistory("read_file"), true);
-  assert.equal(shouldRecordToolHistory("get_recent_tool_calls"), false);
-}
-
-// 3. test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function main() {
   testCatalogAndDispatcherAlignment();
-  testHistoryExclusionAlignment();
 }
 
 main();

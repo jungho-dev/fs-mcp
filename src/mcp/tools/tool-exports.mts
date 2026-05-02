@@ -7,4 +7,3 @@
 
 export * from "@mcp/tools/tool-call-dispatcher";
 export * from "@mcp/tools/tool-catalog";
-export * from "@mcp/tools/tool-history-policy";

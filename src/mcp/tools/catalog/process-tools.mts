@@ -6,7 +6,7 @@
  */
 
 import {zodToJsonSchema} from "zod-to-json-schema";
-import {ForceTerminateArgsSchema, GetRecentToolCallsArgsSchema, InteractWithProcessArgsSchema, KillProcessArgsSchema, ListProcessesArgsSchema, ListSessionsArgsSchema, ReadProcessOutputArgsSchema, StartProcessArgsSchema} from "@mcp/schemas/schema-exports";
+import {ForceTerminateArgsSchema, InteractWithProcessArgsSchema, KillProcessArgsSchema, ListProcessesArgsSchema, ListSessionsArgsSchema, ReadProcessOutputArgsSchema, StartProcessArgsSchema} from "@mcp/schemas/schema-exports";
 import {CMD_PREFIX_DESCRIPTION, OS_GUIDANCE, PATH_GUIDANCE, type ToolCatalogEntry} from "@mcp/tools/catalog/catalog-shared";
 
 export const PROCESS_TOOL_CATALOG: ToolCatalogEntry[] = [
@@ -255,27 +255,6 @@ export const PROCESS_TOOL_CATALOG: ToolCatalogEntry[] = [
       readOnlyHint: false,
       destructiveHint: true,
       openWorldHint: false,
-    },
-  },
-  {
-    name: "get_recent_tool_calls",
-    description: `
-                Get recent tool call history with their arguments and outputs.
-                Returns chronological list of tool calls made during this session.
-
-                Useful for:
-                - Continuing work after context loss
-                - Recovering context after chat history loss
-                - Debugging tool call sequences
-
-                Note: Does not track its own calls or other meta/query tools.
-                History kept in memory (last 1000 calls, lost on restart).
-
-                ${CMD_PREFIX_DESCRIPTION}`,
-    inputSchema: zodToJsonSchema(GetRecentToolCallsArgsSchema),
-    annotations: {
-      title: "Get Recent Tool Calls",
-      readOnlyHint: true,
     },
   },
 ];

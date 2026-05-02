@@ -9,7 +9,6 @@
 
 export * from "@mcp/controllers/edit-controller";
 export * from "@mcp/controllers/filesystem-controller";
-export * from "@mcp/controllers/history-controller";
 export * from "@mcp/controllers/process-controller";
 export * from "@mcp/controllers/search-controller";
 export * from "@mcp/controllers/terminal-controller";

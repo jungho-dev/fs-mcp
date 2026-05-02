@@ -65,8 +65,6 @@ src/
 |   |       |-- preview-file-types.mts
 |   |       |-- reader-factory.mts
 |   |       `-- text-reader.mts
-|   |-- history/
-|   |   `-- tool-history-store.mts
 |   |-- process/
 |   |   |-- command-policy.mts
 |   |   |-- process-runner.mts
@@ -82,7 +80,6 @@ src/
 |   |-- controllers/
 |   |   |-- edit-controller.mts
 |   |   |-- filesystem-controller.mts
-|   |   |-- history-controller.mts
 |   |   |-- index.mts
 |   |   |-- process-controller.mts
 |   |   |-- search-controller.mts
@@ -94,15 +91,13 @@ src/
 |   |   |-- config-schema.mts
 |   |   |-- edit-schema.mts
 |   |   |-- filesystem-schema.mts
-|   |   |-- history-schema.mts
 |   |   |-- index.mts
 |   |   |-- process-schema.mts
 |   |   `-- search-schema.mts
 |   `-- tools/
 |       |-- index.mts
 |       |-- tool-catalog.mts
-|       |-- tool-call-dispatcher.mts
-|       `-- tool-history-policy.mts
+|       `-- tool-call-dispatcher.mts
 tests/
 |-- run-all-tests.js
 |-- config/
@@ -142,7 +137,7 @@ Feature modules can share behavior through sibling feature utilities, such as `f
 * Search execution is delegated to ripgrep through `features/search/ripgrep-adapter.mts`.
 * Stdio transport captures accidental stdout/stderr writes so MCP JSON output remains isolated.
 * Tests exercise the compiled `out` tree, which is the same surface published to npm.
-* `verify:tools` compares the compiled tool catalog, dispatcher registry, and history exclusions.
+* `verify:tools` compares the compiled tool catalog and dispatcher registry.
 * `verify:source` protects the optimized `src` and `tests` root boundaries and checks runtime text surfaces for removed platform helpers.
 * Optimization reports are accumulated under `.docs` and checked by `verify:reports`.
 
