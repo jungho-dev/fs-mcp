@@ -44,8 +44,11 @@ jobs:
         id: package
         shell: bash
         run: |
-          echo "name=$(bun -e \"const pkg = await Bun.file('package.json').json(); console.log(pkg.name);\")" >> "$GITHUB_OUTPUT"
-          echo "version=$(bun -e \"const pkg = await Bun.file('package.json').json(); console.log(pkg.version);\")" >> "$GITHUB_OUTPUT"
+          package_name="$(bun -e 'const pkg = await Bun.file("package.json").json(); console.log(pkg.name);')"
+          package_version="$(bun -e 'const pkg = await Bun.file("package.json").json(); console.log(pkg.version);')"
+
+          echo "name=$package_name" >> "$GITHUB_OUTPUT"
+          echo "version=$package_version" >> "$GITHUB_OUTPUT"
 
       - name: Check published version
         id: publish_check
