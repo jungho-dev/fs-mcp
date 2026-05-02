@@ -3,10 +3,7 @@ name: Publish npm Package
 on:
   push:
     branches:
-      - main
-      - master
       - private/main
-      - public/main
   workflow_dispatch:
 
 concurrency:
@@ -18,6 +15,7 @@ permissions:
 
 jobs:
   publish:
+    if: github.repository == 'jungho-dev/fs-mcp-private'
     runs-on: ubuntu-latest
 
     steps:
