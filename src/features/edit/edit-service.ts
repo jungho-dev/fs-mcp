@@ -10,21 +10,21 @@
  */
 
 import path from "node:path";
-import { resolvePreviewFileType } from "@assets/readers/readers-filetypes";
-import type { ServerResult } from "@assets/type/common";
-import { configManager } from "@features/config/config-store";
-import { detectLineEnding, normalizeLineEndings } from "@features/edit/edit-line-ending-policy";
-import { resolveAbsolutePath } from "@features/filesystem/filesystem-path-resolver";
-import { readFileInternal, validatePath, writeFile } from "@features/filesystem/filesystem-service";
-import { getSimilarityRatio, recursiveFuzzyIndexOf } from "@features/search/search-fuzzy-matcher";
-import { type FuzzySearchLogEntry, fuzzySearchLogger } from "@features/search/search-log";
-import { createErrorResponse } from "@cores/responses/responses-error";
-import { capture } from "@cores/runtime/runtime-output-capture";
-import { EditBlockArgsSchema } from "@schemas/schemas-edit";
+import {resolvePreviewFileType} from "@assets/readers/readers-filetypes";
+import type {ServerResult} from "@assets/type/common";
+import {createErrorResponse} from "@cores/responses/responses-error";
+import {capture} from "@cores/runtime/runtime-output-capture";
+import {configManager} from "@features/config/config-store";
+import {detectLineEnding, normalizeLineEndings} from "@features/edit/edit-line-ending-policy";
+import {resolveAbsolutePath} from "@features/filesystem/filesystem-path-resolver";
+import {readFileInternal, validatePath, writeFile} from "@features/filesystem/filesystem-service";
+import {getSimilarityRatio, recursiveFuzzyIndexOf} from "@features/search/search-fuzzy-matcher";
+import {type FuzzySearchLogEntry, fuzzySearchLogger} from "@features/search/search-log";
+import {EditBlockArgsSchema} from "@schemas/schemas-edit";
 
 interface SearchReplace {
-  search: string;
   replace: string;
+  search: string;
 }
 /**
  * Threshold for fuzzy matching - similarity must be at least this value to be considered
@@ -89,33 +89,33 @@ function getCharacterCodeData(
   });
 
   return {
+    diffLength: fullDiff.length,
     report: charCodeReport.join(","),
     uniqueCount: characterCodes.size,
-    diffLength: fullDiff.length,
   };
 }
-export async function performSearchReplace(filePath: string, block: SearchReplace, expectedReplacements: number = 1): Promise<ServerResult> {
+export async function performSearchReplace(filePath: string, block: SearchReplace, expectedReplacements: number=1): Promise<ServerResult> {
   // Get file extension for diagnostics using path module.
   const fileExtension = path.extname(filePath).toLowerCase();
 
   // Report file extension and string sizes without capturing the file path.
   capture("server_edit_block", {
+    expectedReplacements: expectedReplacements,
     fileExtension: fileExtension,
-    oldStringLength: block.search.length,
-    oldStringLines: block.search.split("\n").length,
     newStringLength: block.replace.length,
     newStringLines: block.replace.split("\n").length,
-    expectedReplacements: expectedReplacements,
+    oldStringLength: block.search.length,
+    oldStringLines: block.search.split("\n").length,
   });
   // Check for empty search string to prevent infinite loops
   if (block.search === "") {
     // Report file extension without capturing the file path.
-    capture("server_edit_block_empty_search", { fileExtension: fileExtension, expectedReplacements });
+    capture("server_edit_block_empty_search", {expectedReplacements, fileExtension: fileExtension });
     return {
       content: [
         {
-          type: "text",
           text: "Empty search strings are not allowed. Please provide a non-empty string to search for.",
+          type: "text",
         },
       ],
     };
@@ -126,7 +126,7 @@ export async function performSearchReplace(filePath: string, block: SearchReplac
 
   // Make sure content is a string
   if (typeof content !== "string") {
-    capture("server_edit_block_content_not_string", { fileExtension: fileExtension, expectedReplacements });
+    capture("server_edit_block_content_not_string", {expectedReplacements, fileExtension: fileExtension });
     throw new Error(`Wrong content for file ${filePath}`);
   }
   // Get the line limit from configuration
@@ -155,10 +155,11 @@ export async function performSearchReplace(filePath: string, block: SearchReplac
 
     // If we're only replacing one occurrence, replace it directly
     if (expectedReplacements === 1) {
-      const searchIndex = newContent.indexOf(normalizedSearch);
+    	const searchIndex = newContent.indexOf(normalizedSearch);
       newContent = newContent.slice(0, searchIndex) + normalizeLineEndings(block.replace, fileLineEnding) + newContent.slice(searchIndex + normalizedSearch.length);
-    } else {
-      // Replace all occurrences using split and join for multiple replacements
+    }
+    else {
+    	// Replace all occurrences using split and join for multiple replacements
       newContent = newContent.split(normalizedSearch).join(normalizeLineEndings(block.replace, fileLineEnding));
     }
     // Check if search or replace text has too many lines
@@ -174,7 +175,7 @@ export async function performSearchReplace(filePath: string, block: SearchReplac
 RECOMMENDATION: For large search/replace operations, consider breaking them into smaller chunks with fewer lines.`;
     }
     await writeFile(filePath, newContent);
-    capture("server_edit_block_exact_success", { fileExtension: fileExtension, expectedReplacements, hasWarning: warningMessage !== "" });
+    capture("server_edit_block_exact_success", {expectedReplacements, fileExtension: fileExtension, hasWarning: warningMessage !== ""});
     const resolvedEditPath = resolveAbsolutePath(filePath);
 
     // Show a partial preview centered on the edited area
@@ -194,8 +195,8 @@ RECOMMENDATION: For large search/replace operations, consider breaking them into
     return {
       content: [
         {
-          type: "text",
           text: `${statusLine}${previewContent}`,
+          type: "text",
         },
       ],
       structuredContent: {
@@ -207,12 +208,12 @@ RECOMMENDATION: For large search/replace operations, consider breaking them into
   }
   // If exact match found but count doesn't match expected, inform the user
   if (count > 0 && count !== expectedReplacements) {
-    capture("server_edit_block_unexpected_count", { fileExtension: fileExtension, expectedReplacements, expectedReplacementsCount: count });
+    capture("server_edit_block_unexpected_count", {expectedReplacements, expectedReplacementsCount: count, fileExtension: fileExtension });
     return {
       content: [
         {
-          type: "text",
           text: `Expected ${expectedReplacements} occurrences but found ${count} in ${filePath}. Double check and make sure you understand all occurencies and if you want to replace all ${count} occurrences, set expected_replacements to ${count}. If there are many occurrancies and you want to change some of them and keep the rest. Do it one by one, by adding more lines around each occurrence.If you want to replace a specific occurrence, make your search string more unique by adding more lines around search string.`,
+          type: "text",
         },
       ],
     };
@@ -237,22 +238,22 @@ RECOMMENDATION: For large search/replace operations, consider breaking them into
 
     // Create comprehensive log entry
     const logEntry: FuzzySearchLogEntry = {
-      timestamp: new Date(),
-      searchText: block.search,
-      foundText: fuzzyResult.value,
-      similarity: similarity,
-      executionTime: executionTime,
-      exactMatchCount: count,
-      expectedReplacements: expectedReplacements,
-      fuzzyThreshold: FUZZY_THRESHOLD,
       belowThreshold: similarity < FUZZY_THRESHOLD,
-      diff: diff,
-      searchLength: block.search.length,
-      foundLength: fuzzyResult.value.length,
-      fileExtension: fileExtension,
       characterCodes: characterCodeData.report,
-      uniqueCharacterCount: characterCodeData.uniqueCount,
+      diff: diff,
       diffLength: characterCodeData.diffLength,
+      exactMatchCount: count,
+      executionTime: executionTime,
+      expectedReplacements: expectedReplacements,
+      fileExtension: fileExtension,
+      foundLength: fuzzyResult.value.length,
+      foundText: fuzzyResult.value,
+      fuzzyThreshold: FUZZY_THRESHOLD,
+      searchLength: block.search.length,
+      searchText: block.search,
+      similarity: similarity,
+      timestamp: new Date(),
+      uniqueCharacterCount: characterCodeData.uniqueCount,
     };
 
     // Log to file
@@ -260,15 +261,15 @@ RECOMMENDATION: For large search/replace operations, consider breaking them into
 
     // Combine all fuzzy search data for single capture
     const fuzzySearchData = {
-      similarity: similarity,
-      execution_time_ms: executionTime,
-      search_length: block.search.length,
-      file_size: content.length,
-      threshold: FUZZY_THRESHOLD,
-      found_text_length: fuzzyResult.value.length,
       character_codes: characterCodeData.report,
-      unique_character_count: characterCodeData.uniqueCount,
+      execution_time_ms: executionTime,
+      file_size: content.length,
+      found_text_length: fuzzyResult.value.length,
+      search_length: block.search.length,
+      similarity: similarity,
+      threshold: FUZZY_THRESHOLD,
       total_diff_length: characterCodeData.diffLength,
+      unique_character_count: characterCodeData.uniqueCount,
     };
 
     // Check if the fuzzy match is "close enough"
@@ -281,12 +282,13 @@ RECOMMENDATION: For large search/replace operations, consider breaking them into
       return {
         content: [
           {
-            type: "text",
             text: `Exact match not found, but found a similar text with ${Math.round(similarity * 100)}% similarity (found in ${executionTime.toFixed(2)}ms):\n\nDifferences:\n${diff}\n\nTo replace this text, use the exact text found in the file.\n\nLog entry saved for analysis. Use the following command to check the log:\nCheck log: ${await fuzzySearchLogger.getLogPath()}`,
+            type: "text",
           },
         ],
       };
-    } else {
+    }
+    else {
       // If the fuzzy match isn't close enough
       // Still capture the fuzzy search event with all data
       capture("server_fuzzy_search_performed", {
@@ -297,8 +299,8 @@ RECOMMENDATION: For large search/replace operations, consider breaking them into
       return {
         content: [
           {
-            type: "text",
             text: `Search content not found in ${filePath}. The closest match was "${fuzzyResult.value}" with only ${Math.round(similarity * 100)}% similarity, which is below the ${Math.round(FUZZY_THRESHOLD * 100)}% threshold. (Fuzzy search completed in ${executionTime.toFixed(2)}ms)\n\nLog entry saved for analysis. Use the following command to check the log:\nCheck log: ${await fuzzySearchLogger.getLogPath()}`,
+            type: "text",
           },
         ],
       };
@@ -353,9 +355,10 @@ export async function handleEditBlock(args: unknown): Promise<ServerResult> {
   let handler: Awaited<ReturnType<typeof import("@assets/readers/readers-factory").getFileHandler>>;
   try {
     validatedPath = await validatePath(parsed.file_path);
-    const { getFileHandler } = await import("@assets/readers/readers-factory");
+    const {getFileHandler} = await import("@assets/readers/readers-factory");
     handler = await getFileHandler(validatedPath);
-  } catch (error) {
+  }
+  catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     return createErrorResponse(errorMessage);
   }
@@ -367,21 +370,21 @@ export async function handleEditBlock(args: unknown): Promise<ServerResult> {
   if (hasEditRange) {
     try {
       const result = await handler.editRange?.(validatedPath, "", {
-        old_string: parsed.old_string,
-        new_string: parsed.new_string,
         expected_replacements: parsed.expected_replacements,
+        new_string: parsed.new_string,
+        old_string: parsed.old_string,
       });
 
       if (result === undefined) {
-        return createErrorResponse("File handler did not return an edit result");
+      	return createErrorResponse("File handler did not return an edit result");
       }
       if (result.success) {
         const resolvedEditRangePath = resolveAbsolutePath(parsed.file_path);
         return {
           content: [
             {
-              type: "text",
               text: `Successfully applied ${result.editsApplied} edit(s) to ${parsed.file_path}`,
+              type: "text",
             },
           ],
           structuredContent: {
@@ -393,7 +396,8 @@ export async function handleEditBlock(args: unknown): Promise<ServerResult> {
       }
       const errorMsg = result.errors?.map((e) => e.error).join("; ") || "Unknown error";
       return createErrorResponse(errorMsg);
-    } catch (error) {
+    }
+    catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       return createErrorResponse(errorMessage);
     }
@@ -401,8 +405,8 @@ export async function handleEditBlock(args: unknown): Promise<ServerResult> {
   return performSearchReplace(
     parsed.file_path,
     {
-      search: parsed.old_string,
       replace: parsed.new_string,
+      search: parsed.old_string,
     },
     parsed.expected_replacements,
   );

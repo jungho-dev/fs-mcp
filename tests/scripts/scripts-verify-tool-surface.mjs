@@ -5,10 +5,10 @@
  * @since 2026-05-02
  */
 
-import { CONFIG_TOOL_CATALOG } from "../../out/tools/tools-config.mjs";
-import { getDispatchableToolNames } from "../../out/tools/tools-dispatcher.mjs";
-import { FILESYSTEM_TOOL_CATALOG } from "../../out/tools/tools-filesystem.mjs";
-import { PROCESS_TOOL_CATALOG } from "../../out/tools/tools-process.mjs";
+import { CONFIG_TOOL_CATALOG } from "../../out/tools/tools-config.js";
+import { getDispatchableToolNames } from "../../out/tools/tools-dispatcher.js";
+import { FILESYSTEM_TOOL_CATALOG } from "../../out/tools/tools-filesystem.js";
+import { PROCESS_TOOL_CATALOG } from "../../out/tools/tools-process.js";
 
 // 1. collection helpers ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function findDuplicates(values) {

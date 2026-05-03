@@ -5,39 +5,39 @@
  * @since 2026-05-02
  */
 
-import { type SpawnOptions, spawn } from "node:child_process";
+import {type SpawnOptions, spawn} from "node:child_process";
 import os from "node:os";
 import path from "node:path";
-import type { ActiveSession, CommandExecutionResult, OutputEvent, TerminalSession, TimingInfo } from "@assets/type/common";
-import { DEFAULT_COMMAND_TIMEOUT } from "@features/config/config-paths";
-import { configManager } from "@features/config/config-store";
-import { analyzeProcessState } from "@features/process/process-repl-detector";
-import { capture } from "@cores/runtime/runtime-output-capture";
+import type {ActiveSession, CommandExecutionResult, OutputEvent, TerminalSession, TimingInfo} from "@assets/type/common";
+import {capture} from "@cores/runtime/runtime-output-capture";
+import {DEFAULT_COMMAND_TIMEOUT} from "@features/config/config-paths";
+import {configManager} from "@features/config/config-store";
+import {analyzeProcessState} from "@features/process/process-repl-detector";
 
 interface CompletedSession {
-  pid: number;
-  outputLines: string[]; // Line-based buffer (consistent with active sessions)
-  exitCode: number | null;
-  startTime: Date;
   endTime: Date;
+  exitCode: number | null;
+  outputLines: string[]; // Line-based buffer (consistent with active sessions)
+  pid: number;
+  startTime: Date;
 }
 // Result type for paginated output reading
 export interface PaginatedOutputResult {
-  lines: string[];
-  totalLines: number;
-  readFrom: number; // Starting line of this read
-  readCount: number; // Number of lines returned
-  remaining: number; // Lines remaining after this read
-  isComplete: boolean; // Whether process has finished
   exitCode?: number | null; // Exit code if completed
+  isComplete: boolean; // Whether process has finished
+  lines: string[];
+  readCount: number; // Number of lines returned
+  readFrom: number; // Starting line of this read
+  remaining: number; // Lines remaining after this read
   runtimeMs?: number; // Runtime in milliseconds (for completed processes)
+  totalLines: number;
 }
 /**
  * Configuration for spawning a shell with appropriate flags
  */
 interface ShellSpawnConfig {
-  executable: string;
   args: string[];
+  executable: string;
   useShellOption: string | boolean;
 }
 function splitShellCommand(shellCommand: string): string[] {
@@ -74,8 +74,8 @@ function getShellSpawnArgs(shellPath: string, command: string): ShellSpawnConfig
   // Unix shells with login flag support
   if (shellName.includes("bash") || shellName.includes("zsh")) {
     return {
-      executable,
       args: appendCommandArgument(shellArgs.length === 0 ? ["-l"] : shellArgs, ["-c"], command, "-c"),
+      executable,
       useShellOption: false,
     };
   }
@@ -85,32 +85,32 @@ function getShellSpawnArgs(shellPath: string, command: string): ShellSpawnConfig
     const pwshCommand = withPwshOutputEncoding(command);
 
     return {
-      executable,
       args: appendCommandArgument(pwshArgs, ["-command", "-c"], pwshCommand, "-Command"),
+      executable,
       useShellOption: false,
     };
   }
   // CMD
   if (shellName === "cmd" || shellName === "cmd.exe") {
     return {
-      executable,
       args: appendCommandArgument(shellArgs, ["/c"], command, "/c"),
+      executable,
       useShellOption: false,
     };
   }
   // Fish shell (uses -l for login, -c for command)
   if (shellName.includes("fish")) {
     return {
-      executable,
       args: appendCommandArgument(shellArgs.length === 0 ? ["-l"] : shellArgs, ["-c"], command, "-c"),
+      executable,
       useShellOption: false,
     };
   }
   // Unknown/other shells - use shell option for safety
   // This provides a fallback for shells we don't explicitly handle
   return {
-    executable: command,
     args: [],
+    executable: command,
     useShellOption: shellPath,
   };
 }
@@ -127,7 +127,7 @@ export class TerminalManager {
   sendInputToProcess(pid: number, input: string): boolean {
     const session = this.sessions.get(pid);
     if (!session) {
-      return false;
+    	return false;
     }
     try {
       if (session.process.stdin && !session.process.stdin.destroyed) {
@@ -137,7 +137,8 @@ export class TerminalManager {
         return true;
       }
       return false;
-    } catch (error) {
+    }
+    catch (error) {
       console.error(`Error sending input to process ${pid}:`, error);
       return false;
     }
@@ -149,7 +150,8 @@ export class TerminalManager {
       try {
         const config = await configManager.getConfig();
         shellToUse = config.defaultShell || true;
-      } catch (_error) {
+      }
+      catch (_error) {
         // If there's an error getting the config, fall back to default
         shellToUse = true;
       }
@@ -180,21 +182,22 @@ export class TerminalManager {
 
       // Add shell option if needed (for unknown shells)
       if (spawnConfig.useShellOption) {
-        spawnOptions.shell = spawnConfig.useShellOption;
+      	spawnOptions.shell = spawnConfig.useShellOption;
       }
-    } else {
+    }
+    else {
       // Boolean or undefined shell - use default shell option behavior
       spawnConfig = {
-        executable: enhancedCommand,
         args: [],
+        executable: enhancedCommand,
         useShellOption: shellToUse,
       };
       spawnOptions = {
-        shell: shellToUse,
         env: {
           ...process.env,
           TERM: "xterm-256color",
         },
+        shell: shellToUse,
         windowsHide: true, // Prevent visible console windows on Windows
       };
     }
@@ -209,17 +212,17 @@ export class TerminalManager {
     if (!childProcess.pid) {
       // Return a consistent error object instead of throwing
       return {
-        pid: -1, // Use -1 to indicate an error state
-        output: output || "Error: Failed to get process ID. The command could not be executed.",
         isBlocked: false,
+        output: output || "Error: Failed to get process ID. The command could not be executed.",
+        pid: -1, // Use -1 to indicate an error state
       };
     }
     const session: TerminalSession = {
+      isBlocked: false,
+      lastReadIndex: 0, // Track where "new" output starts
+      outputLines: [], // Line-based buffer
       pid: childProcess.pid,
       process: childProcess,
-      outputLines: [], // Line-based buffer
-      lastReadIndex: 0, // Track where "new" output starts
-      isBlocked: false,
       startTime: new Date(),
     };
 
@@ -241,24 +244,24 @@ export class TerminalManager {
 
       const resolveOnce = (result: CommandExecutionResult) => {
         if (resolved) {
-          return;
+        	return;
         }
         resolved = true;
         if (periodicCheck) {
-          clearInterval(periodicCheck);
+        	clearInterval(periodicCheck);
         }
         // Add timing info if requested
         if (collectTiming) {
           const endTime = Date.now();
           result.timingInfo = {
-            startTime,
             endTime,
-            totalDurationMs: endTime - startTime,
             exitReason,
             firstOutputTime,
             lastOutputTime,
-            timeToFirstOutputMs: firstOutputTime ? firstOutputTime - startTime : undefined,
             outputEvents: outputEvents.length > 0 ? outputEvents : undefined,
+            startTime,
+            timeToFirstOutputMs: firstOutputTime ? firstOutputTime - startTime : undefined,
+            totalDurationMs: endTime - startTime,
           };
         }
         resolve(result);
@@ -267,14 +270,14 @@ export class TerminalManager {
       const stdout = childProcess.stdout;
       const stderr = childProcess.stderr;
       if (!stdout || !stderr) {
-        throw new Error("Spawned process does not expose stdout/stderr streams.");
+      	throw new Error("Spawned process does not expose stdout/stderr streams.");
       }
       stdout.on("data", (data: Buffer | string) => {
         const text = data.toString();
         const now = Date.now();
 
         if (!firstOutputTime) {
-          firstOutputTime = now;
+        	firstOutputTime = now;
         }
         lastOutputTime = now;
 
@@ -285,11 +288,11 @@ export class TerminalManager {
         // Record output event if collecting timing
         if (collectTiming) {
           outputEvents.push({
-            timestamp: now,
             deltaMs: now - startTime,
-            source: "stdout",
             length: text.length,
             snippet: text.slice(0, 50).replace(/\n/g, "\\n"),
+            source: "stdout",
+            timestamp: now,
           });
         }
         // Immediate check for obvious prompts
@@ -300,13 +303,13 @@ export class TerminalManager {
           if (collectTiming && outputEvents.length > 0) {
             const lastOutputEvent = outputEvents.at(-1);
             if (lastOutputEvent) {
-              lastOutputEvent.matchedPattern = "quick_pattern";
+            	lastOutputEvent.matchedPattern = "quick_pattern";
             }
           }
           resolveOnce({
-            pid: childProcess.pid!,
-            output,
             isBlocked: true,
+            output,
+            pid: childProcess.pid!,
           });
         }
       });
@@ -316,7 +319,7 @@ export class TerminalManager {
         const now = Date.now();
 
         if (!firstOutputTime) {
-          firstOutputTime = now;
+        	firstOutputTime = now;
         }
         lastOutputTime = now;
 
@@ -327,11 +330,11 @@ export class TerminalManager {
         // Record output event if collecting timing
         if (collectTiming) {
           outputEvents.push({
-            timestamp: now,
             deltaMs: now - startTime,
-            source: "stderr",
             length: text.length,
             snippet: text.slice(0, 50).replace(/\n/g, "\\n"),
+            source: "stderr",
+            timestamp: now,
           });
         }
       });
@@ -344,9 +347,9 @@ export class TerminalManager {
             session.isBlocked = true;
             exitReason = "early_exit_periodic_check";
             resolveOnce({
-              pid: childProcess.pid!,
-              output,
               isBlocked: true,
+              output,
+              pid: childProcess.pid!,
             });
           }
         }
@@ -357,9 +360,9 @@ export class TerminalManager {
         session.isBlocked = true;
         exitReason = "timeout";
         resolveOnce({
-          pid: childProcess.pid!,
-          output,
           isBlocked: true,
+          output,
+          pid: childProcess.pid!,
         });
       }, timeoutMs);
 
@@ -367,25 +370,25 @@ export class TerminalManager {
         if (childProcess.pid) {
           // Store completed session before removing active session
           this.completedSessions.set(childProcess.pid, {
-            pid: childProcess.pid,
-            outputLines: [...session.outputLines], // Copy line buffer
-            exitCode: code,
-            startTime: session.startTime,
             endTime: new Date(),
+            exitCode: code,
+            outputLines: [...session.outputLines], // Copy line buffer
+            pid: childProcess.pid,
+            startTime: session.startTime,
           });
 
           // Keep only last 100 completed sessions
           if (this.completedSessions.size > 100) {
-            const oldestKey = Array.from(this.completedSessions.keys())[0];
+          	const oldestKey = Array.from(this.completedSessions.keys())[0];
             this.completedSessions.delete(oldestKey);
           }
           this.sessions.delete(childProcess.pid);
         }
         exitReason = "process_exit";
         resolveOnce({
-          pid: childProcess.pid!,
-          output,
           isBlocked: false,
+          output,
+          pid: childProcess.pid!,
         });
       });
     });
@@ -396,7 +399,7 @@ export class TerminalManager {
    */
   private appendToLineBuffer(session: TerminalSession, text: string): void {
     if (!text) {
-      return;
+    	return;
     }
     // Split text into lines, keeping track of whether text ends with newline
     const lines = text.split("\n");
@@ -407,13 +410,15 @@ export class TerminalManager {
       const _endsWithNewline = text.endsWith("\n");
 
       if (session.outputLines.length === 0) {
-        // First line ever
+      	// First line ever
         session.outputLines.push(line);
-      } else if (i === 0) {
-        // First fragment - append to last line (might be partial)
+      }
+      else if (i === 0) {
+      	// First fragment - append to last line (might be partial)
         session.outputLines[session.outputLines.length - 1] += line;
-      } else {
-        // Subsequent lines - add as new lines
+      }
+      else {
+      	// Subsequent lines - add as new lines
         session.outputLines.push(line);
       }
     }
@@ -461,35 +466,28 @@ export class TerminalManager {
   /**
    * Internal helper to read from a line buffer with offset/length
    */
-  private readFromLineBuffer(
-    lines: string[],
-    offset: number,
-    length: number,
-    lastReadIndex: number,
-    updateLastRead: (index: number) => void,
-    isComplete: boolean,
-    exitCode?: number | null,
-    runtimeMs?: number,
-  ): PaginatedOutputResult {
+  private readFromLineBuffer(lines: string[], offset: number, length: number, lastReadIndex: number, updateLastRead: (index: number) => void, isComplete: boolean, exitCode?: number | null, runtimeMs?: number): PaginatedOutputResult {
     const totalLines = lines.length;
     let startIndex: number;
     let linesToRead: string[];
 
     if (offset < 0) {
-      // Negative offset = start position from end, then read 'length' lines forward
+    	// Negative offset = start position from end, then read 'length' lines forward
       // e.g., offset=-50, length=10 means: start 50 lines from end, read 10 lines
       const fromEnd = Math.abs(offset);
       startIndex = Math.max(0, totalLines - fromEnd);
       linesToRead = lines.slice(startIndex, startIndex + length);
       // Don't update lastReadIndex for tail reads
-    } else if (offset === 0) {
-      // offset=0 means "from where I last read" (like getNewOutput)
+    }
+    else if (offset === 0) {
+    	// offset=0 means "from where I last read" (like getNewOutput)
       startIndex = lastReadIndex;
       linesToRead = lines.slice(startIndex, startIndex + length);
       // Update lastReadIndex for "new output" behavior
       updateLastRead(Math.min(startIndex + linesToRead.length, totalLines));
-    } else {
-      // Positive offset = absolute position
+    }
+    else {
+    	// Positive offset = absolute position
       startIndex = offset;
       linesToRead = lines.slice(startIndex, startIndex + length);
       // Don't update lastReadIndex for absolute position reads
@@ -499,14 +497,14 @@ export class TerminalManager {
     const remaining = Math.max(0, totalLines - endIndex);
 
     return {
-      lines: linesToRead,
-      totalLines,
-      readFrom: startIndex,
-      readCount,
-      remaining,
-      isComplete,
       exitCode,
+      isComplete,
+      lines: linesToRead,
+      readCount,
+      readFrom: startIndex,
+      remaining,
       runtimeMs,
+      totalLines,
     };
   }
   /**
@@ -515,11 +513,11 @@ export class TerminalManager {
   getOutputLineCount(pid: number): number | null {
     const session = this.sessions.get(pid);
     if (session) {
-      return session.outputLines.length;
+    	return session.outputLines.length;
     }
     const completedSession = this.completedSessions.get(pid);
     if (completedSession) {
-      return completedSession.outputLines.length;
+    	return completedSession.outputLines.length;
     }
     return null;
   }
@@ -532,7 +530,7 @@ export class TerminalManager {
   getNewOutput(pid: number, maxLines: number = 1000): string | null {
     const result = this.readOutputPaginated(pid, 0, maxLines);
     if (!result) {
-      return null;
+    	return null;
     }
     const output = result.lines.join("\n").trim();
 
@@ -541,7 +539,8 @@ export class TerminalManager {
       const runtimeStr = result.runtimeMs !== undefined ? `\nRuntime: ${(result.runtimeMs / 1000).toFixed(2)}s` : "";
       if (output) {
         return `${output}\n\nProcess completed with exit code ${result.exitCode}${runtimeStr}`;
-      } else {
+      }
+      else {
         return `Process completed with exit code ${result.exitCode}${runtimeStr}\n(No output produced)`;
       }
     }
@@ -555,13 +554,13 @@ export class TerminalManager {
    * Capture a snapshot of current output state for interaction tracking.
    * Used by interactWithProcess to know what output existed before sending input.
    */
-  captureOutputSnapshot(pid: number): { totalChars: number; lineCount: number } | null {
+  captureOutputSnapshot(pid: number): {totalChars: number; lineCount: number} | null {
     const session = this.sessions.get(pid);
     if (session) {
       const fullOutput = session.outputLines.join("\n");
       return {
-        totalChars: fullOutput.length,
         lineCount: session.outputLines.length,
+        totalChars: fullOutput.length,
       };
     }
     return null;
@@ -571,13 +570,13 @@ export class TerminalManager {
    * This handles the case where output is appended to the last line (REPL prompts).
    * Also checks completed sessions in case process finished between snapshot and poll.
    */
-  getOutputSinceSnapshot(pid: number, snapshot: { totalChars: number; lineCount: number }): string | null {
+  getOutputSinceSnapshot(pid: number, snapshot: {totalChars: number; lineCount: number}): string | null {
     // Check active session first
     const session = this.sessions.get(pid);
     if (session) {
       const fullOutput = session.outputLines.join("\n");
       if (fullOutput.length <= snapshot.totalChars) {
-        return ""; // No new output
+      	return ""; // No new output
       }
       return fullOutput.slice(snapshot.totalChars);
     }
@@ -586,7 +585,7 @@ export class TerminalManager {
     if (completedSession) {
       const fullOutput = completedSession.outputLines.join("\n");
       if (fullOutput.length <= snapshot.totalChars) {
-        return ""; // No new output
+      	return ""; // No new output
       }
       return fullOutput.slice(snapshot.totalChars);
     }
@@ -603,28 +602,29 @@ export class TerminalManager {
   forceTerminate(pid: number): boolean {
     const session = this.sessions.get(pid);
     if (!session) {
-      return false;
+    	return false;
     }
     try {
       session.process.kill("SIGINT");
       setTimeout(() => {
         if (this.sessions.has(pid)) {
-          session.process.kill("SIGKILL");
+        	session.process.kill("SIGKILL");
         }
       }, 1000);
       return true;
-    } catch (error) {
+    }
+    catch (error) {
       // Convert error to string, handling both Error objects and other types
       const errorMessage = error instanceof Error ? error.message : String(error);
-      capture("server_request_error", { error: errorMessage, message: `Failed to terminate process ${pid}:` });
+      capture("server_request_error", {error: errorMessage, message: `Failed to terminate process ${pid}:`});
       return false;
     }
   }
   listActiveSessions(): ActiveSession[] {
     const now = new Date();
     return Array.from(this.sessions.values()).map((session) => ({
-      pid: session.pid,
       isBlocked: session.isBlocked,
+      pid: session.pid,
       runtime: now.getTime() - session.startTime.getTime(),
     }));
   }

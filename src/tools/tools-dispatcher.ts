@@ -6,7 +6,7 @@
  */
 
 import type {ServerResult} from "@assets/type/common";
-import {handleGetConfig, handleSetConfigValues} from "@controllers/controllers-config";
+import {handleGetConfigs, handleSetConfigValues} from "@controllers/controllers-config";
 import {handleEditBlocks} from "@controllers/controllers-edit";
 import {handleCreateDirectories, handleGetFileInfos, handleListDirectories, handleMoveFiles, handleReadFiles, handleRenameFiles, handleWriteFiles} from "@controllers/controllers-filesystem";
 import {handleKillProcesses, handleListProcesses} from "@controllers/controllers-process";
@@ -21,7 +21,7 @@ export type ToolDispatchHandler = (args: unknown) => Promise<ServerResult> | Ser
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export const TOOL_DISPATCHERS: Readonly<Record<string, ToolDispatchHandler>> = {
-  get_config: () => handleGetConfig(),
+  get_configs: (args: unknown) => handleGetConfigs(args),
   set_config_values: (args: unknown) => handleSetConfigValues(args),
   start_processes: (args: unknown) => handleStartProcesses(args),
   read_process_outputs: (args: unknown) => handleReadProcessOutputs(args),

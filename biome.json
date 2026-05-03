@@ -1,5 +1,5 @@
 {
-  "$schema": "https://biomejs.dev/schemas/2.4.13/schema.json",
+  "$schema": "https://biomejs.dev/schemas/2.4.14/schema.json",
   "vcs": {
     "enabled": true,
     "clientKind": "git",
@@ -152,6 +152,8 @@
           "level": "warn",
           "fix": "safe"
         },
+        "useCollapsedElseIf": "off",
+        "useCollapsedIf": "off",
         "useConsistentArrayType": {
           "level": "warn",
           "fix": "safe"
@@ -449,6 +451,12 @@
         }
       },
       "nursery": {
+        "noExcessiveNestedCallbacks": {
+          "level": "warn"
+        },
+        "noReactStringRefs": {
+          "level": "warn"
+        },
         "useConsistentMethodSignatures": {
           "level": "warn",
           "fix": "safe"
@@ -457,9 +465,16 @@
           "level": "info",
           "fix": "safe"
         },
+        "useMathMinMax": {
+          "level": "warn",
+          "fix": "unsafe"
+        },
         "useSpread": {
           "level": "info",
           "fix": "safe"
+        },
+        "useTestHooksOnTop": {
+          "level": "warn"
         }
       },
       "correctness": {
@@ -591,14 +606,35 @@
   "assist": {
     "enabled": true,
     "actions": {
+      "recommended": true,
       "source": {
-        "organizeImports": "on"
+        "recommended": true,
+        "noDuplicateClasses": "on",
+        "organizeImports": "on",
+        "useSortedAttributes": "on",
+        "useSortedInterfaceMembers": "on",
+        "useSortedKeys": "off",
+        "useSortedProperties": "on"
       }
     }
   },
   "javascript": {
     "formatter": {
-      "quoteStyle": "double"
+      "enabled": false,
+      "arrowParentheses": "always",
+      "bracketSameLine": false,
+      "bracketSpacing": true,
+      "indentStyle": "space",
+      "indentWidth": 2,
+      "jsxQuoteStyle": "double",
+      "lineEnding": "auto",
+      "lineWidth": 200,
+      "operatorLinebreak": "after",
+      "quoteProperties": "preserve",
+      "quoteStyle": "double",
+      "semicolons": "always",
+      "trailingCommas": "all",
+      "trailingNewline": true
     }
   },
   "overrides": [
@@ -917,14 +953,8 @@
               "level": "error",
               "fix": "safe"
             },
-            "useCollapsedElseIf": {
-              "level": "error",
-              "fix": "safe"
-            },
-            "useCollapsedIf": {
-              "level": "error",
-              "fix": "safe"
-            },
+            "useCollapsedElseIf": "off",
+            "useCollapsedIf": "off",
             "useConsistentArrowReturn": "off",
             "useConsistentBuiltinInstantiation": {
               "level": "error",
@@ -1076,6 +1106,33 @@
             "useNumberToFixedDigitsArgument": {
               "level": "error",
               "fix": "safe"
+            }
+          },
+          "nursery": {
+            "noExcessiveNestedCallbacks": {
+              "level": "warn"
+            },
+            "noReactStringRefs": {
+              "level": "warn"
+            },
+            "useConsistentMethodSignatures": {
+              "level": "warn",
+              "fix": "safe"
+            },
+            "useDomNodeTextContent": {
+              "level": "info",
+              "fix": "safe"
+            },
+            "useMathMinMax": {
+              "level": "warn",
+              "fix": "unsafe"
+            },
+            "useSpread": {
+              "level": "info",
+              "fix": "safe"
+            },
+            "useTestHooksOnTop": {
+              "level": "warn"
             }
           }
         }
@@ -1396,14 +1453,8 @@
               "level": "error",
               "fix": "safe"
             },
-            "useCollapsedElseIf": {
-              "level": "error",
-              "fix": "safe"
-            },
-            "useCollapsedIf": {
-              "level": "error",
-              "fix": "safe"
-            },
+            "useCollapsedElseIf": "off",
+            "useCollapsedIf": "off",
             "useConsistentArrowReturn": "off",
             "useConsistentBuiltinInstantiation": {
               "level": "error",
@@ -1555,6 +1606,33 @@
             "useNumberToFixedDigitsArgument": {
               "level": "error",
               "fix": "safe"
+            }
+          },
+          "nursery": {
+            "noExcessiveNestedCallbacks": {
+              "level": "warn"
+            },
+            "noReactStringRefs": {
+              "level": "warn"
+            },
+            "useConsistentMethodSignatures": {
+              "level": "warn",
+              "fix": "safe"
+            },
+            "useDomNodeTextContent": {
+              "level": "info",
+              "fix": "safe"
+            },
+            "useMathMinMax": {
+              "level": "warn",
+              "fix": "unsafe"
+            },
+            "useSpread": {
+              "level": "info",
+              "fix": "safe"
+            },
+            "useTestHooksOnTop": {
+              "level": "warn"
             }
           }
         }
@@ -1771,10 +1849,7 @@
               "level": "warn",
               "fix": "safe"
             },
-            "useCollapsedIf": {
-              "level": "error",
-              "fix": "safe"
-            },
+            "useCollapsedIf": "off",
             "useConsistentArrayType": {
               "level": "warn",
               "options": {
@@ -1861,6 +1936,33 @@
             "useNumberToFixedDigitsArgument": {
               "level": "error",
               "fix": "safe"
+            }
+          },
+          "nursery": {
+            "noExcessiveNestedCallbacks": {
+              "level": "warn"
+            },
+            "noReactStringRefs": {
+              "level": "warn"
+            },
+            "useConsistentMethodSignatures": {
+              "level": "warn",
+              "fix": "safe"
+            },
+            "useDomNodeTextContent": {
+              "level": "info",
+              "fix": "safe"
+            },
+            "useMathMinMax": {
+              "level": "warn",
+              "fix": "unsafe"
+            },
+            "useSpread": {
+              "level": "info",
+              "fix": "safe"
+            },
+            "useTestHooksOnTop": {
+              "level": "warn"
             }
           }
         }
@@ -2279,14 +2381,8 @@
               "level": "error",
               "fix": "safe"
             },
-            "useCollapsedElseIf": {
-              "level": "error",
-              "fix": "safe"
-            },
-            "useCollapsedIf": {
-              "level": "error",
-              "fix": "safe"
-            },
+            "useCollapsedElseIf": "off",
+            "useCollapsedIf": "off",
             "useConsistentArrowReturn": "off",
             "useConsistentBuiltinInstantiation": {
               "level": "error",
@@ -2448,6 +2544,33 @@
             "useNumberToFixedDigitsArgument": {
               "level": "error",
               "fix": "safe"
+            }
+          },
+          "nursery": {
+            "noExcessiveNestedCallbacks": {
+              "level": "warn"
+            },
+            "noReactStringRefs": {
+              "level": "warn"
+            },
+            "useConsistentMethodSignatures": {
+              "level": "warn",
+              "fix": "safe"
+            },
+            "useDomNodeTextContent": {
+              "level": "info",
+              "fix": "safe"
+            },
+            "useMathMinMax": {
+              "level": "warn",
+              "fix": "unsafe"
+            },
+            "useSpread": {
+              "level": "info",
+              "fix": "safe"
+            },
+            "useTestHooksOnTop": {
+              "level": "warn"
             }
           }
         }
@@ -2764,10 +2887,7 @@
               "level": "warn",
               "fix": "safe"
             },
-            "useCollapsedIf": {
-              "level": "error",
-              "fix": "safe"
-            },
+            "useCollapsedIf": "off",
             "useConsistentArrayType": {
               "level": "warn",
               "options": {
@@ -2864,6 +2984,33 @@
             "useNumberToFixedDigitsArgument": {
               "level": "error",
               "fix": "safe"
+            }
+          },
+          "nursery": {
+            "noExcessiveNestedCallbacks": {
+              "level": "warn"
+            },
+            "noReactStringRefs": {
+              "level": "warn"
+            },
+            "useConsistentMethodSignatures": {
+              "level": "warn",
+              "fix": "safe"
+            },
+            "useDomNodeTextContent": {
+              "level": "info",
+              "fix": "safe"
+            },
+            "useMathMinMax": {
+              "level": "warn",
+              "fix": "unsafe"
+            },
+            "useSpread": {
+              "level": "info",
+              "fix": "safe"
+            },
+            "useTestHooksOnTop": {
+              "level": "warn"
             }
           }
         }

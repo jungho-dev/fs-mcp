@@ -8,16 +8,16 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { CONFIG_FILE, LEGACY_CONFIG_FILE } from "@features/config/config-paths";
-import { VERSION } from "@cores/runtime/runtime-version";
+import {VERSION} from "@cores/runtime/runtime-version";
+import {CONFIG_FILE, LEGACY_CONFIG_FILE} from "@features/config/config-paths";
 
 export interface ServerConfig {
-  blockedCommands?: string[];
-  defaultShell?: string;
   allowedDirectories?: string[];
-  fileWriteLineLimit?: number; // Line limit for file write operations
-  fileReadLineLimit?: number; // Default line limit for file read operations (changed from character-based)
+  blockedCommands?: string[];
   currentClient?: ClientInfo; // Current connected client information
+  defaultShell?: string;
+  fileReadLineLimit?: number; // Default line limit for file read operations (changed from character-based)
+  fileWriteLineLimit?: number; // Line limit for file write operations
   [key: string]: unknown; // Allow for arbitrary configuration keys
 }
 export interface ClientInfo {
@@ -47,27 +47,27 @@ function stripTomlComment(line: string): string {
 
   for (const character of line) {
     if (isEscaped) {
-      result += character;
+    	result += character;
       isEscaped = false;
       continue;
     }
     if (character === "\\" && inDoubleQuote) {
-      result += character;
+    	result += character;
       isEscaped = true;
       continue;
     }
     if (character === '"' && !inSingleQuote) {
-      inDoubleQuote = !inDoubleQuote;
+    	inDoubleQuote = !inDoubleQuote;
       result += character;
       continue;
     }
     if (character === "'" && !inDoubleQuote) {
-      inSingleQuote = !inSingleQuote;
+    	inSingleQuote = !inSingleQuote;
       result += character;
       continue;
     }
     if (character === "#" && !inDoubleQuote && !inSingleQuote) {
-      break;
+    	break;
     }
     result += character;
   }
@@ -81,26 +81,27 @@ function getTomlBracketDepth(value: string): number {
 
   for (const character of value) {
     if (isEscaped) {
-      isEscaped = false;
+    	isEscaped = false;
       continue;
     }
     if (character === "\\" && inDoubleQuote) {
-      isEscaped = true;
+    	isEscaped = true;
       continue;
     }
     if (character === '"' && !inSingleQuote) {
-      inDoubleQuote = !inDoubleQuote;
+    	inDoubleQuote = !inDoubleQuote;
       continue;
     }
     if (character === "'" && !inDoubleQuote) {
-      inSingleQuote = !inSingleQuote;
+    	inSingleQuote = !inSingleQuote;
       continue;
     }
     if (!inDoubleQuote && !inSingleQuote) {
       if (character === "[") {
-        depth += 1;
-      } else if (character === "]") {
-        depth -= 1;
+      	depth += 1;
+      }
+      else if (character === "]") {
+      	depth -= 1;
       }
     }
   }
@@ -108,16 +109,16 @@ function getTomlBracketDepth(value: string): number {
 }
 function parseTomlScalar(value: string): unknown {
   if (value.startsWith('"')) {
-    return JSON.parse(value);
+  	return JSON.parse(value);
   }
   if (value.startsWith("'") && value.endsWith("'")) {
-    return value.slice(1, -1);
+  	return value.slice(1, -1);
   }
   if (value === "true" || value === "false") {
-    return value === "true";
+  	return value === "true";
   }
   if (/^[+-]?\d+(?:\.\d+)?$/.test(value)) {
-    return Number(value);
+  	return Number(value);
   }
   throw new Error(`Unsupported TOML value: ${value}`);
 }
@@ -134,7 +135,7 @@ function parseTomlConfig(configText: string): ServerConfig {
     const line = stripTomlComment(originalLine).trim();
 
     if (line.length === 0) {
-      continue;
+    	continue;
     }
     if (line.startsWith("[") && !line.includes("=")) {
       throw new Error(`TOML sections are not supported in ${CONFIG_FILE}: ${originalLine}`);
@@ -166,17 +167,17 @@ function formatTomlString(value: string): string {
 }
 function formatTomlValue(value: unknown): string | null {
   if (value === undefined || value === null) {
-    return null;
+  	return null;
   }
   if (Array.isArray(value)) {
     const formattedItems = value.map((item) => formatTomlValue(item)).filter((item): item is string => item !== null);
     return `[${formattedItems.join(", ")}]`;
   }
   if (typeof value === "string") {
-    return formatTomlString(value);
+  	return formatTomlString(value);
   }
   if (typeof value === "number" || typeof value === "boolean") {
-    return String(value);
+  	return String(value);
   }
   return null;
 }
@@ -197,7 +198,7 @@ function getDefaultAllowedDirectories(): string[] {
     .filter((directory) => directory.length > 0);
 
   if (configuredDirectories !== undefined) {
-    return configuredDirectories;
+  	return configuredDirectories;
   }
   return ["C:\\JUNGHO", "C:\\Windows", "C:\\Users\\jungh", "C:\\Users\\jungh\\.codex", "C:\\JUNGHO\\9.Workspace\\2.Project\\2.Node\\fs-mcp"];
 }
@@ -218,26 +219,28 @@ class ConfigManager {
    */
   async init() {
     if (this.initialized) {
-      return;
+    	return;
     }
     try {
       const configDir = path.dirname(this.configPath);
-      await fs.mkdir(configDir, { recursive: true });
+      await fs.mkdir(configDir, {recursive: true});
 
       const loadedConfig = await this.loadPersistedConfig();
       if (loadedConfig !== null) {
-        this.config = loadedConfig.config;
+      	this.config = loadedConfig.config;
         this._isFirstRun = false;
-      } else {
-        this.config = this.getDefaultConfig();
+      }
+      else {
+      	this.config = this.getDefaultConfig();
         this._isFirstRun = true;
       }
       this.config["version"] = VERSION;
       if (loadedConfig === null || loadedConfig.migrated) {
-        await this.saveConfig();
+      	await this.saveConfig();
       }
       this.initialized = true;
-    } catch (error) {
+    }
+    catch (error) {
       console.error("Failed to initialize config:", error);
       this.config = this.getDefaultConfig();
       this.config["version"] = VERSION;
@@ -253,18 +256,20 @@ class ConfigManager {
   private async loadPersistedConfig(): Promise<LoadedConfig | null> {
     try {
       const configData = await fs.readFile(this.configPath, "utf8");
-      return { config: parseTomlConfig(configData), migrated: false };
-    } catch (error) {
+      return {config: parseTomlConfig(configData), migrated: false};
+    }
+    catch (error) {
       if (!isMissingFileError(error)) {
-        throw error;
+      	throw error;
       }
     }
     try {
       const legacyConfigData = await fs.readFile(LEGACY_CONFIG_FILE, "utf8");
-      return { config: JSON.parse(legacyConfigData) as ServerConfig, migrated: true };
-    } catch (error) {
+      return {config: JSON.parse(legacyConfigData) as ServerConfig, migrated: true};
+    }
+    catch (error) {
       if (isMissingFileError(error)) {
-        return null;
+      	return null;
       }
       throw error;
     }
@@ -274,6 +279,7 @@ class ConfigManager {
    */
   private getDefaultConfig(): ServerConfig {
     return {
+      allowedDirectories: getDefaultAllowedDirectories(),
       blockedCommands: [
         // Disk and partition management
         "mkfs", // Create a filesystem on a device
@@ -320,13 +326,12 @@ class ConfigManager {
       ],
       defaultShell: (() => {
         if (os.platform() === "win32") {
-          return "pwsh.exe";
+        	return "pwsh.exe";
         }
         const fallbackShell = os.platform() === "darwin" ? "/bin/zsh" : "/bin/sh";
         const userShell = process.env.SHELL || fallbackShell;
         return userShell;
       })(),
-      allowedDirectories: getDefaultAllowedDirectories(),
       fileReadLineLimit: 50_000,
       fileWriteLineLimit: 50_000,
     };
@@ -334,11 +339,12 @@ class ConfigManager {
   /**
    * Save config to disk
    */
-  private async saveConfig() {
+  private async saveConfig () {
     try {
       const persistableConfig = Object.fromEntries(Object.entries(this.config).filter(([, value]) => formatTomlValue(value) !== null)) as ServerConfig;
       await fs.writeFile(this.configPath, serializeTomlConfig(persistableConfig), "utf8");
-    } catch (error) {
+    }
+    catch (error) {
       console.error("Failed to save config:", error);
       throw error;
     }
@@ -348,7 +354,7 @@ class ConfigManager {
    */
   async getConfig(): Promise<ServerConfig> {
     await this.init();
-    return { ...this.config };
+    return {...this.config};
   }
   /**
    * Get a specific configuration value
@@ -370,9 +376,9 @@ class ConfigManager {
    */
   async updateConfig(updates: Partial<ServerConfig>): Promise<ServerConfig> {
     await this.init();
-    this.config = { ...this.config, ...updates };
+    this.config = {...this.config, ...updates};
     await this.saveConfig();
-    return { ...this.config };
+    return {...this.config};
   }
   /**
    * Reset configuration to defaults
@@ -381,7 +387,7 @@ class ConfigManager {
     this.config = this.getDefaultConfig();
     this.config["version"] = VERSION;
     await this.saveConfig();
-    return { ...this.config };
+    return {...this.config};
   }
   /**
    * Check if this is the first run (config file was just created)

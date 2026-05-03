@@ -32,7 +32,7 @@ function createLogPayload(message: string, data?: unknown): string | Record<stri
     return { message, ...data };
   }
 
-  return { message, data };
+  return { data, message };
 }
 
 /**
@@ -50,9 +50,9 @@ export function log(level: LogLevel, message: string, data?: unknown): void {
         jsonrpc: "2.0" as const,
         method: "notifications/message",
         params: {
+          data: createLogPayload(message, data),
           level,
           logger: "fs-mcp",
-          data: createLogPayload(message, data),
         },
       };
       process.stdout.write(`${JSON.stringify(notification)}\n`);
@@ -63,9 +63,9 @@ export function log(level: LogLevel, message: string, data?: unknown): void {
       jsonrpc: "2.0" as const,
       method: "notifications/message",
       params: {
+        data: `Failed to log message: ${message}`,
         level: "error",
         logger: "fs-mcp",
-        data: `Failed to log message: ${message}`,
       },
     };
     process.stdout.write(`${JSON.stringify(notification)}\n`);
@@ -76,14 +76,14 @@ export function log(level: LogLevel, message: string, data?: unknown): void {
  * Convenience functions for different log levels
  */
 export const logger: Readonly<Record<LogLevel, (message: string, data?: unknown) => void>> = {
-  emergency: (message: string, data?: unknown) => log("emergency", message, data),
   alert: (message: string, data?: unknown) => log("alert", message, data),
   critical: (message: string, data?: unknown) => log("critical", message, data),
-  error: (message: string, data?: unknown) => log("error", message, data),
-  warning: (message: string, data?: unknown) => log("warning", message, data),
-  notice: (message: string, data?: unknown) => log("notice", message, data),
-  info: (message: string, data?: unknown) => log("info", message, data),
   debug: (message: string, data?: unknown) => log("debug", message, data),
+  emergency: (message: string, data?: unknown) => log("emergency", message, data),
+  error: (message: string, data?: unknown) => log("error", message, data),
+  info: (message: string, data?: unknown) => log("info", message, data),
+  notice: (message: string, data?: unknown) => log("notice", message, data),
+  warning: (message: string, data?: unknown) => log("warning", message, data),
 };
 
 /**
@@ -96,9 +96,9 @@ export function logToStderr(level: LogLevel, message: string): void {
       jsonrpc: "2.0" as const,
       method: "notifications/message",
       params: {
+        data: message,
         level,
         logger: "fs-mcp",
-        data: message,
       },
   };
   process.stdout.write(`${JSON.stringify(notification)}\n`);

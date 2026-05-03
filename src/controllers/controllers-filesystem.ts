@@ -1,21 +1,37 @@
 /**
  * @file src/controllers/controllers-filesystem.ts
- * @description MCP filesystem tool 
+ * @description MCP filesystem tool
  * @author JUNGHO
  * @since 2026-05-02
  */
 
 import path from "node:path";
-import { createBatchToolResponse, runParallelBatch } from "@controllers/controllers-batch";
-import { withTimeout } from "@assets/utils/utils-timeout";
-import { configManager } from "@features/config/config-store";
-import { createDirectory, getFileInfo, listDirectory, moveFile, readFile, readMultipleFiles, writeFile } from "@features/filesystem/filesystem-service";
-import { resolveAbsolutePath } from "@features/filesystem/filesystem-path-resolver";
 import type { ReadOptions } from "@assets/readers/readers-base";
 import { resolvePreviewFileType } from "@assets/readers/readers-filetypes";
-import { createErrorResponse } from "@cores/responses/responses-error";
-import { CreateDirectoryArgsSchema, CreateDirectoriesArgsSchema, GetFileInfosArgsSchema, GetFileInfoArgsSchema, ListDirectoriesArgsSchema, ListDirectoryArgsSchema, MoveFilesArgsSchema, MoveFileArgsSchema, ReadFilesArgsSchema, ReadFileArgsSchema, ReadMultipleFilesArgsSchema, RenameFilesArgsSchema, RenameFileArgsSchema, WriteFilesArgsSchema, WriteFileArgsSchema } from "@schemas/schemas-filesystem";
 import type { DirectoryListingEntryType, ServerResult } from "@assets/type/common";
+import { withTimeout } from "@assets/utils/utils-timeout";
+import { createBatchToolResponse, runParallelBatch } from "@controllers/controllers-batch";
+import { createErrorResponse } from "@cores/responses/responses-error";
+import { configManager } from "@features/config/config-store";
+import { resolveAbsolutePath } from "@features/filesystem/filesystem-path-resolver";
+import { createDirectory, getFileInfo, listDirectory, moveFile, readFile, readMultipleFiles, writeFile } from "@features/filesystem/filesystem-service";
+import {
+  CreateDirectoriesArgsSchema,
+  CreateDirectoryArgsSchema,
+  GetFileInfoArgsSchema,
+  GetFileInfosArgsSchema,
+  ListDirectoriesArgsSchema,
+  ListDirectoryArgsSchema,
+  MoveFileArgsSchema,
+  MoveFilesArgsSchema,
+  ReadFileArgsSchema,
+  ReadFilesArgsSchema,
+  ReadMultipleFilesArgsSchema,
+  RenameFileArgsSchema,
+  RenameFilesArgsSchema,
+  WriteFileArgsSchema,
+  WriteFilesArgsSchema,
+} from "@schemas/schemas-filesystem";
 
 const DIRECTORY_LISTING_ENTRY_PATTERN = /^(?:\[(F|D|W|X)\]|(□|■))\s*(.*)$/;
 
@@ -364,7 +380,7 @@ export async function handleGetFileInfo(args: unknown): Promise<ServerResult> {
  */
 export async function handleReadFiles(args: unknown): Promise<ServerResult> {
   const parsed = ReadFilesArgsSchema.parse(args);
-  const items = parsed.items ?? parsed.paths?.map((filePath) => ({ "path": filePath })) ?? [];
+  const items = parsed.items ?? parsed.paths?.map((filePath) => ({ path: filePath })) ?? [];
   const results = await runParallelBatch(items, (item) => handleReadFile(item));
   const response = createBatchToolResponse("read_files", results);
 
@@ -387,7 +403,7 @@ export async function handleWriteFiles(args: unknown): Promise<ServerResult> {
  */
 export async function handleCreateDirectories(args: unknown): Promise<ServerResult> {
   const parsed = CreateDirectoriesArgsSchema.parse(args);
-  const results = await runParallelBatch(parsed.paths, (dirPath) => handleCreateDirectory({ "path": dirPath }));
+  const results = await runParallelBatch(parsed.paths, (dirPath) => handleCreateDirectory({ path: dirPath }));
   const response = createBatchToolResponse("create_directories", results);
 
   return response;
@@ -431,7 +447,7 @@ export async function handleRenameFiles(args: unknown): Promise<ServerResult> {
  */
 export async function handleGetFileInfos(args: unknown): Promise<ServerResult> {
   const parsed = GetFileInfosArgsSchema.parse(args);
-  const results = await runParallelBatch(parsed.paths, (filePath) => handleGetFileInfo({ "path": filePath }));
+  const results = await runParallelBatch(parsed.paths, (filePath) => handleGetFileInfo({ path: filePath }));
   const response = createBatchToolResponse("get_file_infos", results);
 
   return response;

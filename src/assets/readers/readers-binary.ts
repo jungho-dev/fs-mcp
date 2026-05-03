@@ -67,10 +67,11 @@ export class BinaryFileHandler implements FileHandler {
    */
   private getBinaryInstructions(filePath: string): string {
     const fileName = path.basename(filePath);
+    return (`
+      Cannot read binary file as text: ${fileName}
+      Use start_process + interact_with_process to analyze binary files with appropriate tools (Node.js or Python libraries, command-line utilities, etc.).
 
-    return `Cannot read binary file as text: ${fileName}
-Use start_process + interact_with_process to analyze binary files with appropriate tools (Node.js or Python libraries, command-line utilities, etc.).
-
-The read_file tool only handles text files, images, and DOCX files.`;
+      The read_file tool only handles text files, images, and DOCX files.
+    `).trim();
   }
 }

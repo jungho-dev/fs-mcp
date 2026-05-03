@@ -10,22 +10,22 @@ import os from "node:os";
 import path from "node:path";
 
 export interface FuzzySearchLogEntry {
-  timestamp: Date;
-  searchText: string;
-  foundText: string;
-  similarity: number;
-  executionTime: number;
-  exactMatchCount: number;
-  expectedReplacements: number;
-  fuzzyThreshold: number;
   belowThreshold: boolean;
-  diff: string;
-  searchLength: number;
-  foundLength: number;
-  fileExtension: string;
   characterCodes: string;
-  uniqueCharacterCount: number;
+  diff: string;
   diffLength: number;
+  exactMatchCount: number;
+  executionTime: number;
+  expectedReplacements: number;
+  fileExtension: string;
+  foundLength: number;
+  foundText: string;
+  fuzzyThreshold: number;
+  searchLength: number;
+  searchText: string;
+  similarity: number;
+  timestamp: Date;
+  uniqueCharacterCount: number;
 }
 class FuzzySearchLogger {
   private readonly logPath: string;

@@ -1,19 +1,19 @@
 /**
  * @file src/controllers/controllers-edit.ts
- * @description MCP edit tool 
+ * @description MCP edit tool
  * @author JUNGHO
  * @since 2026-05-02
  */
 
 import { createBatchToolResponse, runParallelBatch } from "@controllers/controllers-batch";
+import { handleEditBlock } from "@features/edit/edit-service";
 import { EditBlocksArgsSchema } from "@schemas/schemas-edit";
-import {handleEditBlock} from "@features/edit/edit-service";
 
 /**
  * Handle edit_block command
  * Uses the enhanced implementation with multiple occurrence support and fuzzy matching
  */
-export {handleEditBlock};
+export { handleEditBlock };
 
 /**
  * Handle edit_blocks command.

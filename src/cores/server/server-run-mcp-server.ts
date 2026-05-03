@@ -5,11 +5,11 @@
  * @since 2026-05-02
  */
 
-import {configManager} from "@features/config/config-store";
 import {type LogLevel, logger} from "@cores/runtime/runtime-app-logger";
 import {capture} from "@cores/runtime/runtime-output-capture";
-import {FilteredStdioServerTransport} from "@cores/transport/transport-stdio-transport";
 import {flushDeferredMessages, server} from "@cores/server/server-create-mcp-server";
+import {FilteredStdioServerTransport} from "@cores/transport/transport-stdio-transport";
+import {configManager} from "@features/config/config-store";
 
 type DeferredStartupMessage = {
   level: LogLevel;
@@ -19,18 +19,15 @@ type DeferredStartupMessage = {
 const deferredMessages: DeferredStartupMessage[] = [];
 
 // 1. startup log buffer ――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function deferLog (level: LogLevel, message: string): void {
+function deferLog(level: LogLevel, message: string): void {
   deferredMessages.push({level, message});
 }
-export function flushStartupLogs (
-  transport: Pick<FilteredStdioServerTransport, "sendLog">,
-  messages: DeferredStartupMessage[],
-): DeferredStartupMessage[] {
+export function flushStartupLogs(transport: Pick<FilteredStdioServerTransport, "sendLog">, messages: DeferredStartupMessage[]): DeferredStartupMessage[] {
   const sentMessages: DeferredStartupMessage[] = [];
   while (messages.length > 0) {
     const message = messages.shift();
     if (!message) {
-      continue;
+    	continue;
     }
     transport.sendLog(message.level, message.message);
     sentMessages.push(message);
@@ -120,9 +117,9 @@ export async function runServer () {
       jsonrpc: "2.0" as const,
       method: "notifications/message",
       params: {
+        data: `Failed to start server: ${errorMessage} (${new Date().toISOString()})`,
         level: "error",
         logger: "fs-mcp",
-        data: `Failed to start server: ${errorMessage} (${new Date().toISOString()})`,
       },
     };
     process.stdout.write(`${JSON.stringify(errorNotification)}\n`);
@@ -141,9 +138,9 @@ export function startServer () {
     console.error(error instanceof Error && error.stack ? error.stack : "No stack trace available");
     process.stderr.write(
       `${JSON.stringify({
-        type: "error",
-        timestamp: new Date().toISOString(),
         message: `Fatal error running server: ${errorMessage}`,
+        timestamp: new Date().toISOString(),
+        type: "error",
       })}\n`,
     );
 

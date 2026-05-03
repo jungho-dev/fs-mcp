@@ -11,23 +11,23 @@
  */
 
 export interface ProcessState {
-  isWaitingForInput: boolean;
+  detectedPrompt?: string;
   isFinished: boolean;
   isRunning: boolean;
-  detectedPrompt?: string;
+  isWaitingForInput: boolean;
   lastOutput: string;
 }
 // Common REPL prompt patterns
 const REPL_PROMPTS = {
-  python: [">>> ", "... "],
-  node: ["> ", "... "],
-  r: ["> ", "+ "],
   julia: ["julia> ", "       "], // julia continuation is spaces
-  shell: ["$ ", "# ", "% ", "bash-", "zsh-"],
-  mysql: ["mysql> ", "    -> "],
-  postgres: ["=# ", "-# "],
-  redis: ["redis> "],
   mongo: ["> ", "... "],
+  mysql: ["mysql> ", "    -> "],
+  node: ["> ", "... "],
+  postgres: ["=# ", "-# "],
+  python: [">>> ", "... "],
+  r: ["> ", "+ "],
+  redis: ["redis> "],
+  shell: ["$ ", "# ", "% ", "bash-", "zsh-"],
 };
 
 // Error patterns that indicate completion (even with errors)
@@ -58,9 +58,9 @@ const REGEXP_SPECIAL_CHAR_PATTERN = /[.*+?^${}()|[\]\\]/g;
 export function analyzeProcessState(output: string, _pid?: number): ProcessState {
   if (!output || output.trim().length === 0) {
     return {
-      isWaitingForInput: false,
       isFinished: false,
       isRunning: true,
+      isWaitingForInput: false,
       lastOutput: output,
     };
   }
@@ -74,10 +74,10 @@ export function analyzeProcessState(output: string, _pid?: number): ProcessState
 
   if (detectedPrompt) {
     return {
-      isWaitingForInput: true,
+      detectedPrompt,
       isFinished: false,
       isRunning: true,
-      detectedPrompt,
+      isWaitingForInput: true,
       lastOutput: output,
     };
   }
@@ -86,9 +86,9 @@ export function analyzeProcessState(output: string, _pid?: number): ProcessState
 
   if (hasCompletionIndicator) {
     return {
-      isWaitingForInput: false,
       isFinished: true,
       isRunning: false,
+      isWaitingForInput: false,
       lastOutput: output,
     };
   }
@@ -98,17 +98,17 @@ export function analyzeProcessState(output: string, _pid?: number): ProcessState
   if (hasErrorCompletion) {
     // Prompted errors have already returned from the REPL prompt branch above.
     return {
-      isWaitingForInput: false,
       isFinished: true,
       isRunning: false,
+      isWaitingForInput: false,
       lastOutput: output,
     };
   }
   // Default: process is running, not clearly waiting or finished
   return {
-    isWaitingForInput: false,
     isFinished: false,
     isRunning: true,
+    isWaitingForInput: false,
     lastOutput: output,
   };
 }

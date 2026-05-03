@@ -7,15 +7,27 @@
 
 import type { ServerResult } from "@assets/type/common";
 import { createBatchToolResponse, runParallelBatch } from "@controllers/controllers-batch";
-import { getConfig, setConfigValue } from "@features/config/config-service";
-import { SetConfigValuesArgsSchema } from "@schemas/schemas-config";
+import { CONFIG_QUERY_KEYS, type ConfigQueryKey } from "@features/config/config-metadata";
+import { configManager } from "@features/config/config-store";
+import { getConfigValue, setConfigValue } from "@features/config/config-service";
+import { GetConfigsArgsSchema, SetConfigValuesArgsSchema } from "@schemas/schemas-config";
+
+function createDefaultGetConfigItems(): Array<{ key: ConfigQueryKey }> {
+  return CONFIG_QUERY_KEYS.map((key) => ({ key }));
+}
 
 /**
- * Handle get_config command.
+ * Handle get_configs command.
  */
-export async function handleGetConfig(): Promise<ServerResult> {
-  const result = await getConfig();
-  return result;
+export async function handleGetConfigs(args: unknown): Promise<ServerResult> {
+  const parsed = GetConfigsArgsSchema.parse(args ?? {});
+  const items = parsed.items ?? createDefaultGetConfigItems();
+
+  await configManager.init();
+  const results = await runParallelBatch(items, (item) => getConfigValue(item));
+  const response = createBatchToolResponse("get_configs", results);
+
+  return response;
 }
 
 /**

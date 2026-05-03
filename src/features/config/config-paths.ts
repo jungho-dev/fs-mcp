@@ -5,6 +5,7 @@
  * @since 2026-05-02
  */
 
+import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 
@@ -25,7 +26,7 @@ function resolveTestConfigDir(): string | null {
   }
 
   const testName = path.basename(resolvedEntryPath, path.extname(resolvedEntryPath)).replace(/[^a-z0-9_-]+/gi, "-");
-  return path.join(path.dirname(resolvedEntryPath), ".tmp", "config", testName);
+  return path.join(os.tmpdir(), "fs-mcp-tests", "config", testName);
 }
 
 function resolveConfigDir(): string {

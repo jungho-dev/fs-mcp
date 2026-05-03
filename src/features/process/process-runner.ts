@@ -5,15 +5,15 @@
  * @since 2026-05-02
  */
 
-import { platform } from "node:os";
-import type { OutputEvent, ServerResult, TimingInfo } from "@assets/type/common";
-import { configManager } from "@features/config/config-store";
-import { commandManager } from "@features/process/process-command-policy";
-import { analyzeProcessState, cleanProcessOutput, formatProcessStateMessage, type ProcessState } from "@features/process/process-repl-detector";
-import { terminalManager } from "@features/process/process-terminal-service";
-import { clearVirtualNodeSession, executeVirtualNodeCode, getVirtualNodeSession, listVirtualNodeSessions, startVirtualNodeSession } from "@features/process/process-virtual-node-session";
-import { capture } from "@cores/runtime/runtime-output-capture";
-import { ForceTerminateArgsSchema, InteractWithProcessArgsSchema, ReadProcessOutputArgsSchema, StartProcessArgsSchema } from "@schemas/schemas-process";
+import {platform} from "node:os";
+import type {OutputEvent, ServerResult, TimingInfo} from "@assets/type/common";
+import {capture} from "@cores/runtime/runtime-output-capture";
+import {configManager} from "@features/config/config-store";
+import {commandManager} from "@features/process/process-command-policy";
+import {analyzeProcessState, cleanProcessOutput, formatProcessStateMessage, type ProcessState} from "@features/process/process-repl-detector";
+import {terminalManager} from "@features/process/process-terminal-service";
+import {clearVirtualNodeSession, executeVirtualNodeCode, getVirtualNodeSession, listVirtualNodeSessions, startVirtualNodeSession} from "@features/process/process-virtual-node-session";
+import {ForceTerminateArgsSchema, InteractWithProcessArgsSchema, ReadProcessOutputArgsSchema, StartProcessArgsSchema} from "@schemas/schemas-process";
 
 type DiagnosticExitReason = TimingInfo["exitReason"] | "process_finished" | "no_wait";
 type DiagnosticTimingInfo = Omit<TimingInfo, "exitReason"> & {
@@ -29,7 +29,7 @@ export async function startProcess(args: unknown): Promise<ServerResult> {
   if (!parsed.success) {
     capture("server_start_process_failed");
     return {
-      content: [{ type: "text", text: `Error: Invalid arguments for start_process: ${parsed.error}` }],
+      content: [{text: `Error: Invalid arguments for start_process: ${parsed.error}`, type: "text" }],
       isError: true,
     };
   }
@@ -39,7 +39,8 @@ export async function startProcess(args: unknown): Promise<ServerResult> {
       command: commandManager.getBaseCommand(parsed.data.command),
       commands: commands,
     });
-  } catch (_error) {
+  }
+  catch (_error) {
     capture("server_start_process", {
       command: commandManager.getBaseCommand(parsed.data.command),
     });
@@ -47,7 +48,7 @@ export async function startProcess(args: unknown): Promise<ServerResult> {
   const isAllowed = await commandManager.validateCommand(parsed.data.command);
   if (!isAllowed) {
     return {
-      content: [{ type: "text", text: `Error: Command not allowed: ${parsed.data.command}` }],
+      content: [{text: `Error: Command not allowed: ${parsed.data.command}`, type: "text" }],
       isError: true,
     };
   }
@@ -55,22 +56,25 @@ export async function startProcess(args: unknown): Promise<ServerResult> {
 
   // Handle node:local - runs Node.js code directly on MCP server
   if (commandToRun.trim() === "node:local") {
-    return startVirtualNodeSession(parsed.data.timeout_ms || 30_000);
+  	return startVirtualNodeSession(parsed.data.timeout_ms || 30_000);
   }
   let shellUsed: string | undefined = parsed.data.shell;
 
   if (!shellUsed) {
     const config = await configManager.getConfig();
     if (config.defaultShell) {
-      shellUsed = config.defaultShell;
-    } else {
+    	shellUsed = config.defaultShell;
+    }
+    else {
       const isWindows = platform() === "win32";
       if (isWindows && process.env.COMSPEC) {
-        shellUsed = process.env.COMSPEC;
-      } else if (!isWindows && process.env.SHELL) {
-        shellUsed = process.env.SHELL;
-      } else {
-        shellUsed = isWindows ? "cmd.exe" : "/bin/sh";
+      	shellUsed = process.env.COMSPEC;
+      }
+      else if (!isWindows && process.env.SHELL) {
+      	shellUsed = process.env.SHELL;
+      }
+      else {
+      	shellUsed = isWindows ? "cmd.exe" : "/bin/sh";
       }
     }
   }
@@ -78,7 +82,7 @@ export async function startProcess(args: unknown): Promise<ServerResult> {
 
   if (result.pid === -1) {
     return {
-      content: [{ type: "text", text: result.output }],
+      content: [{text: result.output, type: "text" }],
       isError: true,
     };
   }
@@ -88,21 +92,23 @@ export async function startProcess(args: unknown): Promise<ServerResult> {
   let statusMessage = "";
   if (processState.isWaitingForInput) {
     statusMessage = `\n${formatProcessStateMessage(processState, result.pid)}`;
-  } else if (processState.isFinished) {
+  }
+  else if (processState.isFinished) {
     statusMessage = `\n${formatProcessStateMessage(processState, result.pid)}`;
-  } else if (result.isBlocked) {
-    statusMessage = "\nProcess is running. Use read_process_output to get more output.";
+  }
+  else if (result.isBlocked) {
+  	statusMessage = "\nProcess is running. Use read_process_output to get more output.";
   }
   // Add timing information if requested
   let timingMessage = "";
   if (result.timingInfo) {
-    timingMessage = formatTimingInfo(result.timingInfo);
+  	timingMessage = formatTimingInfo(result.timingInfo);
   }
   return {
     content: [
       {
-        type: "text",
         text: formatStartProcessMessage(result.pid, shellUsed, result.output, statusMessage, timingMessage),
+        type: "text",
       },
     ],
   };
@@ -119,10 +125,10 @@ function formatStartProcessMessage(pid: number, shell: string | undefined, outpu
   const messageParts = [`Process started with PID ${pid}`, `PID: ${pid}`, `Shell: ${shell ?? "(default)"}`, "", "Output:", formatInitialOutput(output)];
 
   if (statusMessage.trim()) {
-    messageParts.push("", statusMessage.trim());
+  	messageParts.push("", statusMessage.trim());
   }
   if (timingMessage.trim()) {
-    messageParts.push("", timingMessage.trim());
+  	messageParts.push("", timingMessage.trim());
   }
   return messageParts.join("\n");
 }
@@ -157,7 +163,7 @@ export async function readProcessOutput(args: unknown): Promise<ServerResult> {
   const parsed = ReadProcessOutputArgsSchema.safeParse(args);
   if (!parsed.success) {
     return {
-      content: [{ type: "text", text: `Error: Invalid arguments for read_process_output: ${parsed.error}` }],
+      content: [{text: `Error: Invalid arguments for read_process_output: ${parsed.error}`, type: "text" }],
       isError: true,
     };
   }
@@ -185,7 +191,7 @@ export async function readProcessOutput(args: unknown): Promise<ServerResult> {
         // Check if there's already new output
         const currentLines = terminalManager.getOutputLineCount(pid) || 0;
         if (currentLines > session.lastReadIndex) {
-          resolve();
+        	resolve();
           return;
         }
         let resolved = false;
@@ -194,16 +200,16 @@ export async function readProcessOutput(args: unknown): Promise<ServerResult> {
 
         const cleanup = () => {
           if (interval) {
-            clearInterval(interval);
+          	clearInterval(interval);
           }
           if (timeout) {
-            clearTimeout(timeout);
+          	clearTimeout(timeout);
           }
         };
 
         const resolveOnce = () => {
           if (resolved) {
-            return;
+          	return;
           }
           resolved = true;
           cleanup();
@@ -214,7 +220,7 @@ export async function readProcessOutput(args: unknown): Promise<ServerResult> {
         interval = setInterval(() => {
           const newLineCount = terminalManager.getOutputLineCount(pid) || 0;
           if (newLineCount > session.lastReadIndex) {
-            resolveOnce();
+          	resolveOnce();
           }
         }, 50);
 
@@ -232,7 +238,7 @@ export async function readProcessOutput(args: unknown): Promise<ServerResult> {
 
   if (!result) {
     return {
-      content: [{ type: "text", text: `No session found for PID ${pid}` }],
+      content: [{text: `No session found for PID ${pid}`, type: "text" }],
       isError: true,
     };
   }
@@ -244,14 +250,17 @@ export async function readProcessOutput(args: unknown): Promise<ServerResult> {
   if (offset < 0) {
     // Tail read - match file reading format for consistency
     statusMessage = `Reading last ${result.readCount} lines (total: ${result.totalLines} lines)`;
-  } else if (offset === 0) {
+  }
+  else if (offset === 0) {
     // "New output" read
     if (result.remaining > 0) {
       statusMessage = `Reading ${result.readCount} new lines from line ${result.readFrom} (total: ${result.totalLines} lines, ${result.remaining} remaining)`;
-    } else {
+    }
+    else {
       statusMessage = `Reading ${result.readCount} new lines (total: ${result.totalLines} lines)`;
     }
-  } else {
+  }
+  else {
     // Absolute position read
     statusMessage = `Reading ${result.readCount} lines from line ${result.readFrom} (total: ${result.totalLines} lines, ${result.remaining} remaining)`;
   }
@@ -260,7 +269,8 @@ export async function readProcessOutput(args: unknown): Promise<ServerResult> {
   if (result.isComplete) {
     const runtimeStr = result.runtimeMs !== undefined ? ` (runtime: ${(result.runtimeMs / 1000).toFixed(2)}s)` : "";
     processStateMessage = `\nProcess completed with exit code ${result.exitCode}${runtimeStr}`;
-  } else if (session) {
+  }
+  else if (session) {
     // Analyze state for running processes
     const fullOutput = session.outputLines.join("\n");
     const processState = analyzeProcessState(fullOutput, pid);
@@ -279,8 +289,8 @@ export async function readProcessOutput(args: unknown): Promise<ServerResult> {
   return {
     content: [
       {
-        type: "text",
         text: `${statusMessage}\n\n${responseText}${processStateMessage}${timingMessage}`,
+        type: "text",
       },
     ],
   };
@@ -296,11 +306,11 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
       error: "Invalid arguments",
     });
     return {
-      content: [{ type: "text", text: `Error: Invalid arguments for interact_with_process: ${parsed.error}` }],
+      content: [{text: `Error: Invalid arguments for interact_with_process: ${parsed.error}`, type: "text" }],
       isError: true,
     };
   }
-  const { pid, input, timeout_ms = 8000, wait_for_prompt = true, verbose_timing = false } = parsed.data;
+  const {pid, input, timeout_ms = 8000, wait_for_prompt = true, verbose_timing = false} = parsed.data;
 
   // Get config for output line limit
   const config = await configManager.getConfig();
@@ -310,8 +320,8 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
   const virtualNodeSession = getVirtualNodeSession(pid);
   if (virtualNodeSession) {
     capture("server_interact_with_process_node_fallback", {
-      pid: pid,
       inputLength: input.length,
+      pid: pid,
     });
 
     // Execute code via temp file approach
@@ -328,8 +338,8 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
 
   try {
     capture("server_interact_with_process", {
-      pid: pid,
       inputLength: input.length,
+      pid: pid,
     });
 
     // Capture output snapshot BEFORE sending input
@@ -340,7 +350,7 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
 
     if (!success) {
       return {
-        content: [{ type: "text", text: `Error: Failed to send input to process ${pid}. The process may have exited or doesn't accept input.` }],
+        content: [{text: `Error: Failed to send input to process ${pid}. The process may have exited or doesn't accept input.`, type: "text" }],
         isError: true,
       };
     }
@@ -351,22 +361,22 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
       if (verbose_timing) {
         const endTime = Date.now();
         const timingInfo = {
-          startTime,
           endTime,
-          totalDurationMs: endTime - startTime,
           exitReason,
           firstOutputTime,
           lastOutputTime,
-          timeToFirstOutputMs: undefined,
           outputEvents: undefined,
+          startTime,
+          timeToFirstOutputMs: undefined,
+          totalDurationMs: endTime - startTime,
         };
         timingMessage = formatTimingInfo(timingInfo);
       }
       return {
         content: [
           {
-            type: "text",
             text: `Input sent to process ${pid}. Use read_process_output to get the response.${timingMessage}`,
+            type: "text",
           },
         ],
       };
@@ -387,11 +397,11 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
 
         const resolveOnce = () => {
           if (resolved) {
-            return;
+          	return;
           }
           resolved = true;
           if (interval) {
-            clearInterval(interval);
+          	clearInterval(interval);
           }
           resolve();
         };
@@ -399,7 +409,7 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
         // Fast-polling check - check every 50ms for quick responses
         interval = setInterval(() => {
           if (resolved) {
-            return;
+          	return;
           }
           // Use snapshot-based reading to handle REPL prompt line appending
           const newOutput = outputSnapshot ? terminalManager.getOutputSinceSnapshot(pid, outputSnapshot) : terminalManager.getNewOutput(pid);
@@ -407,17 +417,17 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
           if (newOutput && newOutput.length > lastOutputLength) {
             const now = Date.now();
             if (!firstOutputTime) {
-              firstOutputTime = now;
+            	firstOutputTime = now;
             }
             lastOutputTime = now;
 
             if (verbose_timing) {
               outputEvents.push({
-                timestamp: now,
                 deltaMs: now - startTime,
-                source: "periodic_poll",
                 length: newOutput.length - lastOutputLength,
                 snippet: newOutput.slice(lastOutputLength, lastOutputLength + 50).replace(/\n/g, "\\n"),
+                source: "periodic_poll",
+                timestamp: now,
               });
             }
             output = newOutput; // Replace with full output since snapshot
@@ -434,7 +444,7 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
               if (verbose_timing && outputEvents.length > 0) {
                 const lastOutputEvent = outputEvents.at(-1);
                 if (lastOutputEvent) {
-                  lastOutputEvent.matchedPattern = "periodic_check";
+                	lastOutputEvent.matchedPattern = "periodic_check";
                 }
               }
               resolveOnce();
@@ -442,14 +452,14 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
             }
             // Also exit if process finished
             if (processState.isFinished) {
-              exitReason = "process_finished";
+            	exitReason = "process_finished";
               resolveOnce();
               return;
             }
           }
           attempts++;
           if (attempts >= maxAttempts) {
-            exitReason = "timeout";
+          	exitReason = "timeout";
             resolveOnce();
           }
         }, pollIntervalMs);
@@ -473,29 +483,31 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
     }
     // Determine final state
     if (!processState) {
-      processState = analyzeProcessState(output, pid);
+    	processState = analyzeProcessState(output, pid);
     }
     let statusMessage = "";
     if (processState.isWaitingForInput) {
       statusMessage = `\n${formatProcessStateMessage(processState, pid)}`;
-    } else if (processState.isFinished) {
+    }
+    else if (processState.isFinished) {
       statusMessage = `\n${formatProcessStateMessage(processState, pid)}`;
-    } else if (timeoutReached) {
-      statusMessage = "\nResponse may be incomplete (timeout reached)";
+    }
+    else if (timeoutReached) {
+    	statusMessage = "\nResponse may be incomplete (timeout reached)";
     }
     // Add timing information if requested
     let timingMessage = "";
     if (verbose_timing) {
       const endTime = Date.now();
       const timingInfo = {
-        startTime,
         endTime,
-        totalDurationMs: endTime - startTime,
         exitReason,
         firstOutputTime,
         lastOutputTime,
-        timeToFirstOutputMs: firstOutputTime ? firstOutputTime - startTime : undefined,
         outputEvents: outputEvents.length > 0 ? outputEvents : undefined,
+        startTime,
+        timeToFirstOutputMs: firstOutputTime ? firstOutputTime - startTime : undefined,
+        totalDurationMs: endTime - startTime,
       };
       timingMessage = formatTimingInfo(timingInfo);
     }
@@ -503,8 +515,8 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
       return {
         content: [
           {
-            type: "text",
             text: `Input executed in process ${pid}.\n(No output produced)${statusMessage}${timingMessage}`,
+            type: "text",
           },
         ],
       };
@@ -514,33 +526,35 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
 
     if (cleanOutput && cleanOutput.trim().length > 0) {
       responseText += `:\n\nOutput:\n${cleanOutput}`;
-    } else {
-      responseText += `.\n(No output produced)`;
+    }
+    else {
+    	responseText += `.\n(No output produced)`;
     }
     if (statusMessage) {
       responseText += `\n\n${statusMessage}`;
     }
     if (truncationMessage) {
-      responseText += truncationMessage;
+    	responseText += truncationMessage;
     }
     if (timingMessage) {
-      responseText += timingMessage;
+    	responseText += timingMessage;
     }
     return {
       content: [
         {
-          type: "text",
           text: responseText,
+          type: "text",
         },
       ],
     };
-  } catch (error) {
+  }
+  catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     capture("server_interact_with_process_error", {
       error: errorMessage,
     });
     return {
-      content: [{ type: "text", text: `Error interacting with process: ${errorMessage}` }],
+      content: [{text: `Error interacting with process: ${errorMessage}`, type: "text" }],
       isError: true,
     };
   }
@@ -552,7 +566,7 @@ export async function forceTerminate(args: unknown): Promise<ServerResult> {
   const parsed = ForceTerminateArgsSchema.safeParse(args);
   if (!parsed.success) {
     return {
-      content: [{ type: "text", text: `Error: Invalid arguments for force_terminate: ${parsed.error}` }],
+      content: [{text: `Error: Invalid arguments for force_terminate: ${parsed.error}`, type: "text" }],
       isError: true,
     };
   }
@@ -563,8 +577,8 @@ export async function forceTerminate(args: unknown): Promise<ServerResult> {
     return {
       content: [
         {
-          type: "text",
           text: `Cleared virtual Node.js session ${pid}`,
+          type: "text",
         },
       ],
     };
@@ -573,8 +587,8 @@ export async function forceTerminate(args: unknown): Promise<ServerResult> {
   return {
     content: [
       {
-        type: "text",
         text: success ? `Successfully initiated termination of session ${pid}` : `No active session found for PID ${pid}`,
+        type: "text",
       },
     ],
   };
@@ -597,8 +611,8 @@ export async function listSessions(): Promise<ServerResult> {
   return {
     content: [
       {
-        type: "text",
         text: allSessions.length === 0 ? "No active sessions" : allSessions.join("\n"),
+        type: "text",
       },
     ],
   };

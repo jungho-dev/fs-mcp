@@ -31,7 +31,7 @@ function createLogPayload(message: string, data?: unknown): string | Record<stri
   if (isStructuredLogData(data)) {
     return {message, ...data};
   }
-  return {message, data};
+  return {data, message};
 }
 function formatLogArgument(value: unknown): string {
   if (typeof value === "object" && value !== null) {
@@ -75,11 +75,11 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
 
     // Store original methods
     this.originalConsole = {
+      debug: console.debug,
+      error: console.error,
+      info: console.info,
       log: console.log,
       warn: console.warn,
-      error: console.error,
-      debug: console.debug,
-      info: console.info,
     };
 
     this.originalStdoutWrite = process.stdout.write;
@@ -159,8 +159,8 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
       else {
         // Buffer for later replay to client
         this.messageBuffer.push({
-          level: "info",
           args,
+          level: "info",
           timestamp: Date.now(),
         });
       }
@@ -172,8 +172,8 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
       }
       else {
         this.messageBuffer.push({
-          level: "info",
           args,
+          level: "info",
           timestamp: Date.now(),
         });
       }
@@ -185,8 +185,8 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
       }
       else {
         this.messageBuffer.push({
-          level: "warning",
           args,
+          level: "warning",
           timestamp: Date.now(),
         });
       }
@@ -198,8 +198,8 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
       }
       else {
         this.messageBuffer.push({
-          level: "error",
           args,
+          level: "error",
           timestamp: Date.now(),
         });
       }
@@ -211,8 +211,8 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
       }
       else {
         this.messageBuffer.push({
-          level: "debug",
           args,
+          level: "debug",
           timestamp: Date.now(),
         });
       }
@@ -240,8 +240,8 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
           else {
             // Buffer for later replay to client
             this.messageBuffer.push({
-              level: "info",
               args: [buffer.replace(TRAILING_NEWLINE_REGEX, "")],
+              level: "info",
               timestamp: Date.now(),
             });
           }
@@ -275,9 +275,9 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
         jsonrpc: "2.0",
         method: "notifications/message",
         params: {
+          data,
           level,
           logger: "fs-mcp",
-          data,
         },
       };
 
@@ -290,9 +290,9 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
         jsonrpc: "2.0" as const,
         method: "notifications/message",
         params: {
+          data: `Log serialization failed: ${args.join(" ")}`,
           level: "error",
           logger: "fs-mcp",
-          data: `Log serialization failed: ${args.join(" ")}`,
         },
       };
       writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fallbackNotification)}\n`);
@@ -311,8 +311,8 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
     // MCP requires client to send first message - server cannot write to stdout before that
     if (!this.isInitialized) {
       this.messageBuffer.push({
-        level,
         args: [createLogPayload(message, data)],
+        level,
         timestamp: Date.now(),
       });
       return;
@@ -322,9 +322,9 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
         jsonrpc: "2.0",
         method: "notifications/message",
         params: {
+          data: createLogPayload(message, data),
           level,
           logger: "fs-mcp",
-          data: createLogPayload(message, data),
         },
       };
 
@@ -336,9 +336,9 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
         jsonrpc: "2.0" as const,
         method: "notifications/message",
         params: {
+          data: `sendLog failed: ${message}`,
           level: "error",
           logger: "fs-mcp",
-          data: `sendLog failed: ${message}`,
         },
       };
       writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fallbackNotification)}\n`);
@@ -371,9 +371,9 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
         jsonrpc: "2.0" as const,
         method: "notifications/message",
         params: {
+          data: `Progress ${token}: ${value}${total ? `/${total}` : ""}`,
           level: "info",
           logger: "fs-mcp",
-          data: `Progress ${token}: ${value}${total ? `/${total}` : ""}`,
         },
       };
       writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fallbackNotification)}\n`);
@@ -402,9 +402,9 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
         jsonrpc: "2.0" as const,
         method: "notifications/message",
         params: {
+          data: `Custom notification failed: ${method}: ${JSON.stringify(params)}`,
           level: "error",
           logger: "fs-mcp",
-          data: `Custom notification failed: ${method}: ${JSON.stringify(params)}`,
         },
       };
       writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fallbackNotification)}\n`);

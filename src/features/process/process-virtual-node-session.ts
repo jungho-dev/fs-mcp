@@ -36,8 +36,7 @@ export function startVirtualNodeSession(timeoutMs: number): ServerResult {
   return {
     content: [
       {
-        type: "text",
-        text: (`
+        text: `
           Node.js session started with PID ${session.pid} (MCP server execution)
           IMPORTANT: Each interact_with_process call runs as a FRESH script.
           State is NOT preserved between calls. Include ALL code in ONE call:
@@ -45,7 +44,8 @@ export function startVirtualNodeSession(timeoutMs: number): ServerResult {
           Available libraries:
           - All Node.js built-ins: fs, path, http, crypto, etc.
           Ready for code - send complete self-contained script via interact_with_process.
-        `).trim(),
+        `.trim(),
+        type: "text",
       },
     ],
   };
@@ -84,11 +84,11 @@ export async function executeVirtualNodeCode(code: string, timeoutMs: number=30_
       });
 
       proc.on("close", (exitCode) => {
-        resolve({stdout, stderr, exitCode: exitCode ?? 1});
+        resolve({exitCode: exitCode ?? 1, stderr, stdout });
       });
 
       proc.on("error", (err) => {
-        resolve({stdout, stderr: `${stderr}\n${err.message}`, exitCode: 1});
+        resolve({exitCode: 1, stderr: `${stderr}\n${err.message}`, stdout });
       });
     });
 
@@ -98,8 +98,8 @@ export async function executeVirtualNodeCode(code: string, timeoutMs: number=30_
       return {
         content: [
           {
-            type: "text",
             text: `Execution failed (exit code ${result.exitCode}):\n${result.stderr}\n${result.stdout}`,
+            type: "text",
           },
         ],
         isError: true,
@@ -108,8 +108,8 @@ export async function executeVirtualNodeCode(code: string, timeoutMs: number=30_
     return {
       content: [
         {
-          type: "text",
           text: result.stdout || "(no output)",
+          type: "text",
         },
       ],
     };
@@ -120,8 +120,8 @@ export async function executeVirtualNodeCode(code: string, timeoutMs: number=30_
     return {
       content: [
         {
-          type: "text",
           text: `Failed to execute Node.js code: ${error instanceof Error ? error.message : String(error)}`,
+          type: "text",
         },
       ],
       isError: true,

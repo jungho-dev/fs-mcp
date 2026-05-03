@@ -33,14 +33,14 @@
     "preserveAllComments": false,
     "baseUrl": ".",
     "paths": {
-      "@platform/*": ["./src/platform/*.ts"],
-      "@assets/*": ["./src/assets/*.ts"],
+      "@cores/*": ["./src/cores/*.ts", "./src/cores/*"],
+      "@assets/*": ["./src/assets/*.ts", "./src/assets/*"],
       "@controllers/*": ["./src/controllers/*.ts", "./src/controllers/*"],
       "@features/*": ["./src/features/*.ts", "./src/features/*"],
-      "@platform/responses/*": ["./src/platform/responses/*.ts", "./src/platform/responses/*"],
+      "@cores/responses/*": ["./src/cores/responses/*.ts", "./src/cores/responses/*"],
       "@schemas/*": ["./src/schemas/*.ts", "./src/schemas/*"],
       "@tools/*": ["./src/tools/*.ts", "./src/tools/*"],
-      "@type/*": ["./src/assets/type/*.ts"]
+      "@type/*": ["./src/assets/type/*.ts", "./src/assets/type/*"]
     },
     "parser": {
       "syntax": "typescript",

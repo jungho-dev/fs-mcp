@@ -90,8 +90,8 @@ export function analyzeLineEndings(content: string): {
   const hasMixed = usedStyles > 1;
 
   return {
-    style,
     count: total,
     hasMixed,
+    style,
   };
 }

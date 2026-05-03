@@ -6,8 +6,8 @@
  */
 
 import path from "node:path";
-import { configManager } from "@features/config/config-store";
-import { capture } from "@cores/runtime/runtime-output-capture";
+import {capture} from "@cores/runtime/runtime-output-capture";
+import {configManager} from "@features/config/config-store";
 
 class CommandManager {
   getBaseCommand(command: string) {
@@ -35,24 +35,25 @@ class CommandManager {
 
         // Handle escape characters
         if (char === "\\" && !escaped) {
-          escaped = true;
+        	escaped = true;
           currentCmd += char;
           continue;
         }
         // If this character is escaped, just add it
         if (escaped) {
-          escaped = false;
+        	escaped = false;
           currentCmd += char;
           continue;
         }
         // Handle quotes (both single and double)
         if ((char === '"' || char === "'") && !inQuote) {
-          inQuote = true;
+        	inQuote = true;
           quoteChar = char;
           currentCmd += char;
           continue;
-        } else if (char === quoteChar && inQuote) {
-          inQuote = false;
+        }
+        else if (char === quoteChar && inQuote) {
+        	inQuote = false;
           quoteChar = "";
           currentCmd += char;
           continue;
@@ -64,10 +65,10 @@ class CommandManager {
           let j = i + 2; // skip past $(
           while (j < commandString.length && openParens > 0) {
             if (commandString[j] === "(") {
-              openParens++;
+            	openParens++;
             }
             if (commandString[j] === ")") {
-              openParens--;
+            	openParens--;
             }
             j++;
           }
@@ -77,9 +78,10 @@ class CommandManager {
             commands.push(...subCommands);
             i = j - 1;
             if (!inQuote) {
-              continue;
-            } else {
-              currentCmd += commandString.slice(startIndex, j);
+            	continue;
+            }
+            else {
+            	currentCmd += commandString.slice(startIndex, j);
               continue;
             }
           }
@@ -97,16 +99,17 @@ class CommandManager {
             commands.push(...subCommands);
             i = j;
             if (!inQuote) {
-              continue;
-            } else {
-              currentCmd += commandString.slice(startIndex, j + 1);
+            	continue;
+            }
+            else {
+            	currentCmd += commandString.slice(startIndex, j + 1);
               continue;
             }
           }
         }
         // If we're inside quotes, just add the character
         if (inQuote) {
-          currentCmd += char;
+        	currentCmd += char;
           continue;
         }
         // Handle subshells - if we see an opening parenthesis, we need to find its matching closing parenthesis
@@ -116,16 +119,16 @@ class CommandManager {
           let j = i + 1;
           while (j < commandString.length && openParens > 0) {
             if (commandString[j] === "(") {
-              openParens++;
+            	openParens++;
             }
             if (commandString[j] === ")") {
-              openParens--;
+            	openParens--;
             }
             j++;
           }
           // Skip to after the closing parenthesis only if properly balanced
           if (j <= commandString.length && openParens === 0) {
-            const subshellContent = commandString.slice(i + 1, j - 1);
+          	const subshellContent = commandString.slice(i + 1, j - 1);
             // Recursively extract commands from the subshell
             const subCommands = this.extractCommands(subshellContent);
             commands.push(...subCommands);
@@ -143,7 +146,7 @@ class CommandManager {
             if (currentCmd.trim()) {
               const baseCommand = this.extractBaseCommand(currentCmd.trim());
               if (baseCommand) {
-                commands.push(baseCommand);
+              	commands.push(baseCommand);
               }
             }
             // Move past the separator
@@ -154,19 +157,20 @@ class CommandManager {
           }
         }
         if (!isSeparator) {
-          currentCmd += char;
+        	currentCmd += char;
         }
       }
       // Don't forget to add the last command
       if (currentCmd.trim()) {
         const baseCommand = this.extractBaseCommand(currentCmd.trim());
         if (baseCommand) {
-          commands.push(baseCommand);
+        	commands.push(baseCommand);
         }
       }
       // Remove duplicates and return
       return [...new Set(commands)];
-    } catch (_error) {
+    }
+    catch (_error) {
       // If anything goes wrong, log the error but return the basic command to not break execution
       capture("server_request_error", {
         error: "Error extracting commands",
@@ -183,7 +187,7 @@ class CommandManager {
 
       // If nothing remains after removing env vars, return null
       if (!withoutEnvVars) {
-        return null;
+      	return null;
       }
       // Get the first token (the command)
       const tokens = withoutEnvVars.split(/\s+/);
@@ -193,24 +197,24 @@ class CommandManager {
       for (const token of tokens) {
         // Skip dollar-prefixed tokens (variables) but not $() command substitutions
         if (token.startsWith("$") && !token.startsWith("$(")) {
-          continue;
+        	continue;
         }
         // Check if it starts with special characters like ( that might indicate it's not a regular command
         if (token[0] === "(") {
-          continue;
+        	continue;
         }
         firstToken = token;
         break;
       }
       // No valid command token found
       if (!firstToken) {
-        return null;
+      	return null;
       }
       // handle $() command substitution - extract the inner command
       if (firstToken.startsWith("$(") && firstToken.endsWith(")")) {
         const inner = firstToken.slice(2, -1).trim();
         if (inner) {
-          const innerTokens = inner.split(/\s+/);
+        	const innerTokens = inner.split(/\s+/);
           return path.basename(innerTokens[0]).toLowerCase();
         }
         return null;
@@ -218,7 +222,8 @@ class CommandManager {
       // strip path prefix so /usr/bin/sudo gets caught as "sudo"
       const baseName = path.basename(firstToken);
       return baseName.toLowerCase();
-    } catch (_error) {
+    }
+    catch (_error) {
       capture("Error extracting base command");
       return null;
     }
@@ -234,18 +239,19 @@ class CommandManager {
 
       // If there are no commands extracted, fall back to base command
       if (allCommands.length === 0) {
-        const baseCommand = this.getBaseCommand(command);
+      	const baseCommand = this.getBaseCommand(command);
         return !blockedCommands.includes(baseCommand);
       }
       // Check if any of the extracted commands are in the blocked list
       for (const cmd of allCommands) {
         if (blockedCommands.includes(cmd)) {
-          return false; // Command is blocked
+        	return false; // Command is blocked
         }
       }
       // No commands were blocked
       return true;
-    } catch (error) {
+    }
+    catch (error) {
       console.error("Error validating command:", error);
       capture("server_validate_command_error", {
         error: error instanceof Error ? error.message : String(error),

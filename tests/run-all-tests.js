@@ -1,108 +1,114 @@
 /**
- * Main test runner script
- * Runs all test modules and provides comprehensive summary
+ * Curated runnable test runner.
+ * Keeps the release-critical suite explicit without scanning the entire tests tree.
  */
 
 import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-// Get directory name
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
-const testConfigRoot = path.join(projectRoot, ".tmp", "test-config");
+const shouldSkipBuild = process.env.FS_MCP_SKIP_BUILD === "1";
 
-// Colors for console output
 const colors = {
   reset: "\x1b[0m",
   green: "\x1b[32m",
   red: "\x1b[31m",
   yellow: "\x1b[33m",
-  blue: "\x1b[34m",
   cyan: "\x1b[36m",
-  magenta: "\x1b[35m",
   bold: "\x1b[1m",
 };
 
-/**
- * Run a command and return its output
- */
-function _runCommand(command, args, cwd = __dirname) {
-  return new Promise((resolve, reject) => {
-    const proc = spawn(command, args, {
-      cwd,
-      stdio: "inherit",
-      shell: true,
-    });
-
-    proc.on("close", (code) => {
-      if (code === 0) {
-        resolve();
-      } else {
-        reject(new Error(`Command failed with exit code ${code}`));
-      }
-    });
-
-    proc.on("error", (err) => {
-      reject(err);
-    });
-  });
-}
+const TEST_GROUPS = {
+  contracts: [
+    "./contracts/batch-tool.contract.test.js",
+    "./contracts/tool-catalog.contract.test.js",
+    "./contracts/tool-result-response.contract.test.js",
+    "./contracts/tool-routing.contract.test.js",
+    "./contracts/tool-surface.contract.test.js",
+  ],
+  smoke: [
+    "./smoke/config/allowed-directories.test.js",
+    "./smoke/config/config-toml-migration.test.js",
+    "./smoke/config/config-toml-preferred.test.js",
+    "./smoke/edit/edit-block-basic.test.js",
+    "./smoke/filesystem/file-handlers.test.js",
+    "./smoke/process/virtual-node-session.test.js",
+    "./smoke/search/search-code.test.js",
+    "./smoke/search/search-truncation.test.js",
+    "./smoke/security/blocked-commands.test.js",
+    "./smoke/security/blocklist-bypass.test.js",
+    "./smoke/security/symlink-security.test.js",
+  ],
+};
+const RUNNABLE_TESTS = Object.values(TEST_GROUPS).flat();
 
 function sanitizeTestFileName(testFile) {
   return testFile.replace(/[^a-z0-9_-]+/gi, "-");
 }
 
-async function prepareTestConfigDir(testFile) {
-  const configDir = path.join(testConfigRoot, sanitizeTestFileName(testFile));
+function writeStdout(message) {
+  process.stdout.write(`${message}\n`);
+}
 
+function writeStderr(message) {
+  process.stderr.write(`${message}\n`);
+}
+
+async function createTestConfigDir(testFile) {
+  const prefix = path.join(os.tmpdir(), `fs-mcp-${sanitizeTestFileName(testFile)}-`);
+  return await fs.mkdtemp(prefix);
+}
+
+async function cleanupTestConfigDir(configDir) {
   await fs.rm(configDir, { recursive: true, force: true });
-  await fs.mkdir(configDir, { recursive: true });
-
-  return configDir;
 }
 
-/**
- * Run a single Node.js test file as a subprocess
- */
 async function runTestFile(testFile) {
-  const configDir = await prepareTestConfigDir(testFile);
+  const configDir = await createTestConfigDir(testFile);
 
-  return new Promise((resolve) => {
-    const startTime = Date.now();
-    const proc = spawn("node", [testFile], {
-      cwd: __dirname,
-      env: {
-        ...process.env,
-        FS_MCP_CONFIG_DIR: configDir,
-      },
-      stdio: "inherit",
-      shell: false,
-    });
+  try {
+    writeStdout(`\n${colors.cyan}Running ${testFile}${colors.reset}`);
 
-    proc.on("close", (code) => {
-      const duration = Date.now() - startTime;
-      if (code === 0) {
-        resolve({ success: true, file: testFile, duration, exitCode: code });
-      } else {
-        console.error(`${colors.red}Test failed: ${testFile} (${duration}ms) - Exit code: ${code}${colors.reset}`);
-        resolve({ success: false, file: testFile, duration, exitCode: code });
-      }
-    });
+    return await new Promise((resolve) => {
+      const startTime = Date.now();
+      const proc = spawn("bun", [testFile], {
+        cwd: __dirname,
+        env: {
+          ...process.env,
+          FS_MCP_CONFIG_DIR: configDir,
+        },
+        stdio: "inherit",
+        shell: false,
+      });
 
-    proc.on("error", (err) => {
-      const duration = Date.now() - startTime;
-      console.error(`${colors.red}Error running ${testFile}: ${err.message}${colors.reset}`);
-      resolve({ success: false, file: testFile, duration, error: err.message });
+      proc.on("close", (code) => {
+        const duration = Date.now() - startTime;
+
+        if (code === 0) {
+          resolve({ success: true, file: testFile, duration, exitCode: code });
+        }
+        else {
+          writeStderr(`${colors.red}Test failed: ${testFile} (${duration}ms) - Exit code: ${code}${colors.reset}`);
+          resolve({ success: false, file: testFile, duration, exitCode: code });
+        }
+      });
+
+      proc.on("error", (error) => {
+        const duration = Date.now() - startTime;
+        writeStderr(`${colors.red}Error running ${testFile}: ${error.message}${colors.reset}`);
+        resolve({ success: false, file: testFile, duration, error: error.message });
+      });
     });
-  });
+  } finally {
+    await cleanupTestConfigDir(configDir);
+  }
 }
 
-/**
- * Build the project
- */
 async function buildProject() {
   await new Promise((resolve, reject) => {
     const proc = spawn("bun", ["run", "build"], {
@@ -114,7 +120,8 @@ async function buildProject() {
     proc.on("close", (code) => {
       if (code === 0) {
         resolve();
-      } else {
+      }
+      else {
         reject(new Error(`Command failed with exit code ${code}`));
       }
     });
@@ -125,163 +132,92 @@ async function buildProject() {
   });
 }
 
-const testDiscoveryIgnoredDirectories = new Set(["fixtures", "scripts"]);
-
-function toTestModulePath(filePath) {
-  return `./${path.relative(__dirname, filePath).split(path.sep).join("/")}`;
-}
-
-async function collectTestFiles(directoryPath, results = []) {
-  const entries = await fs.readdir(directoryPath, { withFileTypes: true });
-
-  for (const entry of entries) {
-    const entryPath = path.join(directoryPath, entry.name);
-    if (entry.isDirectory()) {
-      if (!testDiscoveryIgnoredDirectories.has(entry.name)) {
-        await collectTestFiles(entryPath, results);
-      }
-      continue;
-    }
-
-    const isJavaScriptTest = entry.name.endsWith(".js") || entry.name.endsWith(".mjs");
-    const isRunnableTest = isJavaScriptTest && (entry.name.startsWith("test") || entry.name.includes("-test-")) && entry.name !== "run-all-tests.js";
-
-    if (isRunnableTest) {
-      results.push(toTestModulePath(entryPath));
-    }
+async function runSmokeTests() {
+  if (RUNNABLE_TESTS.length === 0) {
+    writeStderr(`${colors.yellow}Warning: No runnable tests configured${colors.reset}`);
+    return { success: true, results: [], summary: { total: 0, passed: 0, failed: 0, duration: 0 } };
   }
 
-  return results;
-}
-
-/**
- * Discover and run all test modules
- */
-async function runTestModules() {
-  // Discover all test files
-  const testFiles = [];
-  try {
-    const discoveredTests = (await collectTestFiles(__dirname)).sort();
-    const prioritizedMainTest = "./edit/edit-test-edit-block-basic.js";
-
-    if (discoveredTests.includes(prioritizedMainTest)) {
-      testFiles.push(prioritizedMainTest);
-      discoveredTests.splice(discoveredTests.indexOf(prioritizedMainTest), 1);
-    }
-
-    // Add remaining tests
-    testFiles.push(...discoveredTests);
-  } catch (error) {
-    console.error(`${colors.red}Error: Could not scan test directory: ${error.message}${colors.reset}`);
-    process.exit(1);
-  }
-
-  if (testFiles.length === 0) {
-    console.warn(`${colors.yellow}Warning: No test files found${colors.reset}`);
-    return { success: true, results: [] };
-  }
-  testFiles.forEach((_file) => {});
-
-  // Results tracking
   const results = [];
   let totalDuration = 0;
 
-  // Run each test file
-  for (const testFile of testFiles) {
+  for (const testFile of RUNNABLE_TESTS) {
+    // biome-ignore lint/performance/noAwaitInLoops: Smoke tests mutate config and process state, so they must run sequentially.
     const result = await runTestFile(testFile);
     results.push(result);
-    totalDuration += result.duration || 0;
+    totalDuration += result.duration ?? 0;
   }
 
-  // Calculate summary statistics
-  const passed = results.filter((r) => r.success).length;
-  const failed = results.filter((r) => !r.success).length;
-  const failedTests = results.filter((r) => !r.success);
+  const passed = results.filter((result) => result.success).length;
+  const failedTests = results.filter((result) => !result.success);
 
-  // Failed tests details
-  if (failed > 0) {
-    failedTests.forEach((test) => {
-      if (test.exitCode !== undefined) {
-      }
-      if (test.error) {
-      }
-    });
-  }
+  writeStdout(`\n${colors.bold}Runnable suite:${colors.reset} ${passed}/${results.length} passed in ${totalDuration}ms`);
 
-  // Test performance summary
-  if (results.length > 0) {
-    const _avgDuration = totalDuration / results.length;
-    const _slowestTest = results.reduce((prev, current) => ((current.duration || 0) > (prev.duration || 0) ? current : prev));
-    const _fastestTest = results.reduce((prev, current) => ((current.duration || 0) < (prev.duration || 0) ? current : prev));
-  }
-
-  // Final status
-  if (failed === 0) {
-  } else {
+  if (failedTests.length > 0) {
+    for (const failedTest of failedTests) {
+      writeStderr(`${colors.red}- ${failedTest.file}${colors.reset}`);
+    }
   }
 
   return {
-    success: failed === 0,
+    success: failedTests.length === 0,
     results,
     summary: {
-      total: passed + failed,
+      total: results.length,
       passed,
-      failed,
+      failed: failedTests.length,
       duration: totalDuration,
     },
   };
 }
 
-/**
- * Main function
- */
 async function main() {
-  const overallStartTime = Date.now();
-
   try {
-    // Build the project first
-    await buildProject();
+    if (shouldSkipBuild) {
+      writeStderr(`${colors.yellow}Skipping build because FS_MCP_SKIP_BUILD=1${colors.reset}`);
+    }
+    else {
+      await buildProject();
+    }
 
-    // Run all test modules
-    const testResult = await runTestModules();
-
-    // Final timing
-    const _overallDuration = Date.now() - overallStartTime;
-
-    // Exit with appropriate code
+    const testResult = await runSmokeTests();
     process.exit(testResult.success ? 0 : 1);
   } catch (error) {
-    console.error(`\n${colors.red}${colors.bold}FATAL ERROR:${colors.reset}`);
-    console.error(`${colors.red}${error.message}${colors.reset}`);
+    writeStderr(`\n${colors.red}${colors.bold}FATAL ERROR:${colors.reset}`);
+    writeStderr(`${colors.red}${error.message}${colors.reset}`);
+
     if (error.stack) {
-      console.error(`${colors.red}${error.stack}${colors.reset}`);
+      writeStderr(`${colors.red}${error.stack}${colors.reset}`);
     }
+
     process.exit(1);
   }
 }
 
-// Handle uncaught errors gracefully
 process.on("uncaughtException", (error) => {
-  console.error(`\n${colors.red}${colors.bold}UNCAUGHT EXCEPTION:${colors.reset}`);
-  console.error(`${colors.red}${error.message}${colors.reset}`);
+  writeStderr(`\n${colors.red}${colors.bold}UNCAUGHT EXCEPTION:${colors.reset}`);
+  writeStderr(`${colors.red}${error.message}${colors.reset}`);
+
   if (error.stack) {
-    console.error(`${colors.red}${error.stack}${colors.reset}`);
+    writeStderr(`${colors.red}${error.stack}${colors.reset}`);
   }
+
   process.exit(1);
 });
 
-process.on("unhandledRejection", (reason, _promise) => {
-  console.error(`\n${colors.red}${colors.bold}UNHANDLED REJECTION:${colors.reset}`);
-  console.error(`${colors.red}${reason}${colors.reset}`);
+process.on("unhandledRejection", (reason) => {
+  writeStderr(`\n${colors.red}${colors.bold}UNHANDLED REJECTION:${colors.reset}`);
+  writeStderr(`${colors.red}${String(reason)}${colors.reset}`);
   process.exit(1);
 });
 
-// Run the main function
 main().catch((error) => {
-  console.error(`\n${colors.red}${colors.bold}MAIN FUNCTION ERROR:${colors.reset}`);
-  console.error(`${colors.red}${error.message}${colors.reset}`);
+  writeStderr(`\n${colors.red}${colors.bold}MAIN FUNCTION ERROR:${colors.reset}`);
+  writeStderr(`${colors.red}${error.message}${colors.reset}`);
+
   if (error.stack) {
-    console.error(`${colors.red}${error.stack}${colors.reset}`);
+    writeStderr(`${colors.red}${error.stack}${colors.reset}`);
   }
+
   process.exit(1);
 });

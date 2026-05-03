@@ -5,8 +5,8 @@
  * @since 2026-05-02
  */
 
-import { capture } from "@cores/runtime/runtime-output-capture";
-import { distance } from "fastest-levenshtein";
+import {capture} from "@cores/runtime/runtime-output-capture";
+import {distance} from "fastest-levenshtein";
 
 /**
  * Recursively finds the closest match to a query string within text using fuzzy matching
@@ -20,10 +20,10 @@ import { distance } from "fastest-levenshtein";
 export function recursiveFuzzyIndexOf(
   text: string,
   query: string,
-  start: number = 0,
-  end: number | null = null,
-  parentDistance: number = Number.POSITIVE_INFINITY,
-  depth: number = 0,
+  start: number=0,
+  end: number | null=null,
+  parentDistance: number=Number.POSITIVE_INFINITY,
+  depth: number=0,
 ): {
   start: number;
   end: number;
@@ -39,19 +39,19 @@ export function recursiveFuzzyIndexOf(
     // Capture detailed metrics for the recursive search for in-depth analysis
     capture("fuzzy_search_recursive_metrics", {
       execution_time_ms: executionTime,
-      text_length: text.length,
       query_length: query.length,
       result_distance: result.distance,
+      text_length: text.length,
     });
 
     return result;
   }
   if (end === null) {
-    end = text.length;
+  	end = text.length;
   }
   // For small text segments, use iterative approach
   if (end - start <= 2 * query.length) {
-    return iterativeReduction(text, query, start, end, parentDistance);
+  	return iterativeReduction(text, query, start, end, parentDistance);
   }
   const midPoint = start + Math.floor((end - start) / 2);
   const leftEnd = Math.min(end, midPoint + query.length); // Include query length to cover overlaps
@@ -64,13 +64,14 @@ export function recursiveFuzzyIndexOf(
 
   // If parent distance is already the best, use iterative approach
   if (parentDistance === bestDistance) {
-    return iterativeReduction(text, query, start, end, parentDistance);
+  	return iterativeReduction(text, query, start, end, parentDistance);
   }
   // Recursively search the better half
   if (leftDistance < rightDistance) {
-    return recursiveFuzzyIndexOf(text, query, start, leftEnd, bestDistance, depth + 1);
-  } else {
-    return recursiveFuzzyIndexOf(text, query, rightStart, end, bestDistance, depth + 1);
+  	return recursiveFuzzyIndexOf(text, query, start, leftEnd, bestDistance, depth + 1);
+  }
+  else {
+  	return recursiveFuzzyIndexOf(text, query, rightStart, end, bestDistance, depth + 1);
   }
 }
 /**
@@ -126,17 +127,17 @@ function iterativeReduction(
   // Capture metrics for the iterative refinement phase
   capture("fuzzy_search_iterative_metrics", {
     execution_time_ms: executionTime,
-    iterations: iterations,
-    segment_length: end - start,
-    query_length: query.length,
     final_distance: bestDistance,
+    iterations: iterations,
+    query_length: query.length,
+    segment_length: end - start,
   });
 
   return {
-    start: bestStart,
-    end: bestEnd,
-    value: text.slice(bestStart, bestEnd),
     distance: bestDistance,
+    end: bestEnd,
+    start: bestStart,
+    value: text.slice(bestStart, bestEnd),
   };
 }
 /**
@@ -148,7 +149,7 @@ function iterativeReduction(
 export function getSimilarityRatio(a: string, b: string): number {
   const maxLength = Math.max(a.length, b.length);
   if (maxLength === 0) {
-    return 1; // Both strings are empty
+  	return 1; // Both strings are empty
   }
   const levenshteinDistance = distance(a, b);
   return 1 - levenshteinDistance / maxLength;

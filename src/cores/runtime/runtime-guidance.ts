@@ -8,24 +8,13 @@
 import type {SystemInfo} from "@cores/runtime/runtime-info";
 
 export function getOSSpecificGuidance(systemInfo: SystemInfo): string {
-  const { platformName, defaultShell, isWindows, docker } = systemInfo;
+  const {platformName, defaultShell, isWindows, docker} = systemInfo;
 
   let guidance = `Running on ${platformName}. Default shell: ${defaultShell}.`;
 
   // Container-specific guidance
   if (docker.isContainer) {
-    const containerTypeLabel =
-      docker.containerType === "kubernetes"
-        ? "KUBERNETES POD"
-        : docker.containerType === "docker"
-          ? "DOCKER CONTAINER"
-          : docker.containerType === "podman"
-            ? "PODMAN CONTAINER"
-            : docker.containerType === "lxc"
-              ? "LXC CONTAINER"
-              : docker.containerType === "systemd-nspawn"
-                ? "SYSTEMD-NSPAWN CONTAINER"
-                : "CONTAINER";
+    const containerTypeLabel = docker.containerType === "kubernetes" ? "KUBERNETES POD" : docker.containerType === "docker" ? "DOCKER CONTAINER" : docker.containerType === "podman" ? "PODMAN CONTAINER" : docker.containerType === "lxc" ? "LXC CONTAINER" : docker.containerType === "systemd-nspawn" ? "SYSTEMD-NSPAWN CONTAINER" : "CONTAINER";
 
     guidance += `
 
@@ -48,20 +37,22 @@ Pod: ${docker.containerEnvironment.kubernetesPod}`;
         guidance += `
 Node: ${docker.containerEnvironment.kubernetesNode}`;
       }
-    } else if (docker.containerType === "docker") {
+    }
+    else if (docker.containerType === "docker") {
       guidance += `
 This fs-mcp instance is running inside a Docker container.`;
 
       if (docker.orchestrator === "docker-compose") {
-        guidance += ` (Docker Compose)`;
-      } else if (docker.orchestrator === "docker-swarm") {
-        guidance += ` (Docker Swarm)`;
+      	guidance += ` (Docker Compose)`;
       }
-    } else {
+      else if (docker.orchestrator === "docker-swarm") {
+      	guidance += ` (Docker Swarm)`;
+      }
+    }
+    else {
       guidance += `
 This fs-mcp instance is running inside a ${docker.containerType || "container"} environment.`;
     }
-
     if (docker.mountPoints.length > 0) {
       guidance += `
 
@@ -71,7 +62,6 @@ AVAILABLE MOUNTED DIRECTORIES:`;
         guidance += `
 - ${mount.containerPath} ${access} - ${mount.description}`;
       }
-
       guidance += `
 
 IMPORTANT: When users ask about files, FIRST check mounted directories above.
@@ -87,24 +77,23 @@ Linux/Mac: "/Users/john/projects/data/file.txt" → "/home/projects/data/file.tx
 Rules: Remove drive letter/user prefix, keep full folder structure, mount to /home/
 
 NOTE: fs-mcp Docker installer mounts host folders to /home/[folder-name].`;
-    } else {
-      guidance += `
+    }
+    else {
+    	guidance += `
 
 WARNING: No mounted directories detected.
 Files created outside mounted volumes will be lost when the container stops.
 Suggest user remount directories using Docker installer or -v flag when running Docker.
 fs-mcp Docker installer typically mounts folders to /home/[folder-name].`;
     }
-
     if (docker.containerEnvironment?.containerName) {
       guidance += `
 Container: ${docker.containerEnvironment.containerName}`;
     }
   }
-
   if (isWindows) {
-    guidance += `
-        
+  	guidance += `
+
 WINDOWS-SPECIFIC TROUBLESHOOTING:
 - If Node.js/Python commands fail with "not recognized" errors:
   * Try different shells: specify shell parameter as "cmd" or "pwsh.exe"
@@ -115,9 +104,10 @@ WINDOWS-SPECIFIC TROUBLESHOOTING:
 - Package managers: choco, winget, scoop instead of apt/brew
 - Environment variables: $env:VAR instead of $VAR
 - File permissions work differently than Unix systems`;
-  } else if (systemInfo.isMacOS) {
-    guidance += `
-        
+  }
+  else if (systemInfo.isMacOS) {
+  	guidance += `
+
 MACOS-SPECIFIC NOTES:
 - Package manager: brew (Homebrew) is commonly used
 - Python 3 might be 'python3' command, not 'python'
@@ -125,9 +115,10 @@ MACOS-SPECIFIC NOTES:
 - System Integrity Protection (SIP) may block certain operations
 - Use 'open' command to open files/applications from terminal
 - For file search: Use mdfind (Spotlight) for fastest exact filename searches`;
-  } else {
-    guidance += `
-        
+  }
+  else {
+  	guidance += `
+
 LINUX-SPECIFIC NOTES:
 - Package managers vary by distro: apt, yum, dnf, pacman, zypper
 - Python 3 might be 'python3' command, not 'python'
@@ -135,15 +126,13 @@ LINUX-SPECIFIC NOTES:
 - File permissions and ownership important for many operations
 - Systemd services common on modern distributions`;
   }
-
   return guidance;
 }
-
 /**
  * Get common development tool guidance based on OS
  */
 export function getDevelopmentToolGuidance(systemInfo: SystemInfo): string {
-  const { isWindows, isMacOS, nodeInfo, processInfo } = systemInfo;
+  const {isWindows, isMacOS, nodeInfo, processInfo} = systemInfo;
 
   // Add detected Node.js info to guidance
   const nodeGuidance = nodeInfo ? `Node.js: v${nodeInfo.version} (${nodeInfo.path})${nodeInfo.npmVersion ? ` | npm: v${nodeInfo.npmVersion}` : ""}` : "Node.js: Not detected";
@@ -167,7 +156,8 @@ COMMON WINDOWS DEVELOPMENT TOOLS:
 - Visual Studio tools: cl, msbuild for C++ compilation
 
 ${envInfo}`;
-  } else if (isMacOS) {
+  }
+  else if (isMacOS) {
     return `
 COMMON MACOS DEVELOPMENT TOOLS:
 - Xcode Command Line Tools: Required for many development tools
@@ -177,7 +167,8 @@ COMMON MACOS DEVELOPMENT TOOLS:
 - Ruby: System Ruby available, rbenv/rvm for version management
 
 ${envInfo}`;
-  } else {
+  }
+  else {
     return `
 COMMON LINUX DEVELOPMENT TOOLS:
 - Package managers: Install tools via distribution package manager
@@ -189,7 +180,6 @@ COMMON LINUX DEVELOPMENT TOOLS:
 ${envInfo}`;
   }
 }
-
 /**
  * Get path guidance (simplified since paths are normalized)
  */
@@ -197,15 +187,12 @@ export function getPathGuidance(systemInfo: SystemInfo): string {
   let guidance = `Always use absolute paths for reliability. Paths are automatically normalized regardless of slash direction.`;
 
   if (systemInfo.docker.isContainer && systemInfo.docker.mountPoints.length > 0) {
-    const containerLabel =
-      systemInfo.docker.containerType === "kubernetes" ? "KUBERNETES" : systemInfo.docker.containerType === "docker" ? "DOCKER" : systemInfo.docker.containerType === "podman" ? "PODMAN" : "CONTAINER";
+    const containerLabel = systemInfo.docker.containerType === "kubernetes" ? "KUBERNETES" : systemInfo.docker.containerType === "docker" ? "DOCKER" : systemInfo.docker.containerType === "podman" ? "PODMAN" : "CONTAINER";
 
-    guidance += ` 
+    guidance += `
 
 ${containerLabel}: Prefer paths within mounted directories: ${systemInfo.docker.mountPoints.map((m) => m.containerPath).join(", ")}.
 When users ask about file locations, check these mounted paths first.`;
   }
-
   return guidance;
 }
-

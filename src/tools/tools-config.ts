@@ -5,16 +5,18 @@
  * @since 2026-05-03
  */
 
-import { GetConfigArgsSchema, SetConfigValuesArgsSchema } from "@schemas/schemas-config";
+import { GetConfigsArgsSchema, SetConfigValuesArgsSchema } from "@schemas/schemas-config";
 import { CMD_PREFIX_DESCRIPTION, type ToolCatalogEntry } from "@tools/tools-const";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export const CONFIG_TOOL_CATALOG: ToolCatalogEntry[] = [
   {
-    name: "get_config",
+    name: "get_configs",
     description: (`
-      Get the complete server configuration as JSON. Config includes fields for:
+      Get one or many configuration entries in parallel.
+      Use items: [{ key }].
+      Supported keys:
       - blockedCommands (array of blocked shell commands)
       - defaultShell (shell to use for commands)
       - allowedDirectories (paths the server can access)
@@ -22,12 +24,14 @@ export const CONFIG_TOOL_CATALOG: ToolCatalogEntry[] = [
       - fileWriteLineLimit (max lines per write_file call, default 50)
       - currentClient (information about the currently connected MCP client)
       - version (version of the fs-mcp)
-      - systemInfo (operating system and environment details)
+      - systemInfo (operating system and runtime details)
+      - availableShells (detected shells for new process sessions)
+      When items is omitted, all supported keys are returned.
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(GetConfigArgsSchema),
+    inputSchema: zodToJsonSchema(GetConfigsArgsSchema),
     annotations: {
-      title: "Get Configuration",
+      title: "Get Configurations",
       readOnlyHint: true,
     },
   },

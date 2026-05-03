@@ -1,14 +1,21 @@
 /**
  * @file src/controllers/controllers-terminal.ts
- * @description MCP terminal tool 
+ * @description MCP terminal tool
  * @author JUNGHO
  * @since 2026-05-02
  */
 
+import type { ServerResult } from "@assets/type/common";
 import { createBatchToolResponse, runParallelBatch } from "@controllers/controllers-batch";
 import { forceTerminate, interactWithProcess, listSessions, readProcessOutput, startProcess } from "@features/process/process-runner";
-import { ForceTerminateArgsSchema, InteractWithProcessesArgsSchema, ReadProcessOutputArgsSchema, ReadProcessOutputsArgsSchema, StartProcessArgsSchema, StartProcessesArgsSchema } from "@schemas/schemas-process";
-import type { ServerResult } from "@assets/type/common";
+import {
+  ForceTerminateArgsSchema,
+  InteractWithProcessesArgsSchema,
+  ReadProcessOutputArgsSchema,
+  ReadProcessOutputsArgsSchema,
+  StartProcessArgsSchema,
+  StartProcessesArgsSchema,
+} from "@schemas/schemas-process";
 
 /**
  * Handle start_process command (improved execute_command)

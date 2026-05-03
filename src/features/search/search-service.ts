@@ -5,12 +5,12 @@
  * @since 2026-05-02
  */
 
-import { type ChildProcess, spawn } from "node:child_process";
+import {type ChildProcess, spawn} from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { capture } from "@cores/runtime/runtime-output-capture";
-import { validatePath } from "@features/filesystem/filesystem-service";
-import { getRipgrepPath } from "@features/search/search-ripgrep-adapter";
+import {capture} from "@cores/runtime/runtime-output-capture";
+import {validatePath} from "@features/filesystem/filesystem-service";
+import {getRipgrepPath} from "@features/search/search-ripgrep-adapter";
 import PizZip from "pizzip";
 
 const FIRST_CHUNK_WAIT_MS = 40;
@@ -41,32 +41,32 @@ export interface SearchResult {
   type: "file" | "content";
 }
 export interface SearchSession {
+  buffer: string; // For processing incomplete JSON lines
+  error?: string;
   id: string;
-  process: ChildProcess;
-  results: SearchResult[];
   isComplete: boolean;
   isError: boolean;
-  error?: string;
-  startTime: number;
   lastReadTime: number;
   options: SearchSessionOptions;
-  buffer: string; // For processing incomplete JSON lines
-  totalMatches: number;
+  process: ChildProcess;
+  results: SearchResult[];
+  startTime: number;
   totalContextLines: number; // Track context lines separately
+  totalMatches: number;
   wasIncomplete?: boolean; // NEW: Track if search was incomplete due to permissions/access issues
 }
 export interface SearchSessionOptions {
-  rootPath: string;
-  pattern: string;
-  searchType: "files" | "content";
+  contextLines?: number;
+  earlyTermination?: boolean; // Stop search early when exact filename match is found
   filePattern?: string;
   ignoreCase?: boolean;
-  maxResults?: number;
   includeHidden?: boolean;
-  contextLines?: number;
-  timeout?: number;
-  earlyTermination?: boolean; // Stop search early when exact filename match is found
   literalSearch?: boolean; // Force literal string matching (-F flag) instead of regex
+  maxResults?: number;
+  pattern: string;
+  rootPath: string;
+  searchType: "files" | "content";
+  timeout?: number;
 }
 /**
  * Search Session Manager - handles ripgrep processes like terminal sessions
@@ -95,34 +95,35 @@ export class SearchManager {
     const validPath = await validatePath(options.rootPath);
 
     // Build ripgrep arguments
-    const args = this.buildRipgrepArgs({ ...options, rootPath: validPath });
+    const args = this.buildRipgrepArgs({...options, rootPath: validPath});
 
     // Get ripgrep path with fallback resolution
     let rgPath: string;
     try {
       rgPath = await getRipgrepPath();
-    } catch (err) {
+    }
+    catch (err) {
       throw new Error(`Failed to locate ripgrep binary: ${err instanceof Error ? err.message : String(err)}`);
     }
     // Start ripgrep process
-    const rgProcess = spawn(rgPath, args, { windowsHide: true }); // Prevent visible console windows on Windows
+    const rgProcess = spawn(rgPath, args, {windowsHide: true}); // Prevent visible console windows on Windows
 
     if (!rgProcess.pid) {
-      throw new Error("Failed to start ripgrep process");
+    	throw new Error("Failed to start ripgrep process");
     }
     // Create session
     const session: SearchSession = {
+      buffer: "",
       id: sessionId,
-      process: rgProcess,
-      results: [],
       isComplete: false,
       isError: false,
-      startTime: Date.now(),
       lastReadTime: Date.now(),
       options,
-      buffer: "",
-      totalMatches: 0,
+      process: rgProcess,
+      results: [],
+      startTime: Date.now(),
       totalContextLines: 0,
+      totalMatches: 0,
     };
 
     this.sessions.set(sessionId, session);
@@ -141,31 +142,31 @@ export class SearchManager {
     if (timeoutMs) {
       killTimer = setTimeout(() => {
         if (!session.isComplete && !session.process.killed) {
-          session.process.kill("SIGTERM");
+        	session.process.kill("SIGTERM");
         }
       }, timeoutMs);
     }
     // Clear timer on process completion
     session.process.once("close", () => {
       if (killTimer) {
-        clearTimeout(killTimer);
+      	clearTimeout(killTimer);
         killTimer = null;
       }
     });
 
     session.process.once("error", () => {
       if (killTimer) {
-        clearTimeout(killTimer);
+      	clearTimeout(killTimer);
         killTimer = null;
       }
     });
 
     capture("search_session_started", {
-      sessionId,
-      searchType: options.searchType,
       hasTimeout: !!timeoutMs,
-      timeoutMs,
       requestedPath: options.rootPath,
+      searchType: options.searchType,
+      sessionId,
+      timeoutMs,
       validatedPath: validPath,
     });
 
@@ -180,8 +181,8 @@ export class SearchManager {
             session.totalMatches++;
           }
         })
-        .catch((err) => {
-          capture("docx_search_error", { error: err instanceof Error ? err.message : String(err) });
+        .catch ((err) => {
+          capture("docx_search_error", {error: err instanceof Error ? err.message : String(err)});
         });
     }
     // Wait for first chunk of data or early completion instead of fixed delay
@@ -198,12 +199,12 @@ export class SearchManager {
     await firstChunk;
 
     return {
-      sessionId,
       isComplete: session.isComplete,
       isError: session.isError,
       results: [...session.results],
-      totalResults: session.totalMatches,
       runtime: Date.now() - session.startTime,
+      sessionId,
+      totalResults: session.totalMatches,
     };
   }
   /**
@@ -239,15 +240,15 @@ export class SearchManager {
       const tailCount = Math.abs(offset);
       const tailResults = allResults.slice(-tailCount);
       return {
-        results: tailResults,
-        returnedCount: tailResults.length,
-        totalResults: session.totalMatches + session.totalContextLines,
-        totalMatches: session.totalMatches, // Actual matches only
-        isComplete: session.isComplete,
-        isError: session.isError && !!session.error?.trim(), // Only error if we have actual errors
         error: session.error?.trim() || undefined,
         hasMoreResults: false, // Tail always returns what's available
+        isComplete: session.isComplete,
+        isError: session.isError && !!session.error?.trim(), // Only error if we have actual errors
+        results: tailResults,
+        returnedCount: tailResults.length,
         runtime: Date.now() - session.startTime,
+        totalMatches: session.totalMatches, // Actual matches only
+        totalResults: session.totalMatches + session.totalContextLines,
         wasIncomplete: session.wasIncomplete,
       };
     }
@@ -258,15 +259,15 @@ export class SearchManager {
     session.lastReadTime = Date.now();
 
     return {
-      results: slicedResults,
-      returnedCount: slicedResults.length,
-      totalResults: session.totalMatches + session.totalContextLines,
-      totalMatches: session.totalMatches, // Actual matches only
-      isComplete: session.isComplete,
-      isError: session.isError && !!session.error?.trim(), // Only error if we have actual errors
       error: session.error?.trim() || undefined,
       hasMoreResults,
+      isComplete: session.isComplete,
+      isError: session.isError && !!session.error?.trim(), // Only error if we have actual errors
+      results: slicedResults,
+      returnedCount: slicedResults.length,
       runtime: Date.now() - session.startTime,
+      totalMatches: session.totalMatches, // Actual matches only
+      totalResults: session.totalMatches + session.totalContextLines,
       wasIncomplete: session.wasIncomplete,
     };
   }
@@ -277,10 +278,10 @@ export class SearchManager {
     const session = this.sessions.get(sessionId);
 
     if (!session) {
-      return false;
+    	return false;
     }
     if (!session.process.killed) {
-      session.process.kill("SIGTERM");
+    	session.process.kill("SIGTERM");
     }
     // Don't delete session immediately - let user read final results
     // It will be cleaned up by cleanup process
@@ -301,11 +302,11 @@ export class SearchManager {
   }> {
     return Array.from(this.sessions.values()).map((session) => ({
       id: session.id,
-      searchType: session.options.searchType,
-      pattern: session.options.pattern,
       isComplete: session.isComplete,
       isError: session.isError,
+      pattern: session.options.pattern,
       runtime: Date.now() - session.startTime,
+      searchType: session.options.searchType,
       totalResults: session.totalMatches + session.totalContextLines,
     }));
   }
@@ -316,13 +317,13 @@ export class SearchManager {
     if (rootPath) {
       const lowerPath = rootPath.toLowerCase();
       if (DOCX_EXTENSIONS.some((ext) => lowerPath.endsWith(ext))) {
-        return true;
+      	return true;
       }
     }
     if (filePattern) {
       const lowerPattern = filePattern.toLowerCase();
       if (DOCX_EXTENSIONS.some((ext) => lowerPattern.includes(`*${ext}`) || lowerPattern.endsWith(ext))) {
-        return true;
+      	return true;
       }
     }
     return false;
@@ -349,7 +350,7 @@ export class SearchManager {
         const fileName = path.basename(filePath);
         return patterns.some((pat) => {
           if (pat.includes("*")) {
-            return buildGlobPatternRegExp(pat).test(fileName);
+          	return buildGlobPatternRegExp(pat).test(fileName);
           }
           return fileName.toLowerCase() === pat.toLowerCase();
         });
@@ -357,7 +358,7 @@ export class SearchManager {
     }
     for (const filePath of docxFiles) {
       if (maxResults && results.length >= maxResults) {
-        break;
+      	break;
       }
       try {
         const buf = await fs.readFile(filePath);
@@ -365,22 +366,22 @@ export class SearchManager {
 
         for (const xmlPath of DOCX_TEXT_XML_PARTS) {
           if (maxResults && results.length >= maxResults) {
-            break;
+          	break;
           }
           const file = zip.file(xmlPath);
           if (!file) {
-            continue;
+          	continue;
           }
           const xml = file.asText();
           let lineNum = 0;
 
           for (const m of xml.matchAll(WORD_TEXT_PATTERN)) {
             if (maxResults && results.length >= maxResults) {
-              break;
+            	break;
             }
             const text = m[1];
             if (!text?.trim()) {
-              continue;
+            	continue;
             }
             lineNum++;
 
@@ -399,7 +400,8 @@ export class SearchManager {
             }
           }
         }
-      } catch {}
+      }
+      catch {}
     }
     return results;
   }
@@ -412,29 +414,33 @@ export class SearchManager {
 
     async function walk(dir: string): Promise<void> {
       try {
-        const entries = await fs.readdir(dir, { withFileTypes: true });
+        const entries = await fs.readdir(dir, {withFileTypes: true});
         for (const entry of entries) {
           const fullPath = path.join(dir, entry.name);
           if (entry.isDirectory()) {
             if (!entry.name.startsWith(".") && entry.name !== "node_modules") {
-              await walk(fullPath);
+            	await walk(fullPath);
             }
-          } else if (entry.isFile() && isDocx(entry.name)) {
-            docxFiles.push(fullPath);
+          }
+          else if (entry.isFile() && isDocx(entry.name)) {
+          	docxFiles.push(fullPath);
           }
         }
-      } catch {
+      }
+      catch {
         /* skip */
       }
     }
     try {
       const stats = await fs.stat(rootPath);
       if (stats.isFile() && isDocx(rootPath)) {
-        return [rootPath];
-      } else if (stats.isDirectory()) {
-        await walk(rootPath);
+      	return [rootPath];
       }
-    } catch {
+      else if (stats.isDirectory()) {
+      	await walk(rootPath);
+      }
+    }
+    catch {
       /* skip */
     }
     return docxFiles;
@@ -466,7 +472,7 @@ export class SearchManager {
 
     for (const [sessionId, session] of this.sessions) {
       if (session.isComplete && session.lastReadTime < cutoffTime) {
-        this.sessions.delete(sessionId);
+      	this.sessions.delete(sessionId);
       }
     }
   }
@@ -498,24 +504,25 @@ export class SearchManager {
 
       // Add literal search support for content searches
       if (options.literalSearch) {
-        args.push("-F"); // Fixed string matching (literal)
+      	args.push("-F"); // Fixed string matching (literal)
       }
       if (options.contextLines && options.contextLines > 0) {
-        args.push("-C", options.contextLines.toString());
+      	args.push("-C", options.contextLines.toString());
       }
-    } else {
-      // File search mode
+    }
+    else {
+    	// File search mode
       args.push("--files");
     }
     // Case-insensitive: content searches use -i flag, file searches use --iglob
     if (options.searchType === "content" && options.ignoreCase !== false) {
-      args.push("-i");
+    	args.push("-i");
     }
     if (options.includeHidden) {
-      args.push("--hidden");
+    	args.push("--hidden");
     }
     if (options.maxResults && options.maxResults > 0) {
-      args.push("-m", options.maxResults.toString());
+    	args.push("-m", options.maxResults.toString());
     }
     // File pattern filtering (for file type restrictions like *.js, *.d.ts)
     if (options.filePattern) {
@@ -526,13 +533,15 @@ export class SearchManager {
 
       for (const p of patterns) {
         if (options.searchType === "content") {
-          args.push("-g", p);
-        } else {
+        	args.push("-g", p);
+        }
+        else {
           // For file search: use --iglob for case-insensitive or --glob for case-sensitive
           if (options.ignoreCase !== false) {
-            args.push("--iglob", p);
-          } else {
-            args.push("--glob", p);
+          	args.push("--iglob", p);
+          }
+          else {
+          	args.push("--glob", p);
           }
         }
       }
@@ -543,26 +552,29 @@ export class SearchManager {
       const globFlag = options.ignoreCase !== false ? "--iglob" : "--glob";
 
       if (this.isExactFilename(options.pattern)) {
-        // Exact filename: use appropriate glob flag with the exact pattern
+      	// Exact filename: use appropriate glob flag with the exact pattern
         args.push(globFlag, options.pattern);
-      } else if (this.isGlobPattern(options.pattern)) {
-        // Already a glob pattern: use appropriate glob flag as-is
+      }
+      else if (this.isGlobPattern(options.pattern)) {
+      	// Already a glob pattern: use appropriate glob flag as-is
         args.push(globFlag, options.pattern);
-      } else {
+      }
+      else {
         // Substring/fuzzy search: wrap with wildcards
         args.push(globFlag, `*${options.pattern}*`);
       }
       // Add the root path for file mode
       args.push(options.rootPath);
-    } else {
-      // Content search: terminate options before the pattern to prevent
+    }
+    else {
+    	// Content search: terminate options before the pattern to prevent
       // patterns starting with '-' being interpreted as flags
       args.push("--", options.pattern, options.rootPath);
     }
     return args;
   }
   private setupProcessHandlers(session: SearchSession): void {
-    const { process } = session;
+    const {process} = session;
 
     process.stdout?.on("data", (data: Buffer) => {
       session.buffer += data.toString();
@@ -582,11 +594,11 @@ export class SearchManager {
 
         // Skip empty lines and lines with just symbols/numbers/colons
         if (!trimmed || ERROR_NOISE_LINE_PATTERN.test(trimmed)) {
-          return false;
+        	return false;
         }
         // Skip all ripgrep system errors that start with "rg:"
         if (trimmed.startsWith(RIPGREP_ERROR_PREFIX)) {
-          return false;
+        	return false;
         }
         return true;
       });
@@ -597,8 +609,8 @@ export class SearchManager {
         if (meaningfulErrors) {
           session.error = `${(session.error || "") + meaningfulErrors}\n`;
           capture("search_session_error", {
-            sessionId: session.id,
             error: meaningfulErrors.slice(0, ERROR_CAPTURE_LIMIT),
+            sessionId: session.id,
           });
         }
       }
@@ -607,14 +619,14 @@ export class SearchManager {
     process.on("close", (code: number) => {
       // Process any remaining buffer content
       if (session.buffer.trim()) {
-        this.processBufferedOutput(session, true);
+      	this.processBufferedOutput(session, true);
       }
       session.isComplete = true;
 
       // Track if search was incomplete due to access issues
       // Ripgrep exit code 2 means "some files couldn't be searched"
       if (code === 2) {
-        session.wasIncomplete = true;
+      	session.wasIncomplete = true;
       }
       // Only treat as error if:
       // 1. Unexpected exit code (not 0, 1, or 2) AND
@@ -627,14 +639,14 @@ export class SearchManager {
       }
       // If we have results, don't mark as error even if there were permission issues
       if (session.totalMatches > 0) {
-        session.isError = false;
+      	session.isError = false;
       }
       capture("search_session_completed", {
-        sessionId: session.id,
         exitCode: code,
-        totalResults: session.totalMatches + session.totalContextLines,
-        totalMatches: session.totalMatches,
         runtime: Date.now() - session.startTime,
+        sessionId: session.id,
+        totalMatches: session.totalMatches,
+        totalResults: session.totalMatches + session.totalContextLines,
         wasIncomplete: session.wasIncomplete || false, // NEW: Track incomplete searches
       });
 
@@ -654,28 +666,29 @@ export class SearchManager {
 
     // Keep the last incomplete line in the buffer unless this is final processing
     if (!isFinal) {
-      session.buffer = lines.pop() || "";
-    } else {
-      session.buffer = "";
+    	session.buffer = lines.pop() || "";
+    }
+    else {
+    	session.buffer = "";
     }
     for (const line of lines) {
       if (!line.trim()) {
-        continue;
+      	continue;
       }
       const result = this.parseLine(line, session.options.searchType);
       if (result) {
         session.results.push(result);
         // Separate counting of matches vs context lines
         if (result.type === "content" && line.includes(RIPGREP_CONTEXT_TYPE_TOKEN)) {
-          session.totalContextLines++;
-        } else {
-          session.totalMatches++;
+        	session.totalContextLines++;
+        }
+        else {
+        	session.totalMatches++;
         }
         // Early termination for exact filename matches (if enabled)
         if (
           session.options.earlyTermination !== false && // Default to true
-          session.options.searchType === "files" &&
-          this.isExactFilename(session.options.pattern)
+          session.options.searchType === "files" && this.isExactFilename(session.options.pattern)
         ) {
           const pat = path.normalize(session.options.pattern);
           const filePath = path.normalize(result.file);
@@ -685,7 +698,7 @@ export class SearchManager {
             // Found exact match, terminate search early
             setTimeout(() => {
               if (!session.process.killed) {
-                session.process.kill("SIGTERM");
+              	session.process.kill("SIGTERM");
               }
             }, EARLY_TERMINATION_DELAY_MS);
             break;
@@ -720,15 +733,17 @@ export class SearchManager {
         }
         // Handle summary to reconcile totals
         if (parsed.type === "summary") {
-          // Optional: could reconcile totalMatches with parsed.data.stats?.matchedLines
+        	// Optional: could reconcile totalMatches with parsed.data.stats?.matchedLines
           return null;
         }
         return null;
-      } catch (_error) {
+      }
+      catch (_error) {
         // Skip invalid JSON lines
         return null;
       }
-    } else {
+    }
+    else {
       // File search - each line is a file path
       return {
         file: line.trim(),

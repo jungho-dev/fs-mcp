@@ -5,19 +5,19 @@
  * @since 2026-05-02
  */
 
-import {Server} from "@modelcontextprotocol/sdk/server/index.js";
+import type {ServerResult} from "@assets/type/common";
+import {createErrorResponse} from "@cores/responses/responses-error";
+import {normalizeToolResult} from "@cores/responses/responses-tool-result";
 import {type LogLevel, logger, logToStderr} from "@cores/runtime/runtime-app-logger";
 import {capture} from "@cores/runtime/runtime-output-capture";
 import {VERSION} from "@cores/runtime/runtime-version";
-import {createErrorResponse} from "@cores/responses/responses-error";
-import {normalizeToolResult} from "@cores/responses/responses-tool-result";
-import type {ToolCatalogEntry} from "@tools/tools-const";
+import {Server} from "@modelcontextprotocol/sdk/server/index.js";
+import {type CallToolRequest, CallToolRequestSchema, type InitializeRequest, InitializeRequestSchema, LATEST_PROTOCOL_VERSION, ListResourcesRequestSchema, ListResourceTemplatesRequestSchema, ListToolsRequestSchema, SUPPORTED_PROTOCOL_VERSIONS} from "@modelcontextprotocol/sdk/types.js";
 import {CONFIG_TOOL_CATALOG} from "@tools/tools-config";
+import type {ToolCatalogEntry} from "@tools/tools-const";
+import {dispatchToolCall} from "@tools/tools-dispatcher";
 import {FILESYSTEM_TOOL_CATALOG} from "@tools/tools-filesystem";
 import {PROCESS_TOOL_CATALOG} from "@tools/tools-process";
-import {dispatchToolCall} from "@tools/tools-dispatcher";
-import {type CallToolRequest, CallToolRequestSchema, type InitializeRequest, InitializeRequestSchema, LATEST_PROTOCOL_VERSION, ListResourcesRequestSchema, ListResourceTemplatesRequestSchema, ListToolsRequestSchema, SUPPORTED_PROTOCOL_VERSIONS} from "@modelcontextprotocol/sdk/types.js";
-import type {ServerResult} from "@assets/type/common";
 
 // Store startup messages to send after initialization
 type CurrentClient = {
@@ -61,9 +61,9 @@ export const server = new Server(
   },
   {
     capabilities: {
-      tools: {},
-      resources: {},
       logging: {}, // Add logging capability for console redirection
+      resources: {},
+      tools: {},
     },
   },
 );
@@ -110,12 +110,12 @@ server.setRequestHandler(InitializeRequestSchema, async (request: InitializeRequ
 
     // Return standard initialization response
     return {
-      protocolVersion,
       capabilities: {
-        tools: {},
-        resources: {},
         logging: {},
+        resources: {},
+        tools: {},
       },
+      protocolVersion,
       serverInfo: {
         name: "fs-mcp",
         version: VERSION,

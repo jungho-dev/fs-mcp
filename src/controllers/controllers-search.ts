@@ -1,15 +1,15 @@
 /**
  * @file src/controllers/controllers-search.ts
- * @description MCP search tool 
+ * @description MCP search tool
  * @author JUNGHO
  * @since 2026-05-02
  */
 
-import { capture } from "@cores/runtime/runtime-output-capture";
+import type { ServerResult } from "@assets/type/common";
 import { createBatchToolResponse, runParallelBatch } from "@controllers/controllers-batch";
+import { capture } from "@cores/runtime/runtime-output-capture";
 import { searchManager } from "@features/search/search-service";
 import { GetMoreSearchResultsArgsSchema, GetSearchResultsArgsSchema, StartSearchArgsSchema, StartSearchesArgsSchema, StopSearchArgsSchema, StopSearchesArgsSchema } from "@schemas/schemas-search";
-import type { ServerResult } from "@assets/type/common";
 
 /**
  * Handle start_search command
@@ -270,7 +270,7 @@ export async function handleGetSearchResults(args: unknown): Promise<ServerResul
  */
 export async function handleStopSearches(args: unknown): Promise<ServerResult> {
   const parsed = StopSearchesArgsSchema.parse(args);
-  const results = await runParallelBatch(parsed.sessionIds, (sessionId) => handleStopSearch({ "sessionId": sessionId }));
+  const results = await runParallelBatch(parsed.sessionIds, (sessionId) => handleStopSearch({ sessionId: sessionId }));
   const response = createBatchToolResponse("stop_searches", results);
 
   return response;
