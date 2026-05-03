@@ -9,257 +9,270 @@ import path from "node:path";
 import {capture} from "@cores/runtime/runtime-output-capture";
 import {configManager} from "@features/config/config-store";
 
+const COMMAND_SEPARATORS = [";", "&&", "||", "|", "&"] as const;
+const ENV_ASSIGNMENT_PATTERN = /\w+=\S+\s*/g;
+const WHITESPACE_PATTERN = /\s+/;
+
+// 1. command manager ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 class CommandManager {
-  getBaseCommand(command: string) {
-    return command.split(" ")[0].toLowerCase().trim();
+  // 1-1. base command logging name ――――――――――――――――――――――――――――――――――――――――――――――――――
+  getBaseCommand(command: string): string {
+    const firstToken = command.trim().split(WHITESPACE_PATTERN)[0] ?? "";
+    const baseCommand = firstToken.toLowerCase();
+
+    return baseCommand;
   }
+
+  // 1-2. command chain extraction ――――――――――――――――――――――――――――――――――――――――――――――――――
   extractCommands(commandString: string): string[] {
+    let extractedCommands: string[] = [];
+
     try {
-      // Trim any leading/trailing whitespace
-      commandString = commandString.trim();
-
-      // Define command separators - these are the operators that can chain commands
-      const separators = [";", "&&", "||", "|", "&"];
-
-      // This will store our extracted commands
+      const commandSource = commandString.trim();
       const commands: string[] = [];
-
-      // Split by common separators while preserving quotes
       let inQuote = false;
       let quoteChar = "";
-      let currentCmd = "";
+      let currentCommand = "";
       let escaped = false;
+      let index = 0;
 
-      for (let i = 0; i < commandString.length; i++) {
-        const char = commandString[i];
+      while (index < commandSource.length) {
+        const char = commandSource[index] ?? "";
 
-        // Handle escape characters
         if (char === "\\" && !escaped) {
-        	escaped = true;
-          currentCmd += char;
-          continue;
+          escaped = true;
+          currentCommand = `${currentCommand}${char}`;
         }
-        // If this character is escaped, just add it
-        if (escaped) {
-        	escaped = false;
-          currentCmd += char;
-          continue;
+        else if (escaped) {
+          escaped = false;
+          currentCommand = `${currentCommand}${char}`;
         }
-        // Handle quotes (both single and double)
-        if ((char === '"' || char === "'") && !inQuote) {
-        	inQuote = true;
+        else if ((char === "\"" || char === "'") && !inQuote) {
+          inQuote = true;
           quoteChar = char;
-          currentCmd += char;
-          continue;
+          currentCommand = `${currentCommand}${char}`;
         }
         else if (char === quoteChar && inQuote) {
-        	inQuote = false;
+          inQuote = false;
           quoteChar = "";
-          currentCmd += char;
-          continue;
+          currentCommand = `${currentCommand}${char}`;
         }
-        // Handle $() command substitution even inside quotes (fixes blocklist bypass)
-        if (char === "$" && i + 1 < commandString.length && commandString[i + 1] === "(") {
-          const startIndex = i;
-          let openParens = 1;
-          let j = i + 2; // skip past $(
-          while (j < commandString.length && openParens > 0) {
-            if (commandString[j] === "(") {
-            	openParens++;
-            }
-            if (commandString[j] === ")") {
-            	openParens--;
-            }
-            j++;
-          }
-          if (j <= commandString.length && openParens === 0) {
-            const subContent = commandString.slice(i + 2, j - 1);
-            const subCommands = this.extractCommands(subContent);
-            commands.push(...subCommands);
-            i = j - 1;
-            if (!inQuote) {
-            	continue;
-            }
-            else {
-            	currentCmd += commandString.slice(startIndex, j);
-              continue;
-            }
-          }
-        }
-        // Handle backtick command substitution even inside quotes
-        if (char === "`") {
-          const startIndex = i;
-          let j = i + 1;
-          while (j < commandString.length && commandString[j] !== "`") {
-            j++;
-          }
-          if (j < commandString.length) {
-            const subContent = commandString.slice(i + 1, j);
-            const subCommands = this.extractCommands(subContent);
-            commands.push(...subCommands);
-            i = j;
-            if (!inQuote) {
-            	continue;
-            }
-            else {
-            	currentCmd += commandString.slice(startIndex, j + 1);
-              continue;
-            }
-          }
-        }
-        // If we're inside quotes, just add the character
-        if (inQuote) {
-        	currentCmd += char;
-          continue;
-        }
-        // Handle subshells - if we see an opening parenthesis, we need to find its matching closing parenthesis
-        if (char === "(") {
-          // Find the matching closing parenthesis
-          let openParens = 1;
-          let j = i + 1;
-          while (j < commandString.length && openParens > 0) {
-            if (commandString[j] === "(") {
-            	openParens++;
-            }
-            if (commandString[j] === ")") {
-            	openParens--;
-            }
-            j++;
-          }
-          // Skip to after the closing parenthesis only if properly balanced
-          if (j <= commandString.length && openParens === 0) {
-          	const subshellContent = commandString.slice(i + 1, j - 1);
-            // Recursively extract commands from the subshell
-            const subCommands = this.extractCommands(subshellContent);
-            commands.push(...subCommands);
+        else if (char === "$" && commandSource[index + 1] === "(") {
+          const groupEnd = this.findBalancedGroupEnd(commandSource, index + 1);
 
-            // Move position past the subshell
-            i = j - 1;
-            continue;
+          if (groupEnd === null) {
+            currentCommand = `${currentCommand}${char}`;
           }
-        }
-        // Check for separators
-        let isSeparator = false;
-        for (const separator of separators) {
-          if (commandString.startsWith(separator, i)) {
-            // We found a separator - extract the command before it
-            if (currentCmd.trim()) {
-              const baseCommand = this.extractBaseCommand(currentCmd.trim());
-              if (baseCommand) {
-              	commands.push(baseCommand);
-              }
+          else {
+            const subContent = commandSource.slice(index + 2, groupEnd - 1);
+            commands.push(...this.extractCommands(subContent));
+
+            if (inQuote) {
+              currentCommand = `${currentCommand}${commandSource.slice(index, groupEnd)}`;
             }
-            // Move past the separator
-            i += separator.length - 1;
-            currentCmd = "";
-            isSeparator = true;
-            break;
+
+            index = groupEnd - 1;
           }
         }
-        if (!isSeparator) {
-        	currentCmd += char;
+        else if (char === "`") {
+          const backtickEnd = this.findBacktickEnd(commandSource, index);
+
+          if (backtickEnd === null) {
+            currentCommand = `${currentCommand}${char}`;
+          }
+          else {
+            const subContent = commandSource.slice(index + 1, backtickEnd);
+            commands.push(...this.extractCommands(subContent));
+
+            if (inQuote) {
+              currentCommand = `${currentCommand}${commandSource.slice(index, backtickEnd + 1)}`;
+            }
+
+            index = backtickEnd;
+          }
         }
-      }
-      // Don't forget to add the last command
-      if (currentCmd.trim()) {
-        const baseCommand = this.extractBaseCommand(currentCmd.trim());
-        if (baseCommand) {
-        	commands.push(baseCommand);
+        else if (inQuote) {
+          currentCommand = `${currentCommand}${char}`;
         }
+        else if (char === "(") {
+          const groupEnd = this.findBalancedGroupEnd(commandSource, index);
+
+          if (groupEnd === null) {
+            currentCommand = `${currentCommand}${char}`;
+          }
+          else {
+            const subContent = commandSource.slice(index + 1, groupEnd - 1);
+            commands.push(...this.extractCommands(subContent));
+            index = groupEnd - 1;
+          }
+        }
+        else {
+          const separator = this.findSeparator(commandSource, index);
+
+          if (separator) {
+            this.pushBaseCommand(commands, currentCommand);
+            currentCommand = "";
+            index += separator.length - 1;
+          }
+          else {
+            currentCommand = `${currentCommand}${char}`;
+          }
+        }
+
+        index++;
       }
-      // Remove duplicates and return
-      return [...new Set(commands)];
+
+      this.pushBaseCommand(commands, currentCommand);
+      extractedCommands = [...new Set(commands)];
     }
     catch (_error) {
-      // If anything goes wrong, log the error but return the basic command to not break execution
       capture("server_request_error", {
         error: "Error extracting commands",
       });
-      const baseCmd = this.extractBaseCommand(commandString);
-      return baseCmd ? [baseCmd] : [];
+
+      const baseCommand = this.extractBaseCommand(commandString);
+      extractedCommands = baseCommand ? [baseCommand] : [];
     }
+
+    return extractedCommands;
   }
-  // This extracts the actual command name from a command string
+
+  // 1-3. command token normalization ――――――――――――――――――――――――――――――――――――――――――――――
   extractBaseCommand(commandStr: string): string | null {
+    let baseCommand: string | null = null;
+
     try {
-      // Remove environment variables (patterns like KEY=value)
-      const withoutEnvVars = commandStr.replace(/\w+=\S+\s*/g, "").trim();
+      const withoutEnvVars = commandStr.replace(ENV_ASSIGNMENT_PATTERN, "").trim();
 
-      // If nothing remains after removing env vars, return null
-      if (!withoutEnvVars) {
-      	return null;
-      }
-      // Get the first token (the command)
-      const tokens = withoutEnvVars.split(/\s+/);
-      let firstToken: string | null = null;
+      if (withoutEnvVars) {
+        const tokens = withoutEnvVars.split(WHITESPACE_PATTERN);
+        const firstToken = this.findFirstCommandToken(tokens);
 
-      // Find the first valid token (skip variables)
-      for (const token of tokens) {
-        // Skip dollar-prefixed tokens (variables) but not $() command substitutions
-        if (token.startsWith("$") && !token.startsWith("$(")) {
-        	continue;
+        if (firstToken?.startsWith("$(") && firstToken.endsWith(")")) {
+          const inner = firstToken.slice(2, -1).trim();
+
+          if (inner) {
+            const innerToken = inner.split(WHITESPACE_PATTERN)[0] ?? "";
+            baseCommand = innerToken ? path.basename(innerToken).toLowerCase() : null;
+          }
         }
-        // Check if it starts with special characters like ( that might indicate it's not a regular command
-        if (token[0] === "(") {
-        	continue;
+        else if (firstToken) {
+          baseCommand = path.basename(firstToken).toLowerCase();
         }
-        firstToken = token;
-        break;
       }
-      // No valid command token found
-      if (!firstToken) {
-      	return null;
-      }
-      // handle $() command substitution - extract the inner command
-      if (firstToken.startsWith("$(") && firstToken.endsWith(")")) {
-        const inner = firstToken.slice(2, -1).trim();
-        if (inner) {
-        	const innerTokens = inner.split(/\s+/);
-          return path.basename(innerTokens[0]).toLowerCase();
-        }
-        return null;
-      }
-      // strip path prefix so /usr/bin/sudo gets caught as "sudo"
-      const baseName = path.basename(firstToken);
-      return baseName.toLowerCase();
     }
     catch (_error) {
       capture("Error extracting base command");
-      return null;
+      baseCommand = null;
     }
+
+    return baseCommand;
   }
+
+  // 1-4. blocked command validation ―――――――――――――――――――――――――――――――――――――――――――――――
   async validateCommand(command: string): Promise<boolean> {
+    let isAllowed = false;
+
     try {
-      // Get blocked commands from config
       const config = await configManager.getConfig();
       const blockedCommands = config.blockedCommands || [];
+      const extractedCommands = this.extractCommands(command);
+      const commandsToValidate = extractedCommands.length > 0 ? extractedCommands : [this.getBaseCommand(command)];
 
-      // Extract all commands from the command string
-      const allCommands = this.extractCommands(command);
-
-      // If there are no commands extracted, fall back to base command
-      if (allCommands.length === 0) {
-      	const baseCommand = this.getBaseCommand(command);
-        return !blockedCommands.includes(baseCommand);
-      }
-      // Check if any of the extracted commands are in the blocked list
-      for (const cmd of allCommands) {
-        if (blockedCommands.includes(cmd)) {
-        	return false; // Command is blocked
-        }
-      }
-      // No commands were blocked
-      return true;
+      isAllowed = commandsToValidate.every((extractedCommand) => !blockedCommands.includes(extractedCommand));
     }
     catch (error) {
       console.error("Error validating command:", error);
       capture("server_validate_command_error", {
         error: error instanceof Error ? error.message : String(error),
       });
-      // Fail closed: deny the command if validation encounters an error.
-      // This prevents a config read failure from bypassing all command filtering.
-      return false;
+      isAllowed = false;
+    }
+
+    return isAllowed;
+  }
+
+  // 1-5. balanced parenthesis range ―――――――――――――――――――――――――――――――――――――――――――――――
+  private findBalancedGroupEnd(commandSource: string, openParenIndex: number): number | null {
+    let groupEnd: number | null = null;
+    let openParens = 1;
+    let index = openParenIndex + 1;
+
+    while (index < commandSource.length && openParens > 0) {
+      const char = commandSource[index];
+
+      if (char === "(") {
+        openParens++;
+      }
+
+      if (char === ")") {
+        openParens--;
+      }
+
+      index++;
+    }
+
+    if (openParens === 0) {
+      groupEnd = index;
+    }
+
+    return groupEnd;
+  }
+
+  // 1-6. backtick substitution range ――――――――――――――――――――――――――――――――――――――――――――――
+  private findBacktickEnd(commandSource: string, backtickStart: number): number | null {
+    let backtickEnd: number | null = null;
+    let index = backtickStart + 1;
+
+    while (index < commandSource.length && backtickEnd === null) {
+      if (commandSource[index] === "`") {
+        backtickEnd = index;
+      }
+
+      index++;
+    }
+
+    return backtickEnd;
+  }
+
+  // 1-7. command separator match ――――――――――――――――――――――――――――――――――――――――――――――――――
+  private findSeparator(commandSource: string, index: number): string | null {
+    let matchedSeparator: string | null = null;
+
+    for (const separator of COMMAND_SEPARATORS) {
+      if (matchedSeparator === null && commandSource.startsWith(separator, index)) {
+        matchedSeparator = separator;
+      }
+    }
+
+    return matchedSeparator;
+  }
+
+  // 1-8. extracted command append ―――――――――――――――――――――――――――――――――――――――――――――――――
+  private pushBaseCommand(commands: string[], command: string): void {
+    const baseCommand = this.extractBaseCommand(command.trim());
+
+    if (baseCommand) {
+      commands.push(baseCommand);
     }
   }
+
+  // 1-9. first executable token ―――――――――――――――――――――――――――――――――――――――――――――――――――
+  private findFirstCommandToken(tokens: string[]): string | null {
+    let firstToken: string | null = null;
+
+    for (const token of tokens) {
+      const isVariableToken = token.startsWith("$") && !token.startsWith("$(");
+      const isSubshellToken = token[0] === "(";
+
+      if (firstToken === null && !isVariableToken && !isSubshellToken) {
+        firstToken = token;
+      }
+    }
+
+    return firstToken;
+  }
 }
+
+// 2. singleton export ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export const commandManager = new CommandManager();

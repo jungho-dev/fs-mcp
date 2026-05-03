@@ -20,10 +20,8 @@ type DiagnosticTimingInfo = Omit<TimingInfo, "exitReason"> & {
   exitReason: DiagnosticExitReason;
 };
 
-/**
- * Start a new process (renamed from execute_command)
- * Includes early detection of process waiting for input
- */
+// 1. Start a new process (renamed from execute_command) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// Includes early detection of process waiting for input
 export async function startProcess(args: unknown): Promise<ServerResult> {
   const parsed = StartProcessArgsSchema.safeParse(args);
   if (!parsed.success) {
@@ -155,10 +153,8 @@ function formatTimingInfo(timing: DiagnosticTimingInfo): string {
   }
   return msg;
 }
-/**
- * Read output from a running process with file-like pagination
- * Supports offset/length parameters for controlled reading
- */
+// 2. Read output from a running process with file-like pagination ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// Supports offset/length parameters for controlled reading
 export async function readProcessOutput(args: unknown): Promise<ServerResult> {
   const parsed = ReadProcessOutputArgsSchema.safeParse(args);
   if (!parsed.success) {
@@ -295,10 +291,8 @@ export async function readProcessOutput(args: unknown): Promise<ServerResult> {
     ],
   };
 }
-/**
- * Interact with a running process (renamed from send_input)
- * Automatically detects when process is ready and returns output
- */
+// 3. Interact with a running process (renamed from send_input) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// Automatically detects when process is ready and returns output
 export async function interactWithProcess(args: unknown): Promise<ServerResult> {
   const parsed = InteractWithProcessArgsSchema.safeParse(args);
   if (!parsed.success) {
@@ -559,9 +553,7 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
     };
   }
 }
-/**
- * Force terminate a process
- */
+// 4. Force terminate a process ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function forceTerminate(args: unknown): Promise<ServerResult> {
   const parsed = ForceTerminateArgsSchema.safeParse(args);
   if (!parsed.success) {
@@ -593,9 +585,7 @@ export async function forceTerminate(args: unknown): Promise<ServerResult> {
     ],
   };
 }
-/**
- * List active sessions
- */
+// 5. List active sessions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function listSessions(): Promise<ServerResult> {
   const sessions = terminalManager.listActiveSessions();
 

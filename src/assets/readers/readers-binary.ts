@@ -5,22 +5,18 @@
  * @since 2026-05-02
  */
 
-/**
- * Binary file handler
- * Handles binary files that aren't supported by other handlers (Image, DOCX)
- * Uses isBinaryFile for content-based detection
- * Returns instructions to use start_process with appropriate tools
- */
+// Binary file handler
+// Handles binary files that aren't supported by other handlers (Image, DOCX)
+// Uses isBinaryFile for content-based detection
+// Returns instructions to use start_process with appropriate tools
 
 import fs from "node:fs/promises";
 import path from "node:path";
 import type { FileHandler, FileInfo, FileResult, ReadOptions } from "@assets/readers/readers-base";
 import { isBinaryFile } from "isbinaryfile";
 
-/**
- * Binary file handler implementation
- * Uses content-based detection via isBinaryFile
- */
+// 1. Binary file handler implementation ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// Uses content-based detection via isBinaryFile
 export class BinaryFileHandler implements FileHandler {
   async canHandle(filePath: string): Promise<boolean> {
     // Content-based binary detection using isBinaryFile
@@ -62,9 +58,7 @@ export class BinaryFileHandler implements FileHandler {
       },
     };
   }
-  /**
-   * Generate instructions for handling binary files
-   */
+  // 2. Generate instructions for handling binary files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private getBinaryInstructions(filePath: string): string {
     const fileName = path.basename(filePath);
     return (`

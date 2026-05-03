@@ -72,9 +72,7 @@ export interface SystemInfo {
   };
 }
 
-/**
- * Detect container environment and type
- */
+// 1. Detect container environment and type ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function detectContainerEnvironment(): { isContainer: boolean; containerType: ContainerInfo["containerType"]; orchestrator: ContainerInfo["orchestrator"] } {
   // Method 1: Check environment variables first (most reliable when set)
 
@@ -188,9 +186,7 @@ function detectContainerEnvironment(): { isContainer: boolean; containerType: Co
   return { isContainer: false, containerType: null, orchestrator: null };
 }
 
-/**
- * Discover container mount points
- */
+// 2. Discover container mount points ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function discoverContainerMounts(isContainer: boolean): DockerMount[] {
   const mounts: DockerMount[] = [];
 
@@ -371,9 +367,7 @@ function discoverContainerMounts(isContainer: boolean): DockerMount[] {
   return mounts;
 }
 
-/**
- * Get container environment information
- */
+// 3. Get container environment information ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getContainerEnvironment(containerType: ContainerInfo["containerType"]): ContainerInfo["containerEnvironment"] {
   const env: ContainerInfo["containerEnvironment"] = {};
 
@@ -468,9 +462,7 @@ function getContainerEnvironment(containerType: ContainerInfo["containerType"]):
   return Object.keys(env).length > 0 ? env : undefined;
 }
 
-/**
- * Detect Node.js installation and version from current process
- */
+// 4. Detect Node.js installation and version from current process ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function detectNodeInfo(): SystemInfo["nodeInfo"] {
   try {
     // Get Node.js version from current process
@@ -492,9 +484,7 @@ function detectNodeInfo(): SystemInfo["nodeInfo"] {
   }
 }
 
-/**
- * Detect Python installation and version and put on systeminfo.pythonInfo
- */
+// 5. Detect Python installation and version and put on systeminfo.pythonInfo ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function detectPythonInfo(): SystemInfo["pythonInfo"] {
   // Try python commands in order of preference
   const pythonCommands =
@@ -526,9 +516,7 @@ function detectPythonInfo(): SystemInfo["pythonInfo"] {
   return { available: false, command: "" };
 }
 
-/**
- * Get comprehensive system information for tool prompts
- */
+// 6. Get comprehensive system information for tool prompts ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function getSystemInfo(): SystemInfo {
   const platform = os.platform();
   const isWindows = platform === "win32";
@@ -657,9 +645,7 @@ export function getSystemInfo(): SystemInfo {
   };
 }
 
-/**
- * Generate OS-specific guidance for tool prompts
- */
+// Generate OS-specific guidance for tool prompts
 
 export {getDevelopmentToolGuidance, getOSSpecificGuidance, getPathGuidance} from "@cores/runtime/runtime-guidance";
 

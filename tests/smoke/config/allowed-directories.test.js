@@ -33,9 +33,7 @@ const isWindows = process.platform === "win32";
 const TEST_ROOT_PATH = isWindows ? "C:/" : "/";
 const TEST_ROOT_WILDCARD = isWindows ? `${path.parse(TEST_DIR).root}*` : null;
 
-/**
- * Helper function to clean up test directories
- */
+// 1. Helper function to clean up test directories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function cleanupTestDirectories() {
   try {
     await fs.rm(TEST_DIR, { recursive: true, force: true });
@@ -52,9 +50,7 @@ async function cleanupTestDirectories() {
   }
 }
 
-/**
- * Check if a path is accessible
- */
+// 2. Check if a path is accessible ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function isPathAccessible(testPath) {
   try {
     const _validatedPath = await validatePath(testPath);
@@ -69,9 +65,7 @@ function isPathInside(parentPath, childPath) {
   return relativePath.length === 0 || (!relativePath.startsWith("..") && !path.isAbsolute(relativePath));
 }
 
-/**
- * Setup function to prepare the test environment
- */
+// 3. Setup function to prepare the test environment ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function setup() {
   // Clean up before tests
   await cleanupTestDirectories();
@@ -89,9 +83,7 @@ async function setup() {
   return originalConfig;
 }
 
-/**
- * Teardown function to clean up after tests
- */
+// 4. Teardown function to clean up after tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function teardown(originalConfig) {
   // Reset configuration to original
   await configManager.updateConfig(originalConfig);
@@ -100,9 +92,7 @@ async function teardown(originalConfig) {
   await cleanupTestDirectories();
 }
 
-/**
- * Test empty allowedDirectories array (should allow full access)
- */
+// 5. Test empty allowedDirectories array (should allow full access) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testEmptyAllowedDirectories() {
   // Set empty allowedDirectories
   await configManager.setValue("allowedDirectories", []);
@@ -124,9 +114,7 @@ async function testEmptyAllowedDirectories() {
   assert.strictEqual(rootAccess, true, "Root path should be accessible with empty allowedDirectories");
 }
 
-/**
- * Test empty allowedDirectories values from config tool input
- */
+// 6. Test empty allowedDirectories values from config tool input ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testEmptyAllowedDirectoriesInputValues() {
   for (const emptyValue of ["", "   ", null]) {
     const result = await setConfigValue({
@@ -144,9 +132,7 @@ async function testEmptyAllowedDirectoriesInputValues() {
   }
 }
 
-/**
- * Test with specific directory in allowedDirectories
- */
+// 7. Test with specific directory in allowedDirectories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testSpecificAllowedDirectory() {
   // Set allowedDirectories to just the test directory
   await configManager.setValue("allowedDirectories", [TEST_DIR]);
@@ -172,12 +158,9 @@ async function testSpecificAllowedDirectory() {
   assert.strictEqual(rootAccess, false, "Root path should not be accessible");
 }
 
-/**
- * Test with root directory in allowedDirectories
- *
- * NOTE: Windows drive wildcard coverage is handled separately in
- * testWindowsDriveWildcardAllowedDirectories().
- */
+// 8. Test with root directory in allowedDirectories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// NOTE: Windows drive wildcard coverage is handled separately in
+// testWindowsDriveWildcardAllowedDirectories().
 async function testRootInAllowedDirectories() {
   // Set allowedDirectories to include root path
   await configManager.setValue("allowedDirectories", [TEST_ROOT_PATH]);
@@ -209,9 +192,7 @@ async function testRootInAllowedDirectories() {
   }
 }
 
-/**
- * Test with Windows drive wildcard in allowedDirectories
- */
+// 9. Test with Windows drive wildcard in allowedDirectories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testWindowsDriveWildcardAllowedDirectories() {
   if (!isWindows || !TEST_ROOT_WILDCARD) {
     return;
@@ -233,9 +214,7 @@ async function testWindowsDriveWildcardAllowedDirectories() {
   assert.strictEqual(outsideDirAccess, true, "Outside directory should be accessible with Windows drive wildcard");
 }
 
-/**
- * Test with home directory in allowedDirectories
- */
+// 10. Test with home directory in allowedDirectories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testHomeAllowedDirectory() {
   // Set allowedDirectories to just the home directory
   await configManager.setValue("allowedDirectories", [HOME_DIR]);
@@ -271,9 +250,7 @@ async function testHomeAllowedDirectory() {
   assert.strictEqual(rootAccess, false, "Root path should not be accessible");
 }
 
-/**
- * Test with specific directory with slash at the end in allowedDirectories
- */
+// 11. Test with specific directory with slash at the end in allowedDirectories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testSpecificAllowedDirectoryWithSlash() {
   // Set allowedDirectories to just the test directory
   await configManager.setValue("allowedDirectories", [TEST_DIR_WITH_SLASH]);
@@ -300,9 +277,7 @@ async function testSpecificAllowedDirectoryWithSlash() {
   assert.strictEqual(rootAccess, false, "Root path should not be accessible");
 }
 
-/**
- * Test that a path sharing a prefix with an allowed directory (but not a subdirectory) is correctly blocked
- */
+// 12. Test that a path sharing a prefix with an allowed directory (but not a subdirectory) is correctly blocked ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testPrefixPathBlocking() {
   // Create a directory with a name that would be caught by string prefix matching
   // Deliberately use path names that are clearly not subdirectories of each other
@@ -347,9 +322,7 @@ async function testPrefixPathBlocking() {
   }
 }
 
-/**
- * Main test function
- */
+// 13. Main test function ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testAllowedDirectories() {
   // Test 1: Empty allowedDirectories array
   await testEmptyAllowedDirectories();

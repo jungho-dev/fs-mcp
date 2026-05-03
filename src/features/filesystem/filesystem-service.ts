@@ -42,41 +42,32 @@ type LegacyFileInfo = {
 
 // UTILITY FUNCTIONS - Eliminate duplication
 
-/**
- * Get MIME type information for a file
- * @param filePath Path to the file
- * @returns Object with mimeType and isImage properties
- */
+// 1. Get MIME type information for a file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// @param filePath Path to the file
+// @returns Object with mimeType and isImage properties
 async function getMimeTypeInfo(filePath: string): Promise<{ mimeType: string; isImage: boolean }> {
   const { getMimeType, isImageFile } = await import("@features/filesystem/filesystem-mime-registry");
   const mimeType = getMimeType(filePath);
   const isImage = isImageFile(mimeType);
   return { mimeType, isImage };
 }
-/**
- * Get file extension for diagnostics.
- * @param filePath Path to the file
- * @returns Lowercase file extension
- */
+// 2. Get file extension for diagnostics ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// @param filePath Path to the file
+// @returns Lowercase file extension
 function getFileExtension(filePath: string): string {
   return path.extname(filePath).toLowerCase();
 }
-/**
- * Get default read length from configuration
- * @returns Default number of lines to read
- */
+// 3. Get default read length from configuration ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// @returns Default number of lines to read
 async function getDefaultReadLength(): Promise<number> {
   const config = await configManager.getConfig();
   return config.fileReadLineLimit ?? 1000; // Default to 1000 lines if not set
 }
-/**
- * Returns a helpful error message when a file operation fails with a permission
- * or timeout error.
- *
- * Lists all common causes without path-based detection — the AI receiving this
- * error should inspect the path and inform the user which cause is most likely
- * (e.g. cloud storage folder, network drive, system file, locked file, etc.)
- */
+// 4. Returns a helpful error message when a file operation fails with a permission ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// or timeout error.
+// Lists all common causes without path-based detection — the AI receiving this
+// error should inspect the path and inform the user which cause is most likely
+// (e.g. cloud storage folder, network drive, system file, locked file, etc.)
 function buildPermissionError(filePath: string, errCode: string | undefined): Error {
   const isMac = process.platform === "darwin";
   const isTimeout = errCode === "ETIMEDOUT";
@@ -134,14 +125,11 @@ function expandHome(filepath: string): string {
   }
   return filepath;
 }
-/**
- * Recursively validates parent directories until it finds a valid one
- * This function handles the case where we need to create nested directories
- * and we need to check if any of the parent directories exist
- *
- * @param directoryPath The path to validate
- * @returns Promise<boolean> True if a valid parent directory was found
- */
+// 5. Recursively validates parent directories until it finds a valid one ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// This function handles the case where we need to create nested directories
+// and we need to check if any of the parent directories exist
+// @param directoryPath The path to validate
+// @returns Promise<boolean> True if a valid parent directory was found
 async function validateParentDirectories(directoryPath: string): Promise<boolean> {
   const parentDir = path.dirname(directoryPath);
 
@@ -158,12 +146,9 @@ async function validateParentDirectories(directoryPath: string): Promise<boolean
     return validateParentDirectories(parentDir);
   }
 }
-/**
- * Checks if a path is within any of the allowed directories
- *
- * @param pathToCheck Path to check
- * @returns boolean True if path is allowed
- */
+// 6. Checks if a path is within any of the allowed directories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// @param pathToCheck Path to check
+// @returns boolean True if path is allowed
 async function isPathAllowed(pathToCheck: string): Promise<boolean> {
   // If root directory is allowed, all paths are allowed
   const allowedDirectories = await getAllowedDirs();
@@ -203,15 +188,12 @@ async function isPathAllowed(pathToCheck: string): Promise<boolean> {
 
   return isAllowed;
 }
-/**
- * Validates a path to ensure it can be accessed or created.
- * For existing paths, returns the real path (resolving symlinks).
- * For non-existent paths, validates parent directories to ensure they exist.
- *
- * @param requestedPath The path to validate
- * @returns Promise<string> The validated path
- * @throws Error if the path or its parent directories don't exist or if the path is not allowed
- */
+// 7. Validates a path to ensure it can be accessed or created ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// For existing paths, returns the real path (resolving symlinks).
+// For non-existent paths, validates parent directories to ensure they exist.
+// @param requestedPath The path to validate
+// @returns Promise<string> The validated path
+// @throws Error if the path or its parent directories don't exist or if the path is not allowed
 export async function validatePath(requestedPath: string): Promise<string> {
   const validationOperation = async (): Promise<string> => {
     // Expand home directory if present
@@ -288,11 +270,9 @@ export async function validatePath(requestedPath: string): Promise<string> {
 // Re-export FileResult from base for consumers
 export type { FileResult } from "@assets/readers/readers-base";
 
-/**
- * Read file content from a URL
- * @param url URL to fetch content from
- * @returns File content or file result with metadata
- */
+// 8. Read file content from a URL ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// @param url URL to fetch content from
+// @returns File content or file result with metadata
 export async function readFileFromUrl(url: string): Promise<FileResult> {
   // Import the MIME type utilities
   const { isImageFile } = await import("@features/filesystem/filesystem-mime-registry");
@@ -347,12 +327,10 @@ export async function readFileFromUrl(url: string): Promise<FileResult> {
     throw new Error(errorMessage);
   }
 }
-/**
- * Read file content from the local filesystem
- * @param filePath Path to the file
- * @param options Read options
- * @returns File content or file result with metadata
- */
+// 9. Read file content from the local filesystem ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// @param filePath Path to the file
+// @param options Read options
+// @returns File content or file result with metadata
 export async function readFileFromDisk(filePath: string, options?: ReadOptions): Promise<FileResult> {
   const { offset = 0 } = options ?? {};
   let { length } = options ?? {};
@@ -466,25 +444,21 @@ export async function readFileFromDisk(filePath: string, options?: ReadOptions):
   }
   return result;
 }
-/**
- * Read a file from either the local filesystem or a URL
- * @param filePath Path to the file or URL
- * @param options Read options
- * @returns File content or file result with metadata
- */
+// 10. Read a file from either the local filesystem or a URL ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// @param filePath Path to the file or URL
+// @param options Read options
+// @returns File content or file result with metadata
 export async function readFile(filePath: string, options?: ReadOptions): Promise<FileResult> {
   const { isUrl, offset, length } = options ?? {};
   return isUrl ? readFileFromUrl(filePath) : readFileFromDisk(filePath, { offset, length });
 }
-/**
- * Read file content without status messages for internal operations
- * This function preserves exact file content including original line endings,
- * which is essential for edit operations that need to maintain file formatting.
- * @param filePath Path to the file
- * @param offset Starting line number to read from (default: 0)
- * @param length Maximum number of lines to read (default: from config or 1000)
- * @returns File content without status headers, with preserved line endings
- */
+// 11. Read file content without status messages for internal operations ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// This function preserves exact file content including original line endings,
+// which is essential for edit operations that need to maintain file formatting.
+// @param filePath Path to the file
+// @param offset Starting line number to read from (default: 0)
+// @param length Maximum number of lines to read (default: from config or 1000)
+// @returns File content without status headers, with preserved line endings
 export async function readFileInternal(filePath: string, offset: number = 0, length?: number): Promise<string> {
   // Get default length from config if not provided
   if (length === undefined) {

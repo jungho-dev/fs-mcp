@@ -5,23 +5,21 @@
  * @since 2026-05-02
  */
 
-/**
- * DOCX File Handler
- *
- * Approach: expose DOCX as filtered/raw XML through existing read_file + edit_block.
- *
- * READ (default): Returns a text-bearing outline — skips shapes, drawings, SVG noise.
- *   Shows paragraphs with text, tables with cell content, style info, and image refs.
- *   Each element shows its raw XML tag context so Claude can target it for editing.
- *
- * READ (with offset/length): Returns raw pretty-printed XML with line pagination,
- *   so Claude can drill into specific sections when the outline isn't enough.
- *
- * EDIT (old_string/new_string): Find/replace on the pretty-printed XML, then
- *   compact and repack into valid DOCX. Works exactly like text file editing.
- *
- * Round-trip: DOCX → unzip → pretty-print → [outline or raw] → edit → compact → repack
- */
+// DOCX File Handler
+//
+// Approach: expose DOCX as filtered/raw XML through existing read_file + edit_block.
+//
+// READ (default): Returns a text-bearing outline — skips shapes, drawings, SVG noise.
+// Shows paragraphs with text, tables with cell content, style info, and image refs.
+// Each element shows its raw XML tag context so Claude can target it for editing.
+//
+// READ (with offset/length): Returns raw pretty-printed XML with line pagination,
+// so Claude can drill into specific sections when the outline isn't enough.
+//
+// EDIT (old_string/new_string): Find/replace on the pretty-printed XML, then
+// compact and repack into valid DOCX. Works exactly like text file editing.
+//
+// Round-trip: DOCX → unzip → pretty-print → [outline or raw] → edit → compact → repack
 
 import fs from "node:fs/promises";
 import type { EditResult, FileHandler, FileInfo, FileResult, ReadOptions } from "@assets/readers/readers-base";
@@ -56,10 +54,8 @@ const HEADER_FOOTER_XML_PARTS = ["word/header1.xml", "word/header2.xml", "word/h
 
 // 1. XML transform ――――――――――――――――――――――――――――――――――――――――――――――
 
-/**
- * Pretty-print XML: split tags onto separate lines with indentation.
- * Preserves text node content exactly. compact→pretty→compact is lossless.
- */
+// 1. Pretty-print XML: split tags onto separate lines with indentation ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// Preserves text node content exactly. compact→pretty→compact is lossless.
 function prettyPrintXml(xml: string): string {
   const parts = xml.split(XML_TAG_BOUNDARY_PATTERN);
   const lines: string[] = [];
@@ -86,10 +82,8 @@ function prettyPrintXml(xml: string): string {
   }
   return lines.join("\n");
 }
-/**
- * Compact pretty-printed XML back — strip leading indentation, join lines.
- * Does NOT touch whitespace inside <w:t> text nodes.
- */
+// 2. Compact pretty-printed XML back — strip leading indentation, join lines ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// Does NOT touch whitespace inside <w:t> text nodes.
 function compactXml(prettyXml: string): string {
   return prettyXml
     .split("\n")
@@ -131,17 +125,13 @@ function loadDocxZip(buf: Buffer): DocxZipContents {
 
 // 3. Outline extraction ―――――――――――――――――――――――――――――――――――――――――――
 
-/**
- * Extract a text-bearing outline from document.xml.
- *
- * Walks direct children of <w:body> and for each:
- * - w:p (paragraph): extracts text from <w:t> elements, shows style
- * - w:tbl (table): extracts cell text for each row
- * - mc:AlternateContent / shapes / drawings: shows size, skips content
- * - w:sdt: looks inside for text/tables
- *
- * Returns a human-readable outline with enough context for editing.
- */
+// 3. Extract a text-bearing outline from document.xml ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// Walks direct children of <w:body> and for each:
+// - w:p (paragraph): extracts text from <w:t> elements, shows style
+// - w:tbl (table): extracts cell text for each row
+// - mc:AlternateContent / shapes / drawings: shows size, skips content
+// - w:sdt: looks inside for text/tables
+// Returns a human-readable outline with enough context for editing.
 function extractOutline(xml: string): string {
   const lines: string[] = [];
 
@@ -257,7 +247,7 @@ function extractOutline(xml: string): string {
 
 // 4. XML text extraction helpers ―――――――――――――――――――――――――――――――――――
 
-/** Extract all <w:t>...</w:t> text content from an XML fragment */
+// 4. Extract all <w:t>...</w:t> text content from an XML fragment ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractAllText(xml: string): string {
   const texts: string[] = [];
 
@@ -268,7 +258,7 @@ function extractAllText(xml: string): string {
   }
   return texts.join("").trim();
 }
-/** Extract <w:t>...</w:t> elements as XML fragments for use in edit_block */
+// 5. Extract <w:t>...</w:t> elements as XML fragments for use in edit_block ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractTextFragments(xml: string): string[] {
   const fragments: string[] = [];
 
@@ -279,17 +269,17 @@ function extractTextFragments(xml: string): string[] {
   }
   return fragments;
 }
-/** Extract paragraph style id from w:pPr/w:pStyle */
+// 6. Extract paragraph style id from w:pPr/w:pStyle ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractParagraphStyle(xml: string): string | null {
   const match = xml.match(WORD_PARAGRAPH_STYLE_PATTERN);
   return match?.[1] ?? null;
 }
-/** Extract table style from w:tblPr/w:tblStyle */
+// 7. Extract table style from w:tblPr/w:tblStyle ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractTableStyle(xml: string): string | null {
   const match = xml.match(WORD_TABLE_STYLE_PATTERN);
   return match?.[1] ?? null;
 }
-/** Extract table rows as arrays of cell text */
+// 8. Extract table rows as arrays of cell text ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractTableRows(tableXml: string): string[][] {
   const rows: string[][] = [];
   // Find each <w:tr>...</w:tr> using nesting-aware extraction
@@ -306,10 +296,8 @@ function extractTableRows(tableXml: string): string[][] {
   }
   return rows;
 }
-/**
- * Extract all occurrences of a named element from XML, respecting nesting.
- * Returns array of full element strings including open/close tags.
- */
+// 9. Extract all occurrences of a named element from XML, respecting nesting ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// Returns array of full element strings including open/close tags.
 function extractNestedElements(xml: string, tagName: string): string[] {
   const results: string[] = [];
   const openTag = `<${tagName}`;
@@ -363,10 +351,8 @@ function extractNestedElements(xml: string, tagName: string): string[] {
   }
   return results;
 }
-/**
- * Split XML into top-level elements respecting nesting depth.
- * E.g. for body content, returns each direct child element as a string.
- */
+// 10. Split XML into top-level elements respecting nesting depth ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// E.g. for body content, returns each direct child element as a string.
 function splitTopLevelElements(xml: string): string[] {
   const elements: string[] = [];
   let depth = 0;
@@ -430,9 +416,7 @@ function splitTopLevelElements(xml: string): string[] {
   }
   return elements.filter((e) => e.length > 0);
 }
-/**
- * Extract outline info for headers and footers from the DOCX zip.
- */
+// 11. Extract outline info for headers and footers from the DOCX zip ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractHeaderFooterOutline(zip: PizZip): string {
   const parts: string[] = [];
   const zipFiles = zip.files;
@@ -537,12 +521,9 @@ export class DocxFileHandler implements FileHandler {
   canHandle(path: string): boolean {
     return this.extensions.some((e) => path.toLowerCase().endsWith(e));
   }
-  /**
-   * Read DOCX content.
-   *
-   * Default (offset=0, no explicit length or default length): returns outline
-   * With offset/length: returns raw pretty-printed XML with line pagination
-   */
+  // 12. Read DOCX content ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // Default (offset=0, no explicit length or default length): returns outline
+  // With offset/length: returns raw pretty-printed XML with line pagination
   async read(path: string, options?: ReadOptions): Promise<FileResult> {
     const buf = await fs.readFile(path);
     const { zip, documentXml } = loadDocxZip(buf);
@@ -587,11 +568,9 @@ export class DocxFileHandler implements FileHandler {
       metadata: { isDocx: true, lineCount: totalLines },
     };
   }
-  /**
-   * Write/create a DOCX file.
-   * Content is plain text — each line becomes a paragraph.
-   * Lines starting with # become headings (# = Heading1, ## = Heading2, etc.)
-   */
+  // 13. Write/create a DOCX file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // Content is plain text — each line becomes a paragraph.
+  // Lines starting with # become headings (# = Heading1, ## = Heading2, etc.)
   async write(path: string, content: unknown, mode?: "rewrite" | "append"): Promise<void> {
     if (mode === "append") {
       throw new Error("DOCX append not supported. Use edit_block to modify existing DOCX files.");
@@ -619,13 +598,10 @@ export class DocxFileHandler implements FileHandler {
     const buf = zip.generate({ type: "nodebuffer", compression: "DEFLATE", compressionOptions: { level: 6 } });
     await fs.writeFile(path, buf);
   }
-  /**
-   * Edit DOCX via find/replace on pretty-printed XML.
-   *
-   * Works on the same representation that read() returns when using offset/length,
-   * so XML fragments copied from read output work as search strings.
-   * After editing, XML is compacted and repacked into the DOCX.
-   */
+  // 14. Edit DOCX via find/replace on pretty-printed XML ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // Works on the same representation that read() returns when using offset/length,
+  // so XML fragments copied from read output work as search strings.
+  // After editing, XML is compacted and repacked into the DOCX.
   async editRange(path: string, _range: string, content: unknown, _options?: Record<string, unknown>): Promise<EditResult> {
     try {
       let oldStr: string;
@@ -730,9 +706,7 @@ export class DocxFileHandler implements FileHandler {
       };
     }
   }
-  /**
-   * Get DOCX file info
-   */
+  // 15. Get DOCX file info ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async getInfo(path: string): Promise<FileInfo> {
     const stats = await fs.stat(path);
 

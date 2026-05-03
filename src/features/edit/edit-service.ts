@@ -5,9 +5,7 @@
  * @since 2026-05-02
  */
 
-/**
- * Text file editing via search/replace with fuzzy matching support.
- */
+// Text file editing via search/replace with fuzzy matching support.
 
 import path from "node:path";
 import {resolvePreviewFileType} from "@assets/readers/readers-filetypes";
@@ -26,18 +24,14 @@ interface SearchReplace {
   replace: string;
   search: string;
 }
-/**
- * Threshold for fuzzy matching - similarity must be at least this value to be considered
- * (0-1 scale where 1 is perfect match and 0 is completely different)
- */
+// Threshold for fuzzy matching - similarity must be at least this value to be considered
+// (0-1 scale where 1 is perfect match and 0 is completely different)
 const FUZZY_THRESHOLD = 0.7;
 
-/**
- * Extract character code data from diff
- * @param expected The string that was searched for
- * @param actual The string that was found
- * @returns Character code statistics
- */
+// 1. Extract character code data from diff ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// @param expected The string that was searched for
+// @param actual The string that was found
+// @returns Character code statistics
 function getCharacterCodeData(
   expected: string,
   actual: string,
@@ -308,12 +302,10 @@ RECOMMENDATION: For large search/replace operations, consider breaking them into
   }
   throw new Error("Unexpected error during search and replace operation.");
 }
-/**
- * Generates a character-level diff using standard {-removed-}{+added+} format
- * @param expected The string that was searched for
- * @param actual The string that was found
- * @returns A formatted string showing character-level differences
- */
+// 2. Generates a character-level diff using standard {-removed-}{+added+} format ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// @param expected The string that was searched for
+// @param actual The string that was found
+// @returns A formatted string showing character-level differences
 function highlightDifferences(expected: string, actual: string): string {
   // Implementation of a simplified character-level diff
 
@@ -340,13 +332,10 @@ function highlightDifferences(expected: string, actual: string): string {
   // Format the output as a character-level diff
   return `${commonPrefix}{-${expectedDiff}-}{+${actualDiff}+}${commonSuffix}`;
 }
-/**
- * Handle edit_block command
- *
- * 1. Text files: String replacement (old_string/new_string)
- *    - Uses fuzzy matching for resilience
- *    - Handles expected_replacements parameter
- */
+// 3. Handle edit_block command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Text files: String replacement (old_string/new_string)
+// - Uses fuzzy matching for resilience
+// - Handles expected_replacements parameter
 export async function handleEditBlock(args: unknown): Promise<ServerResult> {
   const parsed = EditBlockArgsSchema.parse(args);
 

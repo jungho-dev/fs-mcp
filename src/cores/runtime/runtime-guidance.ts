@@ -128,9 +128,7 @@ LINUX-SPECIFIC NOTES:
   }
   return guidance;
 }
-/**
- * Get common development tool guidance based on OS
- */
+// 1. Get common development tool guidance based on OS ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function getDevelopmentToolGuidance(systemInfo: SystemInfo): string {
   const {isWindows, isMacOS, nodeInfo, processInfo} = systemInfo;
 
@@ -180,9 +178,7 @@ COMMON LINUX DEVELOPMENT TOOLS:
 ${envInfo}`;
   }
 }
-/**
- * Get path guidance (simplified since paths are normalized)
- */
+// 2. Get path guidance (simplified since paths are normalized) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function getPathGuidance(systemInfo: SystemInfo): string {
   let guidance = `Always use absolute paths for reliability. Paths are automatically normalized regardless of slash direction.`;
 

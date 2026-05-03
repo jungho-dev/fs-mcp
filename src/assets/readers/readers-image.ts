@@ -5,18 +5,14 @@
  * @since 2026-05-02
  */
 
-/**
- * Image file handler
- * Handles reading image files and converting to base64
- */
+// Image file handler
+// Handles reading image files and converting to base64
 
 import fs from "node:fs/promises";
 import type {FileHandler, FileInfo, FileResult, ReadOptions} from "@assets/readers/readers-base";
 
-/**
- * Image file handler implementation
- * Supports: PNG, JPEG, GIF, WebP, BMP, SVG
- */
+// 1. Image file handler implementation ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// Supports: PNG, JPEG, GIF, WebP, BMP, SVG
 export class ImageFileHandler implements FileHandler {
   private static readonly IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg"];
 
@@ -80,9 +76,7 @@ export class ImageFileHandler implements FileHandler {
       },
     };
   }
-  /**
-   * Get MIME type for image based on file extension
-   */
+  // 2. Get MIME type for image based on file extension ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private getMimeType(path: string): string {
     const lowerPath = path.toLowerCase();
     for (const [ext, mimeType] of Object.entries(ImageFileHandler.IMAGE_MIME_TYPES)) {

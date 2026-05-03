@@ -10,9 +10,7 @@ const __dirname = path.dirname(__filename);
 const SEARCH_FIXTURE_DIR = path.join(__dirname, "..", "..", "fixtures", "output");
 const SEARCH_FIXTURE_PATH = path.join(SEARCH_FIXTURE_DIR, "output-file-with-1500-lines.txt");
 
-/**
- * Helper function to wait for search completion and get all results
- */
+// 1. Helper function to wait for search completion and get all results ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function searchAndWaitForCompletion(searchArgs, timeout = 30_000) {
   const result = await handleStartSearch(searchArgs);
   let completedResult;

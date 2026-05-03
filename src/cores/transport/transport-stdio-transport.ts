@@ -48,10 +48,8 @@ function writeToStdout(write: typeof process.stdout.write, chunk: string | Uint8
   const writeArgs = callback !== undefined ? [chunk, encodingOrCallback, callback] : encodingOrCallback !== undefined ? [chunk, encodingOrCallback] : [chunk];
   return Reflect.apply(write, process.stdout, writeArgs) as boolean;
 }
-/**
- * Enhanced StdioServerTransport that wraps console output in valid JSON-RPC structures
- * instead of filtering them out. This prevents crashes while maintaining debug visibility.
- */
+// 1. Enhanced StdioServerTransport that wraps console output in valid JSON-RPC structures ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// instead of filtering them out. This prevents crashes while maintaining debug visibility.
 export class FilteredStdioServerTransport extends StdioServerTransport {
   private readonly originalConsole: {
     log: typeof console.log;
@@ -93,9 +91,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
     // Note: We defer the initialization notification until enableNotifications() is called
     // to ensure MCP protocol compliance - notifications must not be sent before initialization
   }
-  /**
-   * Call this method after MCP initialization is complete to enable JSON-RPC notifications
-   */
+  // 2. Call this method after MCP initialization is complete to enable JSON-RPC notifications ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public enableNotifications(): void {
     this.isInitialized = true;
 
@@ -126,10 +122,8 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
     }
     this.sendLogNotification("info", ["JSON-RPC notifications enabled"]);
   }
-  /**
-   * Configure client-specific behavior
-   * Call this BEFORE enableNotifications()
-   */
+  // 3. Configure client-specific behavior ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // Call this BEFORE enableNotifications()
   public configureForClient(clientName: string): void {
     this.clientName = clientName.toLowerCase();
 
@@ -139,15 +133,11 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
       process.stderr.write(`fs-mcp: Notifications disabled for ${clientName}\n`);
     }
   }
-  /**
-   * Check if notifications are enabled
-   */
+  // Check if notifications are enabled
   public get isNotificationsEnabled(): boolean {
     return this.isInitialized;
   }
-  /**
-   * Get the current count of buffered messages
-   */
+  // Get the current count of buffered messages
   public get bufferedMessageCount(): number {
     return this.messageBuffer.length;
   }
@@ -298,10 +288,8 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
       writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fallbackNotification)}\n`);
     }
   }
-  /**
-   * Public method to send log notifications from anywhere in the application
-   * Now properly buffers messages before MCP initialization to avoid breaking stdio protocol
-   */
+  // 4. Public method to send log notifications from anywhere in the application ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // Now properly buffers messages before MCP initialization to avoid breaking stdio protocol
   public sendLog(level: LogLevel, message: string, data?: unknown): void {
     // Skip if notifications are disabled (e.g., for Cline)
     if (this.disableNotifications) {
@@ -344,9 +332,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
       writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fallbackNotification)}\n`);
     }
   }
-  /**
-   * Send a progress notification (useful for long-running operations)
-   */
+  // 5. Send a progress notification (useful for long-running operations) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public sendProgress(token: string, value: number, total?: number): void {
     // Don't send progress before initialization - would break MCP protocol
     if (!this.isInitialized) {
@@ -379,9 +365,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
       writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fallbackNotification)}\n`);
     }
   }
-  /**
-   * Send a custom notification with any method name
-   */
+  // 6. Send a custom notification with any method name ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public sendCustomNotification(method: string, params: unknown): void {
     // Don't send custom notifications before initialization - would break MCP protocol
     if (!this.isInitialized) {
@@ -410,9 +394,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
       writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fallbackNotification)}\n`);
     }
   }
-  /**
-   * Cleanup method to restore original console methods if needed
-   */
+  // 7. Cleanup method to restore original console methods if needed ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public cleanup(): void {
     if (this.originalConsole) {
     	console.log = this.originalConsole.log;

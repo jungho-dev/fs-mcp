@@ -73,9 +73,7 @@ export const server = new Server(
 // Store current client info (simple variable)
 let currentClient: CurrentClient = {name: "uninitialized", version: "uninitialized"};
 
-/**
- * Unified way to update client information
- */
+// 1. Unified way to update client information ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function updateCurrentClient(clientInfo: ClientInfoUpdate): Promise<boolean> {
   if (clientInfo.name !== currentClient.name || clientInfo.version !== currentClient.version) {
     const nameChanged = clientInfo.name !== currentClient.name;

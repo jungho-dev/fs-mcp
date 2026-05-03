@@ -5,10 +5,8 @@
  * @since 2026-05-02
  */
 
-/**
- * Centralized logging utility for fs-mcp
- * Ensures all logging goes through proper channels based on initialization state
- */
+// Centralized logging utility for fs-mcp
+// Ensures all logging goes through proper channels based on initialization state
 
 import type { FilteredStdioServerTransport } from "@cores/transport/transport-stdio-transport";
 
@@ -35,9 +33,7 @@ function createLogPayload(message: string, data?: unknown): string | Record<stri
   return { data, message };
 }
 
-/**
- * Log a message using the appropriate method based on MCP initialization state
- */
+// 1. Log a message using the appropriate method based on MCP initialization state ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function log(level: LogLevel, message: string, data?: unknown): void {
   try {
     // Check if MCP transport is available
@@ -72,9 +68,7 @@ export function log(level: LogLevel, message: string, data?: unknown): void {
   }
 }
 
-/**
- * Convenience functions for different log levels
- */
+// Convenience functions for different log levels
 export const logger: Readonly<Record<LogLevel, (message: string, data?: unknown) => void>> = {
   alert: (message: string, data?: unknown) => log("alert", message, data),
   critical: (message: string, data?: unknown) => log("critical", message, data),
@@ -86,11 +80,9 @@ export const logger: Readonly<Record<LogLevel, (message: string, data?: unknown)
   warning: (message: string, data?: unknown) => log("warning", message, data),
 };
 
-/**
- * Log to stderr during early initialization (before MCP is ready)
- * Use this for critical startup messages that must be visible
- * NOTE: This should also be JSON-RPC format
- */
+// 2. Log to stderr during early initialization (before MCP is ready) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// Use this for critical startup messages that must be visible
+// NOTE: This should also be JSON-RPC format
 export function logToStderr(level: LogLevel, message: string): void {
   const notification = {
       jsonrpc: "2.0" as const,

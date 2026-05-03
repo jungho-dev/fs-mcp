@@ -9,15 +9,11 @@ import { createBatchToolResponse, runParallelBatch } from "@controllers/controll
 import { handleEditBlock } from "@features/edit/edit-service";
 import { EditBlocksArgsSchema } from "@schemas/schemas-edit";
 
-/**
- * Handle edit_block command
- * Uses the enhanced implementation with multiple occurrence support and fuzzy matching
- */
+// Handle edit_block command
+// Uses the enhanced implementation with multiple occurrence support and fuzzy matching
 export { handleEditBlock };
 
-/**
- * Handle edit_blocks command.
- */
+// 1. Handle edit_blocks command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleEditBlocks(args: unknown) {
   const parsed = EditBlocksArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleEditBlock(item));

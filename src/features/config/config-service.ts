@@ -130,9 +130,7 @@ function createSystemInfoSnapshot(): ReturnType<typeof getSystemInfo> & {
     },
   };
 }
-/**
- * Get a single config entry.
- */
+// 1. Get a single config entry ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getConfigValue(args: unknown): Promise<ServerResult> {
   console.error(`getConfigValue called with args: ${JSON.stringify(args)}`);
   const parsed = GetConfigValueArgsSchema.safeParse(args);
@@ -211,9 +209,7 @@ export async function getConfigValue(args: unknown): Promise<ServerResult> {
     };
   }
 }
-/**
- * Set a specific config value
- */
+// 2. Set a specific config value ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function setConfigValue(args: unknown): Promise<ServerResult> {
   console.error(`setConfigValue called with args: ${JSON.stringify(args)}`);
   try {

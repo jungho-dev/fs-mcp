@@ -8,15 +8,13 @@
 import {capture} from "@cores/runtime/runtime-output-capture";
 import {distance} from "fastest-levenshtein";
 
-/**
- * Recursively finds the closest match to a query string within text using fuzzy matching
- * @param text The text to search within
- * @param query The query string to find
- * @param start Start index in the text (default: 0)
- * @param end End index in the text (default: text.length)
- * @param parentDistance Best distance found so far (default: Infinity)
- * @returns Object with start and end indices, matched value, and Levenshtein distance
- */
+// 1. Recursively finds the closest match to a query string within text using fuzzy matching ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// @param text The text to search within
+// @param query The query string to find
+// @param start Start index in the text (default: 0)
+// @param end End index in the text (default: text.length)
+// @param parentDistance Best distance found so far (default: Infinity)
+// @returns Object with start and end indices, matched value, and Levenshtein distance
 export function recursiveFuzzyIndexOf(
   text: string,
   query: string,
@@ -74,15 +72,13 @@ export function recursiveFuzzyIndexOf(
   	return recursiveFuzzyIndexOf(text, query, rightStart, end, bestDistance, depth + 1);
   }
 }
-/**
- * Iteratively refines the best match by reducing the search area
- * @param text The text to search within
- * @param query The query string to find
- * @param start Start index in the text
- * @param end End index in the text
- * @param parentDistance Best distance found so far
- * @returns Object with start and end indices, matched value, and Levenshtein distance
- */
+// 2. Iteratively refines the best match by reducing the search area ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// @param text The text to search within
+// @param query The query string to find
+// @param start Start index in the text
+// @param end End index in the text
+// @param parentDistance Best distance found so far
+// @returns Object with start and end indices, matched value, and Levenshtein distance
 function iterativeReduction(
   text: string,
   query: string,
@@ -140,12 +136,10 @@ function iterativeReduction(
     value: text.slice(bestStart, bestEnd),
   };
 }
-/**
- * Calculates the similarity ratio between two strings
- * @param a First string
- * @param b Second string
- * @returns Similarity ratio (0-1)
- */
+// 3. Calculates the similarity ratio between two strings ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// @param a First string
+// @param b Second string
+// @returns Similarity ratio (0-1)
 export function getSimilarityRatio(a: string, b: string): number {
   const maxLength = Math.max(a.length, b.length);
   if (maxLength === 0) {

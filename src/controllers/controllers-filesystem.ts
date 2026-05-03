@@ -54,9 +54,7 @@ function resolveDirectoryListingEntryType(match: RegExpMatchArray | null): Direc
   }
   return "unknown";
 }
-/**
- * Handle read_file command
- */
+// 1. Handle read_file command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleReadFile(args: unknown): Promise<ServerResult> {
   const HANDLER_TIMEOUT = 60_000; // 60 seconds total operation timeout
   // Add input validation
@@ -130,9 +128,7 @@ export async function handleReadFile(args: unknown): Promise<ServerResult> {
   }
   return result;
 }
-/**
- * Handle read_multiple_files command
- */
+// 2. Handle read_multiple_files command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleReadMultipleFiles(args: unknown): Promise<ServerResult> {
   const parsed = ReadMultipleFilesArgsSchema.parse(args);
   const fileResults = await readMultipleFiles(parsed.paths);
@@ -177,9 +173,7 @@ export async function handleReadMultipleFiles(args: unknown): Promise<ServerResu
   }
   return { content: contentItems };
 }
-/**
- * Handle write_file command
- */
+// 3. Handle write_file command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleWriteFile(args: unknown): Promise<ServerResult> {
   try {
     const parsed = WriteFileArgsSchema.parse(args);
@@ -222,9 +216,7 @@ Performance tip: For optimal speed, consider chunking files into ≤30 line piec
     return createErrorResponse(errorMessage);
   }
 }
-/**
- * Handle create_directory command
- */
+// 4. Handle create_directory command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleCreateDirectory(args: unknown): Promise<ServerResult> {
   try {
     const parsed = CreateDirectoryArgsSchema.parse(args);
@@ -237,9 +229,7 @@ export async function handleCreateDirectory(args: unknown): Promise<ServerResult
     return createErrorResponse(errorMessage);
   }
 }
-/**
- * Handle list_directory command
- */
+// 5. Handle list_directory command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleListDirectory(args: unknown): Promise<ServerResult> {
   try {
     const parsed = ListDirectoryArgsSchema.parse(args);
@@ -272,9 +262,7 @@ export async function handleListDirectory(args: unknown): Promise<ServerResult> 
     return createErrorResponse(errorMessage);
   }
 }
-/**
- * Handle move_file command
- */
+// 6. Handle move_file command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleMoveFile(args: unknown): Promise<ServerResult> {
   try {
     const parsed = MoveFileArgsSchema.parse(args);
@@ -304,9 +292,7 @@ function buildRenameDestinationPath(sourcePath: string, newName: string): string
   return path.join(path.dirname(sourcePath), normalizedName);
 }
 
-/**
- * Handle rename_files item command
- */
+// 7. Handle rename_files item command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleRenameFile(args: unknown): Promise<ServerResult> {
   try {
     const parsed = RenameFileArgsSchema.parse(args);
@@ -320,9 +306,7 @@ export async function handleRenameFile(args: unknown): Promise<ServerResult> {
     return createErrorResponse(errorMessage);
   }
 }
-/**
- * Format a value for display, handling objects and arrays
- */
+// 8. Format a value for display, handling objects and arrays ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function formatValue(value: unknown, indent: string = ""): string {
   if (value === null || value === undefined) {
     return String(value);
@@ -348,9 +332,7 @@ function formatValue(value: unknown, indent: string = ""): string {
   }
   return String(value);
 }
-/**
- * Handle get_file_info command
- */
+// 9. Handle get_file_info command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleGetFileInfo(args: unknown): Promise<ServerResult> {
   try {
     const parsed = GetFileInfoArgsSchema.parse(args);
@@ -375,9 +357,7 @@ export async function handleGetFileInfo(args: unknown): Promise<ServerResult> {
   }
 }
 
-/**
- * Handle read_files command.
- */
+// 10. Handle read_files command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleReadFiles(args: unknown): Promise<ServerResult> {
   const parsed = ReadFilesArgsSchema.parse(args);
   const items = parsed.items ?? parsed.paths?.map((filePath) => ({ path: filePath })) ?? [];
@@ -387,9 +367,7 @@ export async function handleReadFiles(args: unknown): Promise<ServerResult> {
   return response;
 }
 
-/**
- * Handle write_files command.
- */
+// 11. Handle write_files command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleWriteFiles(args: unknown): Promise<ServerResult> {
   const parsed = WriteFilesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleWriteFile(item));
@@ -398,9 +376,7 @@ export async function handleWriteFiles(args: unknown): Promise<ServerResult> {
   return response;
 }
 
-/**
- * Handle create_directories command.
- */
+// 12. Handle create_directories command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleCreateDirectories(args: unknown): Promise<ServerResult> {
   const parsed = CreateDirectoriesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.paths, (dirPath) => handleCreateDirectory({ path: dirPath }));
@@ -409,9 +385,7 @@ export async function handleCreateDirectories(args: unknown): Promise<ServerResu
   return response;
 }
 
-/**
- * Handle list_directories command.
- */
+// 13. Handle list_directories command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleListDirectories(args: unknown): Promise<ServerResult> {
   const parsed = ListDirectoriesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleListDirectory(item));
@@ -420,9 +394,7 @@ export async function handleListDirectories(args: unknown): Promise<ServerResult
   return response;
 }
 
-/**
- * Handle move_files command.
- */
+// 14. Handle move_files command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleMoveFiles(args: unknown): Promise<ServerResult> {
   const parsed = MoveFilesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleMoveFile(item));
@@ -431,9 +403,7 @@ export async function handleMoveFiles(args: unknown): Promise<ServerResult> {
   return response;
 }
 
-/**
- * Handle rename_files command.
- */
+// 15. Handle rename_files command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleRenameFiles(args: unknown): Promise<ServerResult> {
   const parsed = RenameFilesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleRenameFile(item));
@@ -442,9 +412,7 @@ export async function handleRenameFiles(args: unknown): Promise<ServerResult> {
   return response;
 }
 
-/**
- * Handle get_file_infos command.
- */
+// 16. Handle get_file_infos command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleGetFileInfos(args: unknown): Promise<ServerResult> {
   const parsed = GetFileInfosArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.paths, (filePath) => handleGetFileInfo({ path: filePath }));

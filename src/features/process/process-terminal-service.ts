@@ -33,9 +33,7 @@ export interface PaginatedOutputResult {
   runtimeMs?: number; // Runtime in milliseconds (for completed processes)
   totalLines: number;
 }
-/**
- * Configuration for spawning a shell with appropriate flags
- */
+// 1. Configuration for spawning a shell with appropriate flags ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 interface ShellSpawnConfig {
   args: string[];
   executable: string;
@@ -63,10 +61,8 @@ function withPwshOutputEncoding(command: string): string {
 
   return encodedCommand;
 }
-/**
- * Get the appropriate spawn configuration for a given shell
- * This handles login shell flags for different shell types
- */
+// 2. Get the appropriate spawn configuration for a given shell ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// This handles login shell flags for different shell types
 function getShellSpawnArgs(shellPath: string, command: string): ShellSpawnConfig {
   const [shellExecutable, ...shellArgs] = splitShellCommand(shellPath);
   const executable = shellExecutable ?? shellPath;
@@ -119,12 +115,10 @@ export class TerminalManager {
   private readonly sessions: Map<number, TerminalSession> = new Map();
   private readonly completedSessions: Map<number, CompletedSession> = new Map();
 
-  /**
-   * Send input to a running process
-   * @param pid Process ID
-   * @param input Text to send to the process
-   * @returns Whether input was successfully sent
-   */
+  // 3. Send input to a running process ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // @param pid Process ID
+  // @param input Text to send to the process
+  // @returns Whether input was successfully sent
   sendInputToProcess(pid: number, input: string): boolean {
     const session = this.sessions.get(pid);
     if (!session) {
@@ -394,10 +388,8 @@ export class TerminalManager {
       });
     });
   }
-  /**
-   * Append text to a session's line buffer
-   * Handles partial lines and newline splitting
-   */
+  // 4. Append text to a session's line buffer ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // Handles partial lines and newline splitting
   private appendToLineBuffer(session: TerminalSession, text: string): void {
     if (!text) {
     	return;
@@ -424,13 +416,11 @@ export class TerminalManager {
       }
     }
   }
-  /**
-   * Read process output with pagination (like file reading)
-   * @param pid Process ID
-   * @param offset Line offset: 0=from lastReadIndex, positive=absolute, negative=tail
-   * @param length Max lines to return
-   * @param updateReadIndex Whether to update lastReadIndex (default: true for offset=0)
-   */
+  // 5. Read process output with pagination (like file reading) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // @param pid Process ID
+  // @param offset Line offset: 0=from lastReadIndex, positive=absolute, negative=tail
+  // @param length Max lines to return
+  // @param updateReadIndex Whether to update lastReadIndex (default: true for offset=0)
   readOutputPaginated(pid: number, offset: number = 0, length: number = 1000): PaginatedOutputResult | null {
     // First check active sessions
     const session = this.sessions.get(pid);
@@ -464,9 +454,7 @@ export class TerminalManager {
     }
     return null;
   }
-  /**
-   * Internal helper to read from a line buffer with offset/length
-   */
+  // 6. Internal helper to read from a line buffer with offset/length ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private readFromLineBuffer(lines: string[], offset: number, length: number, lastReadIndex: number, updateLastRead: (index: number) => void, isComplete: boolean, exitCode?: number | null, runtimeMs?: number): PaginatedOutputResult {
     const totalLines = lines.length;
     let startIndex: number;
@@ -508,9 +496,7 @@ export class TerminalManager {
       totalLines,
     };
   }
-  /**
-   * Get total line count for a process
-   */
+  // 7. Get total line count for a process ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   getOutputLineCount(pid: number): number | null {
     const session = this.sessions.get(pid);
     if (session) {
@@ -522,12 +508,10 @@ export class TerminalManager {
     }
     return null;
   }
-  /**
-   * Legacy method for backward compatibility
-   * Returns all new output since last read
-   * @param maxLines Maximum lines to return (default: 1000 for context protection)
-   * @deprecated Use readOutputPaginated instead
-   */
+  // 8. Legacy method for backward compatibility ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // Returns all new output since last read
+  // @param maxLines Maximum lines to return (default: 1000 for context protection)
+  // @deprecated Use readOutputPaginated instead
   getNewOutput(pid: number, maxLines: number = 1000): string | null {
     const result = this.readOutputPaginated(pid, 0, maxLines);
     if (!result) {
@@ -551,10 +535,8 @@ export class TerminalManager {
     }
     return output || null;
   }
-  /**
-   * Capture a snapshot of current output state for interaction tracking.
-   * Used by interactWithProcess to know what output existed before sending input.
-   */
+  // 9. Capture a snapshot of current output state for interaction tracking ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // Used by interactWithProcess to know what output existed before sending input.
   captureOutputSnapshot(pid: number): {totalChars: number; lineCount: number} | null {
     const session = this.sessions.get(pid);
     if (session) {
@@ -566,11 +548,9 @@ export class TerminalManager {
     }
     return null;
   }
-  /**
-   * Get output that appeared since a snapshot was taken.
-   * This handles the case where output is appended to the last line (REPL prompts).
-   * Also checks completed sessions in case process finished between snapshot and poll.
-   */
+  // Get output that appeared since a snapshot was taken.
+  // This handles the case where output is appended to the last line (REPL prompts).
+  // Also checks completed sessions in case process finished between snapshot and poll.
   getOutputSinceSnapshot(pid: number, snapshot: {totalChars: number; lineCount: number}): string | null {
     // Check active session first
     const session = this.sessions.get(pid);
@@ -592,11 +572,9 @@ export class TerminalManager {
     }
     return null;
   }
-  /**
-   * Get a session by PID
-   * @param pid Process ID
-   * @returns The session or undefined if not found
-   */
+  // 10. Get a session by PID ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // @param pid Process ID
+  // @returns The session or undefined if not found
   getSession(pid: number): TerminalSession | undefined {
     return this.sessions.get(pid);
   }

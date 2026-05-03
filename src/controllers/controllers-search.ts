@@ -11,9 +11,7 @@ import { capture } from "@cores/runtime/runtime-output-capture";
 import { searchManager } from "@features/search/search-service";
 import { GetMoreSearchResultsArgsSchema, GetSearchResultsArgsSchema, StartSearchArgsSchema, StartSearchesArgsSchema, StopSearchArgsSchema, StopSearchesArgsSchema } from "@schemas/schemas-search";
 
-/**
- * Handle start_search command
- */
+// 1. Handle start_search command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStartSearch(args: unknown): Promise<ServerResult> {
   const parsed = StartSearchArgsSchema.safeParse(args);
   if (!parsed.success) {
@@ -78,9 +76,7 @@ export async function handleStartSearch(args: unknown): Promise<ServerResult> {
     };
   }
 }
-/**
- * Handle get_more_search_results command
- */
+// 2. Handle get_more_search_results command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleGetMoreSearchResults(args: unknown): Promise<ServerResult> {
   const parsed = GetMoreSearchResultsArgsSchema.safeParse(args);
   if (!parsed.success) {
@@ -164,9 +160,7 @@ export async function handleGetMoreSearchResults(args: unknown): Promise<ServerR
     };
   }
 }
-/**
- * Handle stop_search command
- */
+// 3. Handle stop_search command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStopSearch(args: unknown): Promise<ServerResult> {
   const parsed = StopSearchArgsSchema.safeParse(args);
   if (!parsed.success) {
@@ -206,9 +200,7 @@ export async function handleStopSearch(args: unknown): Promise<ServerResult> {
     };
   }
 }
-/**
- * Handle list_searches command
- */
+// 4. Handle list_searches command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleListSearches(): Promise<ServerResult> {
   try {
     const sessions = searchManager.listSearchSessions();
@@ -243,9 +235,7 @@ export async function handleListSearches(): Promise<ServerResult> {
   }
 }
 
-/**
- * Handle start_searches command.
- */
+// 5. Handle start_searches command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStartSearches(args: unknown): Promise<ServerResult> {
   const parsed = StartSearchesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleStartSearch(item));
@@ -254,9 +244,7 @@ export async function handleStartSearches(args: unknown): Promise<ServerResult> 
   return response;
 }
 
-/**
- * Handle get_search_results command.
- */
+// 6. Handle get_search_results command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleGetSearchResults(args: unknown): Promise<ServerResult> {
   const parsed = GetSearchResultsArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleGetMoreSearchResults(item));
@@ -265,9 +253,7 @@ export async function handleGetSearchResults(args: unknown): Promise<ServerResul
   return response;
 }
 
-/**
- * Handle stop_searches command.
- */
+// 7. Handle stop_searches command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStopSearches(args: unknown): Promise<ServerResult> {
   const parsed = StopSearchesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.sessionIds, (sessionId) => handleStopSearch({ sessionId: sessionId }));

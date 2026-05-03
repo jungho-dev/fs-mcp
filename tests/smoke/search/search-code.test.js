@@ -27,9 +27,7 @@ const colors = {
   blue: "\x1b[34m",
 };
 
-/**
- * Helper function to wait for search completion and get all results
- */
+// 1. Helper function to wait for search completion and get all results ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function searchAndWaitForCompletion(searchArgs, timeout = 10_000) {
   const result = await handleStartSearch(searchArgs);
 
@@ -69,9 +67,7 @@ async function searchAndWaitForCompletion(searchArgs, timeout = 10_000) {
   }
 }
 
-/**
- * Setup function to prepare test environment
- */
+// 2. Setup function to prepare test environment ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function setup() {
   // Save original config
   const originalConfig = await configManager.getConfig();
@@ -153,9 +149,7 @@ class TestClass:
   return originalConfig;
 }
 
-/**
- * Teardown function to clean up after tests
- */
+// 3. Teardown function to clean up after tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function teardown(originalConfig) {
   // Clean up any remaining search sessions
   try {
@@ -191,18 +185,14 @@ async function teardown(originalConfig) {
   await configManager.updateConfig(originalConfig);
 }
 
-/**
- * Assert function for test validation
- */
+// 4. Assert function for test validation ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function assert(condition, message) {
   if (!condition) {
     throw new Error(`Assertion failed: ${message}`);
   }
 }
 
-/**
- * Test basic search functionality
- */
+// 5. Test basic search functionality ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testBasicSearch() {
   const { finalResult } = await searchAndWaitForCompletion({
     path: TEST_DIR,
@@ -219,9 +209,7 @@ async function testBasicSearch() {
   assert(text.includes("nested.py"), "Should find matches in nested.py");
 }
 
-/**
- * Test case-sensitive search
- */
+// 6. Test case-sensitive search ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testCaseSensitiveSearch() {
   // Search for 'Pattern' (capital P) with case sensitivity
   const { finalResult } = await searchAndWaitForCompletion({
@@ -236,9 +224,7 @@ async function testCaseSensitiveSearch() {
   assert(text.includes("hidden.txt"), "Should find Pattern in hidden.txt");
 }
 
-/**
- * Test case-insensitive search
- */
+// 7. Test case-insensitive search ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testCaseInsensitiveSearch() {
   const { finalResult } = await searchAndWaitForCompletion({
     path: TEST_DIR,
@@ -253,9 +239,7 @@ async function testCaseInsensitiveSearch() {
   assert(text.includes("nested.py"), "Should find pattern in nested.py");
 }
 
-/**
- * Test file pattern filtering
- */
+// 8. Test file pattern filtering ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testFilePatternFiltering() {
   // Search only in TypeScript files
   const { finalResult } = await searchAndWaitForCompletion({
@@ -271,9 +255,7 @@ async function testFilePatternFiltering() {
   assert(!text.includes("nested.py"), "Should not include Python files");
 }
 
-/**
- * Test maximum results limiting
- */
+// 9. Test maximum results limiting ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testMaxResults() {
   // Test that the maxResults parameter is accepted and doesn't cause errors
   const { finalResult } = await searchAndWaitForCompletion({
@@ -296,9 +278,7 @@ async function testMaxResults() {
   assert(hasResults, "Should have function results or no matches");
 }
 
-/**
- * Test context lines functionality
- */
+// 10. Test context lines functionality ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testContextLines() {
   const { finalResult } = await searchAndWaitForCompletion({
     path: TEST_DIR,
@@ -312,9 +292,7 @@ async function testContextLines() {
   assert(text.length > 0, "Should have context around matches");
 }
 
-/**
- * Test hidden files inclusion
- */
+// 11. Test hidden files inclusion ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testIncludeHidden() {
   // First, create a hidden file (starts with dot)
   const hiddenFile = path.join(TEST_DIR, ".hidden-file.txt");
@@ -337,9 +315,7 @@ async function testIncludeHidden() {
   }
 }
 
-/**
- * Test timeout functionality
- */
+// 12. Test timeout functionality ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testTimeout() {
   // Use a reasonable timeout
   const { finalResult } = await searchAndWaitForCompletion({
@@ -358,9 +334,7 @@ async function testTimeout() {
   assert(hasValidResult, "Should handle timeout gracefully");
 }
 
-/**
- * Test no matches found scenario
- */
+// 13. Test no matches found scenario ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testNoMatches() {
   const { finalResult } = await searchAndWaitForCompletion({
     path: TEST_DIR,
@@ -375,9 +349,7 @@ async function testNoMatches() {
   assert(text.includes("No matches") || text.includes("Total results found: 0"), "Should return no matches message");
 }
 
-/**
- * Test invalid path handling
- */
+// 14. Test invalid path handling ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testInvalidPath() {
   try {
     const result = await handleStartSearch({
@@ -396,9 +368,7 @@ async function testInvalidPath() {
   }
 }
 
-/**
- * Test schema validation with invalid arguments
- */
+// 15. Test schema validation with invalid arguments ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testInvalidArguments() {
   // Test missing required path
   try {
@@ -427,9 +397,7 @@ async function testInvalidArguments() {
   }
 }
 
-/**
- * Test file search functionality
- */
+// 16. Test file search functionality ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testFileSearch() {
   const { finalResult } = await searchAndWaitForCompletion({
     path: TEST_DIR,
@@ -441,9 +409,7 @@ async function testFileSearch() {
   assert(text.includes("test1.js"), "Should find JavaScript files");
 }
 
-/**
- * Main test runner function
- */
+// 17. Main test runner function ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function testSearchCode() {
   let originalConfig;
 

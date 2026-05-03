@@ -15,9 +15,7 @@ async function setup() {
   return originalConfig;
 }
 
-/**
- * Teardown function to clean up after tests
- */
+// 1. Teardown function to clean up after tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function teardown(originalConfig) {
   // Reset configuration to original
   await configManager.updateConfig(originalConfig);

@@ -202,9 +202,7 @@ function getDefaultAllowedDirectories(): string[] {
   }
   return ["C:\\JUNGHO", "C:\\Windows", "C:\\Users\\jungh", "C:\\Users\\jungh\\.codex", "C:\\JUNGHO\\9.Workspace\\2.Project\\2.Node\\fs-mcp"];
 }
-/**
- * Singleton config manager for the server
- */
+// 1. Singleton config manager for the server ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 class ConfigManager {
   private readonly configPath: string;
   private config: ServerConfig = {};
@@ -214,9 +212,7 @@ class ConfigManager {
   constructor() {
     this.configPath = CONFIG_FILE;
   }
-  /**
-   * Initialize configuration - load from disk or create default
-   */
+  // 2. Initialize configuration - load from disk or create default ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async init() {
     if (this.initialized) {
     	return;
@@ -247,9 +243,7 @@ class ConfigManager {
       this.initialized = true;
     }
   }
-  /**
-   * Alias for init() to maintain backward compatibility
-   */
+  // 3. Alias for init() to maintain backward compatibility ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async loadConfig() {
     return this.init();
   }
@@ -274,9 +268,7 @@ class ConfigManager {
       throw error;
     }
   }
-  /**
-   * Create default configuration
-   */
+  // 4. Create default configuration ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private getDefaultConfig(): ServerConfig {
     return {
       allowedDirectories: getDefaultAllowedDirectories(),
@@ -336,9 +328,7 @@ class ConfigManager {
       fileWriteLineLimit: 50_000,
     };
   }
-  /**
-   * Save config to disk
-   */
+  // 5. Save config to disk ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private async saveConfig () {
     try {
       const persistableConfig = Object.fromEntries(Object.entries(this.config).filter(([, value]) => formatTomlValue(value) !== null)) as ServerConfig;
@@ -349,49 +339,37 @@ class ConfigManager {
       throw error;
     }
   }
-  /**
-   * Get the entire config
-   */
+  // 6. Get the entire config ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async getConfig(): Promise<ServerConfig> {
     await this.init();
     return {...this.config};
   }
-  /**
-   * Get a specific configuration value
-   */
+  // 7. Get a specific configuration value ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async getValue(key: string): Promise<unknown> {
     await this.init();
     return this.config[key];
   }
-  /**
-   * Set a specific configuration value
-   */
+  // 8. Set a specific configuration value ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async setValue(key: string, value: unknown): Promise<void> {
     await this.init();
     this.config[key] = value;
     await this.saveConfig();
   }
-  /**
-   * Update multiple configuration values at once
-   */
+  // 9. Update multiple configuration values at once ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async updateConfig(updates: Partial<ServerConfig>): Promise<ServerConfig> {
     await this.init();
     this.config = {...this.config, ...updates};
     await this.saveConfig();
     return {...this.config};
   }
-  /**
-   * Reset configuration to defaults
-   */
+  // 10. Reset configuration to defaults ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async resetConfig(): Promise<ServerConfig> {
     this.config = this.getDefaultConfig();
     this.config["version"] = VERSION;
     await this.saveConfig();
     return {...this.config};
   }
-  /**
-   * Check if this is the first run (config file was just created)
-   */
+  // 11. Check if this is the first run (config file was just created) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   isFirstRun(): boolean {
     return this._isFirstRun;
   }

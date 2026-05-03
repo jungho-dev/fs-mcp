@@ -16,9 +16,7 @@ function createDefaultGetConfigItems(): Array<{ key: ConfigQueryKey }> {
   return CONFIG_QUERY_KEYS.map((key) => ({ key }));
 }
 
-/**
- * Handle get_configs command.
- */
+// 1. Handle get_configs command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleGetConfigs(args: unknown): Promise<ServerResult> {
   const parsed = GetConfigsArgsSchema.parse(args ?? {});
   const items = parsed.items ?? createDefaultGetConfigItems();
@@ -30,9 +28,7 @@ export async function handleGetConfigs(args: unknown): Promise<ServerResult> {
   return response;
 }
 
-/**
- * Handle set_config_values command.
- */
+// 2. Handle set_config_values command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleSetConfigValues(args: unknown): Promise<ServerResult> {
   const parsed = SetConfigValuesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => setConfigValue(item));

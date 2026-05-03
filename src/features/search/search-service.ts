@@ -68,18 +68,14 @@ export interface SearchSessionOptions {
   searchType: "files" | "content";
   timeout?: number;
 }
-/**
- * Search Session Manager - handles ripgrep processes like terminal sessions
- * Supports both file search and content search with progressive results
- */
+// 1. Search Session Manager - handles ripgrep processes like terminal sessions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// Supports both file search and content search with progressive results
 export class SearchManager {
   private readonly sessions = new Map<string, SearchSession>();
   private sessionCounter = 0;
 
-  /**
-   * Start a new search session (like start_process)
-   * Returns immediately with initial state and results
-   */
+  // 2. Start a new search session (like start_process) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // Returns immediately with initial state and results
 
   async startSearch(options: SearchSessionOptions): Promise<{
     sessionId: string;
@@ -207,10 +203,8 @@ export class SearchManager {
       totalResults: session.totalMatches,
     };
   }
-  /**
-   * Read search results with offset-based pagination (like read_file)
-   * Supports both range reading and tail behavior
-   */
+  // Read search results with offset-based pagination (like read_file)
+  // Supports both range reading and tail behavior
   readSearchResults(
     sessionId: string,
     offset: number = 0,
@@ -271,9 +265,7 @@ export class SearchManager {
       wasIncomplete: session.wasIncomplete,
     };
   }
-  /**
-   * Terminate a search session (like force_terminate)
-   */
+  // 3. Terminate a search session (like force_terminate) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   terminateSearch(sessionId: string): boolean {
     const session = this.sessions.get(sessionId);
 
@@ -288,9 +280,7 @@ export class SearchManager {
 
     return true;
   }
-  /**
-   * Get list of active search sessions (like list_sessions)
-   */
+  // 4. Get list of active search sessions (like list_sessions) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   listSearchSessions(): Array<{
     id: string;
     searchType: string;
@@ -310,9 +300,7 @@ export class SearchManager {
       totalResults: session.totalMatches + session.totalContextLines,
     }));
   }
-  /**
-   * Determine if DOCX search should be included based on context
-   */
+  // 5. Determine if DOCX search should be included based on context ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private shouldIncludeDocxSearch(filePattern?: string, rootPath?: string): boolean {
     if (rootPath) {
       const lowerPath = rootPath.toLowerCase();
@@ -328,10 +316,8 @@ export class SearchManager {
     }
     return false;
   }
-  /**
-   * Search DOCX files for content matches
-   * Extracts <w:t> text from document.xml and searches it
-   */
+  // 6. Search DOCX files for content matches ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // Extracts <w:t> text from document.xml and searches it
   private async searchDocxFiles(rootPath: string, pattern: string, ignoreCase: boolean, maxResults?: number, filePattern?: string, _literalSearch?: boolean): Promise<SearchResult[]> {
     const results: SearchResult[] = [];
 
@@ -405,9 +391,7 @@ export class SearchManager {
     }
     return results;
   }
-  /**
-   * Find all DOCX files in a directory recursively
-   */
+  // 7. Find all DOCX files in a directory recursively ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private async findDocxFiles(rootPath: string): Promise<string[]> {
     const docxFiles: string[] = [];
     const isDocx = (name: string) => name.toLowerCase().endsWith(".docx");
@@ -445,9 +429,7 @@ export class SearchManager {
     }
     return docxFiles;
   }
-  /**
-   * Extract context around a match for display (show surrounding text)
-   */
+  // 8. Extract context around a match for display (show surrounding text) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private getMatchContext(text: string, matchStart: number, matchLength: number): string {
     const start = Math.max(0, matchStart - MATCH_CONTEXT_CHARS);
     const end = Math.min(text.length, matchStart + matchLength + MATCH_CONTEXT_CHARS);
@@ -463,10 +445,8 @@ export class SearchManager {
     }
     return context;
   }
-  /**
-   * Clean up completed sessions older than specified time
-   * Called automatically by cleanup interval
-   */
+  // 9. Clean up completed sessions older than specified time ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // Called automatically by cleanup interval
   cleanupSessions(maxAge: number = SEARCH_CLEANUP_INTERVAL_MS): void {
     const cutoffTime = Date.now() - maxAge;
 
@@ -476,22 +456,16 @@ export class SearchManager {
       }
     }
   }
-  /**
-   * Get total number of active sessions (excluding completed ones)
-   */
+  // 10. Get total number of active sessions (excluding completed ones) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   getActiveSessionCount(): number {
     return Array.from(this.sessions.values()).filter((session) => !session.isComplete).length;
   }
-  /**
-   * Detect if pattern looks like an exact filename
-   * (has file extension and no glob wildcards)
-   */
+  // 11. Detect if pattern looks like an exact filename ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // (has file extension and no glob wildcards)
   private isExactFilename(pattern: string): boolean {
     return EXACT_FILENAME_PATTERN.test(pattern) && !this.isGlobPattern(pattern);
   }
-  /**
-   * Detect if pattern contains glob wildcards
-   */
+  // 12. Detect if pattern contains glob wildcards ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private isGlobPattern(pattern: string): boolean {
     return GLOB_META_CHARS.some((char) => pattern.includes(char));
   }

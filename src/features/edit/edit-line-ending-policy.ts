@@ -5,15 +5,11 @@
  * @since 2026-05-02
  */
 
-/**
- * Line ending types
- */
+// 1. Line ending types ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export type LineEndingStyle = "\r\n" | "\n" | "\r";
 
-/**
- * Detect the line ending style used in a file - Optimized version
- * This algorithm uses early termination for maximum performance
- */
+// 2. Detect the line ending style used in a file - Optimized version ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// This algorithm uses early termination for maximum performance
 export function detectLineEnding(content: string): LineEndingStyle {
   for (let i = 0; i < content.length; i++) {
     if (content[i] === "\r") {
@@ -29,9 +25,7 @@ export function detectLineEnding(content: string): LineEndingStyle {
   // Default to system line ending if no line endings found
   return process.platform === "win32" ? "\r\n" : "\n";
 }
-/**
- * Normalize line endings to match the target style
- */
+// 3. Normalize line endings to match the target style ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function normalizeLineEndings(text: string, targetLineEnding: LineEndingStyle): string {
   // First normalize to LF
   const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
@@ -45,9 +39,7 @@ export function normalizeLineEndings(text: string, targetLineEnding: LineEndingS
   }
   return normalized;
 }
-/**
- * Analyze line ending usage in content
- */
+// 4. Analyze line ending usage in content ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function analyzeLineEndings(content: string): {
   style: LineEndingStyle;
   count: number;
