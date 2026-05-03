@@ -2,12 +2,12 @@
 
 - 작업일: 2026-05-02
 - 기준: v1-v10 완료 상태
-- 목적: `create-mcp-server.mts`의 호출 분기 책임을 분리해 서버 생성 파일의 변경 위험을 낮춘다.
+- 목적: `create-mcp-server.ts`의 호출 분기 책임을 분리해 서버 생성 파일의 변경 위험을 낮춘다.
 - 파일 작업: 현재 `fs-mcp` 파일 도구가 정상 응답하므로 분석은 `fs-mcp`로 수행하고, 실제 코드는 `apply_patch`로 수정했다.
 
 ## Analysis
 
-`src/app/server/create-mcp-server.mts`는 다음 책임을 동시에 가진다.
+`src/app/server/create-mcp-server.ts`는 다음 책임을 동시에 가진다.
 
 1. MCP 서버 인스턴스 생성
 2. 초기화 요청 처리
@@ -22,12 +22,12 @@
 
 | Version | Status | Change |
 | --- | --- | --- |
-| v11 | done | `src/mcp/tools/tool-call-dispatcher.mts`를 추가하고 기존 switch 기반 호출 분기를 이동했다. |
+| v11 | done | `src/mcp/tools/tool-call-dispatcher.ts`를 추가하고 기존 switch 기반 호출 분기를 이동했다. |
 
 ## Expected Effect
 
 1. 서버 파일은 요청 수명주기와 응답 정규화에 집중한다.
-2. 툴별 handler 연결은 `src/mcp/tools/tool-call-dispatcher.mts`에서 관리한다.
+2. 툴별 handler 연결은 `src/mcp/tools/tool-call-dispatcher.ts`에서 관리한다.
 3. 새 툴 추가 시 등록 목록과 호출 분기 변경 위치가 더 명확해진다.
 
 ## Verification

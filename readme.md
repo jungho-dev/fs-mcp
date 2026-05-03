@@ -77,7 +77,7 @@ src/
 
 ## Naming Contract
 
-* Source and test filenames use kebab-case, for example `filesystem-controller.mts`.
+* Source and test filenames use kebab-case, for example `filesystem-controller.ts`.
 * Shared type definitions live under `src/assets/type`.
 * Korean companion documents use kebab-case names: `readme-ko.md` and `architecture-ko.md`.
 
@@ -92,4 +92,4 @@ src/
 
 The npm package exposes the `fs-mcp` binary through `out/index.mjs`. Source files, tests, fixtures, and local runtime artifacts remain development-only surfaces.
 
-`bun run verify:source` confirms the optimized source boundary and removed runtime helpers stay out of executable text surfaces. `bun run verify:shape` confirms that root `src` and `out` exist, `dist` is absent, and generated `.map` or `.d.mts` artifacts are not present outside dependencies. `bun run verify:tools` confirms that the compiled tool catalog and dispatcher registry expose the same tool names.
+`bun run verify:source` confirms the optimized source boundary and removed runtime helpers stay out of executable text surfaces. `bun run verify:shape` confirms that root `src` and `out` exist, `dist` is absent, and generated `.map` or `.d.ts` artifacts are not present outside dependencies. `bun run verify:tools` confirms that the compiled tool catalog and dispatcher registry expose the same tool names.

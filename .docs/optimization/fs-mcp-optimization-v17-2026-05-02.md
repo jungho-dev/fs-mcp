@@ -2,13 +2,13 @@
 
 ## 목표
 
-`create-mcp-server.mts`에 집중되어 있던 툴 카탈로그 생성 책임을 MCP tool 계층으로 이동해 서버 조립과 툴 정의를 분리한다.
+`create-mcp-server.ts`에 집중되어 있던 툴 카탈로그 생성 책임을 MCP tool 계층으로 이동해 서버 조립과 툴 정의를 분리한다.
 
 ## 대규모 변경
 
-* `src/mcp/tools/tool-catalog.mts`를 신설해 전체 tool metadata, schema 변환, 런타임 guidance 문구를 전담하도록 이동했다.
-* `src/app/server/create-mcp-server.mts`는 `list_tools` 요청에서 `createToolCatalog()`만 호출하도록 축소했다.
-* `src/mcp/tools/index.mts`에서 tool catalog를 공개해 서버, 검증 스크립트, 계약 테스트가 같은 source of truth를 사용할 수 있게 했다.
+* `src/mcp/tools/tool-catalog.ts`를 신설해 전체 tool metadata, schema 변환, 런타임 guidance 문구를 전담하도록 이동했다.
+* `src/app/server/create-mcp-server.ts`는 `list_tools` 요청에서 `createToolCatalog()`만 호출하도록 축소했다.
+* `src/mcp/tools/index.ts`에서 tool catalog를 공개해 서버, 검증 스크립트, 계약 테스트가 같은 source of truth를 사용할 수 있게 했다.
 
 ## 구조 영향
 

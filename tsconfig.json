@@ -4,11 +4,11 @@
     "rootDir": "./src",
     "outDir": "./out",
     "paths": {
-      "@app/*": ["./src/app/*.mts", "./src/app/*"],
-      "@assets/*": ["./src/assets/*.mts", "./src/assets/*"],
-      "@features/*": ["./src/features/*.mts", "./src/features/*"],
-      "@mcp/*": ["./src/mcp/*.mts", "./src/mcp/*"],
-      "@type/*": ["./src/assets/type/*.mts", "./src/assets/type/*"]
+      "@app/*": ["./src/app/*.ts", "./src/app/*"],
+      "@assets/*": ["./src/assets/*.ts", "./src/assets/*"],
+      "@features/*": ["./src/features/*.ts", "./src/features/*"],
+      "@mcp/*": ["./src/mcp/*.ts", "./src/mcp/*"],
+      "@type/*": ["./src/assets/type/*.ts", "./src/assets/type/*"]
     },
     "typeRoots": ["./node_modules/@types", "./src/assets/type"],
     "types": ["bun", "node"],

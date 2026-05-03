@@ -6,9 +6,9 @@
 
 ## 대규모 변경
 
-* `src/mcp/tools/tool-call-dispatcher.mts`의 switch 라우팅을 `TOOL_DISPATCHERS` registry로 재구성했다.
+* `src/mcp/tools/tool-call-dispatcher.ts`의 switch 라우팅을 `TOOL_DISPATCHERS` registry로 재구성했다.
 * `getDispatchableToolNames()`를 추가해 실행 가능한 툴 이름 목록을 외부 검증 표면으로 공개했다.
-* `src/mcp/tools/tool-history-policy.mts`에서 `HISTORY_EXCLUDED_TOOL_NAMES`를 공개해 history 정책도 툴 계약 비교 대상에 포함했다.
+* `src/mcp/tools/tool-history-policy.ts`에서 `HISTORY_EXCLUDED_TOOL_NAMES`를 공개해 history 정책도 툴 계약 비교 대상에 포함했다.
 
 ## 구조 영향
 

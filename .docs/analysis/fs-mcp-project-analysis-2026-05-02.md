@@ -11,15 +11,15 @@
 
 최근 구조 정리는 방향이 좋다. 엔트리포인트, MCP 계층, 기능 계층, 공용 타입/유틸 계층이 분리되었고, `read_file`과 `read_multiple_files` 같은 단건/다건 처리 툴도 컨트롤러 단에서 명확히 분리되어 있다. 모든 툴 결과는 `schemaVersion`, `toolName`, `status`, `data`, `durationMs`를 포함하는 표준 JSON envelope로 정규화된다.
 
-다만 서버 등록부와 일부 feature service가 아직 너무 크다. 특히 `src/app/server/create-mcp-server.mts`, `src/features/filesystem/filesystem-service.mts`, `src/features/search/search-service.mts`, `src/features/process/process-runner.mts`, `src/features/process/terminal-service.mts`는 변경 영향이 집중되는 파일이다. 도구 정의, 스키마, 핸들러 dispatch, 출력 계약을 더 작게 나눠야 장기 유지보수성이 좋아진다.
+다만 서버 등록부와 일부 feature service가 아직 너무 크다. 특히 `src/app/server/create-mcp-server.ts`, `src/features/filesystem/filesystem-service.ts`, `src/features/search/search-service.ts`, `src/features/process/process-runner.ts`, `src/features/process/terminal-service.ts`는 변경 영향이 집중되는 파일이다. 도구 정의, 스키마, 핸들러 dispatch, 출력 계약을 더 작게 나눠야 장기 유지보수성이 좋아진다.
 
-검증 중 `bun run check`와 `bun run build`가 `terminal-service.mts`의 null-safety 오류로 실패했으며, 최소 수정 후 타입체크, 빌드, 전체 테스트가 통과했다. 또한 분석 중 운영 중인 `fs-mcp` 도구 서버에서 `get_file_info` 병렬 호출 후 `Transport closed`가 관찰되어 MCP 레벨 회귀 테스트가 필요하다.
+검증 중 `bun run check`와 `bun run build`가 `terminal-service.ts`의 null-safety 오류로 실패했으며, 최소 수정 후 타입체크, 빌드, 전체 테스트가 통과했다. 또한 분석 중 운영 중인 `fs-mcp` 도구 서버에서 `get_file_info` 병렬 호출 후 `Transport closed`가 관찰되어 MCP 레벨 회귀 테스트가 필요하다.
 
 ## 2. Current Structure
 
 ```text
 src/
-  index.mts
+  index.ts
   app/
     runtime/
     server/
@@ -50,12 +50,12 @@ out/
 
 루트 `src`와 `out` 배치는 현재 정상이다. `package.json`의 `main`, `exports`, `bin`, 실행 스크립트도 `out/index.mjs`를 기준으로 맞춰져 있다. `tsconfig.json`도 `rootDir: ./src`, `outDir: ./out`으로 설정되어 있다.
 
-빌드 후 확인 결과 프로젝트 내 비의존성 영역에서 `*.map` 파일은 0개, `*.d.mts` 파일도 0개다. 현재 설정은 `sourceMap: false`, `declaration: false`, `declarationMap: false`이므로 `.map` 및 colocated declaration 생성 요구사항은 충족한다.
+빌드 후 확인 결과 프로젝트 내 비의존성 영역에서 `*.map` 파일은 0개, `*.d.ts` 파일도 0개다. 현재 설정은 `sourceMap: false`, `declaration: false`, `declarationMap: false`이므로 `.map` 및 colocated declaration 생성 요구사항은 충족한다.
 
 ## 3. Runtime Flow
 
 ```text
-src/index.mts
+src/index.ts
   -> createServer()
   -> FilteredStdioServerTransport
   -> ListToolsRequestSchema handler
@@ -65,9 +65,9 @@ src/index.mts
   -> mcp/responses/normalizeToolResult()
 ```
 
-`src/index.mts`는 실제 프로세스 엔트리포인트다. 설정 로드, stdio transport 연결, 전역 예외 처리, MCP 초기화 전 로그 버퍼링을 담당한다.
+`src/index.ts`는 실제 프로세스 엔트리포인트다. 설정 로드, stdio transport 연결, 전역 예외 처리, MCP 초기화 전 로그 버퍼링을 담당한다.
 
-`src/app/server/create-mcp-server.mts`는 MCP 서버 생성, 도구 목록 등록, 호출 dispatch, 히스토리 저장, 결과 정규화를 담당한다. 이 파일은 현재 서버의 가장 큰 변경 집중 지점이다.
+`src/app/server/create-mcp-server.ts`는 MCP 서버 생성, 도구 목록 등록, 호출 dispatch, 히스토리 저장, 결과 정규화를 담당한다. 이 파일은 현재 서버의 가장 큰 변경 집중 지점이다.
 
 컨트롤러 계층은 MCP 인자 파싱과 feature service 호출을 담당한다. feature 계층은 파일 처리, 검색, 편집, 프로세스, 설정 등 실제 도메인 동작을 담당한다. 이 경계는 유지할 가치가 있다.
 
@@ -89,7 +89,7 @@ src/index.mts
 
 ## 5. Output Contract
 
-`src/mcp/responses/tool-result-response.mts`가 모든 툴 결과를 표준 envelope로 감싼다.
+`src/mcp/responses/tool-result-response.ts`가 모든 툴 결과를 표준 envelope로 감싼다.
 
 ```json
 {
@@ -115,7 +115,7 @@ src/index.mts
 분석 시작 시 `bun run check`와 `bun run build`가 실패했다.
 
 ```text
-src/features/process/terminal-service.mts:284
+src/features/process/terminal-service.ts:284
 TS2532: Object is possibly 'undefined'.
 ```
 
@@ -135,22 +135,22 @@ MCP client -> read_file/read_multiple_files/get_file_info 혼합 호출
 
 ### P1. Server registry file is too large
 
-`src/app/server/create-mcp-server.mts`는 도구 설명, JSON schema 변환, list_tools 응답, call_tool switch, 히스토리 저장, 결과 정규화를 한 파일에서 처리한다. 파일 크기와 책임이 모두 커서 새 도구 추가 시 누락 위험이 높다.
+`src/app/server/create-mcp-server.ts`는 도구 설명, JSON schema 변환, list_tools 응답, call_tool switch, 히스토리 저장, 결과 정규화를 한 파일에서 처리한다. 파일 크기와 책임이 모두 커서 새 도구 추가 시 누락 위험이 높다.
 
 권장 구조:
 
 ```text
 src/mcp/tools/
-  config-tools.mts
-  filesystem-tools.mts
-  edit-tools.mts
-  search-tools.mts
-  process-tools.mts
-  history-tools.mts
-  registry.mts
+  config-tools.ts
+  filesystem-tools.ts
+  edit-tools.ts
+  search-tools.ts
+  process-tools.ts
+  history-tools.ts
+  registry.ts
 ```
 
-`registry.mts`에서 `{ name, definition, handler }` 형태로 조합하면 `list_tools`와 `call_tool`이 같은 source of truth를 사용하게 된다.
+`registry.ts`에서 `{ name, definition, handler }` 형태로 조합하면 `list_tools`와 `call_tool`이 같은 source of truth를 사용하게 된다.
 
 ### P1. Feature service files are still overloaded
 
@@ -158,11 +158,11 @@ src/mcp/tools/
 
 | 파일 | 주요 책임 |
 | --- | --- |
-| `src/features/filesystem/filesystem-service.mts` | path 검증, allowlist, 읽기/쓰기, 디렉터리, metadata |
-| `src/features/search/search-service.mts` | streaming search, result formatting, pagination |
-| `src/features/process/process-runner.mts` | 프로세스 시작, Node fallback, 세션 연결 |
-| `src/features/process/terminal-service.mts` | session buffer, prompt detection, pagination, timing |
-| `src/features/filesystem/readers/docx-reader.mts` | DOCX outline/XML 처리 |
+| `src/features/filesystem/filesystem-service.ts` | path 검증, allowlist, 읽기/쓰기, 디렉터리, metadata |
+| `src/features/search/search-service.ts` | streaming search, result formatting, pagination |
+| `src/features/process/process-runner.ts` | 프로세스 시작, Node fallback, 세션 연결 |
+| `src/features/process/terminal-service.ts` | session buffer, prompt detection, pagination, timing |
+| `src/features/filesystem/readers/docx-reader.ts` | DOCX outline/XML 처리 |
 
 권장 분리는 기능 추가가 필요한 지점부터 작은 단위로 진행한다. 대규모 일괄 이동보다 `filesystem/path-policy`, `filesystem/file-info`, `process/session-buffer`, `mcp/tools/registry`처럼 변경 압력이 높은 책임부터 분리하는 편이 안전하다.
 
@@ -182,18 +182,18 @@ history exclusion for get_recent_tool_calls
 
 ### P2. Documentation is stale
 
-현재 문서 일부는 실제 구조와 다르다. `architecture.md`, `architecture-ko.md`, 기존 `.docs` 보고서에는 `src/app/bootstrap.mts`가 등장하지만 실제 파일은 없다. `src/index.mts`가 bootstrap 역할을 직접 수행한다.
+현재 문서 일부는 실제 구조와 다르다. `architecture.md`, `architecture-ko.md`, 기존 `.docs` 보고서에는 `src/app/bootstrap.ts`가 등장하지만 실제 파일은 없다. `src/index.ts`가 bootstrap 역할을 직접 수행한다.
 
 문서에서 선택할 수 있는 방향은 둘 중 하나다.
 
-1. `src/index.mts`가 bootstrap이라고 명시하고 문서에서 `bootstrap.mts` 제거
-2. 실제로 `src/app/bootstrap.mts`를 만들고 `index.mts`를 얇은 entry로 축소
+1. `src/index.ts`가 bootstrap이라고 명시하고 문서에서 `bootstrap.ts` 제거
+2. 실제로 `src/app/bootstrap.ts`를 만들고 `index.ts`를 얇은 entry로 축소
 
 현재 코드 변경량을 줄이려면 1번이 더 안전하다.
 
 ### P2. Marker search noise exists in tool description
 
-`create-mcp-server.mts`의 검색 도구 설명 안에 기술부채 marker 예시 텍스트가 남아 있었다. 실제 기술부채 표식이 아니더라도 marker 검색 결과를 오염시킬 수 있다. 예시 문구는 일반적인 `task markers` 표현으로 바꾸는 편이 좋다.
+`create-mcp-server.ts`의 검색 도구 설명 안에 기술부채 marker 예시 텍스트가 남아 있었다. 실제 기술부채 표식이 아니더라도 marker 검색 결과를 오염시킬 수 있다. 예시 문구는 일반적인 `task markers` 표현으로 바꾸는 편이 좋다.
 
 ### P2. Config write robustness can improve
 
@@ -225,7 +225,7 @@ history exclusion for get_recent_tool_calls
 ### Phase 4. Release hygiene
 
 1. `bun run check`, `bun run build`, `bun run test`, `npm pack --dry-run`을 release gate로 고정.
-2. `.map`, `.d.mts`, root `src/out` 산출물 상태 확인을 체크리스트화.
+2. `.map`, `.d.ts`, root `src/out` 산출물 상태 확인을 체크리스트화.
 3. README/architecture/changelog 동기화.
 4. CLI-only 패키지인지 library export까지 제공할지 명확히 결정.
 
@@ -233,32 +233,32 @@ history exclusion for get_recent_tool_calls
 
 ```text
 src/
-  index.mts
+  index.ts
   app/
     runtime/
     server/
     transport/
   mcp/
     tools/
-      registry.mts
-      filesystem-tools.mts
-      process-tools.mts
-      search-tools.mts
-      edit-tools.mts
-      config-tools.mts
-      history-tools.mts
+      registry.ts
+      filesystem-tools.ts
+      process-tools.ts
+      search-tools.ts
+      edit-tools.ts
+      config-tools.ts
+      history-tools.ts
     controllers/
     responses/
     schemas/
   features/
     filesystem/
-      path-policy.mts
-      file-info.mts
+      path-policy.ts
+      file-info.ts
       readers/
     process/
-      process-runner.mts
-      session-buffer.mts
-      terminal-service.mts
+      process-runner.ts
+      session-buffer.ts
+      terminal-service.ts
     search/
     edit/
     config/
@@ -279,7 +279,7 @@ out/
 bun run check
 bun run build
 bun run test
-generated file check: *.map = 0, *.d.mts = 0
+generated file check: *.map = 0, *.d.ts = 0
 out directory check: root out exists
 ```
 
@@ -290,7 +290,7 @@ bun run check: pass
 bun run build: pass
 bun run test: pass, 26/26 tests, 24.4s
 *.map: 0
-*.d.mts: 0
+*.d.ts: 0
 out: exists
 ```
 
@@ -303,12 +303,12 @@ MCP client 레벨의 get_file_info transport 안정성은 별도 재현 테스�
 
 ## 10. Final Recommendation
 
-현재 프로젝트는 구조 개편 방향이 맞고, 빌드 산출물 정책도 `src`와 `out` 중심으로 정리되었다. 단기적으로는 `Transport closed` 재현과 출력 계약 테스트가 가장 중요하다. 그 다음 `create-mcp-server.mts`의 tool registry를 분리하면 도구 추가, 출력 규격 유지, 문서 동기화 비용이 크게 줄어든다.
+현재 프로젝트는 구조 개편 방향이 맞고, 빌드 산출물 정책도 `src`와 `out` 중심으로 정리되었다. 단기적으로는 `Transport closed` 재현과 출력 계약 테스트가 가장 중요하다. 그 다음 `create-mcp-server.ts`의 tool registry를 분리하면 도구 추가, 출력 규격 유지, 문서 동기화 비용이 크게 줄어든다.
 
 우선순위는 다음 순서가 적절하다.
 
 1. MCP e2e 출력 계약 테스트 추가
 2. `get_file_info` transport 종료 원인 확인
-3. 문서의 `bootstrap.mts` 불일치 정리
-4. `src/mcp/tools/registry.mts` 도입
+3. 문서의 `bootstrap.ts` 불일치 정리
+4. `src/mcp/tools/registry.ts` 도입
 5. 큰 feature service를 변경 압력 기준으로 점진 분리

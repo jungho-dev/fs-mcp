@@ -1561,7 +1561,7 @@
       }
     },
     {
-      "includes": ["**/*.ts", "**/*.cts", "**/*.mts", "**/*.d.ts"],
+      "includes": ["**/*.ts", "**/*.cts", "**/*.ts", "**/*.d.ts"],
       "javascript": {
         "globals": [
           "APP_ENV",

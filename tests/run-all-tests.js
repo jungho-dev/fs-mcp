@@ -105,7 +105,7 @@ async function runTestFile(testFile) {
  */
 async function buildProject() {
   await new Promise((resolve, reject) => {
-    const proc = spawn("bun", ["run", "scripts/build.mts"], {
+    const proc = spawn("bun", ["run", "scripts/build.ts"], {
       cwd: projectRoot,
       stdio: "inherit",
       shell: false,

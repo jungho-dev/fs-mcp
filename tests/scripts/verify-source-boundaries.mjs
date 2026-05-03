@@ -6,12 +6,12 @@ const scriptPath = fileURLToPath(import.meta.url);
 const projectRoot = path.resolve(path.dirname(scriptPath), "..", "..");
 const sourceRoot = path.join(projectRoot, "src");
 const testRoot = path.join(projectRoot, "tests");
-const requiredSourceEntries = new Set(["app", "assets", "features", "mcp", "index.mts"]);
+const requiredSourceEntries = new Set(["app", "assets", "features", "mcp", "index.ts"]);
 const forbiddenSourceRootEntries = new Set(["config", "core", "handlers", "tests", "tools", "types"]);
 const requiredTestEntries = new Set(["config", "contracts", "edit", "examples", "filesystem", "fixtures", "process", "run-all-tests.js", "scripts", "search", "security"]);
 const scannedTextSurfaces = [path.join(projectRoot, "package.json"), path.join(projectRoot, "tsconfig.json"), path.join(projectRoot, "tests"), path.join(projectRoot, "src")];
 const ignoredDirectories = new Set([".git", "node_modules", "out", "fixtures"]);
-const textFileExtensions = new Set([".json", ".mjs", ".mts", ".ts", ".js", ".md", ".txt"]);
+const textFileExtensions = new Set([".json", ".mjs", ".ts", ".ts", ".js", ".md", ".txt"]);
 const forbiddenRuntimeTerm = ["caff", "einate"].join("");
 
 // 1. filesystem helpers ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――

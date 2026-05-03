@@ -33,11 +33,11 @@
     "preserveAllComments": false,
     "baseUrl": ".",
     "paths": {
-      "@app/*": ["./src/app/*.mts"],
-      "@assets/*": ["./src/assets/*.mts"],
-      "@features/*": ["./src/features/*.mts"],
-      "@mcp/*": ["./src/mcp/*.mts"],
-      "@type/*": ["./src/assets/type/*.mts"]
+      "@app/*": ["./src/app/*.ts"],
+      "@assets/*": ["./src/assets/*.ts"],
+      "@features/*": ["./src/features/*.ts"],
+      "@mcp/*": ["./src/mcp/*.ts"],
+      "@type/*": ["./src/assets/type/*.ts"]
     },
     "parser": {
       "syntax": "typescript",

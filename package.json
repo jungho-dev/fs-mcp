@@ -4,7 +4,7 @@
   "description": "MCP server for file system operations",
   "publisher": "JUNGHO",
   "license": "Apache-2.0",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "type": "module",
   "main": "./out/index.mjs",
   "exports": {
@@ -51,11 +51,11 @@
     "file-operations"
   ],
   "scripts": {
-    "git": "bun run .bootstrap/bootstrap-sync.mts --git",
-    "swc": "bun run .bootstrap/bootstrap-sync.mts --swc",
-    "sync": "bun run .bootstrap/bootstrap-sync.mts --sync",
-    "tools": "bun run .bootstrap/bootstrap-sync.mts --tools",
-    "build": "bun run .bootstrap/bootstrap-build.mts",
+    "git": "bun run .bootstrap/bootstrap-sync.ts --git",
+    "swc": "bun run .bootstrap/bootstrap-sync.ts --swc",
+    "sync": "bun run .bootstrap/bootstrap-sync.ts --sync",
+    "tools": "bun run .bootstrap/bootstrap-sync.ts --tools",
+    "build": "bun run .bootstrap/bootstrap-build.ts",
     "inspector": "bunx @modelcontextprotocol/inspector out/index.mjs"
   },
   "dependencies": {

@@ -6,7 +6,7 @@
 
 ## Analysis
 
-`create-mcp-server.mts`에는 호출 이력 제외 조건이 문자열 비교로 직접 들어가 있었다.
+`create-mcp-server.ts`에는 호출 이력 제외 조건이 문자열 비교로 직접 들어가 있었다.
 이 조건은 툴 호출 수명주기 정책이므로 서버 요청 handler 내부에 고정되면 새 예외 정책을 추가할 때
 서버 조립 코드가 계속 변경된다.
 
@@ -14,7 +14,7 @@
 
 | Version | Status | Change |
 | --- | --- | --- |
-| v12 | done | `src/mcp/tools/tool-history-policy.mts`를 추가하고 이력 기록 여부 판단을 분리했다. |
+| v12 | done | `src/mcp/tools/tool-history-policy.ts`를 추가하고 이력 기록 여부 판단을 분리했다. |
 
 ## Expected Effect
 

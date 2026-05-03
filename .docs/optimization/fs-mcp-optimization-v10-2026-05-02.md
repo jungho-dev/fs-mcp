@@ -7,14 +7,14 @@
 
 ## Baseline
 
-현재 프로젝트는 `src`와 `out`을 루트 기준으로 사용한다. 런타임 흐름은 `src/index.mts`에서 시작해 `src/app/server/create-mcp-server.mts`, `src/mcp/controllers`, `src/features`로 이어진다.
+현재 프로젝트는 `src`와 `out`을 루트 기준으로 사용한다. 런타임 흐름은 `src/index.ts`에서 시작해 `src/app/server/create-mcp-server.ts`, `src/mcp/controllers`, `src/features`로 이어진다.
 
 확인된 우선 개선점은 다음과 같다.
 
-1. 문서의 `src/app/bootstrap.mts` 표기가 실제 구조와 다르다.
+1. 문서의 `src/app/bootstrap.ts` 표기가 실제 구조와 다르다.
 2. 검색 도구 설명에 예시성 marker 문자열이 남아 기술부채 검색을 오염시킨다.
 3. 표준 출력 envelope는 구현되어 있지만 contract test가 부족하다.
-4. `.map`, `.d.mts`, root `out` 상태를 자동 확인하는 release-shape 검증이 없다.
+4. `.map`, `.d.ts`, root `out` 상태를 자동 확인하는 release-shape 검증이 없다.
 5. README 개발 절차가 새 검증 명령을 안내하지 않는다.
 
 ## Iteration Plan
@@ -37,7 +37,7 @@
 | Version | Status | Notes |
 | --- | --- | --- |
 | v1 | done | 기준 분석과 순차 계획을 기록했다. |
-| v2 | done | architecture 문서에서 실제 없는 `src/app/bootstrap.mts` 표기를 제거했다. |
+| v2 | done | architecture 문서에서 실제 없는 `src/app/bootstrap.ts` 표기를 제거했다. |
 | v3 | done | 검색 도구 설명의 marker 노이즈를 제거했다. |
 | v4 | done | 표준 출력 envelope 타입을 export했다. |
 | v5 | done | 배포 표면 기준 출력 contract 테스트를 추가했다. |
@@ -72,7 +72,7 @@ marker search: 0 matches
 ## Final State
 
 1. 루트 `src`와 `out` 구조는 유지된다.
-2. `.map`과 `.d.mts` 산출물은 생성되지 않는다.
+2. `.map`과 `.d.ts` 산출물은 생성되지 않는다.
 3. 표준 툴 출력 envelope는 테스트로 고정된다.
 4. 문서는 실제 runtime flow와 일치한다.
 5. 개발자와 publish gate는 `bun run verify`로 타입체크, 전체 테스트, release-shape 검증을 한 번에 실행할 수 있다.

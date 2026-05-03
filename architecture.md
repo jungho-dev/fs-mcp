@@ -5,10 +5,10 @@
 ```text
 MCP stdio client
   -> out/index.mjs
-  -> src/index.mts
-  -> src/app/server/create-mcp-server.mts
-  -> src/mcp/tools/tool-catalog.mts for list_tools
-  -> src/mcp/tools/tool-call-dispatcher.mts for call_tool
+  -> src/index.ts
+  -> src/app/server/create-mcp-server.ts
+  -> src/mcp/tools/tool-catalog.ts for list_tools
+  -> src/mcp/tools/tool-call-dispatcher.ts for call_tool
   -> src/mcp/controllers/*
   -> src/features/*
   -> MCP content and structuredContent response
@@ -26,78 +26,78 @@ MCP stdio client
 
 ```text
 src/
-|-- index.mts
+|-- index.ts
 |-- app/
 |   |-- runtime/
-|   |   |-- app-logger.mts
-|   |   |-- output-capture.mts
-|   |   |-- runtime-info.mts
-|   |   `-- version.mts
+|   |   |-- app-logger.ts
+|   |   |-- output-capture.ts
+|   |   |-- runtime-info.ts
+|   |   `-- version.ts
 |   |-- server/
-|   |   `-- create-mcp-server.mts
+|   |   `-- create-mcp-server.ts
 |   `-- transport/
-|       `-- stdio-transport.mts
+|       `-- stdio-transport.ts
 |-- assets/
 |   |-- type/
-|   |   `-- common-types.mts
+|   |   `-- common-types.ts
 |   `-- utils/
-|       `-- timeout.mts
+|       `-- timeout.ts
 |-- features/
 |   |-- config/
-|   |   |-- config-metadata.mts
-|   |   |-- config-paths.mts
-|   |   |-- config-service.mts
-|   |   `-- config-store.mts
+|   |   |-- config-metadata.ts
+|   |   |-- config-paths.ts
+|   |   |-- config-service.ts
+|   |   `-- config-store.ts
 |   |-- edit/
-|   |   |-- edit-service.mts
-|   |   `-- line-ending-policy.mts
+|   |   |-- edit-service.ts
+|   |   `-- line-ending-policy.ts
 |   |-- filesystem/
-|   |   |-- filesystem-limits.mts
-|   |   |-- filesystem-service.mts
-|   |   |-- mime-registry.mts
-|   |   |-- path-resolver.mts
+|   |   |-- filesystem-limits.ts
+|   |   |-- filesystem-service.ts
+|   |   |-- mime-registry.ts
+|   |   |-- path-resolver.ts
 |   |   `-- readers/
-|   |       |-- base.mts
-|   |       |-- binary-reader.mts
-|   |       |-- docx-reader.mts
-|   |       |-- image-reader.mts
-|   |       |-- index.mts
-|   |       |-- preview-file-types.mts
-|   |       |-- reader-factory.mts
-|   |       `-- text-reader.mts
+|   |       |-- base.ts
+|   |       |-- binary-reader.ts
+|   |       |-- docx-reader.ts
+|   |       |-- image-reader.ts
+|   |       |-- index.ts
+|   |       |-- preview-file-types.ts
+|   |       |-- reader-factory.ts
+|   |       `-- text-reader.ts
 |   |-- process/
-|   |   |-- command-policy.mts
-|   |   |-- process-runner.mts
-|   |   |-- process-service.mts
-|   |   |-- repl-detector.mts
-|   |   `-- terminal-service.mts
+|   |   |-- command-policy.ts
+|   |   |-- process-runner.ts
+|   |   |-- process-service.ts
+|   |   |-- repl-detector.ts
+|   |   `-- terminal-service.ts
 |   `-- search/
-|       |-- fuzzy-matcher.mts
-|       |-- ripgrep-adapter.mts
-|       |-- search-log.mts
-|       `-- search-service.mts
+|       |-- fuzzy-matcher.ts
+|       |-- ripgrep-adapter.ts
+|       |-- search-log.ts
+|       `-- search-service.ts
 |-- mcp/
 |   |-- controllers/
-|   |   |-- edit-controller.mts
-|   |   |-- filesystem-controller.mts
-|   |   |-- index.mts
-|   |   |-- process-controller.mts
-|   |   |-- search-controller.mts
-|   |   `-- terminal-controller.mts
+|   |   |-- edit-controller.ts
+|   |   |-- filesystem-controller.ts
+|   |   |-- index.ts
+|   |   |-- process-controller.ts
+|   |   |-- search-controller.ts
+|   |   `-- terminal-controller.ts
 |   |-- responses/
-|   |   |-- error-response.mts
-|   |   `-- tool-result-response.mts
+|   |   |-- error-response.ts
+|   |   `-- tool-result-response.ts
 |   |-- schemas/
-|   |   |-- config-schema.mts
-|   |   |-- edit-schema.mts
-|   |   |-- filesystem-schema.mts
-|   |   |-- index.mts
-|   |   |-- process-schema.mts
-|   |   `-- search-schema.mts
+|   |   |-- config-schema.ts
+|   |   |-- edit-schema.ts
+|   |   |-- filesystem-schema.ts
+|   |   |-- index.ts
+|   |   |-- process-schema.ts
+|   |   `-- search-schema.ts
 |   `-- tools/
-|       |-- index.mts
-|       |-- tool-catalog.mts
-|       `-- tool-call-dispatcher.mts
+|       |-- index.ts
+|       |-- tool-catalog.ts
+|       `-- tool-call-dispatcher.ts
 tests/
 |-- run-all-tests.js
 |-- config/
@@ -128,13 +128,13 @@ mcp -> assets
 tests -> out
 ```
 
-Feature modules can share behavior through sibling feature utilities, such as `features/filesystem/path-resolver.mts`. They should not import controller modules, because controllers are MCP adapters and not reusable domain services.
+Feature modules can share behavior through sibling feature utilities, such as `features/filesystem/path-resolver.ts`. They should not import controller modules, because controllers are MCP adapters and not reusable domain services.
 
 ## Performance and Safety Design
 
-* File operations use explicit timeout boundaries from `features/filesystem/filesystem-limits.mts`.
+* File operations use explicit timeout boundaries from `features/filesystem/filesystem-limits.ts`.
 * Text reading uses size and offset thresholds to avoid full-file reads when a bounded slice is enough.
-* Search execution is delegated to ripgrep through `features/search/ripgrep-adapter.mts`.
+* Search execution is delegated to ripgrep through `features/search/ripgrep-adapter.ts`.
 * Stdio transport captures accidental stdout/stderr writes so MCP JSON output remains isolated.
 * Tests exercise the compiled `out` tree, which is the same surface published to npm.
 * `verify:tools` compares the compiled tool catalog and dispatcher registry.

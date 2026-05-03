@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const scriptPath = fileURLToPath(import.meta.url);
 const projectRoot = path.resolve(path.dirname(scriptPath), "..", "..");
 const ignoredDirectories = new Set([".git", "node_modules"]);
-const forbiddenSuffixes = [".map", ".d.mts"];
+const forbiddenSuffixes = [".map", ".d.ts"];
 
 // 1. filesystem helpers ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function pathExists(targetPath) {

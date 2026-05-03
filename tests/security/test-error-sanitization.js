@@ -1,10 +1,10 @@
 import assert from "node:assert";
 
 // Local implementation of sanitizeError for testing
-// This mirrors the implementation in src/app/runtime/output-capture.mts but avoids import issues
+// This mirrors the implementation in src/app/runtime/output-capture.ts but avoids import issues
 // when running tests. The actual sanitization logic is identical.
 //
-// NOTE: If you update the sanitizeError function in src/app/runtime/output-capture.mts,
+// NOTE: If you update the sanitizeError function in src/app/runtime/output-capture.ts,
 // be sure to update this implementation as well to keep tests accurate.
 function sanitizeError(error) {
   let errorMessage = "";

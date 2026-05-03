@@ -12,10 +12,10 @@
 
 핵심 판단은 다음과 같다.
 
-1. `src/index.mts`는 npm `bin` 계약 때문에 얇은 compatibility entry로만 유지한다.
-2. `server.mts`, `filesystem.mts`, `search-manager.mts`, `terminal-manager.mts` 같은 대형 파일은 유지하지 않고
+1. `src/index.ts`는 npm `bin` 계약 때문에 얇은 compatibility entry로만 유지한다.
+2. `server.ts`, `filesystem.ts`, `search-manager.ts`, `terminal-manager.ts` 같은 대형 파일은 유지하지 않고
    책임 단위 파일로 분해한다.
-3. `handlers`는 `mcp/controllers`로, `tools/schemas.mts`는 domain별 `*.schema.mts`로 재구성한다.
+3. `handlers`는 `mcp/controllers`로, `tools/schemas.ts`는 domain별 `*.schema.ts`로 재구성한다.
 4. `src/assets/type`, `src/assets/utils`는 실제 새 공용 계층으로 만들되 runtime side effect는 금지한다.
 5. `tests`는 기존 파일명 보존이 아니라 `*.unit.test.js`, `*.contract.test.js`, `*.integration.test.js` 기준으로
    재명명한다.
@@ -26,7 +26,7 @@
 | --- | --- | --- |
 | 패키지명 | `@jungho-dev/fs-mcp` | 최신 기준으로 문서 반영 |
 | 버전 | `1.0.1` | 배포 메타데이터 유지 |
-| 공개 실행 파일 | `fs-mcp: out/index.mjs` | `src/index.mts`는 얇은 entry로 유지 필요 |
+| 공개 실행 파일 | `fs-mcp: out/index.mjs` | `src/index.ts`는 얇은 entry로 유지 필요 |
 | 현재 `src` 구조 | `config`, `core`, `handlers`, `tools`, `types`, `utils`, `tests` | 책임 기준이 섞여 있음 |
 | `src/assets` | 존재하지 않음 | alias만 있고 실제 구조는 미구현 |
 | TypeScript | `bun run check` 통과 | 타입 계약은 현재 정상 |
@@ -43,7 +43,7 @@
 | `src/handlers` | MCP handler지만 controller 책임과 feature 호출이 섞임 | `mcp/controllers`로 재명명 |
 | `src/tools` | tool schema, service, manager가 한 폴더에 혼재 | `mcp/schemas`, `features/*`로 분리 |
 | `src/utils` | 순수 유틸, runtime helper, feature helper가 혼재 | `assets`, `app/runtime`, `features/*`로 재배치 |
-| `src/types` | 공용 타입 계층이 작고 사용 경계가 흐림 | `assets/type/*.types.mts`로 확장 |
+| `src/types` | 공용 타입 계층이 작고 사용 경계가 흐림 | `assets/type/*.types.ts`로 확장 |
 | `src/config` | config 저장소와 사용자 경로 정책이 결합 | `features/config` 내부 service/store로 분해 |
 | `src/tests` | 테스트 종류와 fixture/output이 섞임 | 목적별 테스트와 sandbox 분리 |
 
@@ -51,13 +51,13 @@
 
 | 현재 파일 | 문제 | 목표 분해 |
 | --- | --- | --- |
-| `src/core/server.mts` | 서버 생성, tool list, dispatcher, response가 결합 | `app/server/*`, `mcp/registry/*`, `mcp/router/*`, `mcp/responses/*` |
-| `src/tools/filesystem.mts` | path 검증, read/write/list/edit 보조가 결합 | `features/filesystem/*Service.mts`, `features/filesystem/path-guard.mts` |
-| `src/tools/search-manager.mts` | rg 실행, 세션, 결과 포맷, 캐시가 결합 | `search-service`, `ripgrep-adapter`, `result-session-store` |
-| `src/tools/terminal-manager.mts` | session lifecycle, output buffer, interaction이 결합 | `terminal-session-store`, `process-output-buffer`, `terminal-service` |
-| `src/tools/improved-process-tools.mts` | process 실행과 출력 정책이 결합 | `process-runner`, `process-service`, `command-policy` |
-| `src/utils/system-info.mts` | 플랫폼 탐지와 guidance 생성이 큼 | `runtime-info`, `platform-detector` |
-| `src/utils/files/docx.mts` | DOCX 파싱과 preview 정책이 큼 | `docx-reader`, `document-outline-reader` |
+| `src/core/server.ts` | 서버 생성, tool list, dispatcher, response가 결합 | `app/server/*`, `mcp/registry/*`, `mcp/router/*`, `mcp/responses/*` |
+| `src/tools/filesystem.ts` | path 검증, read/write/list/edit 보조가 결합 | `features/filesystem/*Service.ts`, `features/filesystem/path-guard.ts` |
+| `src/tools/search-manager.ts` | rg 실행, 세션, 결과 포맷, 캐시가 결합 | `search-service`, `ripgrep-adapter`, `result-session-store` |
+| `src/tools/terminal-manager.ts` | session lifecycle, output buffer, interaction이 결합 | `terminal-session-store`, `process-output-buffer`, `terminal-service` |
+| `src/tools/improved-process-tools.ts` | process 실행과 출력 정책이 결합 | `process-runner`, `process-service`, `command-policy` |
+| `src/utils/system-info.ts` | 플랫폼 탐지와 guidance 생성이 큼 | `runtime-info`, `platform-detector` |
+| `src/utils/files/docx.ts` | DOCX 파싱과 preview 정책이 큼 | `docx-reader`, `document-outline-reader` |
 
 ## 5. v4 목표 tree 청사진
 
@@ -66,109 +66,109 @@
 
 ```text
 src/
-├─ index.mts
+├─ index.ts
 ├─ app/
-│  ├─ bootstrap.mts
+│  ├─ bootstrap.ts
 │  ├─ server/
-│  │  ├─ create-mcp-server.mts
-│  │  ├─ server-context.mts
-│  │  └─ server-lifecycle.mts
+│  │  ├─ create-mcp-server.ts
+│  │  ├─ server-context.ts
+│  │  └─ server-lifecycle.ts
 │  ├─ transport/
-│  │  ├─ stdio-transport.mts
-│  │  └─ stdio-message-channel.mts
+│  │  ├─ stdio-transport.ts
+│  │  └─ stdio-message-channel.ts
 │  └─ runtime/
-│     ├─ app-logger.mts
-│     ├─ output-capture.mts
-│     ├─ platform-detector.mts
-│     ├─ runtime-info.mts
-│     └─ version.mts
+│     ├─ app-logger.ts
+│     ├─ output-capture.ts
+│     ├─ platform-detector.ts
+│     ├─ runtime-info.ts
+│     └─ version.ts
 ├─ mcp/
 │  ├─ registry/
-│  │  ├─ tool-definition.mts
-│  │  └─ tool-registry.mts
+│  │  ├─ tool-definition.ts
+│  │  └─ tool-registry.ts
 │  ├─ router/
-│  │  ├─ request-context.mts
-│  │  └─ tool-router.mts
+│  │  ├─ request-context.ts
+│  │  └─ tool-router.ts
 │  ├─ schemas/
-│  │  ├─ config.schema.mts
-│  │  ├─ edit.schema.mts
-│  │  ├─ filesystem.schema.mts
-│  │  ├─ history.schema.mts
-│  │  ├─ process.schema.mts
-│  │  ├─ search.schema.mts
-│  │  └─ terminal.schema.mts
+│  │  ├─ config.schema.ts
+│  │  ├─ edit.schema.ts
+│  │  ├─ filesystem.schema.ts
+│  │  ├─ history.schema.ts
+│  │  ├─ process.schema.ts
+│  │  ├─ search.schema.ts
+│  │  └─ terminal.schema.ts
 │  ├─ controllers/
-│  │  ├─ config.controller.mts
-│  │  ├─ edit.controller.mts
-│  │  ├─ filesystem.controller.mts
-│  │  ├─ history.controller.mts
-│  │  ├─ process.controller.mts
-│  │  ├─ search.controller.mts
-│  │  └─ terminal.controller.mts
+│  │  ├─ config.controller.ts
+│  │  ├─ edit.controller.ts
+│  │  ├─ filesystem.controller.ts
+│  │  ├─ history.controller.ts
+│  │  ├─ process.controller.ts
+│  │  ├─ search.controller.ts
+│  │  └─ terminal.controller.ts
 │  └─ responses/
-│     ├─ error-response.mts
-│     └─ tool-response.mts
+│     ├─ error-response.ts
+│     └─ tool-response.ts
 ├─ features/
 │  ├─ config/
-│  │  ├─ config-metadata.mts
-│  │  ├─ config-paths.mts
-│  │  ├─ config-service.mts
-│  │  └─ config-store.mts
+│  │  ├─ config-metadata.ts
+│  │  ├─ config-paths.ts
+│  │  ├─ config-service.ts
+│  │  └─ config-store.ts
 │  ├─ filesystem/
-│  │  ├─ directory-service.mts
-│  │  ├─ file-move-service.mts
-│  │  ├─ file-preview-service.mts
-│  │  ├─ file-read-service.mts
-│  │  ├─ file-write-service.mts
-│  │  ├─ mime-registry.mts
-│  │  ├─ path-guard.mts
+│  │  ├─ directory-service.ts
+│  │  ├─ file-move-service.ts
+│  │  ├─ file-preview-service.ts
+│  │  ├─ file-read-service.ts
+│  │  ├─ file-write-service.ts
+│  │  ├─ mime-registry.ts
+│  │  ├─ path-guard.ts
 │  │  └─ readers/
-│  │     ├─ binary-reader.mts
-│  │     ├─ docx-reader.mts
-│  │     ├─ document-outline-reader.mts
-│  │     ├─ image-reader.mts
-│  │     ├─ reader-registry.mts
-│  │     └─ text-reader.mts
+│  │     ├─ binary-reader.ts
+│  │     ├─ docx-reader.ts
+│  │     ├─ document-outline-reader.ts
+│  │     ├─ image-reader.ts
+│  │     ├─ reader-registry.ts
+│  │     └─ text-reader.ts
 │  ├─ edit/
-│  │  ├─ block-editor.mts
-│  │  ├─ edit-service.mts
-│  │  ├─ line-ending-policy.mts
-│  │  └─ occurrence-resolver.mts
+│  │  ├─ block-editor.ts
+│  │  ├─ edit-service.ts
+│  │  ├─ line-ending-policy.ts
+│  │  └─ occurrence-resolver.ts
 │  ├─ search/
-│  │  ├─ fuzzy-matcher.mts
-│  │  ├─ result-session-store.mts
-│  │  ├─ ripgrep-adapter.mts
-│  │  ├─ search-log.mts
-│  │  └─ search-service.mts
+│  │  ├─ fuzzy-matcher.ts
+│  │  ├─ result-session-store.ts
+│  │  ├─ ripgrep-adapter.ts
+│  │  ├─ search-log.ts
+│  │  └─ search-service.ts
 │  ├─ process/
-│  │  ├─ command-policy.mts
-│  │  ├─ process-output-buffer.mts
-│  │  ├─ process-runner.mts
-│  │  ├─ process-service.mts
-│  │  ├─ process-session-store.mts
-│  │  ├─ repl-detector.mts
-│  │  ├─ shell-resolver.mts
-│  │  └─ terminal-service.mts
+│  │  ├─ command-policy.ts
+│  │  ├─ process-output-buffer.ts
+│  │  ├─ process-runner.ts
+│  │  ├─ process-service.ts
+│  │  ├─ process-session-store.ts
+│  │  ├─ repl-detector.ts
+│  │  ├─ shell-resolver.ts
+│  │  └─ terminal-service.ts
 │  └─ history/
-│     ├─ history-service.mts
-│     └─ tool-history-store.mts
+│     ├─ history-service.ts
+│     └─ tool-history-store.ts
 ├─ assets/
 │  ├─ type/
-│  │  ├─ common.types.mts
-│  │  ├─ config.types.mts
-│  │  ├─ edit.types.mts
-│  │  ├─ filesystem.types.mts
-│  │  ├─ history.types.mts
-│  │  ├─ mcp-tool.types.mts
-│  │  ├─ process.types.mts
-│  │  ├─ search.types.mts
-│  │  └─ terminal.types.mts
+│  │  ├─ common.types.ts
+│  │  ├─ config.types.ts
+│  │  ├─ edit.types.ts
+│  │  ├─ filesystem.types.ts
+│  │  ├─ history.types.ts
+│  │  ├─ mcp-tool.types.ts
+│  │  ├─ process.types.ts
+│  │  ├─ search.types.ts
+│  │  └─ terminal.types.ts
 │  └─ utils/
-│     ├─ concurrency-limit.mts
-│     ├─ path-normalize.mts
-│     ├─ result.mts
-│     ├─ text-slice.mts
-│     └─ timeout.mts
+│     ├─ concurrency-limit.ts
+│     ├─ path-normalize.ts
+│     ├─ result.ts
+│     ├─ text-slice.ts
+│     └─ timeout.ts
 └─ tests/
    ├─ contract/
    │  ├─ config.contract.test.js
@@ -227,38 +227,38 @@ src/
 
 | 현재 위치 | 변경 방식 | 목표 위치 |
 | --- | --- | --- |
-| `src/index.mts` | entry만 남기고 bootstrap 호출로 축소 | `src/index.mts`, `src/app/bootstrap.mts` |
-| `src/core/server.mts` | 서버 생성, tool registry, router, response로 분할 | `app/server/*`, `mcp/registry/*`, `mcp/router/*`, `mcp/responses/*` |
-| `src/core/custom-stdio.mts` | stdio transport와 message channel로 분할 | `app/transport/stdio-transport.mts`, `app/transport/stdio-message-channel.mts` |
-| `src/core/error-handlers.mts` | MCP response formatter로 재명명 | `mcp/responses/error-response.mts` |
-| `src/core/version.mts` | runtime metadata로 이동 | `app/runtime/version.mts` |
-| `src/handlers/*` | handler 명칭 제거, controller로 재명명 | `mcp/controllers/*.controller.mts` |
-| `src/tools/schemas.mts` | domain별 schema 파일로 분할 | `mcp/schemas/*.schema.mts` |
-| `src/tools/config.mts`, `src/config/*` | config service/store/metadata/path로 분해 | `features/config/*` |
-| `src/tools/filesystem.mts` | 파일 작업별 service와 path guard로 분해 | `features/filesystem/*Service.mts`, `features/filesystem/path-guard.mts` |
-| `src/utils/files/*` | reader 명칭으로 재정리 | `features/filesystem/readers/*-reader.mts` |
-| `src/tools/mime-types.mts` | 파일 feature 내부 registry로 재명명 | `features/filesystem/mime-registry.mts` |
-| `src/tools/edit.mts`, `src/utils/lineEndingHandler.mts` | editor service와 policy로 분해 | `features/edit/*` |
-| `src/tools/search-manager.mts` | service, adapter, session store로 분해 | `features/search/search-service.mts`, `ripgrep-adapter.mts`, `result-session-store.mts` |
-| `src/tools/fuzzySearch.mts`, `src/utils/fuzzySearchLogger.mts` | matcher와 log로 재명명 | `features/search/fuzzy-matcher.mts`, `search-log.mts` |
-| `src/utils/ripgrep-resolver.mts` | rg 실행 adapter로 흡수 | `features/search/ripgrep-adapter.mts` |
-| `src/tools/process.mts`, `src/tools/improved-process-tools.mts` | process service와 runner로 분해 | `features/process/process-service.mts`, `process-runner.mts` |
-| `src/tools/terminal-manager.mts` | terminal service, session store, output buffer로 분해 | `features/process/terminal-service.mts`, `process-session-store.mts`, `process-output-buffer.mts` |
-| `src/core/command-manager.mts` | command policy로 재명명 | `features/process/command-policy.mts` |
-| `src/utils/process-detection.mts` | repl/shell 탐지 책임으로 분리 | `features/process/repl-detector.mts`, `shell-resolver.mts` |
-| `src/utils/toolHistory.mts` | history store/service로 분해 | `features/history/tool-history-store.mts`, `history-service.mts` |
-| `src/utils/system-info.mts` | platform/runtime 정보로 분해 | `app/runtime/platform-detector.mts`, `app/runtime/runtime-info.mts` |
-| `src/utils/logger.mts`, `src/utils/capture.mts` | app runtime 명칭으로 이동 | `app/runtime/app-logger.mts`, `app/runtime/output-capture.mts` |
-| `src/types/*` | domain별 공용 타입으로 확장 | `assets/type/*.types.mts` |
-| `src/utils/withTimeout.mts` | 순수 timeout 유틸로 rename | `assets/utils/timeout.mts` |
+| `src/index.ts` | entry만 남기고 bootstrap 호출로 축소 | `src/index.ts`, `src/app/bootstrap.ts` |
+| `src/core/server.ts` | 서버 생성, tool registry, router, response로 분할 | `app/server/*`, `mcp/registry/*`, `mcp/router/*`, `mcp/responses/*` |
+| `src/core/custom-stdio.ts` | stdio transport와 message channel로 분할 | `app/transport/stdio-transport.ts`, `app/transport/stdio-message-channel.ts` |
+| `src/core/error-handlers.ts` | MCP response formatter로 재명명 | `mcp/responses/error-response.ts` |
+| `src/core/version.ts` | runtime metadata로 이동 | `app/runtime/version.ts` |
+| `src/handlers/*` | handler 명칭 제거, controller로 재명명 | `mcp/controllers/*.controller.ts` |
+| `src/tools/schemas.ts` | domain별 schema 파일로 분할 | `mcp/schemas/*.schema.ts` |
+| `src/tools/config.ts`, `src/config/*` | config service/store/metadata/path로 분해 | `features/config/*` |
+| `src/tools/filesystem.ts` | 파일 작업별 service와 path guard로 분해 | `features/filesystem/*Service.ts`, `features/filesystem/path-guard.ts` |
+| `src/utils/files/*` | reader 명칭으로 재정리 | `features/filesystem/readers/*-reader.ts` |
+| `src/tools/mime-types.ts` | 파일 feature 내부 registry로 재명명 | `features/filesystem/mime-registry.ts` |
+| `src/tools/edit.ts`, `src/utils/lineEndingHandler.ts` | editor service와 policy로 분해 | `features/edit/*` |
+| `src/tools/search-manager.ts` | service, adapter, session store로 분해 | `features/search/search-service.ts`, `ripgrep-adapter.ts`, `result-session-store.ts` |
+| `src/tools/fuzzySearch.ts`, `src/utils/fuzzySearchLogger.ts` | matcher와 log로 재명명 | `features/search/fuzzy-matcher.ts`, `search-log.ts` |
+| `src/utils/ripgrep-resolver.ts` | rg 실행 adapter로 흡수 | `features/search/ripgrep-adapter.ts` |
+| `src/tools/process.ts`, `src/tools/improved-process-tools.ts` | process service와 runner로 분해 | `features/process/process-service.ts`, `process-runner.ts` |
+| `src/tools/terminal-manager.ts` | terminal service, session store, output buffer로 분해 | `features/process/terminal-service.ts`, `process-session-store.ts`, `process-output-buffer.ts` |
+| `src/core/command-manager.ts` | command policy로 재명명 | `features/process/command-policy.ts` |
+| `src/utils/process-detection.ts` | repl/shell 탐지 책임으로 분리 | `features/process/repl-detector.ts`, `shell-resolver.ts` |
+| `src/utils/toolHistory.ts` | history store/service로 분해 | `features/history/tool-history-store.ts`, `history-service.ts` |
+| `src/utils/system-info.ts` | platform/runtime 정보로 분해 | `app/runtime/platform-detector.ts`, `app/runtime/runtime-info.ts` |
+| `src/utils/logger.ts`, `src/utils/capture.ts` | app runtime 명칭으로 이동 | `app/runtime/app-logger.ts`, `app/runtime/output-capture.ts` |
+| `src/types/*` | domain별 공용 타입으로 확장 | `assets/type/*.types.ts` |
+| `src/utils/withTimeout.ts` | 순수 timeout 유틸로 rename | `assets/utils/timeout.ts` |
 | `src/tests/*` | 목적 기반 테스트명으로 재명명 | `tests/{unit,contract,integration,fixtures,sandbox}/*` |
 
 ## 8. 리팩토링 순서
 
-1. `src/index.mts`를 얇은 entry로 축소하고 `src/app/bootstrap.mts`를 만든다.
+1. `src/index.ts`를 얇은 entry로 축소하고 `src/app/bootstrap.ts`를 만든다.
 2. `src/assets/type`, `src/assets/utils`를 만들고 side effect 없는 타입과 유틸부터 이동한다.
 3. `src/mcp/schemas`를 domain별 schema로 분리하고 controller가 schema만 참조하게 만든다.
-4. `src/core/server.mts`를 `app/server`, `mcp/registry`, `mcp/router`, `mcp/responses`로 분해한다.
+4. `src/core/server.ts`를 `app/server`, `mcp/registry`, `mcp/router`, `mcp/responses`로 분해한다.
 5. `src/handlers`를 `mcp/controllers`로 rename하고 feature service 호출만 남긴다.
 6. `features/config`를 먼저 분해해 테스트 sandbox config 주입 기반을 만든다.
 7. `features/filesystem`, `features/edit`, `features/search`, `features/process`, `features/history` 순서로 분해한다.
@@ -270,7 +270,7 @@ src/
 
 | 영역 | 최적화 |
 | --- | --- |
-| 파일 다중 읽기 | `assets/utils/concurrency-limit.mts` 기반 동시성 제한 |
+| 파일 다중 읽기 | `assets/utils/concurrency-limit.ts` 기반 동시성 제한 |
 | 파일 preview | reader registry에서 type별 reader lazy load |
 | 검색 | `result-session-store`에 TTL, max result cap, ring buffer 적용 |
 | rg 실행 | `ripgrep-adapter`에서 binary resolution cache 적용 |
@@ -282,8 +282,8 @@ src/
 ## 10. 수용 기준
 
 1. `src/core`, `src/tools`, `src/handlers`, `src/utils`, `src/types`, `src/config`는 최종 목표 구조에서 제거한다.
-2. `src/index.mts`는 npm `bin` 호환용 entry만 담당하고 business logic을 갖지 않는다.
-3. MCP schema는 단일 `schemas.mts`가 아니라 domain별 `*.schema.mts`로 나뉜다.
+2. `src/index.ts`는 npm `bin` 호환용 entry만 담당하고 business logic을 갖지 않는다.
+3. MCP schema는 단일 `schemas.ts`가 아니라 domain별 `*.schema.ts`로 나뉜다.
 4. controller는 schema validation과 service 호출만 담당한다.
 5. feature service는 MCP SDK를 직접 import하지 않는다.
 6. `assets/type`은 runtime side effect가 없어야 한다.
