@@ -7,12 +7,12 @@
 
 import { constants as fsConstants } from "node:fs";
 import { access, readFile } from "node:fs/promises";
-import { getSystemInfo } from "@app/runtime/runtime-info";
-import { currentClient } from "@app/server/create-mcp-server";
+import type { ServerResult } from "@assets/type/common";
 import { CONFIG_FIELD_DEFINITIONS, CONFIG_FIELD_KEYS, isConfigFieldKey } from "@features/config/config-metadata";
 import { configManager } from "@features/config/config-store";
-import { SetConfigValueArgsSchema } from "@mcp/schemas/schema-exports";
-import type { ServerResult } from "@type/common-types";
+import { getSystemInfo } from "@cores/runtime/runtime-info";
+import { currentClient } from "@cores/server/server-create-mcp-server";
+import { SetConfigValueArgsSchema } from "@schemas/schemas-config";
 
 const ALLOWED_CONFIG_KEYS = new Set(CONFIG_FIELD_KEYS);
 const SHELL_LINE_SEPARATOR_REGEX = /\r?\n/;

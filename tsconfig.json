@@ -4,10 +4,13 @@
     "rootDir": "./src",
     "outDir": "./out",
     "paths": {
-      "@app/*": ["./src/app/*.ts", "./src/app/*"],
+      "@cores/*": ["./src/cores/*.ts", "./src/cores/*"],
       "@assets/*": ["./src/assets/*.ts", "./src/assets/*"],
+      "@controllers/*": ["./src/controllers/*.ts", "./src/controllers/*"],
       "@features/*": ["./src/features/*.ts", "./src/features/*"],
-      "@mcp/*": ["./src/mcp/*.ts", "./src/mcp/*"],
+      "@cores/responses/*": ["./src/cores/responses/*.ts", "./src/cores/responses/*"],
+      "@schemas/*": ["./src/schemas/*.ts", "./src/schemas/*"],
+      "@tools/*": ["./src/tools/*.ts", "./src/tools/*"],
       "@type/*": ["./src/assets/type/*.ts", "./src/assets/type/*"]
     },
     "typeRoots": ["./node_modules/@types", "./src/assets/type"],

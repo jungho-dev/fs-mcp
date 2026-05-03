@@ -5,18 +5,18 @@
  * @since 2026-05-02
  */
 
-import { exec } from "node:child_process";
+import {exec} from "node:child_process";
 import os from "node:os";
-import { promisify } from "node:util";
-import { KillProcessArgsSchema } from "@mcp/schemas/schema-exports";
-import type { ProcessInfo, ServerResult } from "@type/common-types";
+import {promisify} from "node:util";
+import type {ProcessInfo, ServerResult} from "@assets/type/common";
+import { KillProcessArgsSchema } from "@schemas/schemas-process";
 
 const execAsync = promisify(exec);
 
 export async function listProcesses(): Promise<ServerResult> {
   const command = os.platform() === "win32" ? "tasklist" : "ps aux";
   try {
-    const { stdout } = await execAsync(command);
+    const {stdout} = await execAsync(command);
     const processes = stdout
       .split("\n")
       .slice(1)
@@ -39,9 +39,10 @@ export async function listProcesses(): Promise<ServerResult> {
         },
       ],
     };
-  } catch (error) {
+  }
+  catch (error) {
     return {
-      content: [{ type: "text", text: `Error: Failed to list processes: ${error instanceof Error ? error.message : String(error)}` }],
+      content: [{type: "text", text: `Error: Failed to list processes: ${error instanceof Error ? error.message : String(error)}`}],
       isError: true,
     };
   }
@@ -50,18 +51,19 @@ export async function killProcess(args: unknown): Promise<ServerResult> {
   const parsed = KillProcessArgsSchema.safeParse(args);
   if (!parsed.success) {
     return {
-      content: [{ type: "text", text: `Error: Invalid arguments for kill_process: ${parsed.error}` }],
+      content: [{type: "text", text: `Error: Invalid arguments for kill_process: ${parsed.error}`}],
       isError: true,
     };
   }
   try {
     process.kill(parsed.data.pid);
     return {
-      content: [{ type: "text", text: `Successfully terminated process ${parsed.data.pid}` }],
+      content: [{type: "text", text: `Successfully terminated process ${parsed.data.pid}`}],
     };
-  } catch (error) {
+  }
+  catch (error) {
     return {
-      content: [{ type: "text", text: `Error: Failed to kill process: ${error instanceof Error ? error.message : String(error)}` }],
+      content: [{type: "text", text: `Error: Failed to kill process: ${error instanceof Error ? error.message : String(error)}`}],
       isError: true,
     };
   }

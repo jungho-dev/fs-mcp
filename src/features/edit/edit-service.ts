@@ -10,17 +10,17 @@
  */
 
 import path from "node:path";
-import { capture } from "@app/runtime/output-capture";
+import { resolvePreviewFileType } from "@assets/readers/readers-filetypes";
+import type { ServerResult } from "@assets/type/common";
 import { configManager } from "@features/config/config-store";
-import { detectLineEnding, normalizeLineEndings } from "@features/edit/line-ending-policy";
+import { detectLineEnding, normalizeLineEndings } from "@features/edit/edit-line-ending-policy";
+import { resolveAbsolutePath } from "@features/filesystem/filesystem-path-resolver";
 import { readFileInternal, validatePath, writeFile } from "@features/filesystem/filesystem-service";
-import { resolveAbsolutePath } from "@features/filesystem/path-resolver";
-import { resolvePreviewFileType } from "@features/filesystem/readers/preview-file-types";
-import { getSimilarityRatio, recursiveFuzzyIndexOf } from "@features/search/fuzzy-matcher";
+import { getSimilarityRatio, recursiveFuzzyIndexOf } from "@features/search/search-fuzzy-matcher";
 import { type FuzzySearchLogEntry, fuzzySearchLogger } from "@features/search/search-log";
-import { createErrorResponse } from "@mcp/responses/error-response";
-import { EditBlockArgsSchema } from "@mcp/schemas/schema-exports";
-import type { ServerResult } from "@type/common-types";
+import { createErrorResponse } from "@cores/responses/responses-error";
+import { capture } from "@cores/runtime/runtime-output-capture";
+import { EditBlockArgsSchema } from "@schemas/schemas-edit";
 
 interface SearchReplace {
   search: string;
@@ -350,10 +350,10 @@ export async function handleEditBlock(args: unknown): Promise<ServerResult> {
 
   // Validate path and resolve handler once.
   let validatedPath: string;
-  let handler: Awaited<ReturnType<typeof import("@features/filesystem/readers/reader-factory").getFileHandler>>;
+  let handler: Awaited<ReturnType<typeof import("@assets/readers/readers-factory").getFileHandler>>;
   try {
     validatedPath = await validatePath(parsed.file_path);
-    const { getFileHandler } = await import("@features/filesystem/readers/reader-factory");
+    const { getFileHandler } = await import("@assets/readers/readers-factory");
     handler = await getFileHandler(validatedPath);
   } catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);

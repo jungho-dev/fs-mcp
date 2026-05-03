@@ -1,5 +1,5 @@
 /**
- * @file bootstrap-sync.ts
+ * @file .bootstrap/bootstrap-sync.ts
  * @description ~/.bootstrap minimal bootstrap: load remote dev-ts sync engine and run
  * @author Jungho
  * @since 2026-03-15

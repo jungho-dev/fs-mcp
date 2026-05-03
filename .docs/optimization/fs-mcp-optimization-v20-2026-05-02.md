@@ -12,7 +12,7 @@
 
 ## 구조 영향
 
-* `src/app`, `src/assets`, `src/features`, `src/mcp`, `src/tests`, `src/index.ts` 구조가 릴리스 조건이 되었다.
+* `src/platform`, `src/assets`, `src/features`, `src/mcp`, `src/tests`, `src/index.ts` 구조가 릴리스 조건이 되었다.
 * 과거 `src/core`, `src/handlers`, `src/tools`, `src/types`, `src/config` 같은 루트 구조가 재생성되면 검증이 실패한다.
 * 문서 보고서에 남은 과거 설명은 보존하되, 실행 표면에는 재유입되지 않도록 범위를 분리했다.
 

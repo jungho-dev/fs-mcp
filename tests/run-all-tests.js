@@ -105,7 +105,7 @@ async function runTestFile(testFile) {
  */
 async function buildProject() {
   await new Promise((resolve, reject) => {
-    const proc = spawn("bun", ["run", "scripts/build.ts"], {
+    const proc = spawn("bun", ["run", "build"], {
       cwd: projectRoot,
       stdio: "inherit",
       shell: false,
@@ -143,7 +143,8 @@ async function collectTestFiles(directoryPath, results = []) {
       continue;
     }
 
-    const isRunnableTest = entry.name.startsWith("test") && (entry.name.endsWith(".js") || entry.name.endsWith(".mjs")) && entry.name !== "run-all-tests.js";
+    const isJavaScriptTest = entry.name.endsWith(".js") || entry.name.endsWith(".mjs");
+    const isRunnableTest = isJavaScriptTest && (entry.name.startsWith("test") || entry.name.includes("-test-")) && entry.name !== "run-all-tests.js";
 
     if (isRunnableTest) {
       results.push(toTestModulePath(entryPath));
@@ -161,7 +162,7 @@ async function runTestModules() {
   const testFiles = [];
   try {
     const discoveredTests = (await collectTestFiles(__dirname)).sort();
-    const prioritizedMainTest = "./edit/test-edit-block-basic.js";
+    const prioritizedMainTest = "./edit/edit-test-edit-block-basic.js";
 
     if (discoveredTests.includes(prioritizedMainTest)) {
       testFiles.push(prioritizedMainTest);

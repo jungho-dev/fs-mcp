@@ -33,10 +33,13 @@
     "preserveAllComments": false,
     "baseUrl": ".",
     "paths": {
-      "@app/*": ["./src/app/*.ts"],
+      "@platform/*": ["./src/platform/*.ts"],
       "@assets/*": ["./src/assets/*.ts"],
-      "@features/*": ["./src/features/*.ts"],
-      "@mcp/*": ["./src/mcp/*.ts"],
+      "@controllers/*": ["./src/controllers/*.ts", "./src/controllers/*"],
+      "@features/*": ["./src/features/*.ts", "./src/features/*"],
+      "@platform/responses/*": ["./src/platform/responses/*.ts", "./src/platform/responses/*"],
+      "@schemas/*": ["./src/schemas/*.ts", "./src/schemas/*"],
+      "@tools/*": ["./src/tools/*.ts", "./src/tools/*"],
       "@type/*": ["./src/assets/type/*.ts"]
     },
     "parser": {

@@ -8,9 +8,9 @@
 import { type ChildProcess, spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { capture } from "@app/runtime/output-capture";
+import { capture } from "@cores/runtime/runtime-output-capture";
 import { validatePath } from "@features/filesystem/filesystem-service";
-import { getRipgrepPath } from "@features/search/ripgrep-adapter";
+import { getRipgrepPath } from "@features/search/search-ripgrep-adapter";
 import PizZip from "pizzip";
 
 const FIRST_CHUNK_WAIT_MS = 40;

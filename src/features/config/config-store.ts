@@ -8,8 +8,8 @@
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { VERSION } from "@app/runtime/version";
 import { CONFIG_FILE, LEGACY_CONFIG_FILE } from "@features/config/config-paths";
+import { VERSION } from "@cores/runtime/runtime-version";
 
 export interface ServerConfig {
   blockedCommands?: string[];

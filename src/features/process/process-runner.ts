@@ -6,14 +6,14 @@
  */
 
 import { platform } from "node:os";
-import { capture } from "@app/runtime/output-capture";
+import type { OutputEvent, ServerResult, TimingInfo } from "@assets/type/common";
 import { configManager } from "@features/config/config-store";
-import { commandManager } from "@features/process/command-policy";
-import { analyzeProcessState, cleanProcessOutput, formatProcessStateMessage, type ProcessState } from "@features/process/repl-detector";
-import { terminalManager } from "@features/process/terminal-service";
-import { clearVirtualNodeSession, executeVirtualNodeCode, getVirtualNodeSession, listVirtualNodeSessions, startVirtualNodeSession } from "@features/process/virtual-node-session";
-import { ForceTerminateArgsSchema, InteractWithProcessArgsSchema, ReadProcessOutputArgsSchema, StartProcessArgsSchema } from "@mcp/schemas/schema-exports";
-import type { OutputEvent, ServerResult, TimingInfo } from "@type/common-types";
+import { commandManager } from "@features/process/process-command-policy";
+import { analyzeProcessState, cleanProcessOutput, formatProcessStateMessage, type ProcessState } from "@features/process/process-repl-detector";
+import { terminalManager } from "@features/process/process-terminal-service";
+import { clearVirtualNodeSession, executeVirtualNodeCode, getVirtualNodeSession, listVirtualNodeSessions, startVirtualNodeSession } from "@features/process/process-virtual-node-session";
+import { capture } from "@cores/runtime/runtime-output-capture";
+import { ForceTerminateArgsSchema, InteractWithProcessArgsSchema, ReadProcessOutputArgsSchema, StartProcessArgsSchema } from "@schemas/schemas-process";
 
 type DiagnosticExitReason = TimingInfo["exitReason"] | "process_finished" | "no_wait";
 type DiagnosticTimingInfo = Omit<TimingInfo, "exitReason"> & {

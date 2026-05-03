@@ -7,7 +7,7 @@
 
 ## Analysis
 
-`src/app/server/create-mcp-server.ts`는 다음 책임을 동시에 가진다.
+`src/platform/server/server-create-mcp-server.ts`는 다음 책임을 동시에 가진다.
 
 1. MCP 서버 인스턴스 생성
 2. 초기화 요청 처리

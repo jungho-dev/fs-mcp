@@ -26,7 +26,7 @@
 | --- | --- | --- |
 | 패키지명 | `@jungho-dev/fs-mcp` | 최신 기준으로 문서 반영 |
 | 버전 | `1.0.1` | 배포 메타데이터 유지 |
-| 공개 실행 파일 | `fs-mcp: out/index.mjs` | `src/index.ts`는 얇은 entry로 유지 필요 |
+| 공개 실행 파일 | `fs-mcp: out/index.js` | `src/index.ts`는 얇은 entry로 유지 필요 |
 | 현재 `src` 구조 | `config`, `core`, `handlers`, `tools`, `types`, `utils`, `tests` | 책임 기준이 섞여 있음 |
 | `src/assets` | 존재하지 않음 | alias만 있고 실제 구조는 미구현 |
 | TypeScript | `bun run check` 통과 | 타입 계약은 현재 정상 |
@@ -227,10 +227,10 @@ src/
 
 | 현재 위치 | 변경 방식 | 목표 위치 |
 | --- | --- | --- |
-| `src/index.ts` | entry만 남기고 bootstrap 호출로 축소 | `src/index.ts`, `src/app/bootstrap.ts` |
+| `src/index.ts` | entry만 남기고 bootstrap 호출로 축소 | `src/index.ts`, `src/platform/bootstrap.ts` |
 | `src/core/server.ts` | 서버 생성, tool registry, router, response로 분할 | `app/server/*`, `mcp/registry/*`, `mcp/router/*`, `mcp/responses/*` |
 | `src/core/custom-stdio.ts` | stdio transport와 message channel로 분할 | `app/transport/stdio-transport.ts`, `app/transport/stdio-message-channel.ts` |
-| `src/core/error-handlers.ts` | MCP response formatter로 재명명 | `mcp/responses/error-response.ts` |
+| `src/core/error-ts` | MCP response formatter로 재명명 | `mcp/responses/error-response.ts` |
 | `src/core/version.ts` | runtime metadata로 이동 | `app/runtime/version.ts` |
 | `src/handlers/*` | handler 명칭 제거, controller로 재명명 | `mcp/controllers/*.controller.ts` |
 | `src/tools/schemas.ts` | domain별 schema 파일로 분할 | `mcp/schemas/*.schema.ts` |
@@ -255,7 +255,7 @@ src/
 
 ## 8. 리팩토링 순서
 
-1. `src/index.ts`를 얇은 entry로 축소하고 `src/app/bootstrap.ts`를 만든다.
+1. `src/index.ts`를 얇은 entry로 축소하고 `src/platform/bootstrap.ts`를 만든다.
 2. `src/assets/type`, `src/assets/utils`를 만들고 side effect 없는 타입과 유틸부터 이동한다.
 3. `src/mcp/schemas`를 domain별 schema로 분리하고 controller가 schema만 참조하게 만든다.
 4. `src/core/server.ts`를 `app/server`, `mcp/registry`, `mcp/router`, `mcp/responses`로 분해한다.
