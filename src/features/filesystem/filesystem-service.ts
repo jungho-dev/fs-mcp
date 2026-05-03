@@ -109,6 +109,7 @@ function buildPermissionError(filePath: string, errCode: string | undefined): Er
   }
   return new Error(lines.join("\n"));
 }
+
 // Initialize allowed directories from configuration
 async function getAllowedDirs(): Promise<string[]> {
   try {
@@ -122,6 +123,7 @@ async function getAllowedDirs(): Promise<string[]> {
   }
   return [];
 }
+
 // Normalize all paths consistently
 function normalizePath(p: string): string {
   return path.normalize(expandHome(p)).toLowerCase();
@@ -282,6 +284,7 @@ export async function validatePath(requestedPath: string): Promise<string> {
   }
   return result;
 }
+
 // Re-export FileResult from base for consumers
 export type { FileResult } from "@assets/readers/readers-base";
 
@@ -703,6 +706,7 @@ export async function searchFiles(rootPath: string, pattern: string): Promise<st
     return await searchFilesNodeJS(rootPath, pattern);
   }
 }
+
 // 1. Search compatibility result collection ――――――――――――――――――――――――
 function appendFileSearchResults(target: string[], searchResults: SearchResult[]): void {
   for (const searchResult of searchResults) {
@@ -711,18 +715,22 @@ function appendFileSearchResults(target: string[], searchResults: SearchResult[]
     }
   }
 }
+
 // 2. File search result guard ―――――――――――――――――――――――――――――――――――――
 function isFileSearchResult(searchResult: SearchResult): boolean {
   return searchResult.type === "file" && searchResult.file !== LAST_READ_MARKER_FILE;
 }
+
 // 3. Search poll wait ――――――――――――――――――――――――――――――――――――――――――――
 async function waitForSearchPoll(): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, SEARCH_POLL_INTERVAL_MS));
 }
+
 // 4. Search timeout guard ―――――――――――――――――――――――――――――――――――――――――
 function isSearchCompatibilityTimeout(startTime: number): boolean {
   return Date.now() - startTime > SEARCH_COMPAT_TIMEOUT_MS;
 }
+
 // Keep the original Node.js implementation as fallback
 async function searchFilesNodeJS(rootPath: string, pattern: string): Promise<string[]> {
   const results: string[] = [];

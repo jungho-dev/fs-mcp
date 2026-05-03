@@ -17,6 +17,7 @@ import {CONFIG_TOOL_CATALOG} from "@tools/tools-config";
 import type {ToolCatalogEntry} from "@tools/tools-const";
 import {dispatchToolCall} from "@tools/tools-dispatcher";
 import {FILESYSTEM_TOOL_CATALOG} from "@tools/tools-filesystem";
+import {GIT_TOOL_CATALOG} from "@tools/tools-git";
 import {PROCESS_TOOL_CATALOG} from "@tools/tools-process";
 
 // Store startup messages to send after initialization
@@ -42,6 +43,7 @@ function deferLog(level: LogLevel, message: string): void {
 function hasRequestMetadata(value: unknown): value is RequestMetadata {
   return typeof value === "object" && value !== null;
 }
+
 // Function to flush deferred messages after initialization
 export function flushDeferredMessages(): void {
   while (deferredMessages.length > 0) {
@@ -94,6 +96,7 @@ async function updateCurrentClient(clientInfo: ClientInfoUpdate): Promise<boolea
   }
   return false;
 }
+
 // Add handler for initialization method - capture client info
 server.setRequestHandler(InitializeRequestSchema, async (request: InitializeRequest) => {
   try {
@@ -135,7 +138,7 @@ deferLog("info", "Setting up request ..");
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   function createToolCatalog(): ToolCatalogEntry[] {
-    return [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG];
+    return [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG, ...GIT_TOOL_CATALOG];
   }
   try {
     return {

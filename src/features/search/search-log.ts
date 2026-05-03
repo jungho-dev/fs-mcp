@@ -105,5 +105,6 @@ class FuzzySearchLogger {
     }
   }
 }
+
 // Singleton instance
 export const fuzzySearchLogger = new FuzzySearchLogger();

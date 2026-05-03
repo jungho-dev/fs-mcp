@@ -37,6 +37,7 @@ const TEST_GROUPS = {
     "./smoke/config/config-toml-preferred.test.js",
     "./smoke/edit/edit-block-basic.test.js",
     "./smoke/filesystem/file-handlers.test.js",
+    "./smoke/git/git-basic.test.js",
     "./smoke/process/virtual-node-session.test.js",
     "./smoke/search/search-code.test.js",
     "./smoke/search/search-truncation.test.js",

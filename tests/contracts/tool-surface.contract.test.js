@@ -9,6 +9,7 @@ import assert from "node:assert/strict";
 import { CONFIG_TOOL_CATALOG } from "../../out/tools/tools-config.js";
 import { getDispatchableToolNames } from "../../out/tools/tools-dispatcher.js";
 import { FILESYSTEM_TOOL_CATALOG } from "../../out/tools/tools-filesystem.js";
+import { GIT_TOOL_CATALOG } from "../../out/tools/tools-git.js";
 import { PROCESS_TOOL_CATALOG } from "../../out/tools/tools-process.js";
 
 function sortedDifference(left, right) {
@@ -18,7 +19,7 @@ function sortedDifference(left, right) {
 
 // 1. catalog and dispatcher alignment ―――――――――――――――――――――――――――――――――――――――――――――――
 function testCatalogAndDispatcherAlignment() {
-  const catalogNames = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG]
+  const catalogNames = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG, ...GIT_TOOL_CATALOG]
     .map((tool) => tool.name)
     .sort();
   const dispatchableNames = getDispatchableToolNames().sort();

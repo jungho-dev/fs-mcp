@@ -9,15 +9,52 @@ import type {ServerResult} from "@assets/type/common";
 import {handleGetConfigs, handleSetConfigValues} from "@controllers/controllers-config";
 import {handleEditBlocks} from "@controllers/controllers-edit";
 import {handleCreateDirectories, handleGetFileInfos, handleListDirectories, handleMoveFiles, handleReadFiles, handleRenameFiles, handleWriteFiles} from "@controllers/controllers-filesystem";
+import {handleGitTool} from "@controllers/controllers-git";
 import {handleKillProcesses, handleListProcesses} from "@controllers/controllers-process";
 import {handleGetSearchResults, handleListSearches, handleStartSearches, handleStopSearches} from "@controllers/controllers-search";
 import {handleInteractWithProcesses, handleListSessions, handleReadProcessOutputs, handleStartProcesses} from "@controllers/controllers-terminal";
 import {createErrorResponse} from "@cores/responses/responses-error";
 import {normalizeToolResult} from "@cores/responses/responses-tool-result";
 import {capture} from "@cores/runtime/runtime-output-capture";
+import type {GitToolName} from "@schemas/schemas-git";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export type ToolDispatchHandler = (args: unknown) => Promise<ServerResult> | ServerResult;
+
+const GIT_TOOL_NAMES: GitToolName[] = [
+  "git_add",
+  "git_blame",
+  "git_branch",
+  "git_changelog_analyze",
+  "git_checkout",
+  "git_cherry_pick",
+  "git_clean",
+  "git_clear_working_dir",
+  "git_clone",
+  "git_commit",
+  "git_diff",
+  "git_fetch",
+  "git_init",
+  "git_log",
+  "git_merge",
+  "git_pull",
+  "git_push",
+  "git_rebase",
+  "git_reflog",
+  "git_remote",
+  "git_reset",
+  "git_set_working_dir",
+  "git_show",
+  "git_stash",
+  "git_status",
+  "git_tag",
+  "git_worktree",
+  "git_wrapup_instructions",
+];
+
+const GIT_TOOL_DISPATCHERS = Object.fromEntries(
+  GIT_TOOL_NAMES.map((toolName) => [toolName, (args: unknown) => handleGitTool(toolName, args)]),
+) as Record<GitToolName, ToolDispatchHandler>;
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export const TOOL_DISPATCHERS: Readonly<Record<string, ToolDispatchHandler>> = {
@@ -41,6 +78,7 @@ export const TOOL_DISPATCHERS: Readonly<Record<string, ToolDispatchHandler>> = {
   get_search_results: (args: unknown) => handleGetSearchResults(args),
   stop_searches: (args: unknown) => handleStopSearches(args),
   list_searches: () => handleListSearches(),
+  ...GIT_TOOL_DISPATCHERS,
 };
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――

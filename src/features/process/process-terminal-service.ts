@@ -21,6 +21,7 @@ interface CompletedSession {
   pid: number;
   startTime: Date;
 }
+
 // Result type for paginated output reading
 export interface PaginatedOutputResult {
   exitCode?: number | null; // Exit code if completed

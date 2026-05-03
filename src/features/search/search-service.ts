@@ -752,11 +752,13 @@ export class SearchManager {
     }
   }
 }
+
 // 1. Glob-to-RegExp conversion ―――――――――――――――――――――――――――――――――
 function buildGlobPatternRegExp(pattern: string): RegExp {
   const regexPattern = pattern.replace(GLOB_REGEX_ESCAPE_PATTERN, "\\$&").replace(GLOB_ASTERISK_PATTERN, ".*");
   return new RegExp(`^${regexPattern}$`, "i");
 }
+
 // Global search manager instance
 export const searchManager = new SearchManager();
 

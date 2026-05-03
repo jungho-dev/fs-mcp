@@ -17,6 +17,7 @@ export interface ProcessState {
   isWaitingForInput: boolean;
   lastOutput: string;
 }
+
 // Common REPL prompt patterns
 const REPL_PROMPTS = {
   julia: ["julia> ", "       "], // julia continuation is spaces
@@ -112,6 +113,7 @@ export function analyzeProcessState(output: string, _pid?: number): ProcessState
     lastOutput: output,
   };
 }
+
 // 2. Output cleanup ―――――――――――――――――――――――――――――――――――――――――――――――
 export function cleanProcessOutput(output: string, inputSent?: string): string {
   let cleaned = output;
@@ -133,10 +135,12 @@ export function cleanProcessOutput(output: string, inputSent?: string): string {
   }
   return cleaned.trim();
 }
+
 // 3. Regex literal escaping ―――――――――――――――――――――――――――――――――――――――
 function escapeRegExp(string: string): string {
   return string.replace(REGEXP_SPECIAL_CHAR_PATTERN, "\\$&");
 }
+
 // 4. User-facing state message ―――――――――――――――――――――――――――――――――――――
 export function formatProcessStateMessage(state: ProcessState, pid: number): string {
   if (state.isWaitingForInput) {

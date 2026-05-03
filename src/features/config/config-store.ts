@@ -396,5 +396,6 @@ class ConfigManager {
     return this._isFirstRun;
   }
 }
+
 // Export singleton instance
 export const configManager = new ConfigManager();

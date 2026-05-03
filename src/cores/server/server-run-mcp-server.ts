@@ -34,6 +34,7 @@ export function flushStartupLogs(transport: Pick<FilteredStdioServerTransport, "
   }
   return sentMessages;
 }
+
 // 2. MCP server bootstrap ――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runServer () {
   try {
@@ -130,6 +131,7 @@ export async function runServer () {
     process.exit(1);
   }
 }
+
 // 3. entrypoint wrapper ―――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function startServer () {
   void runServer().catch (async (error) => {

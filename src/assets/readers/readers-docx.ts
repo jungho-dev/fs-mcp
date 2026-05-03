@@ -96,13 +96,13 @@ function compactXml(prettyXml: string): string {
     .map((l) => l.trimStart())
     .join("");
 }
+
 // 2. DOCX ZIP helpers ――――――――――――――――――――――――――――――――――――――――――――
 
 interface DocxZipContents {
-  zip: PizZip;
   documentXml: string;
-  /** All XML parts keyed by path (e.g. "word/header1.xml") */
   xmlParts: Map<string, string>;
+  zip: PizZip;
 }
 function loadDocxZip(buf: Buffer): DocxZipContents {
   const zip = new PizZip(buf);
@@ -128,6 +128,7 @@ function loadDocxZip(buf: Buffer): DocxZipContents {
     xmlParts,
   };
 }
+
 // 3. Outline extraction ―――――――――――――――――――――――――――――――――――――――――――
 
 /**
@@ -253,6 +254,7 @@ function extractOutline(xml: string): string {
 
   return `${header}\n${lines.join("\n")}`;
 }
+
 // 4. XML text extraction helpers ―――――――――――――――――――――――――――――――――――
 
 /** Extract all <w:t>...</w:t> text content from an XML fragment */
@@ -453,6 +455,7 @@ function extractHeaderFooterOutline(zip: PizZip): string {
   }
   return parts.length > 0 ? `\n\nHeaders/Footers:\n${parts.join("\n")}` : "";
 }
+
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――═
 // DOCX creation helpers
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――═
@@ -509,6 +512,7 @@ function createMinimalDocxZip(documentXml: string): PizZip {
 
   return zip;
 }
+
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――═
 // Count occurrences helper
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――═
@@ -522,6 +526,7 @@ function countOccurrences(haystack: string, needle: string): number {
   }
   return count;
 }
+
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――═
 // DocxFileHandler — implements FileHandler
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――═

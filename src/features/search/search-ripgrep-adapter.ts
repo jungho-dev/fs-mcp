@@ -35,10 +35,12 @@ export async function getRipgrepPath(): Promise<string> {
   }
   throw new Error(RIPGREP_NOT_FOUND_MESSAGE);
 }
+
 // 2. Cache reset ――――――――――――――――――――――――――――――――――――――――――――――――――
 export function clearRipgrepCache(): void {
   cachedRgPath = null;
 }
+
 // 3. Bundled package lookup ――――――――――――――――――――――――――――――――――――――――
 async function resolveBundledRipgrepPath(): Promise<string | null> {
   try {
@@ -53,6 +55,7 @@ async function resolveBundledRipgrepPath(): Promise<string | null> {
   }
   return null;
 }
+
 // 4. System PATH lookup ―――――――――――――――――――――――――――――――――――――――――――
 function resolveSystemRipgrepPath(): string | null {
   try {
@@ -69,6 +72,7 @@ function resolveSystemRipgrepPath(): string | null {
   }
   return null;
 }
+
 // 5. Known install path lookup ―――――――――――――――――――――――――――――――――――――
 function resolveCommonRipgrepPath(): string | null {
   for (const possiblePath of getCommonRipgrepPaths()) {
@@ -78,6 +82,7 @@ function resolveCommonRipgrepPath(): string | null {
   }
   return null;
 }
+
 // 6. Common install path list ――――――――――――――――――――――――――――――――――――――
 function getCommonRipgrepPaths(): string[] {
   if (process.platform === WINDOWS_PLATFORM) {
@@ -85,6 +90,7 @@ function getCommonRipgrepPaths(): string[] {
   }
   return ["/usr/local/bin/rg", "/usr/bin/rg", join(homedir(), ".cargo", "bin", "rg"), "/opt/homebrew/bin/rg"];
 }
+
 // 7. Executable permission guard ―――――――――――――――――――――――――――――――――――
 function ensureExecutable(rgPath: string): void {
   if (process.platform === WINDOWS_PLATFORM) {
@@ -97,6 +103,7 @@ function ensureExecutable(rgPath: string): void {
     // Ignore chmod errors; packaged binaries may be read-only.
   }
 }
+
 // 8. Cache assignment ―――――――――――――――――――――――――――――――――――――――――――――
 function cacheRipgrepPath(rgPath: string): string {
   cachedRgPath = rgPath;
