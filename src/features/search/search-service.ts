@@ -209,7 +209,7 @@ export class SearchManager {
   readSearchResults(
     sessionId: string,
     offset: number = 0,
-    length: number = 100,
+    length?: number,
   ): {
     results: SearchResult[];
     returnedCount: number; // Renamed from newResultsCount
@@ -248,8 +248,8 @@ export class SearchManager {
       };
     }
     // Handle positive offsets (range behavior) - like file reading
-    const slicedResults = allResults.slice(offset, offset + length);
-    const hasMoreResults = offset + length < allResults.length || !session.isComplete;
+    const slicedResults = length === undefined ? allResults.slice(offset) : allResults.slice(offset, offset + length);
+    const hasMoreResults = length === undefined ? !session.isComplete : offset + length < allResults.length || !session.isComplete;
 
     session.lastReadTime = Date.now();
 

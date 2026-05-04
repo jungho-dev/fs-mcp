@@ -28,7 +28,7 @@ export const StartSearchesArgsSchema = z.object({
 export const GetMoreSearchResultsArgsSchema = z.object({
   sessionId: z.string(),
   offset: z.number().optional().default(0),
-  length: z.number().optional().default(100),
+  length: z.number().optional(),
 });
 
 export const GetSearchResultsArgsSchema = z.object({

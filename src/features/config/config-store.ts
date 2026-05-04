@@ -14,8 +14,8 @@ export interface ServerConfig {
   blockedCommands?: string[];
   currentClient?: ClientInfo; // Current connected client information
   defaultShell?: string;
-  fileReadLineLimit?: number; // Default line limit for file read operations (changed from character-based)
-  fileWriteLineLimit?: number; // Line limit for file write operations
+  fileReadLineLimit?: number; // Legacy read hint; read operations are uncapped unless length is provided
+  fileWriteLineLimit?: number; // Large write/edit warning threshold
   [key: string]: unknown; // Allow for arbitrary configuration keys
 }
 export interface ClientInfo {

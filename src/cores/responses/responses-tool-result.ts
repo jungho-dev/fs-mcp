@@ -47,8 +47,8 @@ interface DisplayLineRange {
   nextStart: number;
 }
 const DISPLAY_MAX_LINES = 5;
-const DISPLAY_MAX_LINE_LENGTH = 100;
-const DISPLAY_MAX_CHARS = DISPLAY_MAX_LINES * DISPLAY_MAX_LINE_LENGTH;
+const DISPLAY_MAX_LINE_LENGTH = 30;
+const DISPLAY_MAX_CHARS = 30;
 const DISPLAY_OVERFLOW_SUFFIX = " ... (truncated)";
 
 // 1. Normalize content item ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――

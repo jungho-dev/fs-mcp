@@ -125,9 +125,9 @@ export async function performSearchReplace(filePath: string, block: SearchReplac
     capture("server_edit_block_content_not_string", {expectedReplacements, fileExtension: fileExtension });
     throw new Error(`Wrong content for file ${filePath}`);
   }
-  // Get the line limit from configuration
+  // Get the large-edit warning threshold from configuration
   const config = await configManager.getConfig();
-  const MAX_LINES = config.fileWriteLineLimit ?? 50; // Default to 50 if not set
+  const warningLineLimit = config.fileWriteLineLimit ?? 50;
 
   // Detect file's line ending style
   const fileLineEnding = detectLineEnding(content);
@@ -164,9 +164,9 @@ export async function performSearchReplace(filePath: string, block: SearchReplac
     const maxLines = Math.max(searchLines, replaceLines);
     let warningMessage = "";
 
-    if (maxLines > MAX_LINES) {
+    if (maxLines > warningLineLimit) {
       const problemText = searchLines > replaceLines ? "search text" : "replacement text";
-      warningMessage = `\n\nWARNING: The ${problemText} has ${maxLines} lines (maximum: ${MAX_LINES}).
+      warningMessage = `\n\nWARNING: The ${problemText} has ${maxLines} lines (warning threshold: ${warningLineLimit}).
 
 RECOMMENDATION: For large search/replace operations, consider breaking them into smaller chunks with fewer lines.`;
     }

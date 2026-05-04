@@ -461,18 +461,9 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
     await waitForResponse();
 
     // Clean and format output
-    let cleanOutput = cleanProcessOutput(output, input);
+    const cleanOutput = cleanProcessOutput(output, input);
     const timeoutReached = !earlyExit && !processState?.isFinished && !processState?.isWaitingForInput;
 
-    // Apply output line limit to prevent context overflow
-    let truncationMessage = "";
-    const outputLines = cleanOutput.split("\n");
-    if (outputLines.length > maxOutputLines) {
-      const truncatedLines = outputLines.slice(0, maxOutputLines);
-      cleanOutput = truncatedLines.join("\n");
-      const remainingLines = outputLines.length - maxOutputLines;
-      truncationMessage = `\n\nOutput truncated: showing ${maxOutputLines} of ${outputLines.length} lines (${remainingLines} hidden). Use read_process_output with offset/length for full output.`;
-    }
     // Determine final state
     if (!processState) {
     	processState = analyzeProcessState(output, pid);
@@ -524,9 +515,6 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
     }
     if (statusMessage) {
       responseText += `\n\n${statusMessage}`;
-    }
-    if (truncationMessage) {
-    	responseText += truncationMessage;
     }
     if (timingMessage) {
     	responseText += timingMessage;

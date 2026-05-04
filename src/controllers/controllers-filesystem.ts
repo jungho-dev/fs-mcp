@@ -172,16 +172,15 @@ export async function handleWriteFile(args: unknown): Promise<ServerResult> {
   try {
     const parsed = WriteFileArgsSchema.parse(args);
 
-    // Get the line limit from configuration
+    // Get the large-write warning threshold from configuration
     const config = await configManager.getConfig();
-    const MAX_LINES = config.fileWriteLineLimit ?? 50; // Default to 50 if not set
+    const warningLineLimit = config.fileWriteLineLimit ?? 50;
 
-    // Strictly enforce line count limit
     const lines = parsed.content.split("\n");
     const lineCount = lines.length;
-    let errorMessage = "";
-    if (lineCount > MAX_LINES) {
-      errorMessage = `File written successfully! (${lineCount} lines)
+    let warningMessage = "";
+    if (lineCount > warningLineLimit) {
+      warningMessage = `File written successfully! (${lineCount} lines)
 
 Performance tip: For optimal speed, consider chunking files into ≤30 line pieces in future operations.`;
     }
@@ -196,7 +195,7 @@ Performance tip: For optimal speed, consider chunking files into ≤30 line piec
       content: [
         {
           type: "text",
-          text: `Successfully ${modeMessage} ${parsed.path} (${lineCount} lines) ${errorMessage}`,
+          text: `Successfully ${modeMessage} ${parsed.path} (${lineCount} lines) ${warningMessage}`,
         },
       ],
       structuredContent: {

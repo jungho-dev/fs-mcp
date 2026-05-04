@@ -23,7 +23,7 @@ interface CompactedStringPayload {
 }
 
 const BATCH_INPUT_PREVIEW_LENGTH = 160;
-const BATCH_RESULT_PREVIEW_LENGTH = 240;
+const BATCH_RESULT_PREVIEW_LENGTH = 30;
 const BATCH_LARGE_INPUT_FIELDS = new Set(["blob", "content", "data", "imageData", "listing", "new_string", "old_string", "textContent"]);
 const BATCH_STRUCTURED_PAYLOAD_FIELDS = ["imageData", "listing", "textContent"];
 const LINE_SPLIT_PATTERN = /\r\n|\r|\n/;
@@ -100,8 +100,8 @@ function hasLargeStructuredPayload(result: ServerResult): boolean {
 // 7. Create result text preview ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createResultTextPreview(text: string): string {
   const compactedText = text.replace(WHITESPACE_PATTERN, " ").trim();
-  const suffix = " ... (full payload omitted here)";
-  let preview = text;
+  const suffix = " ... (omitted)";
+  let preview = compactedText;
 
   if (compactedText.length > BATCH_RESULT_PREVIEW_LENGTH) {
     const previewLength = Math.max(0, BATCH_RESULT_PREVIEW_LENGTH - suffix.length);
@@ -162,7 +162,7 @@ export function createBatchToolResponse<T>(toolName: string, items: BatchToolIte
   const succeededCount = totalCount - failedCount;
   const summaryLines = items.map((item) => {
     const statusText = item.ok ? "OK" : "ERROR";
-    const textPreview = extractPrimaryText(item.result).slice(0, 160);
+    const textPreview = extractPrimaryText(item.result).slice(0, BATCH_RESULT_PREVIEW_LENGTH);
 
     return `[${item.index}] ${statusText} ${textPreview}`;
   });

@@ -44,8 +44,8 @@ export const EDIT_TOOL_CATALOG: ToolCatalogEntry[] = [
       rather than one large replacement.
       When a close but non-exact match is found, a character-level diff is shown in the format:
       common_prefix{-removed-}{+added+}common_suffix to help you identify what's different.
-      Similar to write_file, there is a configurable line limit (fileWriteLineLimit) that warns
-      if the edited file exceeds this limit. If this happens, consider breaking your edits into
+      Similar to write_file, there is a configurable warning threshold (fileWriteLineLimit) that warns
+      if an edit exceeds this threshold. If this happens, consider breaking your edits into
       smaller, more focused changes.
       ${PATH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}

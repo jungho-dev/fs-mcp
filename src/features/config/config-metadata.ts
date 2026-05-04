@@ -40,12 +40,12 @@ export const CONFIG_FIELD_DEFINITIONS = {
     valueType: "string",
   },
   fileReadLineLimit: {
-    description: "Maximum number of lines returned from a file in one read action. Lower numbers keep responses short and safer; higher numbers return more text at once.",
+    description: "Legacy read hint. File reads are not capped unless a tool call provides length; visible output previews are capped separately.",
     label: "File Read Limit",
     valueType: "number",
   },
   fileWriteLineLimit: {
-    description: "Maximum number of lines that can be written in one edit operation. This helps prevent accidental oversized writes and keeps file changes predictable.",
+    description: "Large write/edit warning threshold. Write and edit operations are not blocked by this value.",
     label: "File Write Limit",
     valueType: "number",
   },
