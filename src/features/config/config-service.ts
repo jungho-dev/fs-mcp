@@ -7,6 +7,7 @@
 
 import {constants as fsConstants} from "node:fs";
 import {access, readFile} from "node:fs/promises";
+import path from "node:path";
 import type {ServerResult} from "@assets/type/common";
 import {getSystemInfo} from "@cores/runtime/runtime-info";
 import {currentClient} from "@cores/server/server-create-mcp-server";
@@ -46,9 +47,16 @@ async function detectAvailableShells(systemInfo: ReturnType<typeof getSystemInfo
 
   if (systemInfo.isWindows) {
     add(process.env.ComSpec ?? "");
-    const systemRoot = process.env.SystemRoot ?? "C:\\Windows";
-    const programFiles = process.env.ProgramFiles ?? "C:\\Program Files";
-    const candidates = [`${programFiles}\\PowerShell\\7\\pwsh.exe`, `${systemRoot}\\System32\\cmd.exe`, `${systemRoot}\\System32\\bash.exe`, "pwsh.exe", "cmd.exe", "bash.exe"];
+    const candidates = ["pwsh.exe", "cmd.exe", "bash.exe"];
+    const systemRoot = process.env.SystemRoot?.trim();
+    const programFiles = process.env.ProgramFiles?.trim();
+
+    if (systemRoot && systemRoot.length > 0) {
+      candidates.unshift(path.join(systemRoot, "System32", "cmd.exe"), path.join(systemRoot, "System32", "bash.exe"));
+    }
+    if (programFiles && programFiles.length > 0) {
+      candidates.unshift(path.join(programFiles, "PowerShell", "7", "pwsh.exe"));
+    }
 
     const availableCandidates = await Promise.all(
       candidates.map(async (shell) => {
@@ -291,14 +299,13 @@ export async function setConfigValue(args: unknown): Promise<ServerResult> {
         ],
       };
     }
-    catch (saveError) {
-      const saveErrorMessage = saveError instanceof Error ? saveError.message : String(saveError);
-      console.error(`Error saving config: ${saveErrorMessage}`);
-      // Continue with in-memory change but report error
+    catch (updateError) {
+      const updateErrorMessage = updateError instanceof Error ? updateError.message : String(updateError);
+      console.error(`Error updating config: ${updateErrorMessage}`);
       return {
         content: [
           {
-            text: `Value changed in memory but couldn't be saved to disk: ${saveErrorMessage}`,
+            text: `Error updating configuration value: ${updateErrorMessage}`,
             type: "text",
           },
         ],

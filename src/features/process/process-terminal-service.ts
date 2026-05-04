@@ -10,9 +10,10 @@ import os from "node:os";
 import path from "node:path";
 import type {ActiveSession, CommandExecutionResult, OutputEvent, TerminalSession, TimingInfo} from "@assets/type/common";
 import {capture} from "@cores/runtime/runtime-output-capture";
-import {DEFAULT_COMMAND_TIMEOUT} from "@features/config/config-paths";
 import {configManager} from "@features/config/config-store";
 import {analyzeProcessState} from "@features/process/process-repl-detector";
+
+const DEFAULT_COMMAND_TIMEOUT = 1000;
 
 interface CompletedSession {
   endTime: Date;

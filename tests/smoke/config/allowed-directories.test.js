@@ -30,7 +30,7 @@ const _ROOT_PATH = "/";
 
 // For Windows compatibility - use forward slash for more consistent recognition
 const isWindows = process.platform === "win32";
-const TEST_ROOT_PATH = isWindows ? "C:/" : "/";
+const TEST_ROOT_PATH = isWindows ? path.parse(TEST_DIR).root.replaceAll("\\", "/") : "/";
 const TEST_ROOT_WILDCARD = isWindows ? `${path.parse(TEST_DIR).root}*` : null;
 
 // 1. Helper function to clean up test directories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -177,7 +177,7 @@ async function testRootInAllowedDirectories() {
 
   // Check if we're on Windows
   if (isWindows) {
-    // Since we're on Windows, we've already established that C:/ is accessible when set as
+    // Since we're on Windows, the drive root access check above is sufficient when set as
     // an allowed directory. This is sufficient to demonstrate the root path allowance is working as expected.
     // We'll skip the other path tests that would fail in the current implementation.
   } else {

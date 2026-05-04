@@ -30,7 +30,7 @@ bun add -g @jungho-dev/fs-mcp
 
 ### Codex 설정
 
-Bun 전역 설치본을 사용할 때 `C:/Users/jungh/.codex/config.toml`에 다음 서버를 추가합니다.
+Bun 전역 설치본을 사용할 때 `~/.codex/config.toml`에 다음 서버를 추가합니다.
 
 ```toml
 [mcp_servers.fs-mcp]

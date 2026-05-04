@@ -30,7 +30,7 @@ bun add -g @jungho-dev/fs-mcp
 
 ### Codex Configuration
 
-Add this server to `C:/Users/jungh/.codex/config.toml` when the package is installed globally with Bun.
+Add this server to `~/.codex/config.toml` when the package is installed globally with Bun.
 
 ```toml
 [mcp_servers.fs-mcp]

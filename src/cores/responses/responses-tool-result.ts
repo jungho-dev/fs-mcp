@@ -40,6 +40,7 @@ export interface ToolResponseOptions {
 }
 const DISPLAY_MAX_LINES = 5;
 const DISPLAY_MAX_LINE_LENGTH = 100;
+const DISPLAY_MAX_CHARS = 10;
 function normalizeContentItem(item: ServerResponseContent): ServerResponseContent {
   const itemType = typeof item.type === "string" && item.type.length > 0 ? item.type : "text";
   const normalizedItem: ServerResponseContent = {
@@ -127,7 +128,14 @@ function createDisplayText(toolName: string, output: StandardToolOutput): string
     }
     displayLines.push(...visiblePreviewLines);
   }
-  return displayLines.join("\n");
+  const joined = displayLines.join("\n");
+
+  if (joined.length <= DISPLAY_MAX_CHARS) {
+    return joined;
+  }
+  const suffix = " ... (see structuredContent)";
+  const maxBase = Math.max(0, DISPLAY_MAX_CHARS - suffix.length);
+  return `${joined.slice(0, maxBase)}${suffix}`;
 }
 function createErrorDetails(status: ToolResultStatus, content: ServerResponseContent[]): ToolResultError | null {
   if (status !== "error") {

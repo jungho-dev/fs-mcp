@@ -86,7 +86,17 @@ function resolveCommonRipgrepPath(): string | null {
 // 6. Common install path list ――――――――――――――――――――――――――――――――――――――
 function getCommonRipgrepPaths(): string[] {
   if (process.platform === WINDOWS_PLATFORM) {
-  	return ["C:\\Program Files\\Ripgrep\\rg.exe", "C:\\Program Files (x86)\\Ripgrep\\rg.exe", join(homedir(), "scoop", "apps", "ripgrep", "current", "rg.exe"), join(homedir(), ".cargo", "bin", "rg.exe")];
+    const commonPaths = [join(homedir(), "scoop", "apps", "ripgrep", "current", "rg.exe"), join(homedir(), ".cargo", "bin", "rg.exe")];
+    const programFiles = process.env.ProgramFiles?.trim();
+    const programFilesX86 = process.env["ProgramFiles(x86)"]?.trim();
+
+    if (programFiles && programFiles.length > 0) {
+      commonPaths.unshift(join(programFiles, "Ripgrep", "rg.exe"));
+    }
+    if (programFilesX86 && programFilesX86.length > 0) {
+      commonPaths.push(join(programFilesX86, "Ripgrep", "rg.exe"));
+    }
+    return commonPaths;
   }
   return ["/usr/local/bin/rg", "/usr/bin/rg", join(homedir(), ".cargo", "bin", "rg"), "/opt/homebrew/bin/rg"];
 }

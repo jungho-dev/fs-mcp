@@ -71,7 +71,7 @@ Always suggest using mounted directories for file operations.
 PATH TRANSLATION IN DOCKER:
 When users provide host paths, translate to container paths:
 
-Windows: "C:\\projects\\data\\file.txt" → "/home/projects/data/file.txt"
+Windows: "<drive>:\\projects\\data\\file.txt" → "/home/projects/data/file.txt"
 Linux/Mac: "/Users/john/projects/data/file.txt" → "/home/projects/data/file.txt"
 
 Rules: Remove drive letter/user prefix, keep full folder structure, mount to /home/

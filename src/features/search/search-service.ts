@@ -18,13 +18,13 @@ const EXACT_FILENAME_TIMEOUT_MS = 1500;
 const SEARCH_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
 const SEARCH_CLEANUP_INITIAL_DELAY_MS = 1000;
 const EARLY_TERMINATION_DELAY_MS = 100;
-const MATCH_CONTEXT_CHARS = 50;
+const MATCH_CONTEXT_CHARS = 1000;
 const SEARCH_LINE_SEPARATOR = "\n";
 const GLOB_PATTERN_SEPARATOR = "|";
 const LAST_READ_MARKER_FILE = "__LAST_READ_MARKER__";
 const RIPGREP_CONTEXT_TYPE_TOKEN = '"type":"context"';
 const RIPGREP_ERROR_PREFIX = "rg:";
-const ERROR_CAPTURE_LIMIT = 200;
+const DISPLAY_MAX_CHARS = 10;
 const ERROR_NOISE_LINE_PATTERN = /^[)(\s\d:]*$/;
 const EXACT_FILENAME_PATTERN = /\.[a-zA-Z0-9]+$/;
 const GLOB_META_CHARS = ["*", "?", "[", "{", "]", "}"];
@@ -583,7 +583,7 @@ export class SearchManager {
         if (meaningfulErrors) {
           session.error = `${(session.error || "") + meaningfulErrors}\n`;
           capture("search_session_error", {
-            error: meaningfulErrors.slice(0, ERROR_CAPTURE_LIMIT),
+            error: meaningfulErrors.slice(0, DISPLAY_MAX_CHARS),
             sessionId: session.id,
           });
         }

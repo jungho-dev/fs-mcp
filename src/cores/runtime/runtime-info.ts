@@ -526,6 +526,8 @@ export function getSystemInfo(): SystemInfo {
   // Container detection
   const containerDetection = detectContainerEnvironment();
   const mountPoints = containerDetection.isContainer ? discoverContainerMounts(containerDetection.isContainer) : [];
+  const homeDir = os.homedir();
+  const tempDir = os.tmpdir();
 
   let platformName: string;
   let defaultShell: string;
@@ -537,27 +539,27 @@ export function getSystemInfo(): SystemInfo {
     defaultShell = "pwsh.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -Command";
     pathSeparator = "\\";
     examplePaths = {
-      home: "C:\\Users\\username",
-      temp: "C:\\Temp",
-      absolute: "C:\\path\\to\\file.txt",
+      home: homeDir,
+      temp: tempDir,
+      absolute: path.join(homeDir, "path", "to", "file.txt"),
     };
   } else if (isMacOS) {
     platformName = "macOS";
     defaultShell = "zsh";
     pathSeparator = "/";
     examplePaths = {
-      home: "/Users/username",
-      temp: "/tmp",
-      absolute: "/path/to/file.txt",
+      home: homeDir,
+      temp: tempDir,
+      absolute: path.join(homeDir, "path", "to", "file.txt"),
     };
   } else if (isLinux) {
     platformName = "Linux";
     defaultShell = "bash";
     pathSeparator = "/";
     examplePaths = {
-      home: "/home/username",
-      temp: "/tmp",
-      absolute: "/path/to/file.txt",
+      home: homeDir,
+      temp: tempDir,
+      absolute: path.join(homeDir, "path", "to", "file.txt"),
     };
   } else {
     // Fallback for other Unix-like systems
@@ -565,9 +567,9 @@ export function getSystemInfo(): SystemInfo {
     defaultShell = "bash";
     pathSeparator = "/";
     examplePaths = {
-      home: "/home/username",
-      temp: "/tmp",
-      absolute: "/path/to/file.txt",
+      home: homeDir,
+      temp: tempDir,
+      absolute: path.join(homeDir, "path", "to", "file.txt"),
     };
   }
 
@@ -648,4 +650,3 @@ export function getSystemInfo(): SystemInfo {
 // Generate OS-specific guidance for tool prompts
 
 export {getDevelopmentToolGuidance, getOSSpecificGuidance, getPathGuidance} from "@cores/runtime/runtime-guidance";
-

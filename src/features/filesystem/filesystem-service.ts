@@ -179,7 +179,7 @@ async function isPathAllowed(pathToCheck: string): Promise<boolean> {
     if (subdirCheck) {
       return true;
     }
-    // If allowed directory is the root (C:\ on Windows), allow access to the entire drive
+    // If allowed directory is the drive root on Windows, allow access to the entire drive
     if (normalizedAllowedDir === "c:" && process.platform === "win32") {
       return normalizedPathToCheck.startsWith("c:");
     }

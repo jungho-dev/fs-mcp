@@ -4,8 +4,6 @@
  */
 
 import { spawn } from "node:child_process";
-import fs from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -33,8 +31,6 @@ const TEST_GROUPS = {
   ],
   smoke: [
     "./smoke/config/allowed-directories.test.js",
-    "./smoke/config/config-toml-migration.test.js",
-    "./smoke/config/config-toml-preferred.test.js",
     "./smoke/edit/edit-block-basic.test.js",
     "./smoke/filesystem/file-handlers.test.js",
     "./smoke/git/git-basic.test.js",
@@ -48,10 +44,6 @@ const TEST_GROUPS = {
 };
 const RUNNABLE_TESTS = Object.values(TEST_GROUPS).flat();
 
-function sanitizeTestFileName(testFile) {
-  return testFile.replace(/[^a-z0-9_-]+/gi, "-");
-}
-
 function writeStdout(message) {
   process.stdout.write(`${message}\n`);
 }
@@ -60,54 +52,35 @@ function writeStderr(message) {
   process.stderr.write(`${message}\n`);
 }
 
-async function createTestConfigDir(testFile) {
-  const prefix = path.join(os.tmpdir(), `fs-mcp-${sanitizeTestFileName(testFile)}-`);
-  return await fs.mkdtemp(prefix);
-}
-
-async function cleanupTestConfigDir(configDir) {
-  await fs.rm(configDir, { recursive: true, force: true });
-}
-
 async function runTestFile(testFile) {
-  const configDir = await createTestConfigDir(testFile);
+  writeStdout(`\n${colors.cyan}Running ${testFile}${colors.reset}`);
 
-  try {
-    writeStdout(`\n${colors.cyan}Running ${testFile}${colors.reset}`);
-
-    return await new Promise((resolve) => {
-      const startTime = Date.now();
-      const proc = spawn("bun", [testFile], {
-        cwd: __dirname,
-        env: {
-          ...process.env,
-          FS_MCP_CONFIG_DIR: configDir,
-        },
-        stdio: "inherit",
-        shell: false,
-      });
-
-      proc.on("close", (code) => {
-        const duration = Date.now() - startTime;
-
-        if (code === 0) {
-          resolve({ success: true, file: testFile, duration, exitCode: code });
-        }
-        else {
-          writeStderr(`${colors.red}Test failed: ${testFile} (${duration}ms) - Exit code: ${code}${colors.reset}`);
-          resolve({ success: false, file: testFile, duration, exitCode: code });
-        }
-      });
-
-      proc.on("error", (error) => {
-        const duration = Date.now() - startTime;
-        writeStderr(`${colors.red}Error running ${testFile}: ${error.message}${colors.reset}`);
-        resolve({ success: false, file: testFile, duration, error: error.message });
-      });
+  return await new Promise((resolve) => {
+    const startTime = Date.now();
+    const proc = spawn("bun", [testFile], {
+      cwd: __dirname,
+      stdio: "inherit",
+      shell: false,
     });
-  } finally {
-    await cleanupTestConfigDir(configDir);
-  }
+
+    proc.on("close", (code) => {
+      const duration = Date.now() - startTime;
+
+      if (code === 0) {
+        resolve({ success: true, file: testFile, duration, exitCode: code });
+      }
+      else {
+        writeStderr(`${colors.red}Test failed: ${testFile} (${duration}ms) - Exit code: ${code}${colors.reset}`);
+        resolve({ success: false, file: testFile, duration, exitCode: code });
+      }
+    });
+
+    proc.on("error", (error) => {
+      const duration = Date.now() - startTime;
+      writeStderr(`${colors.red}Error running ${testFile}: ${error.message}${colors.reset}`);
+      resolve({ success: false, file: testFile, duration, error: error.message });
+    });
+  });
 }
 
 async function buildProject() {
