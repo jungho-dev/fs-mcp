@@ -10,7 +10,12 @@ import { getHeadCommit, resolveRepositoryPath } from "@features/git/git-session"
 import { detectAutoExcludedFiles, getStatusSummary, parseRefs, sumNumstat, toSnakeStatus } from "@features/git/git-status-support";
 import type { GitArgsMap, GitToolOutput } from "@features/git/git-types";
 
-// 1. git_add ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+const GPG_SIGN_PATTERN = /gpg|sign/i;
+const COMMIT_SUMMARY_FORMAT = "%H%x1f%an <%ae>%x1f%ct%x1f%s";
+const SIGNATURE_STATUS_FORMAT = "%G?";
+const GIT_LOG_FORMAT = "%H%x1f%h%x1f%an%x1f%ae%x1f%ct%x1f%P%x1f%d%x1f%s%x1f%b%x1e";
+
+// 1. Run git add ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitAdd(input: GitArgsMap["git_add"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
 
@@ -36,7 +41,7 @@ export async function runGitAdd(input: GitArgsMap["git_add"]): Promise<GitToolOu
   };
 }
 
-// 2. git_commit ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Run git commit ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitCommit(input: GitArgsMap["git_commit"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
 
@@ -44,13 +49,13 @@ export async function runGitCommit(input: GitArgsMap["git_commit"]): Promise<Git
     await runGitCommand(["add", ...input.filesToStage], { cwd });
   }
   const commitArgs = ["commit", "-m", normalizeCommitMessage(input.message), ...(input.amend ? ["--amend"] : []), ...(input.allowEmpty ? ["--allow-empty"] : []), ...(input.noVerify ? ["--no-verify"] : []), ...(input.author ? ["--author", `${input.author.name} <${input.author.email}>`] : [])];
-  let signingWarning;
+  let signingWarning: string | undefined;
   let commitResult = await runGitCommand(commitArgs, { cwd, allowFailure: true });
 
   if (commitResult.exitCode !== 0) {
     const combinedFailure = [commitResult.stderr, commitResult.stdout].join("\n");
 
-    if (/gpg|sign/i.test(combinedFailure)) {
+    if (GPG_SIGN_PATTERN.test(combinedFailure)) {
       signingWarning = combinedFailure.trim();
       commitResult = await runGitCommand([...commitArgs, "--no-gpg-sign"], { cwd, allowFailure: true });
     }
@@ -63,12 +68,12 @@ export async function runGitCommit(input: GitArgsMap["git_commit"]): Promise<Git
   if (!headCommit) {
   	throw new Error("Commit completed but HEAD is unavailable.");
   }
-  const summaryResult = await runGitCommand(["show", "--stat", "--format=%H%x1f%an <%ae>%x1f%ct%x1f%s", "-1", headCommit], { cwd });
+  const summaryResult = await runGitCommand(["show", "--stat", `--format=${COMMIT_SUMMARY_FORMAT}`, "-1", headCommit], { cwd });
   const headerLine = splitLines(summaryResult.stdout)[0];
   const headerParts = headerLine.split("\x1f");
   const numstatResult = await runGitCommand(["show", "--numstat", "--format=", "-1", headCommit], { cwd, allowFailure: true });
   const changedFilesResult = await runGitCommand(["diff-tree", "--no-commit-id", "--name-only", "-r", headCommit], { cwd, allowFailure: true });
-  const signatureResult = await runGitCommand(["log", "-1", "--pretty=format:%G?"], { cwd, allowFailure: true });
+  const signatureResult = await runGitCommand(["log", "-1", `--pretty=format:${SIGNATURE_STATUS_FORMAT}`], { cwd, allowFailure: true });
   const status = await getStatusSummary(cwd, true);
   const diffStats = sumNumstat(numstatResult.stdout);
   const committedFiles = splitLines(changedFilesResult.stdout);
@@ -89,7 +94,7 @@ export async function runGitCommit(input: GitArgsMap["git_commit"]): Promise<Git
   };
 }
 
-// 3. git_diff ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Run git diff ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitDiff(input: GitArgsMap["git_diff"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const contextLines = input.contextLines ?? 3;
@@ -124,11 +129,11 @@ export async function runGitDiff(input: GitArgsMap["git_diff"]): Promise<GitTool
   };
 }
 
-// 4. git_log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Run git log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitLog(input: GitArgsMap["git_log"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const maxCount = input.maxCount ?? 20;
-  const logArgs = ["log", `--max-count=${String(maxCount)}`, ...(input.skip !== undefined ? [`--skip=${String(input.skip)}`] : []), ...(input.author ? [`--author=${input.author}`] : []), ...(input.grep ? [`--grep=${input.grep}`] : []), ...(input.since ? [`--since=${input.since}`] : []), ...(input.until ? [`--until=${input.until}`] : []), ...(input.showSignature ? ["--show-signature"] : []), "--pretty=format:%H%x1f%h%x1f%an%x1f%ae%x1f%ct%x1f%P%x1f%d%x1f%s%x1f%b%x1e", ...(input.branch ? [input.branch] : []), ...(input.filePath ? ["--", input.filePath] : [])];
+  const logArgs = ["log", `--max-count=${String(maxCount)}`, ...(input.skip !== undefined ? [`--skip=${String(input.skip)}`] : []), ...(input.author ? [`--author=${input.author}`] : []), ...(input.grep ? [`--grep=${input.grep}`] : []), ...(input.since ? [`--since=${input.since}`] : []), ...(input.until ? [`--until=${input.until}`] : []), ...(input.showSignature ? ["--show-signature"] : []), `--pretty=format:${GIT_LOG_FORMAT}`, ...(input.branch ? [input.branch] : []), ...(input.filePath ? ["--", input.filePath] : [])];
   const commandResult = await runGitCommand(logArgs, { cwd, allowFailure: true });
 
   if (commandResult.exitCode !== 0) {
@@ -164,6 +169,7 @@ export async function runGitLog(input: GitArgsMap["git_log"]): Promise<GitToolOu
       });
 
       if (input.stat) {
+        // biome-ignore lint/performance/noAwaitInLoops: Per-commit stat lookup preserves log output order.
         const statResult = await runGitCommand(["show", "--stat", "--format=", parts[0]], { cwd, allowFailure: true });
         commitRecord.stat = statResult.stdout.trim();
       }
@@ -181,7 +187,7 @@ export async function runGitLog(input: GitArgsMap["git_log"]): Promise<GitToolOu
   };
 }
 
-// 5. git_show ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Run git show ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitShow(input: GitArgsMap["git_show"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const targetObject = input.filePath ? `${input.object}:${input.filePath}` : input.object;

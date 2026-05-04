@@ -62,10 +62,44 @@ const GIT_EXEC_MAX_BUFFER = 20 * 1024 * 1024;
 const AUTO_EXCLUDE_PATTERNS = ["package-lock.json", "yarn.lock", "pnpm-lock.yaml", "bun.lock", "bun.lockb", "poetry.lock", "Pipfile.lock", "uv.lock", "composer.lock", "Gemfile.lock", "go.sum", "Cargo.lock", "flake.lock", "pubspec.lock", "mix.lock", "Podfile.lock", "packages.lock.json"] as const;
 const PROTECTED_BRANCHES = new Set(["main", "master", "production", "prod", "release"]);
 const CONFLICT_STATUS_CODES = new Set(["DD", "AU", "UD", "UA", "DU", "AA", "UU"]);
+const CARRIAGE_RETURN_LINE_ENDING_PATTERN = /\r\n/g;
+const CARRIAGE_RETURN_PATTERN = /\r/g;
+const ESCAPED_NEWLINE_PATTERN = /\\n/g;
+const ESCAPED_CARRIAGE_RETURN_PATTERN = /\\r/g;
+const ESCAPED_TAB_PATTERN = /\\t/g;
+const BRANCH_TRACK_PATTERN = /^([^\s]+)(?: \[(.*)\])?$/;
+const AHEAD_PATTERN = /ahead (\d+)/;
+const BEHIND_PATTERN = /behind (\d+)/;
+const REMOTE_LINE_PATTERN = /^([^\s]+)\s+([^\s]+)\s+\((fetch|push)\)$/;
+const WRAPPED_REFS_PATTERN = /^\((.*)\)$/;
+const GPG_SIGN_PATTERN = /gpg|sign/i;
+const CLEAN_REMOVED_PATTERN = /(?:Would remove|Removing)\s+(.+)$/;
+const TRAILING_PATH_SEPARATOR_PATTERN = /[\\/]+$/;
+const FETCH_PRUNED_REF_PATTERN = /prune|deleted/i;
+const PUSH_REJECTED_REF_PATTERN = /\[rejected\]/i;
+const STASH_INDEX_PATTERN = /stash@\{(\d+)\}/;
+const STASH_CREATED_PATTERN = /stash@\{\d+\}/;
+const STASH_BRANCH_PREFIX_PATTERN = /^On\s+/;
+const GIT_FORMAT_FIELD_SEPARATOR = "%x1f";
+const GIT_FORMAT_RECORD_SEPARATOR = "%x1e";
+const RECENT_COMMIT_FORMAT = `${["%H", "%an", "%aI", "%s"].join(GIT_FORMAT_FIELD_SEPARATOR)}${GIT_FORMAT_RECORD_SEPARATOR}`;
+const RECENT_TAG_FORMAT = ["%(refname:short)", "%(creatordate:iso-strict)", "%(taggername)", "%(taggeremail)", "%(subject)", "%(body)"].join(GIT_FORMAT_FIELD_SEPARATOR);
+const COMMIT_SUMMARY_FORMAT = ["%H", "%an <%ae>", "%ct", "%s"].join(GIT_FORMAT_FIELD_SEPARATOR);
+const SIGNATURE_STATUS_FORMAT = "%G?";
+const GIT_LOG_FORMAT = `${["%H", "%h", "%an", "%ae", "%ct", "%P", "%d", "%s", "%b"].join(GIT_FORMAT_FIELD_SEPARATOR)}${GIT_FORMAT_RECORD_SEPARATOR}`;
+// biome-ignore lint/security/noSecrets: Git for-each-ref format atoms are not secrets.
+const BRANCH_LIST_FORMAT = ["%(refname:short)", "%(HEAD)", "%(objectname)", "%(upstream:short)", "%(upstream:track)"].join(GIT_FORMAT_FIELD_SEPARATOR);
+const REFLOG_FORMAT = ["%gD", "%H", "%gs", "%ct"].join(GIT_FORMAT_FIELD_SEPARATOR);
+const STASH_LIST_FORMAT = ["%gd", "%ct", "%gs"].join(GIT_FORMAT_FIELD_SEPARATOR);
+// biome-ignore lint/security/noSecrets: Git for-each-ref format atoms are not secrets.
+const TAG_LIST_FORMAT = ["%(refname:short)", "%(objectname)", "%(creatordate:unix)", "%(taggername)", "%(taggeremail)", "%(subject)", "%(body)"].join(GIT_FORMAT_FIELD_SEPARATOR);
+const CHANGELOG_COMMIT_FORMAT = `${["%h", "%an", "%ct", "%d", "%s"].join(GIT_FORMAT_FIELD_SEPARATOR)}${GIT_FORMAT_RECORD_SEPARATOR}`;
+const WORKTREE_BLOCK_SPLIT_PATTERN = /\r?\n\r?\n/;
+const BLAME_HEADER_PATTERN = /^[0-9a-f]{40}\s+\d+\s+\d+/;
 
 let currentGitWorkingDirectory: string | null = null;
 
-// 1. public dispatch ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Execute git tool ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function executeGitTool<TName extends GitToolName>(name: TName, args: GitArgsMap[TName]): Promise<ServerResult> {
   let response: ServerResult;
 
@@ -159,11 +193,11 @@ export async function executeGitTool<TName extends GitToolName>(name: TName, arg
   }
   return response;
 }
-// 2. response helper ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Create JSON response ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createJsonResponse(output: Record<string, unknown>): ServerResult {
   return createToolTextResponse(JSON.stringify(output, null, 2), { structuredContent: output });
 }
-// 3. command helper ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Run git command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitCommand(args: string[], options: { cwd?: string; allowFailure?: boolean } = {}): Promise<GitCommandResult> {
   let commandResult: GitCommandResult;
 
@@ -194,31 +228,37 @@ async function runGitCommand(args: string[], options: { cwd?: string; allowFailu
   }
   return commandResult;
 }
+// 4. Split lines ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function splitLines(text: string): string[] {
   return text
-    .replace(/\r\n/g, "\n")
-    .replace(/\r/g, "\n")
+    .replace(CARRIAGE_RETURN_LINE_ENDING_PATTERN, "\n")
+    .replace(CARRIAGE_RETURN_PATTERN, "\n")
     .split("\n")
     .filter((line) => line.length > 0);
 }
+// 5. Normalize commit message ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function normalizeCommitMessage(message: string): string {
-  return message.replace(/\\n/g, "\n").replace(/\\r/g, "\r").replace(/\\t/g, "\t");
+  return message.replace(ESCAPED_NEWLINE_PATTERN, "\n").replace(ESCAPED_CARRIAGE_RETURN_PATTERN, "\r").replace(ESCAPED_TAB_PATTERN, "\t");
 }
-// 4. repo helpers ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Resolve existing path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function resolveExistingPath(requestedPath: string): Promise<string> {
   return await validatePath(requestedPath);
 }
+// 7. Resolve creation path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function resolveCreationPath(requestedPath: string): Promise<string> {
   const validatedPath = await validatePath(requestedPath);
   return path.resolve(validatedPath);
 }
+// 8. Ensure directory exists ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function ensureDirectoryExists(targetPath: string): Promise<void> {
   await fs.mkdir(targetPath, { recursive: true });
 }
+// 9. Get repository root ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function getRepositoryRoot(cwd: string): Promise<string> {
   const commandResult = await runGitCommand(["rev-parse", "--show-toplevel"], { cwd });
   return commandResult.stdout.trim();
 }
+// 10. Resolve repository path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function resolveRepositoryPath(requestedPath?: string): Promise<string> {
   const basePath = requestedPath ?? currentGitWorkingDirectory;
 
@@ -227,23 +267,28 @@ async function resolveRepositoryPath(requestedPath?: string): Promise<string> {
   }
   return await getRepositoryRoot(await resolveExistingPath(basePath));
 }
+// 11. Resolve creation base path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function resolveCreationBasePath(requestedPath?: string): Promise<string> {
   const basePath = requestedPath ?? currentGitWorkingDirectory ?? process.cwd();
   return await resolveCreationPath(basePath);
 }
+// 12. Get head commit ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function getHeadCommit(cwd: string): Promise<string | null> {
   const commandResult = await runGitCommand(["rev-parse", "HEAD"], { cwd, allowFailure: true });
   const headCommit = commandResult.exitCode === 0 ? commandResult.stdout.trim() : "";
   return headCommit.length > 0 ? headCommit : null;
 }
+// 13. Get current branch ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function getCurrentBranch(cwd: string): Promise<string | null> {
   const commandResult = await runGitCommand(["branch", "--show-current"], { cwd, allowFailure: true });
   const branchName = commandResult.stdout.trim();
   return branchName.length > 0 ? branchName : null;
 }
+// 14. Is protected branch ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isProtectedBranch(branchName: string | null): boolean {
   return branchName !== null && PROTECTED_BRANCHES.has(branchName.toLowerCase());
 }
+// 15. Ensure protected branch confirmation ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function ensureProtectedBranchConfirmation(cwd: string, confirmed: boolean | undefined, reason: string): Promise<void> {
   const branchName = await getCurrentBranch(cwd);
 
@@ -251,7 +296,7 @@ async function ensureProtectedBranchConfirmation(cwd: string, confirmed: boolean
   	throw new Error(`${reason} requires confirmed: true on protected branches.`);
   }
 }
-// 5. status helpers ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 16. Append unique ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function appendUnique(target: string[] | undefined, value: string): string[] {
   const normalizedTarget = target ?? [];
 
@@ -260,6 +305,7 @@ function appendUnique(target: string[] | undefined, value: string): string[] {
   }
   return normalizedTarget;
 }
+// 17. Add index change ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function addIndexChange(bucket: GitStatusBucket, code: string, pathValue: string): void {
   if (code === "A") {
   	bucket.added = appendUnique(bucket.added, pathValue);
@@ -277,6 +323,7 @@ function addIndexChange(bucket: GitStatusBucket, code: string, pathValue: string
   	bucket.copied = appendUnique(bucket.copied, pathValue);
   }
 }
+// 18. Add working tree change ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function addWorkingTreeChange(bucket: GitWorkingTreeBucket, code: string, pathValue: string): void {
   if (code === "A") {
   	bucket.added = appendUnique(bucket.added, pathValue);
@@ -288,9 +335,11 @@ function addWorkingTreeChange(bucket: GitWorkingTreeBucket, code: string, pathVa
   	bucket.deleted = appendUnique(bucket.deleted, pathValue);
   }
 }
+// 19. Flatten bucket ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function flattenBucket(bucket: GitStatusBucket | GitWorkingTreeBucket): string[] {
   return Object.values(bucket).flatMap((value) => value ?? []);
 }
+// 20. Parse branch header ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function parseBranchHeader(line: string, summary: GitStatusSummary): void {
   const branchLine = line.slice(3);
 
@@ -306,13 +355,13 @@ function parseBranchHeader(line: string, summary: GitStatusSummary): void {
 
     summary.currentBranch = branchName.length > 0 ? branchName : null;
     if (pieces.length > 1) {
-      const trackMatch = pieces[1].match(/^([^\s]+)(?: \[(.*)\])?$/);
+      const trackMatch = pieces[1].match(BRANCH_TRACK_PATTERN);
 
       if (trackMatch) {
         summary.upstream = trackMatch[1];
         if (trackMatch[2]) {
-          const aheadMatch = trackMatch[2].match(/ahead (\d+)/);
-          const behindMatch = trackMatch[2].match(/behind (\d+)/);
+          const aheadMatch = trackMatch[2].match(AHEAD_PATTERN);
+          const behindMatch = trackMatch[2].match(BEHIND_PATTERN);
 
           if (aheadMatch) {
           	summary.ahead = Number.parseInt(aheadMatch[1], 10);
@@ -325,6 +374,7 @@ function parseBranchHeader(line: string, summary: GitStatusSummary): void {
     }
   }
 }
+// 21. Parse status summary ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function parseStatusSummary(text: string, includeUntracked: boolean): GitStatusSummary {
   const summary: GitStatusSummary = {
     currentBranch: null,
@@ -366,12 +416,14 @@ function parseStatusSummary(text: string, includeUntracked: boolean): GitStatusS
 
   return summary;
 }
+// 22. Get status summary ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function getStatusSummary(cwd: string, includeUntracked: boolean=true): Promise<GitStatusSummary> {
   const statusArgs = ["status", "--short", "--branch", includeUntracked ? "--untracked-files=all" : "--untracked-files=no"];
   const commandResult = await runGitCommand(statusArgs, { cwd });
 
   return parseStatusSummary(commandResult.stdout, includeUntracked);
 }
+// 23. To snake status ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function toSnakeStatus(summary: GitStatusSummary): Record<string, unknown> {
   return {
     current_branch: summary.currentBranch,
@@ -385,6 +437,7 @@ function toSnakeStatus(summary: GitStatusSummary): Record<string, unknown> {
     conflicted_files: summary.conflictedFiles,
   };
 }
+// 24. To snapshot status ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function toSnapshotStatus(summary: GitStatusSummary): Record<string, unknown> {
   return {
     branch: summary.currentBranch,
@@ -398,12 +451,13 @@ function toSnapshotStatus(summary: GitStatusSummary): Record<string, unknown> {
     conflicts: summary.conflictedFiles,
   };
 }
+// 25. Get remotes ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function getRemotes(cwd: string): Promise<Record<string, string>[]> {
   const commandResult = await runGitCommand(["remote", "-v"], { cwd, allowFailure: true });
   const remoteMap = new Map<string, { name: string; fetchUrl: string; pushUrl: string }>();
 
   splitLines(commandResult.stdout).forEach((line) => {
-    const match = line.match(/^([^\s]+)\s+([^\s]+)\s+\((fetch|push)\)$/);
+    const match = line.match(REMOTE_LINE_PATTERN);
 
     if (match) {
       const remoteName = match[1];
@@ -423,8 +477,9 @@ async function getRemotes(cwd: string): Promise<Record<string, string>[]> {
 
   return [...remoteMap.values()];
 }
+// 26. Get recent commits ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function getRecentCommits(cwd: string, limit: number): Promise<Record<string, string>[]> {
-  const commandResult = await runGitCommand(["log", `--max-count=${String(limit)}`, "--pretty=format:%H%x1f%an%x1f%aI%x1f%s%x1e"], { cwd, allowFailure: true });
+  const commandResult = await runGitCommand(["log", `--max-count=${String(limit)}`, `--pretty=format:${RECENT_COMMIT_FORMAT}`], { cwd, allowFailure: true });
 
   if (commandResult.exitCode !== 0) {
   	return [];
@@ -443,8 +498,9 @@ async function getRecentCommits(cwd: string, limit: number): Promise<Record<stri
       };
     });
 }
+// 27. Get recent tags ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function getRecentTags(cwd: string, limit: number): Promise<Record<string, string>[]> {
-  const commandResult = await runGitCommand(["for-each-ref", "refs/tags", "--sort=-creatordate", `--count=${String(limit)}`, "--format=%(refname:short)%x1f%(creatordate:iso-strict)%x1f%(taggername)%x1f%(taggeremail)%x1f%(subject)%x1f%(body)"], { cwd, allowFailure: true });
+  const commandResult = await runGitCommand(["for-each-ref", "refs/tags", "--sort=-creatordate", `--count=${String(limit)}`, `--format=${RECENT_TAG_FORMAT}`], { cwd, allowFailure: true });
 
   if (commandResult.exitCode !== 0) {
   	return [];
@@ -462,6 +518,7 @@ async function getRecentTags(cwd: string, limit: number): Promise<Record<string,
     };
   });
 }
+// 28. Gather repository snapshot ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function gatherRepositorySnapshot(cwd: string): Promise<Record<string, unknown>> {
   const status = await getStatusSummary(cwd, true);
   const recentCommits = await getRecentCommits(cwd, 2);
@@ -475,14 +532,17 @@ async function gatherRepositorySnapshot(cwd: string): Promise<Record<string, unk
     remotes,
   };
 }
+// 29. Get changed files between ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function getChangedFilesBetween(cwd: string, left: string, right: string): Promise<string[]> {
   const commandResult = await runGitCommand(["diff", "--name-only", left, right], { cwd, allowFailure: true });
   return splitLines(commandResult.stdout);
 }
+// 30. Get conflicted files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function getConflictedFiles(cwd: string): Promise<string[]> {
   const status = await getStatusSummary(cwd, true);
   return status.conflictedFiles;
 }
+// 31. Sum numstat ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function sumNumstat(text: string): { filesChanged: number; insertions?: number; deletions?: number } {
   let filesChanged = 0;
   let insertions = 0;
@@ -505,6 +565,7 @@ function sumNumstat(text: string): { filesChanged: number; insertions?: number; 
     ...(filesChanged > 0 ? { insertions, deletions } : {}),
   };
 }
+// 32. Parse refs ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function parseRefs(refText: string | undefined): string[] | undefined {
   if (!refText) {
   	return ;
@@ -515,13 +576,13 @@ function parseRefs(refText: string | undefined): string[] | undefined {
   	return ;
   }
   const refs = normalized
-    .replace(/^\((.*)\)$/, "$1")
+    .replace(WRAPPED_REFS_PATTERN, "$1")
     .split(",")
     .map((value) => value.trim())
     .filter((value) => value.length > 0);
   return refs.length > 0 ? refs : undefined;
 }
-// 6. git_set_working_dir ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 33. Run git set working dir ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitSetWorkingDir(input: GitArgsMap["git_set_working_dir"]): Promise<Record<string, unknown>> {
   const resolvedPath = await resolveCreationPath(input.path);
   const shouldValidateRepository = input.validateGitRepo ?? true;
@@ -545,8 +606,8 @@ async function runGitSetWorkingDir(input: GitArgsMap["git_set_working_dir"]): Pr
   else {
   	currentGitWorkingDirectory = resolvedPath;
   }
-  let repository;
-  let enrichmentWarnings;
+  let repository: Record<string, unknown> | undefined;
+  let enrichmentWarnings: string[] | undefined;
 
   if (shouldValidateRepository) {
     try {
@@ -564,7 +625,7 @@ async function runGitSetWorkingDir(input: GitArgsMap["git_set_working_dir"]): Pr
     ...(enrichmentWarnings ? { enrichmentWarnings } : {}),
   };
 }
-// 7. git_clear_working_dir ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 34. Run git clear working dir ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitClearWorkingDir(): Promise<Record<string, unknown>> {
   const previousPath = currentGitWorkingDirectory;
 
@@ -576,7 +637,7 @@ async function runGitClearWorkingDir(): Promise<Record<string, unknown>> {
     ...(previousPath ? { previousPath } : {}),
   };
 }
-// 8. git_status ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 35. Run git status ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitStatus(input: GitArgsMap["git_status"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
   const includeUntracked = input.includeUntracked ?? true;
@@ -595,7 +656,7 @@ async function runGitStatus(input: GitArgsMap["git_status"]): Promise<Record<str
     conflictedFiles: status.conflictedFiles,
   };
 }
-// 9. git_init ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 36. Run git init ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitInit(input: GitArgsMap["git_init"]): Promise<Record<string, unknown>> {
   const targetPath = await resolveCreationBasePath(input.path);
   const initialBranch = input.initialBranch ?? "main";
@@ -610,7 +671,7 @@ async function runGitInit(input: GitArgsMap["git_init"]): Promise<Record<string,
     isBare: input.bare === true,
   };
 }
-// 10. git_clone ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 37. Run git clone ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitClone(input: GitArgsMap["git_clone"]): Promise<Record<string, unknown>> {
   const destinationPath = await resolveCreationPath(input.path);
 
@@ -627,7 +688,7 @@ async function runGitClone(input: GitArgsMap["git_clone"]): Promise<Record<strin
     ...(headCommit ? { commitHash: headCommit } : {}),
   };
 }
-// 11. git_add ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 38. Run git add ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitAdd(input: GitArgsMap["git_add"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
 
@@ -652,7 +713,7 @@ async function runGitAdd(input: GitArgsMap["git_add"]): Promise<Record<string, u
     status: toSnakeStatus(status),
   };
 }
-// 12. git_commit ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 39. Run git commit ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitCommit(input: GitArgsMap["git_commit"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
 
@@ -660,12 +721,12 @@ async function runGitCommit(input: GitArgsMap["git_commit"]): Promise<Record<str
     await runGitCommand(["add", ...input.filesToStage], { cwd });
   }
   const commitArgs = ["commit", "-m", normalizeCommitMessage(input.message), ...(input.amend ? ["--amend"] : []), ...(input.allowEmpty ? ["--allow-empty"] : []), ...(input.noVerify ? ["--no-verify"] : []), ...(input.author ? ["--author", `${input.author.name} <${input.author.email}>`] : [])];
-  let signingWarning;
+  let signingWarning: string | undefined;
   let commitResult = await runGitCommand(commitArgs, { cwd, allowFailure: true });
 
   if (commitResult.exitCode !== 0) {
     const combinedFailure = [commitResult.stderr, commitResult.stdout].join("\n");
-    if (/gpg|sign/i.test(combinedFailure)) {
+    if (GPG_SIGN_PATTERN.test(combinedFailure)) {
       signingWarning = combinedFailure.trim();
       commitResult = await runGitCommand([...commitArgs, "--no-gpg-sign"], { cwd, allowFailure: true });
     }
@@ -678,12 +739,12 @@ async function runGitCommit(input: GitArgsMap["git_commit"]): Promise<Record<str
   if (!headCommit) {
   	throw new Error("Commit completed but HEAD is unavailable.");
   }
-  const summaryResult = await runGitCommand(["show", "--stat", "--format=%H%x1f%an <%ae>%x1f%ct%x1f%s", "-1", headCommit], { cwd });
+  const summaryResult = await runGitCommand(["show", "--stat", `--format=${COMMIT_SUMMARY_FORMAT}`, "-1", headCommit], { cwd });
   const headerLine = splitLines(summaryResult.stdout)[0];
   const headerParts = headerLine.split("\x1f");
   const numstatResult = await runGitCommand(["show", "--numstat", "--format=", "-1", headCommit], { cwd, allowFailure: true });
   const changedFilesResult = await runGitCommand(["diff-tree", "--no-commit-id", "--name-only", "-r", headCommit], { cwd, allowFailure: true });
-  const signatureResult = await runGitCommand(["log", "-1", "--pretty=format:%G?"], { cwd, allowFailure: true });
+  const signatureResult = await runGitCommand(["log", "-1", `--pretty=format:${SIGNATURE_STATUS_FORMAT}`], { cwd, allowFailure: true });
   const status = await getStatusSummary(cwd, true);
   const diffStats = sumNumstat(numstatResult.stdout);
   const committedFiles = splitLines(changedFilesResult.stdout);
@@ -703,7 +764,7 @@ async function runGitCommit(input: GitArgsMap["git_commit"]): Promise<Record<str
     status: toSnakeStatus(status),
   };
 }
-// 13. git_diff ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 40. Run git diff ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitDiff(input: GitArgsMap["git_diff"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
   const contextLines = input.contextLines ?? 3;
@@ -726,7 +787,7 @@ async function runGitDiff(input: GitArgsMap["git_diff"]): Promise<Record<string,
     }
   }
   const excludedFiles = autoExclude ? (await runGitCommand(["diff", "--name-only", ...diffRange, "--", ...pathspecs], { cwd, allowFailure: true })).stdout
-        .replace(/\r\n/g, "\n")
+        .replace(CARRIAGE_RETURN_LINE_ENDING_PATTERN, "\n")
         .split("\n")
         .filter((value) => value.length > 0)
         .filter((value) => AUTO_EXCLUDE_PATTERNS.includes(path.basename(value) as (typeof AUTO_EXCLUDE_PATTERNS)[number])) : [];
@@ -740,11 +801,11 @@ async function runGitDiff(input: GitArgsMap["git_diff"]): Promise<Record<string,
     ...(excludedFiles.length > 0 ? { excludedFiles } : {}),
   };
 }
-// 14. git_log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 41. Run git log ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitLog(input: GitArgsMap["git_log"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
   const maxCount = input.maxCount ?? 20;
-  const logArgs = ["log", `--max-count=${String(maxCount)}`, ...(input.skip !== undefined ? [`--skip=${String(input.skip)}`] : []), ...(input.author ? [`--author=${input.author}`] : []), ...(input.grep ? [`--grep=${input.grep}`] : []), ...(input.since ? [`--since=${input.since}`] : []), ...(input.until ? [`--until=${input.until}`] : []), ...(input.showSignature ? ["--show-signature"] : []), "--pretty=format:%H%x1f%h%x1f%an%x1f%ae%x1f%ct%x1f%P%x1f%d%x1f%s%x1f%b%x1e", ...(input.branch ? [input.branch] : []), ...(input.filePath ? ["--", input.filePath] : [])];
+  const logArgs = ["log", `--max-count=${String(maxCount)}`, ...(input.skip !== undefined ? [`--skip=${String(input.skip)}`] : []), ...(input.author ? [`--author=${input.author}`] : []), ...(input.grep ? [`--grep=${input.grep}`] : []), ...(input.since ? [`--since=${input.since}`] : []), ...(input.until ? [`--until=${input.until}`] : []), ...(input.showSignature ? ["--show-signature"] : []), `--pretty=format:${GIT_LOG_FORMAT}`, ...(input.branch ? [input.branch] : []), ...(input.filePath ? ["--", input.filePath] : [])];
   const commandResult = await runGitCommand(logArgs, { cwd, allowFailure: true });
 
   if (commandResult.exitCode !== 0) {
@@ -755,7 +816,7 @@ async function runGitLog(input: GitArgsMap["git_log"]): Promise<Record<string, u
       ...(input.branch || input.author || input.grep || input.filePath || input.since || input.until ? { note: "No commits matched the provided filters." } : {}),
     };
   }
-  const commits = [];
+  const commits: Record<string, unknown>[] = [];
   const entries = commandResult.stdout
     .split("\x1e")
     .map((entry) => entry.trim())
@@ -780,6 +841,7 @@ async function runGitLog(input: GitArgsMap["git_log"]): Promise<Record<string, u
       });
 
       if (input.stat) {
+        // biome-ignore lint/performance/noAwaitInLoops: Per-commit git detail lookup preserves output order.
         const statResult = await runGitCommand(["show", "--stat", "--format=", parts[0]], { cwd, allowFailure: true });
         commitRecord.stat = statResult.stdout.trim();
       }
@@ -796,7 +858,7 @@ async function runGitLog(input: GitArgsMap["git_log"]): Promise<Record<string, u
     totalCount: commits.length,
   };
 }
-// 15. git_show ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 42. Run git show ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitShow(input: GitArgsMap["git_show"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
   const targetObject = input.filePath ? `${input.object}:${input.filePath}` : input.object;
@@ -810,7 +872,7 @@ async function runGitShow(input: GitArgsMap["git_show"]): Promise<Record<string,
     content: showResult.stdout,
   };
 }
-// 16. git_branch ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 43. Run git branch ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitBranch(input: GitArgsMap["git_branch"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
   const mode = input.mode ?? "list";
@@ -851,7 +913,7 @@ async function runGitBranch(input: GitArgsMap["git_branch"]): Promise<Record<str
       ...(typeof input.merged === "string" ? [`--merged=${input.merged}`] : []),
       ...(input.noMerged === true ? ["--no-merged"] : []),
       ...(typeof input.noMerged === "string" ? [`--no-merged=${input.noMerged}`] : []),
-      "--format=%(refname:short)%x1f%(HEAD)%x1f%(objectname)%x1f%(upstream:short)%x1f%(upstream:track)",
+      `--format=${BRANCH_LIST_FORMAT}`,
       ...(input.remote ? ["refs/remotes"] : input.all ? ["refs/heads", "refs/remotes"] : ["refs/heads"]),
     ],
     { cwd },
@@ -859,8 +921,8 @@ async function runGitBranch(input: GitArgsMap["git_branch"]): Promise<Record<str
   const branches = splitLines(branchResult.stdout).map((line) => {
     const parts = line.split("\x1f");
     const counts = parts[4] ?? "";
-    const aheadMatch = counts.match(/ahead (\d+)/);
-    const behindMatch = counts.match(/behind (\d+)/);
+    const aheadMatch = counts.match(AHEAD_PATTERN);
+    const behindMatch = counts.match(BEHIND_PATTERN);
 
     return {
       name: parts[0],
@@ -878,7 +940,7 @@ async function runGitBranch(input: GitArgsMap["git_branch"]): Promise<Record<str
     branches,
   };
 }
-// 17. git_checkout ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 44. Run git checkout ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitCheckout(input: GitArgsMap["git_checkout"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
 
@@ -893,7 +955,7 @@ async function runGitCheckout(input: GitArgsMap["git_checkout"]): Promise<Record
   await runGitCommand(["checkout", ...(input.force ? ["-f"] : []), input.target], { cwd });
   return { success: true, target: input.target, branchCreated: false, filesModified: [] };
 }
-// 18. git_cherry_pick ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 45. Run git cherry pick ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitCherryPick(input: GitArgsMap["git_cherry_pick"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
 
@@ -927,7 +989,7 @@ async function runGitCherryPick(input: GitArgsMap["git_cherry_pick"]): Promise<R
     ...(pickResult.exitCode !== 0 ? { message: pickResult.stderr.trim() || pickResult.stdout.trim() } : {}),
   };
 }
-// 19. git_clean ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 46. Run git clean ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitClean(input: GitArgsMap["git_clean"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
   const cleanResult = await runGitCommand(["clean", ...(input.dryRun ? ["-n"] : []), ...(input.force ? ["-f"] : []), ...(input.directories ? ["-d"] : []), ...(input.ignored ? ["-x"] : [])], { cwd });
@@ -935,12 +997,12 @@ async function runGitClean(input: GitArgsMap["git_clean"]): Promise<Record<strin
   const directoriesRemoved: string[] = [];
 
   splitLines(cleanResult.stdout).forEach((line) => {
-    const match = line.match(/(?:Would remove|Removing)\s+(.+)$/);
+    const match = line.match(CLEAN_REMOVED_PATTERN);
 
     if (match) {
       const candidate = match[1].trim();
       if (candidate.endsWith("/") || candidate.endsWith("\\")) {
-      	directoriesRemoved.push(candidate.replace(/[\\/]+$/, ""));
+        directoriesRemoved.push(candidate.replace(TRAILING_PATH_SEPARATOR_PATTERN, ""));
       }
       else {
       	filesRemoved.push(candidate);
@@ -955,7 +1017,7 @@ async function runGitClean(input: GitArgsMap["git_clean"]): Promise<Record<strin
     directoriesRemoved,
   };
 }
-// 20. git_fetch ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 47. Run git fetch ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitFetch(input: GitArgsMap["git_fetch"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
   const remote = input.remote ?? "origin";
@@ -965,10 +1027,10 @@ async function runGitFetch(input: GitArgsMap["git_fetch"]): Promise<Record<strin
     success: true,
     remote,
     fetchedRefs: splitLines(fetchResult.stderr).filter((line) => line.includes("->")),
-    prunedRefs: splitLines(fetchResult.stderr).filter((line) => /prune|deleted/i.test(line)),
+    prunedRefs: splitLines(fetchResult.stderr).filter((line) => FETCH_PRUNED_REF_PATTERN.test(line)),
   };
 }
-// 21. git_merge ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 48. Run git merge ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitMerge(input: GitArgsMap["git_merge"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
   const previousHead = await getHeadCommit(cwd);
@@ -987,7 +1049,7 @@ async function runGitMerge(input: GitArgsMap["git_merge"]): Promise<Record<strin
     strategy: input.strategy ?? "ort",
   };
 }
-// 22. git_pull ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 49. Run git pull ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitPull(input: GitArgsMap["git_pull"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
   const previousHead = await getHeadCommit(cwd);
@@ -1009,7 +1071,7 @@ async function runGitPull(input: GitArgsMap["git_pull"]): Promise<Record<string,
     filesChanged,
   };
 }
-// 23. git_push ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 50. Run git push ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitPush(input: GitArgsMap["git_push"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
   const branch = input.branch ?? (await getCurrentBranch(cwd)) ?? "HEAD";
@@ -1028,11 +1090,11 @@ async function runGitPush(input: GitArgsMap["git_push"]): Promise<Record<string,
     remote,
     branch,
     pushedRefs: pushResult.exitCode === 0 ? [remoteBranch] : [],
-    rejectedRefs: splitLines(pushResult.stderr).filter((line) => /\[rejected\]/i.test(line)),
+    rejectedRefs: splitLines(pushResult.stderr).filter((line) => PUSH_REJECTED_REF_PATTERN.test(line)),
     upstreamSet: input.setUpstream === true,
   };
 }
-// 24. git_rebase ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 51. Run git rebase ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitRebase(input: GitArgsMap["git_rebase"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
   const mode = input.mode ?? "start";
@@ -1070,12 +1132,12 @@ async function runGitRebase(input: GitArgsMap["git_rebase"]): Promise<Record<str
     ...(rebaseResult.exitCode !== 0 ? { message: rebaseResult.stderr.trim() || rebaseResult.stdout.trim() } : {}),
   };
 }
-// 25. git_reflog ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 52. Run git reflog ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitReflog(input: GitArgsMap["git_reflog"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
   const ref = input.ref ?? "HEAD";
   const maxCount = input.maxCount ?? 20;
-  const reflogResult = await runGitCommand(["reflog", "show", ref, `--max-count=${String(maxCount)}`, "--format=%gD%x1f%H%x1f%gs%x1f%ct"], { cwd, allowFailure: true });
+  const reflogResult = await runGitCommand(["reflog", "show", ref, `--max-count=${String(maxCount)}`, `--format=${REFLOG_FORMAT}`], { cwd, allowFailure: true });
   const entries = splitLines(reflogResult.stdout).map((line) => {
     const parts = line.split("\x1f");
     return {
@@ -1094,7 +1156,7 @@ async function runGitReflog(input: GitArgsMap["git_reflog"]): Promise<Record<str
     totalEntries: entries.length,
   };
 }
-// 26. git_remote ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 53. Run git remote ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitRemote(input: GitArgsMap["git_remote"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
   const mode = input.mode ?? "list";
@@ -1136,7 +1198,7 @@ async function runGitRemote(input: GitArgsMap["git_remote"]): Promise<Record<str
   await runGitCommand(["remote", "set-url", ...(input.push ? ["--push"] : []), input.name, input.url], { cwd });
   return { success: true, mode, url: input.url };
 }
-// 27. git_reset ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 54. Run git reset ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitReset(input: GitArgsMap["git_reset"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
   const mode = input.mode ?? "mixed";
@@ -1167,24 +1229,24 @@ async function runGitReset(input: GitArgsMap["git_reset"]): Promise<Record<strin
     filesReset,
   };
 }
-// 28. git_stash ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 55. Run git stash ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitStash(input: GitArgsMap["git_stash"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
   const mode = input.mode ?? "push";
 
   if (mode === "list") {
-    const listResult = await runGitCommand(["stash", "list", ...(input.limit ? [`--max-count=${String(input.limit)}`] : []), "--format=%gd%x1f%ct%x1f%gs"], { cwd, allowFailure: true });
+    const listResult = await runGitCommand(["stash", "list", ...(input.limit ? [`--max-count=${String(input.limit)}`] : []), `--format=${STASH_LIST_FORMAT}`], { cwd, allowFailure: true });
     const stashes = splitLines(listResult.stdout).map((line) => {
       const parts = line.split("\x1f");
       const ref = parts[0];
-      const indexMatch = ref.match(/stash@\{(\d+)\}/);
+      const indexMatch = ref.match(STASH_INDEX_PATTERN);
 
       return {
         ref,
         index: Number.parseInt(indexMatch?.[1] ?? "0", 10),
         description: parts[2],
         timestamp: Number.parseInt(parts[1], 10),
-        branch: parts[2].includes(":") ? parts[2].split(":")[0].replace(/^On\s+/, "") : "unknown",
+        branch: parts[2].includes(":") ? parts[2].split(":")[0].replace(STASH_BRANCH_PREFIX_PATTERN, "") : "unknown",
       };
     });
 
@@ -1212,7 +1274,7 @@ async function runGitStash(input: GitArgsMap["git_stash"]): Promise<Record<strin
     };
   }
   const pushResult = await runGitCommand(["stash", "push", ...(input.includeUntracked ? ["--include-untracked"] : []), ...(input.keepIndex ? ["--keep-index"] : []), ...(input.message ? ["-m", input.message] : [])], { cwd });
-  const createdMatch = pushResult.stdout.match(/stash@\{\d+\}/);
+  const createdMatch = pushResult.stdout.match(STASH_CREATED_PATTERN);
 
   return {
     success: true,
@@ -1220,13 +1282,13 @@ async function runGitStash(input: GitArgsMap["git_stash"]): Promise<Record<strin
     ...(createdMatch ? { created: createdMatch[0] } : {}),
   };
 }
-// 29. git_tag ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 56. Run git tag ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitTag(input: GitArgsMap["git_tag"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
   const mode = input.mode ?? "list";
 
   if (mode === "list") {
-    const tagResult = await runGitCommand(["for-each-ref", "refs/tags", ...(input.limit ? [`--count=${String(input.limit)}`] : []), "--sort=-creatordate", "--format=%(refname:short)%x1f%(objectname)%x1f%(creatordate:unix)%x1f%(taggername)%x1f%(taggeremail)%x1f%(subject)%x1f%(body)"], { cwd, allowFailure: true });
+    const tagResult = await runGitCommand(["for-each-ref", "refs/tags", ...(input.limit ? [`--count=${String(input.limit)}`] : []), "--sort=-creatordate", `--format=${TAG_LIST_FORMAT}`], { cwd, allowFailure: true });
     const tags = splitLines(tagResult.stdout).map((line) => {
       const parts = line.split("\x1f");
       return {
@@ -1276,7 +1338,7 @@ async function runGitTag(input: GitArgsMap["git_tag"]): Promise<Record<string, u
     signed: false,
   };
 }
-// 30. git_worktree ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 57. Run git worktree ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitWorktree(input: GitArgsMap["git_worktree"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
   const mode = input.mode ?? "list";
@@ -1284,7 +1346,7 @@ async function runGitWorktree(input: GitArgsMap["git_worktree"]): Promise<Record
   if (mode === "list") {
     const listResult = await runGitCommand(["worktree", "list", "--porcelain"], { cwd, allowFailure: true });
     const blocks = listResult.stdout
-      .split(/\r?\n\r?\n/)
+      .split(WORKTREE_BLOCK_SPLIT_PATTERN)
       .map((entry) => entry.trim())
       .filter((entry) => entry.length > 0);
     const worktrees = blocks.map((block) => {
@@ -1341,7 +1403,7 @@ async function runGitWorktree(input: GitArgsMap["git_worktree"]): Promise<Record
     pruned: splitLines(pruneResult.stdout),
   };
 }
-// 31. git_blame ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 58. Run git blame ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitBlame(input: GitArgsMap["git_blame"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
   const blameResult = await runGitCommand(["blame", "--line-porcelain", ...(input.ignoreWhitespace ? ["-w"] : []), ...(input.startLine && input.endLine ? ["-L", `${String(input.startLine)},${String(input.endLine)}`] : []), input.filePath], { cwd });
@@ -1352,7 +1414,7 @@ async function runGitBlame(input: GitArgsMap["git_blame"]): Promise<Record<strin
   let currentLineNumber = 0;
 
   splitLines(blameResult.stdout).forEach((line) => {
-    if (/^[0-9a-f]{40}\s+\d+\s+\d+/.test(line)) {
+    if (BLAME_HEADER_PATTERN.test(line)) {
     	const parts = line.split(" ");
       currentHash = parts[0];
       currentLineNumber = Number.parseInt(parts[2], 10);
@@ -1381,14 +1443,14 @@ async function runGitBlame(input: GitArgsMap["git_blame"]): Promise<Record<strin
     totalLines: lines.length,
   };
 }
-// 32. git_changelog_analyze ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 59. Run git changelog analyze ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitChangelogAnalyze(input: GitArgsMap["git_changelog_analyze"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
   const branch = input.branch ?? (await getCurrentBranch(cwd)) ?? "HEAD";
   const maxCommits = input.maxCommits ?? 20;
   const maxTags = input.maxTags ?? 20;
   const historyRange = input.sinceTag ? `${input.sinceTag}..${branch}` : branch;
-  const commitResult = await runGitCommand(["log", historyRange, `--max-count=${String(maxCommits)}`, "--pretty=format:%h%x1f%an%x1f%ct%x1f%d%x1f%s%x1e"], { cwd, allowFailure: true });
+  const commitResult = await runGitCommand(["log", historyRange, `--max-count=${String(maxCommits)}`, `--pretty=format:${CHANGELOG_COMMIT_FORMAT}`], { cwd, allowFailure: true });
   const commits = commitResult.stdout
     .split("\x1e")
     .map((entry) => entry.trim())
@@ -1418,7 +1480,7 @@ async function runGitChangelogAnalyze(input: GitArgsMap["git_changelog_analyze"]
     },
   };
 }
-// 33. git_wrapup_instructions ――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 60. Run git wrapup instructions ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitWrapupInstructions(input: GitArgsMap["git_wrapup_instructions"]): Promise<Record<string, unknown>> {
   const createTag = input.createTag ?? true;
   const instructions = ["Acceptance criteria:", "1. Inspect git diff and understand each change before grouping commits.", "2. Update changelog or release metadata when this repository requires it.", "3. Run the smallest real verification set for the changed surface.", "4. Create atomic Conventional Commit messages only after verification passes.", "5. Confirm the working tree is clean after commits.", ...(createTag ? ["6. Create an annotated semantic-version tag only when release tagging is in scope."] : []), "Stop and report if conflicts, unexplained changes, or failing checks remain."].join("\n");

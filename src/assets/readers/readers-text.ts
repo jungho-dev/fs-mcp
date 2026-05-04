@@ -20,11 +20,12 @@
 import {createReadStream} from "node:fs";
 import fs from "node:fs/promises";
 import {createInterface} from "node:readline";
-import type {FileHandler, FileInfo, FileResult, ReadOptions} from "@assets/readers/readers-base";
+import type {FileHandler, FileInfo, FileMetadata, FileResult, ReadOptions} from "@assets/readers/readers-base";
 import {FILE_SIZE_LIMITS, READ_PERFORMANCE_THRESHOLDS} from "@features/filesystem/filesystem-limits";
 
 // 1. Text file handler implementation ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Binary detection is done at the factory level - this handler assumes file is text
+// 1. Text file handler ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export class TextFileHandler implements FileHandler {
   canHandle(_path: string): boolean {
     // Text handler accepts all files that pass the factory's binary check
@@ -33,7 +34,7 @@ export class TextFileHandler implements FileHandler {
   }
   async read(filePath: string, options?: ReadOptions): Promise<FileResult> {
     const offset = options?.offset ?? 0;
-    const length = options?.length ?? 1000; // Default from config
+    const length = options?.length;
     const includeStatusMessage = options?.includeStatusMessage ?? true;
 
     // Binary detection is done at factory level - just read as text
@@ -52,6 +53,7 @@ export class TextFileHandler implements FileHandler {
   async getInfo(path: string): Promise<FileInfo> {
     const stats = await fs.stat(path);
 
+    const metadata: FileMetadata = {};
     const info: FileInfo = {
       size: stats.size,
       created: stats.birthtime,
@@ -61,7 +63,7 @@ export class TextFileHandler implements FileHandler {
       isFile: stats.isFile(),
       permissions: stats.mode.toString(8).slice(-3),
       fileType: "text",
-      metadata: {},
+      metadata,
     };
 
     // For text files that aren't too large, count lines
@@ -69,7 +71,7 @@ export class TextFileHandler implements FileHandler {
       try {
         const content = await fs.readFile(path, "utf8");
         const lineCount = TextFileHandler.countLines(content);
-        info.metadata!.lineCount = lineCount;
+        metadata.lineCount = lineCount;
       }
       catch (_error) {
         // If reading fails, skip line count
@@ -91,7 +93,7 @@ export class TextFileHandler implements FileHandler {
     }
     return lines.length;
   }
-  // 2. Get file line count (for files under size limit) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 2. Get file line count ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private async getFileLineCount(filePath: string): Promise<number | undefined> {
     try {
       const stats = await fs.stat(filePath);
@@ -105,7 +107,7 @@ export class TextFileHandler implements FileHandler {
     }
     return;
   }
-  // 3. Generate enhanced status message ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 3. Generate enhanced status message ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private generateEnhancedStatusMessage(readLines: number, offset: number, totalLines?: number, isNegativeOffset: boolean = false): string {
     if (isNegativeOffset) {
       if (totalLines !== undefined) {
@@ -168,8 +170,8 @@ export class TextFileHandler implements FileHandler {
     }
     return lines;
   }
-  // 4. Read file with smart positioning for optimal performance ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  private async readFileWithSmartPositioning(filePath: string, offset: number, length: number, mimeType: string, includeStatusMessage: boolean = true): Promise<FileResult> {
+  // 4. Read file with smart positioning ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  private async readFileWithSmartPositioning(filePath: string, offset: number, length: number | undefined, mimeType: string, includeStatusMessage: boolean = true): Promise<FileResult> {
     const stats = await fs.stat(filePath);
     const fileSize = stats.size;
 
@@ -201,7 +203,7 @@ export class TextFileHandler implements FileHandler {
       }
     }
   }
-  // 5. Read last N lines efficiently by reading file backwards ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 5. Read last n lines reverse ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private async readLastNLinesReverse(filePath: string, n: number, mimeType: string, includeStatusMessage: boolean = true, fileTotalLines?: number): Promise<FileResult> {
     const fd = await fs.open(filePath, "r");
     try {
@@ -217,6 +219,7 @@ export class TextFileHandler implements FileHandler {
         position -= readSize;
 
         const buffer = Buffer.alloc(readSize);
+        // biome-ignore lint/performance/noAwaitInLoops: Reverse chunk reads must advance sequentially by file position.
         await fd.read(buffer, 0, readSize, position);
 
         const chunk = buffer.toString("utf-8");
@@ -238,7 +241,7 @@ export class TextFileHandler implements FileHandler {
       await fd.close();
     }
   }
-  // 6. Read from end using readline with circular buffer ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 6. Read from end with readline ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private async readFromEndWithReadline(filePath: string, requestedLines: number, mimeType: string, includeStatusMessage: boolean = true, fileTotalLines?: number): Promise<FileResult> {
     const rl = createInterface({
       input: createReadStream(filePath),
@@ -267,8 +270,8 @@ export class TextFileHandler implements FileHandler {
 
     return {content, mimeType, metadata: {}};
   }
-  // 7. Read from start/middle using readline ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  private async readFromStartWithReadline(filePath: string, offset: number, length: number, mimeType: string, includeStatusMessage: boolean = true, fileTotalLines?: number): Promise<FileResult> {
+  // 7. Read from start with readline ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  private async readFromStartWithReadline(filePath: string, offset: number, length: number | undefined, mimeType: string, includeStatusMessage: boolean = true, fileTotalLines?: number): Promise<FileResult> {
     const rl = createInterface({
       input: createReadStream(filePath),
       crlfDelay: Number.POSITIVE_INFINITY,
@@ -278,11 +281,11 @@ export class TextFileHandler implements FileHandler {
     let lineNumber = 0;
 
     for await (const line of rl) {
-      if (lineNumber >= offset && result.length < length) {
-      	result.push(line);
+      if (lineNumber >= offset && (length === undefined || result.length < length)) {
+     	result.push(line);
       }
-      if (result.length >= length) {
-      	break;
+      if (length !== undefined && result.length >= length) {
+     	break;
       }
       lineNumber++;
     }
@@ -298,8 +301,8 @@ export class TextFileHandler implements FileHandler {
       return {content, mimeType, metadata: {}};
     }
   }
-  // 8. Read from estimated byte position for very large files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  private async readFromEstimatedPosition(filePath: string, offset: number, length: number, mimeType: string, includeStatusMessage: boolean = true, fileTotalLines?: number): Promise<FileResult> {
+  // 8. Read from estimated position ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  private async readFromEstimatedPosition(filePath: string, offset: number, length: number | undefined, mimeType: string, includeStatusMessage: boolean = true, fileTotalLines?: number): Promise<FileResult> {
     // First, do a quick scan to estimate lines per byte
     const rl = createInterface({
       input: createReadStream(filePath),
@@ -344,8 +347,8 @@ export class TextFileHandler implements FileHandler {
         	firstLineSkipped = true;
           continue;
         }
-        if (result.length < length) {
-        	result.push(line);
+        if (length === undefined || result.length < length) {
+       	result.push(line);
         }
         else {
         	break;

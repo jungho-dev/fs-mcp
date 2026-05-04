@@ -14,6 +14,9 @@ import {configManager} from "@features/config/config-store";
 import {analyzeProcessState} from "@features/process/process-repl-detector";
 
 const DEFAULT_COMMAND_TIMEOUT = 1000;
+const SSH_COMMAND_PREFIX_PATTERN = /^ssh /;
+const QUICK_PROMPT_PATTERN = />>>\s*$|>\s*$|\$\s*$|#\s*$/;
+const OUTPUT_SNIPPET_NEWLINE_PATTERN = /\n/g;
 
 interface CompletedSession {
   endTime: Date;
@@ -40,6 +43,7 @@ interface ShellSpawnConfig {
   executable: string;
   useShellOption: string | boolean;
 }
+// 1. Split shell command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function splitShellCommand(shellCommand: string): string[] {
   const matches = shellCommand.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g);
   const parts = matches ?? [shellCommand];
@@ -50,12 +54,14 @@ function splitShellCommand(shellCommand: string): string[] {
     return isQuoted ? part.slice(1, -1) : part;
   });
 }
+// 2. Append command argument ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function appendCommandArgument(args: string[], commandFlags: string[], command: string, defaultFlag: string): string[] {
   const commandFlagIndex = args.findIndex((arg) => commandFlags.includes(arg.toLowerCase()));
   const commandArgs = commandFlagIndex === -1 ? [...args, defaultFlag, command] : [...args.slice(0, commandFlagIndex + 1), command, ...args.slice(commandFlagIndex + 1)];
 
   return commandArgs;
 }
+// 3. With pwsh output encoding ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function withPwshOutputEncoding(command: string): string {
   const outputEncodingCommand = "$OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false);";
   const encodedCommand = command.includes("[Console]::OutputEncoding") ? command : `${outputEncodingCommand} ${command}`;
@@ -64,6 +70,7 @@ function withPwshOutputEncoding(command: string): string {
 }
 // 2. Get the appropriate spawn configuration for a given shell ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // This handles login shell flags for different shell types
+// 4. Get shell spawn args ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getShellSpawnArgs(shellPath: string, command: string): ShellSpawnConfig {
   const [shellExecutable, ...shellArgs] = splitShellCommand(shellPath);
   const executable = shellExecutable ?? shellPath;
@@ -112,6 +119,7 @@ function getShellSpawnArgs(shellPath: string, command: string): ShellSpawnConfig
     useShellOption: shellPath,
   };
 }
+// 5. Terminal manager ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export class TerminalManager {
   private readonly sessions: Map<number, TerminalSession> = new Map();
   private readonly completedSessions: Map<number, CompletedSession> = new Map();
@@ -158,7 +166,7 @@ export class TerminalManager {
     // Enhance SSH commands automatically
     let enhancedCommand = command;
     if (command.trim().startsWith("ssh ") && !command.includes(" -t")) {
-      enhancedCommand = command.replace(/^ssh /, "ssh -t ");
+      enhancedCommand = command.replace(SSH_COMMAND_PREFIX_PATTERN, "ssh -t ");
       console.log(`Enhanced SSH command: ${enhancedCommand}`);
     }
     // Get the appropriate spawn configuration for the shell
@@ -213,16 +221,17 @@ export class TerminalManager {
         pid: -1, // Use -1 to indicate an error state
       };
     }
+    const childPid = childProcess.pid;
     const session: TerminalSession = {
       isBlocked: false,
       lastReadIndex: 0, // Track where "new" output starts
       outputLines: [], // Line-based buffer
-      pid: childProcess.pid,
+      pid: childPid,
       process: childProcess,
       startTime: new Date(),
     };
 
-    this.sessions.set(childProcess.pid, session);
+    this.sessions.set(childPid, session);
 
     // Timing diagnostics
     const startTime = Date.now();
@@ -236,8 +245,6 @@ export class TerminalManager {
       let periodicCheck: NodeJS.Timeout | null = null;
 
       // Quick prompt patterns for immediate detection
-      const quickPromptPatterns = />>>\s*$|>\s*$|\$\s*$|#\s*$/;
-
       const resolveOnce = (result: CommandExecutionResult) => {
         if (resolved) {
         	return;
@@ -286,13 +293,13 @@ export class TerminalManager {
           outputEvents.push({
             deltaMs: now - startTime,
             length: text.length,
-            snippet: text.slice(0, 50).replace(/\n/g, "\\n"),
+            snippet: text.slice(0, 50).replace(OUTPUT_SNIPPET_NEWLINE_PATTERN, "\\n"),
             source: "stdout",
             timestamp: now,
           });
         }
         // Immediate check for obvious prompts
-        if (quickPromptPatterns.test(text)) {
+        if (QUICK_PROMPT_PATTERN.test(text)) {
           session.isBlocked = true;
           exitReason = "early_exit_quick_pattern";
 
@@ -305,7 +312,7 @@ export class TerminalManager {
           resolveOnce({
             isBlocked: true,
             output,
-            pid: childProcess.pid!,
+            pid: childPid,
           });
         }
       });
@@ -328,7 +335,7 @@ export class TerminalManager {
           outputEvents.push({
             deltaMs: now - startTime,
             length: text.length,
-            snippet: text.slice(0, 50).replace(/\n/g, "\\n"),
+            snippet: text.slice(0, 50).replace(OUTPUT_SNIPPET_NEWLINE_PATTERN, "\\n"),
             source: "stderr",
             timestamp: now,
           });
@@ -338,14 +345,14 @@ export class TerminalManager {
       // Periodic comprehensive check every 100ms
       periodicCheck = setInterval(() => {
         if (output.trim()) {
-          const processState = analyzeProcessState(output, childProcess.pid);
+          const processState = analyzeProcessState(output, childPid);
           if (processState.isWaitingForInput) {
             session.isBlocked = true;
             exitReason = "early_exit_periodic_check";
             resolveOnce({
               isBlocked: true,
               output,
-              pid: childProcess.pid!,
+              pid: childPid,
             });
           }
         }
@@ -358,18 +365,18 @@ export class TerminalManager {
         resolveOnce({
           isBlocked: true,
           output,
-          pid: childProcess.pid!,
+          pid: childPid,
         });
       }, timeoutMs);
 
       childProcess.on("exit", (code: number | null) => {
-        if (childProcess.pid) {
+        if (childPid) {
           // Store completed session before removing active session
-          this.completedSessions.set(childProcess.pid, {
+          this.completedSessions.set(childPid, {
             endTime: new Date(),
             exitCode: code,
             outputLines: [...session.outputLines], // Copy line buffer
-            pid: childProcess.pid,
+            pid: childPid,
             startTime: session.startTime,
           });
 
@@ -378,19 +385,20 @@ export class TerminalManager {
           	const oldestKey = Array.from(this.completedSessions.keys())[0];
             this.completedSessions.delete(oldestKey);
           }
-          this.sessions.delete(childProcess.pid);
+          this.sessions.delete(childPid);
         }
         exitReason = "process_exit";
         resolveOnce({
           isBlocked: false,
           output,
-          pid: childProcess.pid!,
+          pid: childPid,
         });
       });
     });
   }
   // 4. Append text to a session's line buffer ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   // Handles partial lines and newline splitting
+  // 6. Append to line buffer ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private appendToLineBuffer(session: TerminalSession, text: string): void {
     if (!text) {
     	return;
@@ -420,9 +428,9 @@ export class TerminalManager {
   // 5. Read process output with pagination (like file reading) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   // @param pid Process ID
   // @param offset Line offset: 0=from lastReadIndex, positive=absolute, negative=tail
-  // @param length Max lines to return
+  // @param length Max lines to return. Omit to read through available output.
   // @param updateReadIndex Whether to update lastReadIndex (default: true for offset=0)
-  readOutputPaginated(pid: number, offset: number = 0, length: number = 1000): PaginatedOutputResult | null {
+  readOutputPaginated(pid: number, offset: number = 0, length?: number): PaginatedOutputResult | null {
     // First check active sessions
     const session = this.sessions.get(pid);
     if (session) {
@@ -455,8 +463,8 @@ export class TerminalManager {
     }
     return null;
   }
-  // 6. Internal helper to read from a line buffer with offset/length ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  private readFromLineBuffer(lines: string[], offset: number, length: number, lastReadIndex: number, updateLastRead: (index: number) => void, isComplete: boolean, exitCode?: number | null, runtimeMs?: number): PaginatedOutputResult {
+  // 7. Read from line buffer ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  private readFromLineBuffer(lines: string[], offset: number, length: number | undefined, lastReadIndex: number, updateLastRead: (index: number) => void, isComplete: boolean, exitCode?: number | null, runtimeMs?: number): PaginatedOutputResult {
     const totalLines = lines.length;
     let startIndex: number;
     let linesToRead: string[];
@@ -466,20 +474,20 @@ export class TerminalManager {
       // e.g., offset=-50, length=10 means: start 50 lines from end, read 10 lines
       const fromEnd = Math.abs(offset);
       startIndex = Math.max(0, totalLines - fromEnd);
-      linesToRead = lines.slice(startIndex, startIndex + length);
+      linesToRead = length === undefined ? lines.slice(startIndex) : lines.slice(startIndex, startIndex + length);
       // Don't update lastReadIndex for tail reads
     }
     else if (offset === 0) {
     	// offset=0 means "from where I last read" (like getNewOutput)
       startIndex = lastReadIndex;
-      linesToRead = lines.slice(startIndex, startIndex + length);
+      linesToRead = length === undefined ? lines.slice(startIndex) : lines.slice(startIndex, startIndex + length);
       // Update lastReadIndex for "new output" behavior
       updateLastRead(Math.min(startIndex + linesToRead.length, totalLines));
     }
     else {
     	// Positive offset = absolute position
       startIndex = offset;
-      linesToRead = lines.slice(startIndex, startIndex + length);
+      linesToRead = length === undefined ? lines.slice(startIndex) : lines.slice(startIndex, startIndex + length);
       // Don't update lastReadIndex for absolute position reads
     }
     const readCount = linesToRead.length;
@@ -511,9 +519,9 @@ export class TerminalManager {
   }
   // 8. Legacy method for backward compatibility ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   // Returns all new output since last read
-  // @param maxLines Maximum lines to return (default: 1000 for context protection)
+  // @param maxLines Maximum lines to return. Omit to read all new output.
   // @deprecated Use readOutputPaginated instead
-  getNewOutput(pid: number, maxLines: number = 1000): string | null {
+  getNewOutput(pid: number, maxLines?: number): string | null {
     const result = this.readOutputPaginated(pid, 0, maxLines);
     if (!result) {
     	return null;

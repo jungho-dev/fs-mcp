@@ -15,11 +15,11 @@ import assert from "node:assert";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { configManager } from "../../../out/features/config/config-store.js";
-import { getFileInfo, readFile, writeFile } from "../../../out/features/filesystem/filesystem-service.js";
 import { getFileHandler } from "../../../out/assets/readers/readers-factory.js";
 import { handleEditBlock } from "../../../out/controllers/controllers-edit.js";
 import { handleReadFile } from "../../../out/controllers/controllers-filesystem.js";
+import { configManager } from "../../../out/features/config/config-store.js";
+import { getFileInfo, readFile, writeFile } from "../../../out/features/filesystem/filesystem-service.js";
 
 // Get directory name
 const __filename = fileURLToPath(import.meta.url);

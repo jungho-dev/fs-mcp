@@ -35,7 +35,7 @@ export const AUTO_EXCLUDE_PATTERNS = [
 export const PROTECTED_BRANCHES = new Set(["main", "master", "production", "prod", "release"]);
 export const CONFLICT_STATUS_CODES = new Set(["DD", "AU", "UD", "UA", "DU", "AA", "UU"]);
 
-// 1. git command execution ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Run git command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitCommand(args: string[], options: { cwd?: string; allowFailure?: boolean } = {}): Promise<GitCommandResult> {
   let commandResult: GitCommandResult;
 
@@ -68,13 +68,13 @@ export async function runGitCommand(args: string[], options: { cwd?: string; all
   return commandResult;
 }
 
-// 2. line split helper ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Split lines ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function splitLines(text: string): string[] {
   const splitResult = text.replace(/\\r\\n/g, "\\n").replace(/\\r/g, "\\n").split("\\n").filter((line) => line.length > 0);
   return splitResult;
 }
 
-// 3. commit message normalize ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Normalize commit message ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function normalizeCommitMessage(message: string): string {
   const normalizedMessage = message.replace(/\\\\n/g, "\\n").replace(/\\\\r/g, "\\r").replace(/\\\\t/g, "\\t");
   return normalizedMessage;

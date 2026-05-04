@@ -37,14 +37,17 @@ type RequestMetadata = {
 
 const deferredMessages: Array<{level: LogLevel; message: string}> = [];
 
+// 1. Defer log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function deferLog(level: LogLevel, message: string): void {
   deferredMessages.push({level, message});
 }
+// 2. Has request metadata ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function hasRequestMetadata(value: unknown): value is RequestMetadata {
   return typeof value === "object" && value !== null;
 }
 
 // Function to flush deferred messages after initialization
+// 3. Flush deferred messages ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function flushDeferredMessages(): void {
   while (deferredMessages.length > 0) {
     const msg = deferredMessages.shift();
@@ -73,7 +76,7 @@ export const server = new Server(
 // Store current client info (simple variable)
 let currentClient: CurrentClient = {name: "uninitialized", version: "uninitialized"};
 
-// 1. Unified way to update client information ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Update current client ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function updateCurrentClient(clientInfo: ClientInfoUpdate): Promise<boolean> {
   if (clientInfo.name !== currentClient.name || clientInfo.version !== currentClient.version) {
     const nameChanged = clientInfo.name !== currentClient.name;
@@ -135,6 +138,7 @@ export {currentClient};
 deferLog("info", "Setting up request ..");
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
+  // 5. Create tool catalog ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   function createToolCatalog(): ToolCatalogEntry[] {
     return [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG, ...GIT_TOOL_CATALOG];
   }

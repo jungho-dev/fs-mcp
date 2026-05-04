@@ -53,7 +53,7 @@ const PROMPT_CLEANUP_PATTERNS = [/^>>>\s*/gm, /^>\s*/gm, /^\.{3}\s*/gm, /^\+\s*/
 const TRAILING_PROMPT_PATTERNS = [/\n>>>\s*$/, /\n>\s*$/, /\n\+\s*$/];
 const REGEXP_SPECIAL_CHAR_PATTERN = /[.*+?^${}()|[\]\\]/g;
 
-// 1. Process state analysis ――――――――――――――――――――――――――――――――――――――
+// 1. Analyze process state ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function analyzeProcessState(output: string, _pid?: number): ProcessState {
   if (!output || output.trim().length === 0) {
     return {
@@ -112,7 +112,7 @@ export function analyzeProcessState(output: string, _pid?: number): ProcessState
   };
 }
 
-// 2. Output cleanup ―――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Clean process output ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function cleanProcessOutput(output: string, inputSent?: string): string {
   let cleaned = output;
 
@@ -134,12 +134,12 @@ export function cleanProcessOutput(output: string, inputSent?: string): string {
   return cleaned.trim();
 }
 
-// 3. Regex literal escaping ―――――――――――――――――――――――――――――――――――――――
+// 3. Escape reg exp ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function escapeRegExp(string: string): string {
   return string.replace(REGEXP_SPECIAL_CHAR_PATTERN, "\\$&");
 }
 
-// 4. User-facing state message ―――――――――――――――――――――――――――――――――――――
+// 4. Format process state message ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function formatProcessStateMessage(state: ProcessState, pid: number): string {
   if (state.isWaitingForInput) {
     return `Process ${pid} is waiting for input${state.detectedPrompt ? ` (detected: "${state.detectedPrompt.trim()}")` : ""}`;

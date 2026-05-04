@@ -17,6 +17,7 @@ import { isBinaryFile } from "isbinaryfile";
 
 // 1. Binary file handler implementation ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Uses content-based detection via isBinaryFile
+// 1. Binary file handler ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export class BinaryFileHandler implements FileHandler {
   async canHandle(filePath: string): Promise<boolean> {
     // Content-based binary detection using isBinaryFile
@@ -58,7 +59,7 @@ export class BinaryFileHandler implements FileHandler {
       },
     };
   }
-  // 2. Generate instructions for handling binary files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 2. Get binary instructions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private getBinaryInstructions(filePath: string): string {
     const fileName = path.basename(filePath);
     return (`

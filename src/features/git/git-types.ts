@@ -5,7 +5,7 @@
  * @since 2026-05-03
  */
 
-import {GIT_INPUT_SCHEMAS, type GitToolName} from "@schemas/schemas-git";
+import type {GIT_INPUT_SCHEMAS, GitToolName} from "@schemas/schemas-git";
 import type {z} from "zod";
 
 export type GitArgsMap = {

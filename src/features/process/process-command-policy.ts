@@ -13,7 +13,7 @@ const COMMAND_SEPARATORS = [";", "&&", "||", "|", "&"] as const;
 const ENV_ASSIGNMENT_PATTERN = /\w+=\S+\s*/g;
 const WHITESPACE_PATTERN = /\s+/;
 
-// 1. command manager ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Command manager ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 class CommandManager {
   // 1-1. base command logging name ――――――――――――――――――――――――――――――――――――――――――――――――――
   getBaseCommand(command: string): string {
@@ -193,6 +193,7 @@ class CommandManager {
   }
 
   // 1-5. balanced parenthesis range ―――――――――――――――――――――――――――――――――――――――――――――――
+  // 2. Find balanced group end ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private findBalancedGroupEnd(commandSource: string, openParenIndex: number): number | null {
     let groupEnd: number | null = null;
     let openParens = 1;
@@ -220,6 +221,7 @@ class CommandManager {
   }
 
   // 1-6. backtick substitution range ――――――――――――――――――――――――――――――――――――――――――――――
+  // 3. Find backtick end ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private findBacktickEnd(commandSource: string, backtickStart: number): number | null {
     let backtickEnd: number | null = null;
     let index = backtickStart + 1;
@@ -236,6 +238,7 @@ class CommandManager {
   }
 
   // 1-7. command separator match ――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 4. Find separator ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private findSeparator(commandSource: string, index: number): string | null {
     let matchedSeparator: string | null = null;
 
@@ -249,6 +252,7 @@ class CommandManager {
   }
 
   // 1-8. extracted command append ―――――――――――――――――――――――――――――――――――――――――――――――――
+  // 5. Push base command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private pushBaseCommand(commands: string[], command: string): void {
     const baseCommand = this.extractBaseCommand(command.trim());
 
@@ -258,6 +262,7 @@ class CommandManager {
   }
 
   // 1-9. first executable token ―――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 6. Find first command token ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private findFirstCommandToken(tokens: string[]): string | null {
     let firstToken: string | null = null;
 

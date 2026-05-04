@@ -22,6 +22,7 @@ type DiagnosticTimingInfo = Omit<TimingInfo, "exitReason"> & {
 
 // 1. Start a new process (renamed from execute_command) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Includes early detection of process waiting for input
+// 1. Start process ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function startProcess(args: unknown): Promise<ServerResult> {
   const parsed = StartProcessArgsSchema.safeParse(args);
   if (!parsed.success) {
@@ -111,6 +112,7 @@ export async function startProcess(args: unknown): Promise<ServerResult> {
     ],
   };
 }
+// 2. Format initial output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function formatInitialOutput(output: string): string {
   const normalizedOutput = output
     .replace(/\r\n/g, "\n")
@@ -119,6 +121,7 @@ function formatInitialOutput(output: string): string {
 
   return normalizedOutput || "(no initial output)";
 }
+// 3. Format start process message ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function formatStartProcessMessage(pid: number, shell: string | undefined, output: string, statusMessage: string, timingMessage: string): string {
   const messageParts = [`Process started with PID ${pid}`, `PID: ${pid}`, `Shell: ${shell ?? "(default)"}`, "", "Output:", formatInitialOutput(output)];
 
@@ -130,6 +133,7 @@ function formatStartProcessMessage(pid: number, shell: string | undefined, outpu
   }
   return messageParts.join("\n");
 }
+// 4. Format timing info ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function formatTimingInfo(timing: DiagnosticTimingInfo): string {
   let msg = "\n\nTiming Information:\n";
   msg += `  Exit Reason: ${timing.exitReason}\n`;
@@ -155,6 +159,7 @@ function formatTimingInfo(timing: DiagnosticTimingInfo): string {
 }
 // 2. Read output from a running process with file-like pagination ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Supports offset/length parameters for controlled reading
+// 5. Read process output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function readProcessOutput(args: unknown): Promise<ServerResult> {
   const parsed = ReadProcessOutputArgsSchema.safeParse(args);
   if (!parsed.success) {
@@ -163,15 +168,11 @@ export async function readProcessOutput(args: unknown): Promise<ServerResult> {
       isError: true,
     };
   }
-  // Get default line limit from config
-  const config = await configManager.getConfig();
-  const defaultLength = config.fileReadLineLimit ?? 1000;
-
   const {
     pid,
     timeout_ms = 5000,
     offset = 0, // 0 = from last read, positive = absolute, negative = tail
-    length = defaultLength, // Default from config, same as file reading
+    length,
     verbose_timing = false,
   } = parsed.data;
 
@@ -293,6 +294,7 @@ export async function readProcessOutput(args: unknown): Promise<ServerResult> {
 }
 // 3. Interact with a running process (renamed from send_input) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Automatically detects when process is ready and returns output
+// 6. Interact with process ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function interactWithProcess(args: unknown): Promise<ServerResult> {
   const parsed = InteractWithProcessArgsSchema.safeParse(args);
   if (!parsed.success) {
@@ -305,10 +307,6 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
     };
   }
   const {pid, input, timeout_ms = 8000, wait_for_prompt = true, verbose_timing = false} = parsed.data;
-
-  // Get config for output line limit
-  const config = await configManager.getConfig();
-  const maxOutputLines = config.fileReadLineLimit ?? 1000;
 
   // Check if this is a virtual Node session (node:local)
   const virtualNodeSession = getVirtualNodeSession(pid);
@@ -553,7 +551,7 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
     };
   }
 }
-// 4. Force terminate a process ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Force terminate ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function forceTerminate(args: unknown): Promise<ServerResult> {
   const parsed = ForceTerminateArgsSchema.safeParse(args);
   if (!parsed.success) {
@@ -585,7 +583,7 @@ export async function forceTerminate(args: unknown): Promise<ServerResult> {
     ],
   };
 }
-// 5. List active sessions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. List sessions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function listSessions(): Promise<ServerResult> {
   const sessions = terminalManager.listActiveSessions();
 

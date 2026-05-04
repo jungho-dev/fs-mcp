@@ -17,10 +17,12 @@ declare global {
 
 export type LogLevel = "emergency" | "alert" | "critical" | "error" | "warning" | "notice" | "info" | "debug";
 
+// 1. Is structured log data ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isStructuredLogData(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+// 2. Create log payload ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createLogPayload(message: string, data?: unknown): string | Record<string, unknown> {
   if (data === undefined) {
     return message;
@@ -33,7 +35,7 @@ function createLogPayload(message: string, data?: unknown): string | Record<stri
   return { data, message };
 }
 
-// 1. Log a message using the appropriate method based on MCP initialization state ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function log(level: LogLevel, message: string, data?: unknown): void {
   try {
     // Check if MCP transport is available
@@ -83,6 +85,7 @@ export const logger: Readonly<Record<LogLevel, (message: string, data?: unknown)
 // 2. Log to stderr during early initialization (before MCP is ready) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Use this for critical startup messages that must be visible
 // NOTE: This should also be JSON-RPC format
+// 4. Log to stderr ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function logToStderr(level: LogLevel, message: string): void {
   const notification = {
       jsonrpc: "2.0" as const,

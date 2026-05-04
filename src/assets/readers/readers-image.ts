@@ -13,6 +13,7 @@ import type {FileHandler, FileInfo, FileResult, ReadOptions} from "@assets/reade
 
 // 1. Image file handler implementation ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Supports: PNG, JPEG, GIF, WebP, BMP, SVG
+// 1. Image file handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export class ImageFileHandler implements FileHandler {
   private static readonly IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg"];
 
@@ -76,7 +77,7 @@ export class ImageFileHandler implements FileHandler {
       },
     };
   }
-  // 2. Get MIME type for image based on file extension ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 2. Get MIME type ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private getMimeType(path: string): string {
     const lowerPath = path.toLowerCase();
     for (const [ext, mimeType] of Object.entries(ImageFileHandler.IMAGE_MIME_TYPES)) {

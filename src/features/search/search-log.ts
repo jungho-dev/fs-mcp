@@ -27,15 +27,18 @@ export interface FuzzySearchLogEntry {
   timestamp: Date;
   uniqueCharacterCount: number;
 }
+// 1. Fuzzy search logger ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 class FuzzySearchLogger {
   private readonly logPath: string;
   private initialized = false;
 
+  // 2. Constructor ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   constructor() {
     // Create log file in a dedicated directory
     const logDir = path.join(os.homedir(), ".fs-mcp-logs");
     this.logPath = path.join(logDir, "fuzzy-search.log");
   }
+  // 3. Ensure log file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private async ensureLogFile(): Promise<void> {
     if (this.initialized) {
     	return;

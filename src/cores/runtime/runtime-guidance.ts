@@ -7,6 +7,7 @@
 
 import type {SystemInfo} from "@cores/runtime/runtime-info";
 
+// 1. Get os specific guidance ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function getOSSpecificGuidance(systemInfo: SystemInfo): string {
   const {platformName, defaultShell, isWindows, docker} = systemInfo;
 
@@ -128,7 +129,7 @@ LINUX-SPECIFIC NOTES:
   }
   return guidance;
 }
-// 1. Get common development tool guidance based on OS ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Get development tool guidance ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function getDevelopmentToolGuidance(systemInfo: SystemInfo): string {
   const {isWindows, isMacOS, nodeInfo, processInfo} = systemInfo;
 
@@ -178,7 +179,7 @@ COMMON LINUX DEVELOPMENT TOOLS:
 ${envInfo}`;
   }
 }
-// 2. Get path guidance (simplified since paths are normalized) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Get path guidance ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function getPathGuidance(systemInfo: SystemInfo): string {
   let guidance = `Always use absolute paths for reliability. Paths are automatically normalized regardless of slash direction.`;
 

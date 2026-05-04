@@ -82,11 +82,13 @@ export const TOOL_DISPATCHERS: Readonly<Record<string, ToolDispatchHandler>> = {
 };
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Get dispatchable tool names ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function getDispatchableToolNames(): string[] {
   return Object.keys(TOOL_DISPATCHERS);
 }
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Dispatch tool call ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function dispatchToolCall(name: string, args: unknown): Promise<ServerResult> {
   const startTime = Date.now();
   const normalizeDispatchResult = (result: ServerResult): ServerResult => normalizeToolResult(name, result, Date.now() - startTime);

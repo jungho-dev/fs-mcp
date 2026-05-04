@@ -47,6 +47,7 @@ type DocxEditContent = {
   expected_replacements?: number;
 };
 
+// 1. Is docx edit content ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isDocxEditContent(value: unknown): value is DocxEditContent {
   return typeof value === "object" && value !== null;
 }
@@ -56,6 +57,7 @@ const HEADER_FOOTER_XML_PARTS = ["word/header1.xml", "word/header2.xml", "word/h
 
 // 1. Pretty-print XML: split tags onto separate lines with indentation ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Preserves text node content exactly. compact→pretty→compact is lossless.
+// 2. Pretty print XML ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function prettyPrintXml(xml: string): string {
   const parts = xml.split(XML_TAG_BOUNDARY_PATTERN);
   const lines: string[] = [];
@@ -84,6 +86,7 @@ function prettyPrintXml(xml: string): string {
 }
 // 2. Compact pretty-printed XML back — strip leading indentation, join lines ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Does NOT touch whitespace inside <w:t> text nodes.
+// 3. Compact XML ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function compactXml(prettyXml: string): string {
   return prettyXml
     .split("\n")
@@ -98,6 +101,7 @@ interface DocxZipContents {
   xmlParts: Map<string, string>;
   zip: PizZip;
 }
+// 4. Load docx zip ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function loadDocxZip(buf: Buffer): DocxZipContents {
   const zip = new PizZip(buf);
   const docFile = zip.file("word/document.xml");
@@ -132,6 +136,7 @@ function loadDocxZip(buf: Buffer): DocxZipContents {
 // - mc:AlternateContent / shapes / drawings: shows size, skips content
 // - w:sdt: looks inside for text/tables
 // Returns a human-readable outline with enough context for editing.
+// 5. Extract outline ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractOutline(xml: string): string {
   const lines: string[] = [];
 
@@ -247,7 +252,7 @@ function extractOutline(xml: string): string {
 
 // 4. XML text extraction helpers ―――――――――――――――――――――――――――――――――――
 
-// 4. Extract all <w:t>...</w:t> text content from an XML fragment ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Extract all text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractAllText(xml: string): string {
   const texts: string[] = [];
 
@@ -258,7 +263,7 @@ function extractAllText(xml: string): string {
   }
   return texts.join("").trim();
 }
-// 5. Extract <w:t>...</w:t> elements as XML fragments for use in edit_block ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Extract text fragments ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractTextFragments(xml: string): string[] {
   const fragments: string[] = [];
 
@@ -269,17 +274,17 @@ function extractTextFragments(xml: string): string[] {
   }
   return fragments;
 }
-// 6. Extract paragraph style id from w:pPr/w:pStyle ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Extract paragraph style ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractParagraphStyle(xml: string): string | null {
   const match = xml.match(WORD_PARAGRAPH_STYLE_PATTERN);
   return match?.[1] ?? null;
 }
-// 7. Extract table style from w:tblPr/w:tblStyle ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Extract table style ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractTableStyle(xml: string): string | null {
   const match = xml.match(WORD_TABLE_STYLE_PATTERN);
   return match?.[1] ?? null;
 }
-// 8. Extract table rows as arrays of cell text ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Extract table rows ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractTableRows(tableXml: string): string[][] {
   const rows: string[][] = [];
   // Find each <w:tr>...</w:tr> using nesting-aware extraction
@@ -298,6 +303,7 @@ function extractTableRows(tableXml: string): string[][] {
 }
 // 9. Extract all occurrences of a named element from XML, respecting nesting ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Returns array of full element strings including open/close tags.
+// 11. Extract nested elements ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractNestedElements(xml: string, tagName: string): string[] {
   const results: string[] = [];
   const openTag = `<${tagName}`;
@@ -353,6 +359,7 @@ function extractNestedElements(xml: string, tagName: string): string[] {
 }
 // 10. Split XML into top-level elements respecting nesting depth ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // E.g. for body content, returns each direct child element as a string.
+// 12. Split top level elements ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function splitTopLevelElements(xml: string): string[] {
   const elements: string[] = [];
   let depth = 0;
@@ -416,7 +423,7 @@ function splitTopLevelElements(xml: string): string[] {
   }
   return elements.filter((e) => e.length > 0);
 }
-// 11. Extract outline info for headers and footers from the DOCX zip ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 13. Extract header footer outline ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractHeaderFooterOutline(zip: PizZip): string {
   const parts: string[] = [];
   const zipFiles = zip.files;
@@ -444,9 +451,11 @@ function extractHeaderFooterOutline(zip: PizZip): string {
 // DOCX creation helpers
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――═
 
+// 14. Escape XML ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function escapeXml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
+// 15. Create minimal docx zip ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createMinimalDocxZip(documentXml: string): PizZip {
   const zip = new PizZip();
 
@@ -501,6 +510,7 @@ function createMinimalDocxZip(documentXml: string): PizZip {
 // Count occurrences helper
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――═
 
+// 16. Count occurrences ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function countOccurrences(haystack: string, needle: string): number {
   let count = 0;
   let pos = haystack.indexOf(needle);
@@ -515,6 +525,7 @@ function countOccurrences(haystack: string, needle: string): number {
 // DocxFileHandler — implements FileHandler
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――═
 
+// 17. Docx file handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export class DocxFileHandler implements FileHandler {
   private readonly extensions = [".docx"];
 

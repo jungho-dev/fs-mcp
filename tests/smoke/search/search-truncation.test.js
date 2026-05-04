@@ -2,8 +2,8 @@
 
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { configManager } from "../../../out/features/config/config-store.js";
 import { handleGetMoreSearchResults, handleStartSearch, handleStopSearch } from "../../../out/controllers/controllers-search.js";
+import { configManager } from "../../../out/features/config/config-store.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

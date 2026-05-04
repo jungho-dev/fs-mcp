@@ -10,7 +10,10 @@ import { getCurrentBranch, getHeadCommit, isProtectedBranch, resolveRepositoryPa
 import { getChangedFilesBetween, getConflictedFiles, getRemotes } from "@features/git/git-status-support";
 import type { GitArgsMap, GitToolOutput } from "@features/git/git-types";
 
-// 1. git_fetch ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+const FETCH_PRUNED_REF_PATTERN = /prune|deleted/i;
+const PUSH_REJECTED_REF_PATTERN = /\\[rejected\\]/i;
+
+// 1. Run git fetch ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitFetch(input: GitArgsMap["git_fetch"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const remote = input.remote ?? "origin";
@@ -20,11 +23,11 @@ export async function runGitFetch(input: GitArgsMap["git_fetch"]): Promise<GitTo
     success: true,
     remote,
     fetchedRefs: splitLines(fetchResult.stderr).filter((line) => line.includes("->")),
-    prunedRefs: splitLines(fetchResult.stderr).filter((line) => /prune|deleted/i.test(line)),
+    prunedRefs: splitLines(fetchResult.stderr).filter((line) => FETCH_PRUNED_REF_PATTERN.test(line)),
   };
 }
 
-// 2. git_pull ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Run git pull ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitPull(input: GitArgsMap["git_pull"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const previousHead = await getHeadCommit(cwd);
@@ -47,7 +50,7 @@ export async function runGitPull(input: GitArgsMap["git_pull"]): Promise<GitTool
   };
 }
 
-// 3. git_push ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Run git push ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitPush(input: GitArgsMap["git_push"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const branch = input.branch ?? (await getCurrentBranch(cwd)) ?? "HEAD";
@@ -66,12 +69,12 @@ export async function runGitPush(input: GitArgsMap["git_push"]): Promise<GitTool
     remote,
     branch,
     pushedRefs: pushResult.exitCode === 0 ? [remoteBranch] : [],
-    rejectedRefs: splitLines(pushResult.stderr).filter((line) => /\[rejected\]/i.test(line)),
+    rejectedRefs: splitLines(pushResult.stderr).filter((line) => PUSH_REJECTED_REF_PATTERN.test(line)),
     upstreamSet: input.setUpstream === true,
   };
 }
 
-// 4. git_remote ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Run git remote ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitRemote(input: GitArgsMap["git_remote"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const mode = input.mode ?? "list";

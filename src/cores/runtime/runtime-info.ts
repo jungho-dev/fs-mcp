@@ -13,21 +13,14 @@ import path from "node:path";
 const DOCKER_CGROUP_CONTAINER_ID_REGEX = /docker\/([a-f0-9]{64})/;
 
 export interface DockerMount {
-  hostPath: string;
   containerPath: string;
-  type: "bind" | "volume";
-  readOnly: boolean;
   description: string;
+  hostPath: string;
+  readOnly: boolean;
+  type: "bind" | "volume";
 }
 
 export interface ContainerInfo {
-  // New enhanced detection
-  isContainer: boolean;
-  containerType: "docker" | "podman" | "kubernetes" | "lxc" | "systemd-nspawn" | "other" | null;
-  orchestrator: "kubernetes" | "docker-compose" | "docker-swarm" | "podman-compose" | null;
-  // Backward compatibility
-  isDocker: boolean;
-  mountPoints: DockerMount[];
   containerEnvironment?: {
     dockerImage?: string;
     containerName?: string;
@@ -36,43 +29,50 @@ export interface ContainerInfo {
     kubernetesPod?: string;
     kubernetesNode?: string;
   };
+  containerType: "docker" | "podman" | "kubernetes" | "lxc" | "systemd-nspawn" | "other" | null;
+  // New enhanced detection
+  isContainer: boolean;
+  // Backward compatibility
+  isDocker: boolean;
+  mountPoints: DockerMount[];
+  orchestrator: "kubernetes" | "docker-compose" | "docker-swarm" | "podman-compose" | null;
 }
 
 export interface SystemInfo {
-  platform: string;
-  platformName: string;
   defaultShell: string;
-  pathSeparator: string;
-  isWindows: boolean;
-  isMacOS: boolean;
-  isLinux: boolean;
   docker: ContainerInfo;
-  isDXT: boolean;
-  nodeInfo?: {
-    version: string;
-    path: string;
-    npmVersion?: string;
-  };
-  pythonInfo?: {
-    available: boolean;
-    command: string;
-    version?: string;
-  };
-  processInfo: {
-    pid: number;
-    arch: string;
-    platform: string;
-    versions: NodeJS.ProcessVersions;
-  };
   examplePaths: {
     home: string;
     temp: string;
     absolute: string;
     accessible?: string[];
   };
+  isDXT: boolean;
+  isLinux: boolean;
+  isMacOS: boolean;
+  isWindows: boolean;
+  nodeInfo?: {
+    version: string;
+    path: string;
+    npmVersion?: string;
+  };
+  pathSeparator: string;
+  platform: string;
+  platformName: string;
+  processInfo: {
+    pid: number;
+    arch: string;
+    platform: string;
+    versions: NodeJS.ProcessVersions;
+  };
+  pythonInfo?: {
+    available: boolean;
+    command: string;
+    version?: string;
+  };
 }
 
-// 1. Detect container environment and type ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Detect container environment ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function detectContainerEnvironment(): { isContainer: boolean; containerType: ContainerInfo["containerType"]; orchestrator: ContainerInfo["orchestrator"] } {
   // Method 1: Check environment variables first (most reliable when set)
 
@@ -186,7 +186,7 @@ function detectContainerEnvironment(): { isContainer: boolean; containerType: Co
   return { isContainer: false, containerType: null, orchestrator: null };
 }
 
-// 2. Discover container mount points ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Discover container mounts ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function discoverContainerMounts(isContainer: boolean): DockerMount[] {
   const mounts: DockerMount[] = [];
 
@@ -367,7 +367,7 @@ function discoverContainerMounts(isContainer: boolean): DockerMount[] {
   return mounts;
 }
 
-// 3. Get container environment information ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Get container environment ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getContainerEnvironment(containerType: ContainerInfo["containerType"]): ContainerInfo["containerEnvironment"] {
   const env: ContainerInfo["containerEnvironment"] = {};
 
@@ -462,7 +462,7 @@ function getContainerEnvironment(containerType: ContainerInfo["containerType"]):
   return Object.keys(env).length > 0 ? env : undefined;
 }
 
-// 4. Detect Node.js installation and version from current process ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Detect node info ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function detectNodeInfo(): SystemInfo["nodeInfo"] {
   try {
     // Get Node.js version from current process
@@ -484,7 +484,7 @@ function detectNodeInfo(): SystemInfo["nodeInfo"] {
   }
 }
 
-// 5. Detect Python installation and version and put on systeminfo.pythonInfo ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Detect python info ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function detectPythonInfo(): SystemInfo["pythonInfo"] {
   // Try python commands in order of preference
   const pythonCommands =
@@ -516,7 +516,7 @@ function detectPythonInfo(): SystemInfo["pythonInfo"] {
   return { available: false, command: "" };
 }
 
-// 6. Get comprehensive system information for tool prompts ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Get system info ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function getSystemInfo(): SystemInfo {
   const platform = os.platform();
   const isWindows = platform === "win32";
@@ -646,7 +646,3 @@ export function getSystemInfo(): SystemInfo {
     examplePaths,
   };
 }
-
-// Generate OS-specific guidance for tool prompts
-
-export {getDevelopmentToolGuidance, getOSSpecificGuidance, getPathGuidance} from "@cores/runtime/runtime-guidance";

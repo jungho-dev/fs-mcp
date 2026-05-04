@@ -6,89 +6,89 @@
  */
 
 import type {ChildProcess} from "node:child_process";
-import type {FilteredStdioServerTransport} from "@cores/transport/transport-stdio-transport";
 import type {PreviewFileType} from "@assets/readers/readers-filetypes";
+import type {FilteredStdioServerTransport} from "@cores/transport/transport-stdio-transport";
 
 declare global {
   var mcpTransport: FilteredStdioServerTransport | undefined;
 }
 export interface ProcessInfo {
-  pid: number;
   command: string;
   cpu: string;
   memory: string;
+  pid: number;
 }
 export interface TerminalSession {
+  isBlocked: boolean;
+  lastReadIndex: number;
+  outputLines: string[];
   pid: number;
   process: ChildProcess;
-  outputLines: string[];
-  lastReadIndex: number;
-  isBlocked: boolean;
   startTime: Date;
 }
 export interface CommandExecutionResult {
-  pid: number;
-  output: string;
   isBlocked: boolean;
+  output: string;
+  pid: number;
   timingInfo?: TimingInfo;
 }
 export interface TimingInfo {
-  startTime: number;
   endTime: number;
-  totalDurationMs: number;
   exitReason: "early_exit_quick_pattern" | "early_exit_periodic_check" | "process_exit" | "timeout";
   firstOutputTime?: number;
   lastOutputTime?: number;
-  timeToFirstOutputMs?: number;
   outputEvents?: OutputEvent[];
+  startTime: number;
+  timeToFirstOutputMs?: number;
+  totalDurationMs: number;
 }
 export interface OutputEvent {
-  timestamp: number;
   deltaMs: number;
-  source: "stdout" | "stderr" | "periodic_poll";
   length: number;
-  snippet: string;
   matchedPattern?: string;
+  snippet: string;
+  source: "stdout" | "stderr" | "periodic_poll";
+  timestamp: number;
 }
 export interface ActiveSession {
-  pid: number;
   isBlocked: boolean;
+  pid: number;
   runtime: number;
 }
 export interface CompletedSession {
-  pid: number;
-  output: string;
-  exitCode: number | null;
-  startTime: Date;
   endTime: Date;
+  exitCode: number | null;
+  output: string;
+  pid: number;
+  startTime: Date;
 }
 export interface ServerResponseContent {
-  type: string;
-  text?: string;
   data?: string;
   mimeType?: string;
+  text?: string;
+  type: string;
 }
 export type DirectoryListingEntryType = "file" | "dir" | "warning" | "denied" | "unknown";
 
 export interface FilePreviewDirectoryEntry {
-  type: DirectoryListingEntryType;
   path: string;
   text: string;
+  type: DirectoryListingEntryType;
 }
 export interface FilePreviewStructuredContent {
+  entries?: FilePreviewDirectoryEntry[];
   fileName: string;
   filePath: string;
   fileType: PreviewFileType;
   imageData?: string;
+  listing?: string;
   mimeType?: string;
   textContent?: string;
-  entries?: FilePreviewDirectoryEntry[];
-  listing?: string;
 }
 export interface ServerResult {
-  content: ServerResponseContent[];
-  structuredContent?: FilePreviewStructuredContent | Record<string, unknown>;
-  isError?: boolean;
   _meta?: Record<string, unknown>;
+  content: ServerResponseContent[];
+  isError?: boolean;
+  structuredContent?: FilePreviewStructuredContent | Record<string, unknown>;
 }
 export type ToolHandler<T = unknown> = (args: T) => Promise<ServerResult>;

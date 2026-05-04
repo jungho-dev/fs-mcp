@@ -2,35 +2,45 @@
 
 ## Overview
 
-`@jungho-dev/fs-mcp` is a stdio-based Model Context Protocol server for local command execution, filesystem access, code search, configuration management, and surgical file editing.
+`@jungho-dev/fs-mcp` is a stdio-based Model Context Protocol server for filesystem work, local process
+sessions, ripgrep-backed search, runtime configuration, git workflows, and surgical file editing.
 
-The current source layout is domain-oriented. Runtime bootstrap stays in `src/cores`, reusable readers and types live in `src/assets`, MCP adapters are split across `src/controllers`, `src/schemas`, `src/tools`, and `src/cores/responses`, and domain behavior lives under `src/features`.
+This package is not a VS Code extension bundle. It is the MCP server that VS Code MCP clients, such as Cline,
+Claude Dev, or other MCP-capable extensions, launch through stdio.
 
-## Install
+## VS Code Extension Usage
+
+Install the package globally:
 
 ```bash
 npm install -g @jungho-dev/fs-mcp
 ```
 
+Or install with Bun:
+
 ```bash
 bun add -g @jungho-dev/fs-mcp
 ```
 
-## MCP Client Configuration
+Add the server to the MCP configuration used by your VS Code extension:
 
 ```json
 {
   "mcpServers": {
     "fs-mcp": {
-      "command": "fs-mcp"
+      "command": "fs-mcp",
+      "args": []
     }
   }
 }
 ```
 
-### Codex Configuration
+If the extension cannot resolve global binaries, set `command` to the absolute `fs-mcp` executable path.
+The server uses stdio only and does not open a network listener.
 
-Add this server to `~/.codex/config.toml` when the package is installed globally with Bun.
+## Codex Configuration
+
+Add this server to `~/.codex/config.toml` when the package is installed globally:
 
 ```toml
 [mcp_servers.fs-mcp]
@@ -43,42 +53,61 @@ args = []
 
 ## Main Capabilities
 
-* Filesystem tools for reading, writing, listing, moving, and inspecting files.
-* Process tools for starting commands, reading output, and managing sessions.
-* Search tools backed by ripgrep with result pagination.
-* Edit tools for exact and fuzzy search/replace operations.
-* Runtime configuration tools for command policy and filesystem access boundaries.
+- Filesystem tools for reading, writing, listing, moving, renaming, and inspecting files.
+- Batch filesystem tools with compact result previews to avoid duplicating large payloads in extension output.
+- Process tools for starting commands, reading output, interacting with sessions, and killing processes.
+- Search tools backed by `@vscode/ripgrep` with pagination, session listing, and stop controls.
+- Edit tools for exact block edits, fuzzy diagnostics, and preview-oriented edit responses.
+- Git tools for repository status, history, branch, stash, tag, worktree, and remote operations.
+- Runtime configuration tools for command policy, shell selection, allowed directories, and system information.
+
+## Client Compatibility
+
+- VS Code-oriented clients are detected by client metadata or client name.
+- Notifications are suppressed for Cline, VS Code, and Claude Dev style clients to keep stdio JSON-RPC clean.
+- Resource and resource-template list handlers return empty lists so Visual Studio initialization succeeds.
+- File previews include structured metadata for text, markdown, HTML, image, and directory responses.
 
 ## Repository Structure
 
 ```text
 project root/
 |-- src/
-|   |-- app/          runtime bootstrap, stdio transport, server assembly
-|   |-- assets/       shared readers, type declarations, small utilities
-|   |-- controllers/  MCP request handlers and batch helpers
-|   |-- domains/      config, edit, filesystem, process, and search behavior
-|   |-- responses/    tool error and result normalization
+|   |-- assets/       shared readers, type declarations, and cross-domain utilities
+|   |-- controllers/  MCP request handlers and batch response helpers
+|   |-- cores/        runtime, transport, server assembly, and response normalization
+|   |-- features/     config, edit, filesystem, git, process, and search behavior
 |   |-- schemas/      request argument validation schemas
 |   `-- tools/        tool catalog entries and dispatcher
-`-- tests/            build-backed smoke and integration tests
+`-- tests/            compiled-output contract and smoke tests
 ```
 
-## Naming Contract
+## Response Shape
 
-* Source and test filenames use kebab-case, for example `tools-filesystem.ts` and `controllers-search.ts`.
-* Shared type definitions live under `src/assets/type`.
-* Korean companion documents use kebab-case names: `readme-ko.md` and `architecture-ko.md`.
+Every dispatched tool result is normalized by `src/cores/responses/responses-tool-result.ts`.
+The visible `content[0].text` preview is capped for chat and extension transcript readability.
+The structured payload keeps machine-readable data, while batch helpers compact large nested inputs and duplicate
+text payloads before they are embedded in batch results.
+
+## Development
+
+```bash
+bun run typecheck
+bun run build
+bun run test
+```
+
+`bun run verify` runs type checking, build, source-boundary checks, package-shape checks, tool-surface checks,
+optimization-report checks, and the test suite.
 
 ## Documentation
 
-* English README: `readme.md`
-* Korean README: `readme-ko.md`
-* English architecture: `architecture.md`
-* Korean architecture: `architecture-ko.md`
+- English README: `readme.md`
+- Korean README: `readme-ko.md`
+- English architecture: `architecture.md`
+- Korean architecture: `architecture-ko.md`
 
 ## Packaging Notes
 
-The npm package exposes the `fs-mcp` binary through `out/index.js`. Source files, tests, fixtures, and local runtime artifacts remain development-only surfaces.
-
-`bun run verify:source` confirms the optimized source boundary and removed runtime helpers stay out of executable text surfaces. `bun run verify:shape` confirms that root `src` and `out` exist, `dist` is absent, and generated `.map` or `.d.ts` artifacts are not present outside dependencies. `bun run verify:tools` confirms that the compiled tool catalog and dispatcher registry expose the same tool names.
+The npm package exposes the `fs-mcp` binary through `out/index.mjs`. Source files, tests, fixtures, and local
+runtime artifacts remain development-only surfaces.

@@ -11,7 +11,19 @@ import { ensureDirectoryExists, ensureProtectedBranchConfirmation, getCurrentBra
 import { getChangedFilesBetween, getConflictedFiles, getRecentTags } from "@features/git/git-status-support";
 import type { GitArgsMap, GitToolOutput } from "@features/git/git-types";
 
-// 1. git_clean ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+const CLEAN_REMOVED_PATTERN = /(?:Would remove|Removing)\s+(.+)$/;
+const TRAILING_PATH_SEPARATOR_PATTERN = /[\\/]+$/;
+const AHEAD_PATTERN = /ahead (\d+)/;
+const BEHIND_PATTERN = /behind (\d+)/;
+const STASH_INDEX_PATTERN = /stash@\{(\d+)\}/;
+const STASH_CREATED_PATTERN = /stash@\{\d+\}/;
+const STASH_BRANCH_PREFIX_PATTERN = /^On\s+/;
+const WORKTREE_BLOCK_SPLIT_PATTERN = /\r?\n\r?\n/;
+// biome-ignore lint/security/noSecrets: Git for-each-ref format atoms are not secrets.
+const BRANCH_LIST_FORMAT = "%(refname:short)%x1f%(HEAD)%x1f%(objectname)%x1f%(upstream:short)%x1f%(upstream:track)";
+const STASH_LIST_FORMAT = "%gd%x1f%ct%x1f%gs";
+
+// 1. Run git clean ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitClean(input: GitArgsMap["git_clean"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const cleanResult = await runGitCommand(["clean", ...(input.dryRun ? ["-n"] : []), ...(input.force ? ["-f"] : []), ...(input.directories ? ["-d"] : []), ...(input.ignored ? ["-x"] : [])], { cwd });
@@ -19,12 +31,12 @@ export async function runGitClean(input: GitArgsMap["git_clean"]): Promise<GitTo
   const directoriesRemoved: string[] = [];
 
   splitLines(cleanResult.stdout).forEach((line) => {
-    const match = line.match(/(?:Would remove|Removing)\s+(.+)$/);
+    const match = line.match(CLEAN_REMOVED_PATTERN);
 
     if (match) {
       const candidate = match[1].trim();
       if (candidate.endsWith("/") || candidate.endsWith("\\")) {
-      	directoriesRemoved.push(candidate.replace(/[\\/]+$/, ""));
+        directoriesRemoved.push(candidate.replace(TRAILING_PATH_SEPARATOR_PATTERN, ""));
       }
       else {
       	filesRemoved.push(candidate);
@@ -40,7 +52,7 @@ export async function runGitClean(input: GitArgsMap["git_clean"]): Promise<GitTo
   };
 }
 
-// 2. git_branch ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Run git branch ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitBranch(input: GitArgsMap["git_branch"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const mode = input.mode ?? "list";
@@ -81,7 +93,7 @@ export async function runGitBranch(input: GitArgsMap["git_branch"]): Promise<Git
       ...(typeof input.merged === "string" ? [`--merged=${input.merged}`] : []),
       ...(input.noMerged === true ? ["--no-merged"] : []),
       ...(typeof input.noMerged === "string" ? [`--no-merged=${input.noMerged}`] : []),
-      "--format=%(refname:short)%x1f%(HEAD)%x1f%(objectname)%x1f%(upstream:short)%x1f%(upstream:track)",
+      `--format=${BRANCH_LIST_FORMAT}`,
       ...(input.remote ? ["refs/remotes"] : input.all ? ["refs/heads", "refs/remotes"] : ["refs/heads"]),
     ],
     { cwd },
@@ -89,8 +101,8 @@ export async function runGitBranch(input: GitArgsMap["git_branch"]): Promise<Git
   const branches = splitLines(branchResult.stdout).map((line) => {
     const parts = line.split("\x1f");
     const counts = parts[4] ?? "";
-    const aheadMatch = counts.match(/ahead (\d+)/);
-    const behindMatch = counts.match(/behind (\d+)/);
+    const aheadMatch = counts.match(AHEAD_PATTERN);
+    const behindMatch = counts.match(BEHIND_PATTERN);
 
     return {
       name: parts[0],
@@ -109,7 +121,7 @@ export async function runGitBranch(input: GitArgsMap["git_branch"]): Promise<Git
   };
 }
 
-// 3. git_checkout ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Run git checkout ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitCheckout(input: GitArgsMap["git_checkout"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
 
@@ -125,7 +137,7 @@ export async function runGitCheckout(input: GitArgsMap["git_checkout"]): Promise
   return { success: true, target: input.target, branchCreated: false, filesModified: [] };
 }
 
-// 4. git_cherry_pick ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Run git cherry pick ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitCherryPick(input: GitArgsMap["git_cherry_pick"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
 
@@ -160,7 +172,7 @@ export async function runGitCherryPick(input: GitArgsMap["git_cherry_pick"]): Pr
   };
 }
 
-// 5. git_merge ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Run git merge ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitMerge(input: GitArgsMap["git_merge"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const previousHead = await getHeadCommit(cwd);
@@ -180,7 +192,7 @@ export async function runGitMerge(input: GitArgsMap["git_merge"]): Promise<GitTo
   };
 }
 
-// 6. git_rebase ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Run git rebase ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitRebase(input: GitArgsMap["git_rebase"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const mode = input.mode ?? "start";
@@ -219,7 +231,7 @@ export async function runGitRebase(input: GitArgsMap["git_rebase"]): Promise<Git
   };
 }
 
-// 7. git_reset ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Run git reset ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitReset(input: GitArgsMap["git_reset"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const mode = input.mode ?? "mixed";
@@ -251,24 +263,24 @@ export async function runGitReset(input: GitArgsMap["git_reset"]): Promise<GitTo
   };
 }
 
-// 8. git_stash ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Run git stash ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitStash(input: GitArgsMap["git_stash"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const mode = input.mode ?? "push";
 
   if (mode === "list") {
-    const listResult = await runGitCommand(["stash", "list", ...(input.limit ? [`--max-count=${String(input.limit)}`] : []), "--format=%gd%x1f%ct%x1f%gs"], { cwd, allowFailure: true });
+    const listResult = await runGitCommand(["stash", "list", ...(input.limit ? [`--max-count=${String(input.limit)}`] : []), `--format=${STASH_LIST_FORMAT}`], { cwd, allowFailure: true });
     const stashes = splitLines(listResult.stdout).map((line) => {
       const parts = line.split("\x1f");
       const ref = parts[0];
-      const indexMatch = ref.match(/stash@\{(\d+)\}/);
+      const indexMatch = ref.match(STASH_INDEX_PATTERN);
 
       return {
         ref,
         index: Number.parseInt(indexMatch?.[1] ?? "0", 10),
         description: parts[2],
         timestamp: Number.parseInt(parts[1], 10),
-        branch: parts[2].includes(":") ? parts[2].split(":")[0].replace(/^On\s+/, "") : "unknown",
+        branch: parts[2].includes(":") ? parts[2].split(":")[0].replace(STASH_BRANCH_PREFIX_PATTERN, "") : "unknown",
       };
     });
 
@@ -296,7 +308,7 @@ export async function runGitStash(input: GitArgsMap["git_stash"]): Promise<GitTo
     };
   }
   const pushResult = await runGitCommand(["stash", "push", ...(input.includeUntracked ? ["--include-untracked"] : []), ...(input.keepIndex ? ["--keep-index"] : []), ...(input.message ? ["-m", input.message] : [])], { cwd });
-  const createdMatch = pushResult.stdout.match(/stash@\{\d+\}/);
+  const createdMatch = pushResult.stdout.match(STASH_CREATED_PATTERN);
 
   return {
     success: true,
@@ -305,7 +317,7 @@ export async function runGitStash(input: GitArgsMap["git_stash"]): Promise<GitTo
   };
 }
 
-// 9. git_tag ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Run git tag ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitTag(input: GitArgsMap["git_tag"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const mode = input.mode ?? "list";
@@ -363,7 +375,7 @@ export async function runGitTag(input: GitArgsMap["git_tag"]): Promise<GitToolOu
   };
 }
 
-// 10. git_worktree ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Run git worktree ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitWorktree(input: GitArgsMap["git_worktree"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const mode = input.mode ?? "list";
@@ -371,7 +383,7 @@ export async function runGitWorktree(input: GitArgsMap["git_worktree"]): Promise
   if (mode === "list") {
     const listResult = await runGitCommand(["worktree", "list", "--porcelain"], { cwd, allowFailure: true });
     const blocks = listResult.stdout
-      .split(/\r?\n\r?\n/)
+      .split(WORKTREE_BLOCK_SPLIT_PATTERN)
       .map((entry) => entry.trim())
       .filter((entry) => entry.length > 0);
     const worktrees = blocks.map((block) => {

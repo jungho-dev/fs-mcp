@@ -12,7 +12,9 @@ import type {ProcessInfo, ServerResult} from "@assets/type/common";
 import {KillProcessArgsSchema} from "@schemas/schemas-process";
 
 const execAsync = promisify(exec);
+const PROCESS_COLUMN_SPLIT_PATTERN = /\\s+/;
 
+// 1. List processes ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function listProcesses(): Promise<ServerResult> {
   const command = os.platform() === "win32" ? "tasklist" : "ps aux";
   try {
@@ -22,7 +24,7 @@ export async function listProcesses(): Promise<ServerResult> {
       .slice(1)
       .filter(Boolean)
       .map((line) => {
-        const parts = line.split(/\s+/);
+        const parts = line.split(PROCESS_COLUMN_SPLIT_PATTERN);
         return {
           command: parts.at(-1),
           cpu: parts[2],
@@ -47,6 +49,7 @@ export async function listProcesses(): Promise<ServerResult> {
     };
   }
 }
+// 2. Kill process ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function killProcess(args: unknown): Promise<ServerResult> {
   const parsed = KillProcessArgsSchema.safeParse(args);
   if (!parsed.success) {

@@ -23,25 +23,28 @@ let textHandler: TextFileHandler | null = null;
 let binaryHandler: BinaryFileHandler | null = null;
 let docxHandler: DocxFileHandler | null = null;
 
-// 1. Initialize handlers (lazy initialization) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Get image handler ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getImageHandler(): ImageFileHandler {
   if (!imageHandler) {
   	imageHandler = new ImageFileHandler();
   }
   return imageHandler;
 }
+// 2. Get text handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getTextHandler(): TextFileHandler {
   if (!textHandler) {
   	textHandler = new TextFileHandler();
   }
   return textHandler;
 }
+// 3. Get binary handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getBinaryHandler(): BinaryFileHandler {
   if (!binaryHandler) {
   	binaryHandler = new BinaryFileHandler();
   }
   return binaryHandler;
 }
+// 4. Get docx handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getDocxHandler(): DocxFileHandler {
   if (!docxHandler) {
   	docxHandler = new DocxFileHandler();
@@ -59,6 +62,7 @@ function getDocxHandler(): DocxFileHandler {
 // 4. Text files (default)
 // @param filePath File path to get handler for
 // @returns FileHandler instance that can handle this file
+// 5. Get file handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getFileHandler(filePath: string): Promise<FileHandler> {
   // Check DOCX first (extension-based, sync)
   if (getDocxHandler().canHandle(filePath)) {
@@ -79,6 +83,7 @@ export async function getFileHandler(filePath: string): Promise<FileHandler> {
 // Delegates to ImageFileHandler.canHandle to avoid duplicating extension logic
 // @param path File path
 // @returns true if file is an image format
+// 6. Is image file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function isImageFile(path: string): boolean {
   return getImageHandler().canHandle(path);
 }

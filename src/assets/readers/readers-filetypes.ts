@@ -16,6 +16,7 @@ export const TEXT_PREVIEW_EXTENSIONS = new Set([".txt", ".text", ".log", ".json"
 
 const TEXT_PREVIEW_BASENAMES = new Set([".env", ".gitignore", ".gitattributes", "dockerfile", "makefile"]);
 
+// 1. Resolve preview file type ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function resolvePreviewFileType(filePath: string): PreviewFileType {
   const normalizedPath = filePath.toLowerCase();
   const extension = path.extname(normalizedPath);

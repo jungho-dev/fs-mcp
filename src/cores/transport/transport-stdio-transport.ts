@@ -21,9 +21,11 @@ interface LogNotification {
     data: unknown;
   };
 }
+// 1. Is structured log data ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isStructuredLogData(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+// 2. Create log payload ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createLogPayload(message: string, data?: unknown): string | Record<string, unknown> {
   if (data === undefined) {
   	return message;
@@ -33,6 +35,7 @@ function createLogPayload(message: string, data?: unknown): string | Record<stri
   }
   return {data, message};
 }
+// 3. Format log argument ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function formatLogArgument(value: unknown): string {
   if (typeof value === "object" && value !== null) {
     try {
@@ -44,12 +47,14 @@ function formatLogArgument(value: unknown): string {
   }
   return String(value);
 }
+// 4. Write to stdout ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function writeToStdout(write: typeof process.stdout.write, chunk: string | Uint8Array, encodingOrCallback?: BufferEncoding | StdoutWriteCallback, callback?: StdoutWriteCallback): boolean {
   const writeArgs = callback !== undefined ? [chunk, encodingOrCallback, callback] : encodingOrCallback !== undefined ? [chunk, encodingOrCallback] : [chunk];
   return Reflect.apply(write, process.stdout, writeArgs) as boolean;
 }
 // 1. Enhanced StdioServerTransport that wraps console output in valid JSON-RPC structures ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // instead of filtering them out. This prevents crashes while maintaining debug visibility.
+// 5. Filtered stdio server transport ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export class FilteredStdioServerTransport extends StdioServerTransport {
   private readonly originalConsole: {
     log: typeof console.log;
@@ -68,6 +73,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
   private clientName: string = "unknown";
   private disableNotifications: boolean = false;
 
+  // 6. Constructor ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   constructor() {
     super();
 
@@ -91,7 +97,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
     // Note: We defer the initialization notification until enableNotifications() is called
     // to ensure MCP protocol compliance - notifications must not be sent before initialization
   }
-  // 2. Call this method after MCP initialization is complete to enable JSON-RPC notifications ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 7. Enable notifications ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public enableNotifications(): void {
     this.isInitialized = true;
 
@@ -124,6 +130,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
   }
   // 3. Configure client-specific behavior ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   // Call this BEFORE enableNotifications()
+  // 8. Configure for client ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public configureForClient(clientName: string): void {
     this.clientName = clientName.toLowerCase();
 
@@ -134,13 +141,16 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
     }
   }
   // Check if notifications are enabled
+  // 9. Is notifications enabled ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public get isNotificationsEnabled(): boolean {
     return this.isInitialized;
   }
   // Get the current count of buffered messages
+  // 10. Buffered message count ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public get bufferedMessageCount(): number {
     return this.messageBuffer.length;
   }
+  // 11. Setup console redirection ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private setupConsoleRedirection(): void {
     console.log = (...args: unknown[]) => {
       if (this.isInitialized) {
@@ -208,6 +218,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
       }
     };
   }
+  // 12. Setup stdout filtering ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private setupStdoutFiltering(): void {
     process.stdout.write = (buffer: string | Uint8Array, encodingOrCallback?: BufferEncoding | StdoutWriteCallback, callback?: StdoutWriteCallback): boolean => {
       const encoding = typeof encodingOrCallback === "string" ? encodingOrCallback : undefined;
@@ -245,6 +256,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
       return writeToStdout(this.originalStdoutWrite, buffer, encoding, resolvedCallback);
     };
   }
+  // 13. Send log notification ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private sendLogNotification(level: LogLevel, args: unknown[]): void {
     // Skip if notifications are disabled (e.g., for Cline)
     if (this.disableNotifications) {
@@ -290,6 +302,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
   }
   // 4. Public method to send log notifications from anywhere in the application ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   // Now properly buffers messages before MCP initialization to avoid breaking stdio protocol
+  // 14. Send log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public sendLog(level: LogLevel, message: string, data?: unknown): void {
     // Skip if notifications are disabled (e.g., for Cline)
     if (this.disableNotifications) {
@@ -332,7 +345,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
       writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fallbackNotification)}\n`);
     }
   }
-  // 5. Send a progress notification (useful for long-running operations) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 15. Send progress ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public sendProgress(token: string, value: number, total?: number): void {
     // Don't send progress before initialization - would break MCP protocol
     if (!this.isInitialized) {
@@ -365,7 +378,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
       writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fallbackNotification)}\n`);
     }
   }
-  // 6. Send a custom notification with any method name ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 16. Send custom notification ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public sendCustomNotification(method: string, params: unknown): void {
     // Don't send custom notifications before initialization - would break MCP protocol
     if (!this.isInitialized) {
@@ -394,7 +407,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
       writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fallbackNotification)}\n`);
     }
   }
-  // 7. Cleanup method to restore original console methods if needed ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 17. Cleanup ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public cleanup(): void {
     if (this.originalConsole) {
     	console.log = this.originalConsole.log;

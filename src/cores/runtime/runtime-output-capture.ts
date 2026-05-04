@@ -5,6 +5,7 @@
  * @since 2026-05-02
  */
 
+// 1. Sanitize error ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function sanitizeError(error: unknown): { message: string; code?: string } {
   let message = "Unknown error";
   let code: string | undefined;

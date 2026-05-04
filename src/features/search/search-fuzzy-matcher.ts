@@ -15,6 +15,7 @@ import {distance} from "fastest-levenshtein";
 // @param end End index in the text (default: text.length)
 // @param parentDistance Best distance found so far (default: Infinity)
 // @returns Object with start and end indices, matched value, and Levenshtein distance
+// 1. Recursive fuzzy index of ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function recursiveFuzzyIndexOf(
   text: string,
   query: string,
@@ -79,6 +80,7 @@ export function recursiveFuzzyIndexOf(
 // @param end End index in the text
 // @param parentDistance Best distance found so far
 // @returns Object with start and end indices, matched value, and Levenshtein distance
+// 2. Iterative reduction ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function iterativeReduction(
   text: string,
   query: string,
@@ -140,6 +142,7 @@ function iterativeReduction(
 // @param a First string
 // @param b Second string
 // @returns Similarity ratio (0-1)
+// 3. Get similarity ratio ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function getSimilarityRatio(a: string, b: string): number {
   const maxLength = Math.max(a.length, b.length);
   if (maxLength === 0) {

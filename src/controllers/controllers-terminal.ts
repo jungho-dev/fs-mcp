@@ -17,31 +17,31 @@ import {
   StartProcessesArgsSchema,
 } from "@schemas/schemas-process";
 
-// 1. Handle start_process command (improved execute_command) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Handle start process ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStartProcess(args: unknown): Promise<ServerResult> {
   const parsed = StartProcessArgsSchema.parse(args);
   return startProcess(parsed);
 }
-// 2. Handle read_process_output command (improved read_output) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Handle read process output ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleReadProcessOutput(args: unknown): Promise<ServerResult> {
   const parsed = ReadProcessOutputArgsSchema.parse(args);
   return readProcessOutput(parsed);
 }
-// 3. Handle interact_with_process command (improved send_input) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Handle interact with process ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleInteractWithProcess(args: unknown): Promise<ServerResult> {
   return interactWithProcess(args);
 }
-// 4. Handle force_terminate command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Handle force terminate ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleForceTerminate(args: unknown): Promise<ServerResult> {
   const parsed = ForceTerminateArgsSchema.parse(args);
   return forceTerminate(parsed);
 }
-// 5. Handle list_sessions command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Handle list sessions ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleListSessions(): Promise<ServerResult> {
   return listSessions();
 }
 
-// 6. Handle start_processes command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Handle start processes ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStartProcesses(args: unknown): Promise<ServerResult> {
   const parsed = StartProcessesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleStartProcess(item));
@@ -50,7 +50,7 @@ export async function handleStartProcesses(args: unknown): Promise<ServerResult>
   return response;
 }
 
-// 7. Handle read_process_outputs command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Handle read process outputs ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleReadProcessOutputs(args: unknown): Promise<ServerResult> {
   const parsed = ReadProcessOutputsArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleReadProcessOutput(item));
@@ -59,7 +59,7 @@ export async function handleReadProcessOutputs(args: unknown): Promise<ServerRes
   return response;
 }
 
-// 8. Handle interact_with_processes command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Handle interact with processes ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleInteractWithProcesses(args: unknown): Promise<ServerResult> {
   const parsed = InteractWithProcessesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleInteractWithProcess(item));

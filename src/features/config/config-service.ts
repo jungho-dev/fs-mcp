@@ -18,6 +18,7 @@ import {GetConfigValueArgsSchema, SetConfigValueArgsSchema} from "@schemas/schem
 const ALLOWED_CONFIG_KEYS = new Set(CONFIG_FIELD_KEYS);
 const SHELL_LINE_SEPARATOR_REGEX = /\r?\n/;
 
+// 1. Normalize array config value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function normalizeArrayConfigValue(key: string, value: unknown): unknown {
   let normalizedValue = value;
 
@@ -26,6 +27,7 @@ function normalizeArrayConfigValue(key: string, value: unknown): unknown {
   }
   return normalizedValue;
 }
+// 2. Path exists ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function pathExists(pathValue: string): Promise<boolean> {
   try {
     await access(pathValue, fsConstants.X_OK);
@@ -35,6 +37,7 @@ async function pathExists(pathValue: string): Promise<boolean> {
     return false;
   }
 }
+// 3. Detect available shells ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function detectAvailableShells(systemInfo: ReturnType<typeof getSystemInfo>): Promise<string[]> {
   const detected = new Set<string>();
   const add = (shell: string): void => {
@@ -107,6 +110,7 @@ async function detectAvailableShells(systemInfo: ReturnType<typeof getSystemInfo
   }
   return [...detected];
 }
+// 4. Format config value ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function formatConfigValue(value: unknown): string {
   const serializedValue = JSON.stringify(value, null, 2);
 
@@ -115,6 +119,7 @@ function formatConfigValue(value: unknown): string {
   }
   return String(value);
 }
+// 5. Create system info snapshot ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createSystemInfoSnapshot(): ReturnType<typeof getSystemInfo> & {
   memory: {
     rss: string;
@@ -138,7 +143,7 @@ function createSystemInfoSnapshot(): ReturnType<typeof getSystemInfo> & {
     },
   };
 }
-// 1. Get a single config entry ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Get config value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getConfigValue(args: unknown): Promise<ServerResult> {
   console.error(`getConfigValue called with args: ${JSON.stringify(args)}`);
   const parsed = GetConfigValueArgsSchema.safeParse(args);
@@ -217,7 +222,7 @@ export async function getConfigValue(args: unknown): Promise<ServerResult> {
     };
   }
 }
-// 2. Set a specific config value ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Set config value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function setConfigValue(args: unknown): Promise<ServerResult> {
   console.error(`setConfigValue called with args: ${JSON.stringify(args)}`);
   try {

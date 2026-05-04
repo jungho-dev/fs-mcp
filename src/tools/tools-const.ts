@@ -5,7 +5,8 @@
  * @since 2026-05-03
  */
 
-import {getOSSpecificGuidance, getPathGuidance, getSystemInfo} from "@cores/runtime/runtime-info";
+import {getOSSpecificGuidance, getPathGuidance} from "@cores/runtime/runtime-guidance";
+import {getSystemInfo} from "@cores/runtime/runtime-info";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export type ToolCatalogEntry = {

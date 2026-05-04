@@ -10,7 +10,11 @@ import { getCurrentGitWorkingDirectory, resolveRepositoryPath } from "@features/
 import { gatherRepositorySnapshot, getRecentTags, parseRefs } from "@features/git/git-status-support";
 import type { GitArgsMap, GitToolOutput } from "@features/git/git-types";
 
-// 1. git_blame ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+const BLAME_HEADER_PATTERN = /^[0-9a-f]{40}\\s+\\d+\\s+\\d+/;
+const REFLOG_FORMAT = "%gD%x1f%H%x1f%gs%x1f%ct";
+const CHANGELOG_COMMIT_FORMAT = "%h%x1f%an%x1f%ct%x1f%d%x1f%s%x1e";
+
+// 1. Run git blame ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitBlame(input: GitArgsMap["git_blame"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const blameResult = await runGitCommand(["blame", "--line-porcelain", ...(input.ignoreWhitespace ? ["-w"] : []), ...(input.startLine && input.endLine ? ["-L", `${String(input.startLine)},${String(input.endLine)}`] : []), input.filePath], { cwd });
@@ -21,7 +25,7 @@ export async function runGitBlame(input: GitArgsMap["git_blame"]): Promise<GitTo
   let currentLineNumber = 0;
 
   splitLines(blameResult.stdout).forEach((line) => {
-    if (/^[0-9a-f]{40}\s+\d+\s+\d+/.test(line)) {
+    if (BLAME_HEADER_PATTERN.test(line)) {
     	const parts = line.split(" ");
       currentHash = parts[0];
       currentLineNumber = Number.parseInt(parts[2], 10);
@@ -51,12 +55,12 @@ export async function runGitBlame(input: GitArgsMap["git_blame"]): Promise<GitTo
   };
 }
 
-// 2. git_reflog ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Run git reflog ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitReflog(input: GitArgsMap["git_reflog"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const ref = input.ref ?? "HEAD";
   const maxCount = input.maxCount ?? 20;
-  const reflogResult = await runGitCommand(["reflog", "show", ref, `--max-count=${String(maxCount)}`, "--format=%gD%x1f%H%x1f%gs%x1f%ct"], { cwd, allowFailure: true });
+  const reflogResult = await runGitCommand(["reflog", "show", ref, `--max-count=${String(maxCount)}`, `--format=${REFLOG_FORMAT}`], { cwd, allowFailure: true });
   const entries = splitLines(reflogResult.stdout).map((line) => {
     const parts = line.split("\x1f");
     return {
@@ -76,14 +80,14 @@ export async function runGitReflog(input: GitArgsMap["git_reflog"]): Promise<Git
   };
 }
 
-// 3. git_changelog_analyze ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Run git changelog analyze ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitChangelogAnalyze(input: GitArgsMap["git_changelog_analyze"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const branch = input.branch ?? "HEAD";
   const maxCommits = input.maxCommits ?? 20;
   const maxTags = input.maxTags ?? 20;
   const historyRange = input.sinceTag ? `${input.sinceTag}..${branch}` : branch;
-  const commitResult = await runGitCommand(["log", historyRange, `--max-count=${String(maxCommits)}`, "--pretty=format:%h%x1f%an%x1f%ct%x1f%d%x1f%s%x1e"], { cwd, allowFailure: true });
+  const commitResult = await runGitCommand(["log", historyRange, `--max-count=${String(maxCommits)}`, `--pretty=format:${CHANGELOG_COMMIT_FORMAT}`], { cwd, allowFailure: true });
   const commits = commitResult.stdout
     .split("\x1e")
     .map((entry) => entry.trim())
@@ -114,7 +118,7 @@ export async function runGitChangelogAnalyze(input: GitArgsMap["git_changelog_an
   };
 }
 
-// 4. git_wrapup_instructions ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Run git wrapup instructions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitWrapupInstructions(input: GitArgsMap["git_wrapup_instructions"]): Promise<GitToolOutput> {
   const createTag = input.createTag ?? true;
   const instructions = ["Acceptance criteria:", "1. Inspect git diff and understand each change before grouping commits.", "2. Update changelog or release metadata when this repository requires it.", "3. Run the smallest real verification set for the changed surface.", "4. Create atomic Conventional Commit messages only after verification passes.", "5. Confirm the working tree is clean after commits.", ...(createTag ? ["6. Create an annotated semantic-version tag only when release tagging is in scope."] : []), "Stop and report if conflicts, unexplained changes, or failing checks remain."].join("\n");

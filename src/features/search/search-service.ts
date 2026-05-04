@@ -70,6 +70,7 @@ export interface SearchSessionOptions {
 }
 // 1. Search Session Manager - handles ripgrep processes like terminal sessions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Supports both file search and content search with progressive results
+// 1. Search manager ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export class SearchManager {
   private readonly sessions = new Map<string, SearchSession>();
   private sessionCounter = 0;
@@ -300,7 +301,7 @@ export class SearchManager {
       totalResults: session.totalMatches + session.totalContextLines,
     }));
   }
-  // 5. Determine if DOCX search should be included based on context ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 2. Should include docx search ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private shouldIncludeDocxSearch(filePattern?: string, rootPath?: string): boolean {
     if (rootPath) {
       const lowerPath = rootPath.toLowerCase();
@@ -318,6 +319,7 @@ export class SearchManager {
   }
   // 6. Search DOCX files for content matches ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   // Extracts <w:t> text from document.xml and searches it
+  // 3. Search docx files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private async searchDocxFiles(rootPath: string, pattern: string, ignoreCase: boolean, maxResults?: number, filePattern?: string, _literalSearch?: boolean): Promise<SearchResult[]> {
     const results: SearchResult[] = [];
 
@@ -347,6 +349,7 @@ export class SearchManager {
       	break;
       }
       try {
+        // biome-ignore lint/performance/noAwaitInLoops: DOCX files are scanned sequentially to honor maxResults short-circuiting.
         const buf = await fs.readFile(filePath);
         const zip = new PizZip(buf);
 
@@ -391,11 +394,12 @@ export class SearchManager {
     }
     return results;
   }
-  // 7. Find all DOCX files in a directory recursively ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 4. Find docx files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private async findDocxFiles(rootPath: string): Promise<string[]> {
     const docxFiles: string[] = [];
     const isDocx = (name: string) => name.toLowerCase().endsWith(".docx");
 
+    // 5. Walk ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
     async function walk(dir: string): Promise<void> {
       try {
         const entries = await fs.readdir(dir, {withFileTypes: true});
@@ -403,6 +407,7 @@ export class SearchManager {
           const fullPath = path.join(dir, entry.name);
           if (entry.isDirectory()) {
             if (!entry.name.startsWith(".") && entry.name !== "node_modules") {
+              // biome-ignore lint/performance/noAwaitInLoops: Recursive walk is sequential to keep traversal bounded and simple.
             	await walk(fullPath);
             }
           }
@@ -429,7 +434,7 @@ export class SearchManager {
     }
     return docxFiles;
   }
-  // 8. Extract context around a match for display (show surrounding text) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 6. Get match context ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private getMatchContext(text: string, matchStart: number, matchLength: number): string {
     const start = Math.max(0, matchStart - MATCH_CONTEXT_CHARS);
     const end = Math.min(text.length, matchStart + matchLength + MATCH_CONTEXT_CHARS);
@@ -462,13 +467,15 @@ export class SearchManager {
   }
   // 11. Detect if pattern looks like an exact filename ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   // (has file extension and no glob wildcards)
+  // 7. Is exact filename ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private isExactFilename(pattern: string): boolean {
     return EXACT_FILENAME_PATTERN.test(pattern) && !this.isGlobPattern(pattern);
   }
-  // 12. Detect if pattern contains glob wildcards ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 8. Is glob pattern ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private isGlobPattern(pattern: string): boolean {
     return GLOB_META_CHARS.some((char) => pattern.includes(char));
   }
+  // 9. Build ripgrep args ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private buildRipgrepArgs(options: SearchSessionOptions): string[] {
     const args: string[] = [];
 
@@ -547,6 +554,7 @@ export class SearchManager {
     }
     return args;
   }
+  // 10. Setup process handlers ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private setupProcessHandlers(session: SearchSession): void {
     const {process} = session;
 
@@ -635,6 +643,7 @@ export class SearchManager {
       // Rely on cleanupSessions(maxAge) only; no per-session timer
     });
   }
+  // 11. Process buffered output ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private processBufferedOutput(session: SearchSession, isFinal: boolean = false): void {
     const lines = session.buffer.split(SEARCH_LINE_SEPARATOR);
 
@@ -681,6 +690,7 @@ export class SearchManager {
       }
     }
   }
+  // 12. Parse line ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private parseLine(line: string, searchType: "files" | "content"): SearchResult | null {
     if (searchType === "content") {
       // Parse JSON output from content search
@@ -727,7 +737,7 @@ export class SearchManager {
   }
 }
 
-// 1. Glob-to-RegExp conversion ―――――――――――――――――――――――――――――――――
+// 13. Build glob pattern reg exp ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function buildGlobPatternRegExp(pattern: string): RegExp {
   const regexPattern = pattern.replace(GLOB_REGEX_ESCAPE_PATTERN, "\\$&").replace(GLOB_ASTERISK_PATTERN, ".*");
   return new RegExp(`^${regexPattern}$`, "i");
@@ -739,7 +749,7 @@ export const searchManager = new SearchManager();
 // Cleanup management - run on fixed schedule
 let cleanupInterval: NodeJS.Timeout | null = null;
 
-// 2. Cleanup interval bootstrap ―――――――――――――――――――――――――――――――――
+// 14. Start cleanup if needed ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function startCleanupIfNeeded(): void {
   if (!cleanupInterval) {
     cleanupInterval = setInterval(() => {

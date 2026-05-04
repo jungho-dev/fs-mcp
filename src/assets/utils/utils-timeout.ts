@@ -12,6 +12,7 @@
 // @param operationName Name of the operation (for logs)
 // @param defaultValue Value to return if the operation times out
 // @returns Promise that resolves with the operation result or the default value on timeout
+// 1. With timeout ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function withTimeout<T>(operation: Promise<T>, timeoutMs: number, operationName: string, defaultValue: T): Promise<T> {
   // Don't sanitize operation name for logs; callers decide how to report it.
   return new Promise((resolve, reject) => {

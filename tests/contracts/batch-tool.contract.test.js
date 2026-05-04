@@ -19,6 +19,8 @@ const TEST_DIR = path.join(os.tmpdir(), "fs-mcp-batch-tool-contract");
 const CREATED_DIR = path.join(TEST_DIR, "created-dir");
 const SOURCE_FILE = path.join(TEST_DIR, "source.txt");
 const EXTRA_FILE = path.join(TEST_DIR, "extra.txt");
+const LARGE_FILE = path.join(TEST_DIR, "large.txt");
+const LARGE_WRITTEN_FILE = path.join(TEST_DIR, "large-written.txt");
 const MOVED_FILE = path.join(TEST_DIR, "moved.txt");
 const RENAMED_FILE = path.join(TEST_DIR, "renamed.txt");
 const WRITTEN_FILE = path.join(TEST_DIR, "written.txt");
@@ -26,6 +28,11 @@ const DISPLAY_LINE_SPLIT_PATTERN = /\r?\n/;
 const OLD_VALUE_PATTERN = /old value/;
 const EXTRA_VALUE_PATTERN = /extra value/;
 const CREATED_DIR_PATTERN = /created-dir/;
+const FULL_PAYLOAD_OMITTED_PATTERN = /full payload omitted here/;
+const READING_TWO_LINES_PATTERN = /Reading 2 lines/;
+const THREE_HUNDRED_X_PATTERN = /x{300}/;
+const THREE_HUNDRED_Y_PATTERN = /y{300}/;
+const LARGE_TEXT = `${"x".repeat(300)}\n${"y".repeat(300)}\n`;
 
 function parseToolOutput(result) {
   assert.equal(result.content.length, 1);
@@ -53,6 +60,7 @@ async function setup() {
   await fs.mkdir(TEST_DIR, { recursive: true });
   await fs.writeFile(SOURCE_FILE, "old value\n", "utf8");
   await fs.writeFile(EXTRA_FILE, "extra value\n", "utf8");
+  await fs.writeFile(LARGE_FILE, LARGE_TEXT, "utf8");
   await configManager.updateConfig({
     ...originalConfig,
     allowedDirectories: [TEST_DIR],
@@ -76,6 +84,17 @@ async function testReadFilesSurface() {
   assert.equal(batchResults[0].ok, true);
   assert.match(batchResults[0].result.content[0].text, OLD_VALUE_PATTERN);
   assert.match(batchResults[1].result.content[0].text, EXTRA_VALUE_PATTERN);
+
+  const largeResult = await dispatchToolCall("read_files", {
+    paths: [LARGE_FILE],
+  });
+  const largeBatchResults = extractBatchResults(largeResult);
+
+  assert.equal(largeBatchResults[0].ok, true);
+  assert.match(largeBatchResults[0].result.content[0].text, FULL_PAYLOAD_OMITTED_PATTERN);
+  assert.match(largeBatchResults[0].result.structuredContent.textContent, READING_TWO_LINES_PATTERN);
+  assert.match(largeBatchResults[0].result.structuredContent.textContent, THREE_HUNDRED_X_PATTERN);
+  assert.match(largeBatchResults[0].result.structuredContent.textContent, THREE_HUNDRED_Y_PATTERN);
 }
 
 async function testCreateAndListDirectorySurface() {
@@ -112,6 +131,21 @@ async function testWriteMoveInfoAndEditSurface() {
   });
   const writeBatchResults = extractBatchResults(writeResult);
   assert.equal(writeBatchResults[0].ok, true);
+
+  const largeWriteResult = await dispatchToolCall("write_files", {
+    items: [
+      {
+        content: LARGE_TEXT,
+        mode: "rewrite",
+        path: LARGE_WRITTEN_FILE,
+      },
+    ],
+  });
+  const largeWriteBatchResults = extractBatchResults(largeWriteResult);
+
+  assert.equal(largeWriteBatchResults[0].ok, true);
+  assert.equal(largeWriteBatchResults[0].input.content.omitted, true);
+  assert.equal(largeWriteBatchResults[0].input.content.originalLength, LARGE_TEXT.length);
 
   const editResult = await dispatchToolCall("edit_blocks", {
     items: [

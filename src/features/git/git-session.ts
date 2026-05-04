@@ -7,46 +7,46 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import {runGitCommand, PROTECTED_BRANCHES} from "@features/git/git-runtime";
 import {validatePath} from "@features/filesystem/filesystem-service";
+import {PROTECTED_BRANCHES, runGitCommand } from "@features/git/git-runtime";
 
 let currentGitWorkingDirectory: string | null = null;
 
-// 1. session get ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Get current git working directory ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function getCurrentGitWorkingDirectory(): string | null {
   return currentGitWorkingDirectory;
 }
 
-// 2. session set ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Set current git working directory ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function setCurrentGitWorkingDirectory(workingDirectory: string | null): void {
   currentGitWorkingDirectory = workingDirectory;
 }
 
-// 3. existing path resolve ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Resolve existing path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function resolveExistingPath(requestedPath: string): Promise<string> {
   const resolvedPath = await validatePath(requestedPath);
   return resolvedPath;
 }
 
-// 4. creation path resolve ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Resolve creation path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function resolveCreationPath(requestedPath: string): Promise<string> {
   const validatedPath = await validatePath(requestedPath);
   const resolvedPath = path.resolve(validatedPath);
   return resolvedPath;
 }
 
-// 5. directory ensure ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Ensure directory exists ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function ensureDirectoryExists(targetPath: string): Promise<void> {
   await fs.mkdir(targetPath, { recursive: true });
 }
 
-// 6. repository root lookup ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Get repository root ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getRepositoryRoot(cwd: string): Promise<string> {
   const commandResult = await runGitCommand(["rev-parse", "--show-toplevel"], { cwd });
   return commandResult.stdout.trim();
 }
 
-// 7. repository path resolve ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Resolve repository path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function resolveRepositoryPath(requestedPath?: string): Promise<string> {
   const basePath = requestedPath ?? currentGitWorkingDirectory;
 
@@ -57,33 +57,33 @@ export async function resolveRepositoryPath(requestedPath?: string): Promise<str
   return await getRepositoryRoot(await resolveExistingPath(basePath));
 }
 
-// 8. creation base resolve ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Resolve creation base path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function resolveCreationBasePath(requestedPath?: string): Promise<string> {
   const basePath = requestedPath ?? currentGitWorkingDirectory ?? process.cwd();
   return await resolveCreationPath(basePath);
 }
 
-// 9. head commit lookup ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Get head commit ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getHeadCommit(cwd: string): Promise<string | null> {
   const commandResult = await runGitCommand(["rev-parse", "HEAD"], { cwd, allowFailure: true });
   const headCommit = commandResult.exitCode === 0 ? commandResult.stdout.trim() : "";
   return headCommit.length > 0 ? headCommit : null;
 }
 
-// 10. current branch lookup ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Get current branch ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getCurrentBranch(cwd: string): Promise<string | null> {
   const commandResult = await runGitCommand(["branch", "--show-current"], { cwd, allowFailure: true });
   const branchName = commandResult.stdout.trim();
   return branchName.length > 0 ? branchName : null;
 }
 
-// 11. protected branch guard ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11. Is protected branch ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function isProtectedBranch(branchName: string | null): boolean {
   const protectedBranch = branchName !== null && PROTECTED_BRANCHES.has(branchName.toLowerCase());
   return protectedBranch;
 }
 
-// 12. protected branch confirm ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 12. Ensure protected branch confirmation ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function ensureProtectedBranchConfirmation(cwd: string, confirmed: boolean | undefined, reason: string): Promise<void> {
   const branchName = await getCurrentBranch(cwd);
 

@@ -1,8 +1,8 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { configManager } from "../../../out/features/config/config-store.js";
 import { handleEditBlock } from "../../../out/controllers/controllers-edit.js";
+import { configManager } from "../../../out/features/config/config-store.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);

@@ -18,10 +18,11 @@ type DeferredStartupMessage = {
 
 const deferredMessages: DeferredStartupMessage[] = [];
 
-// 1. startup log buffer ――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Defer log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function deferLog(level: LogLevel, message: string): void {
   deferredMessages.push({level, message});
 }
+// 2. Flush startup logs ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function flushStartupLogs(transport: Pick<FilteredStdioServerTransport, "sendLog">, messages: DeferredStartupMessage[]): DeferredStartupMessage[] {
   const sentMessages: DeferredStartupMessage[] = [];
   while (messages.length > 0) {
@@ -35,7 +36,7 @@ export function flushStartupLogs(transport: Pick<FilteredStdioServerTransport, "
   return sentMessages;
 }
 
-// 2. MCP server bootstrap ――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Run server ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runServer () {
   try {
     // Create transport FIRST so all logging gets properly buffered
@@ -132,7 +133,7 @@ export async function runServer () {
   }
 }
 
-// 3. entrypoint wrapper ―――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Start server ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function startServer () {
   void runServer().catch (async (error) => {
     const errorMessage = error instanceof Error ? error.message : String(error);

@@ -573,6 +573,7 @@
       "!**/.cache/**",
       "!**/out/**",
       "!**/.out/**",
+      "!tests/fixtures/**",
       "!**/vendor/**",
       "!coverage/**",
       "!**/.nuxt/**",

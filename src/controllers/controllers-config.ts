@@ -8,15 +8,16 @@
 import type { ServerResult } from "@assets/type/common";
 import { createBatchToolResponse, runParallelBatch } from "@controllers/controllers-batch";
 import { CONFIG_QUERY_KEYS, type ConfigQueryKey } from "@features/config/config-metadata";
-import { configManager } from "@features/config/config-store";
 import { getConfigValue, setConfigValue } from "@features/config/config-service";
+import { configManager } from "@features/config/config-store";
 import { GetConfigsArgsSchema, SetConfigValuesArgsSchema } from "@schemas/schemas-config";
 
+// 1. Create default get config items ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createDefaultGetConfigItems(): Array<{ key: ConfigQueryKey }> {
   return CONFIG_QUERY_KEYS.map((key) => ({ key }));
 }
 
-// 1. Handle get_configs command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Handle get configs ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleGetConfigs(args: unknown): Promise<ServerResult> {
   const parsed = GetConfigsArgsSchema.parse(args ?? {});
   const items = parsed.items ?? createDefaultGetConfigItems();
@@ -28,7 +29,7 @@ export async function handleGetConfigs(args: unknown): Promise<ServerResult> {
   return response;
 }
 
-// 2. Handle set_config_values command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Handle set config values ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleSetConfigValues(args: unknown): Promise<ServerResult> {
   const parsed = SetConfigValuesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => setConfigValue(item));

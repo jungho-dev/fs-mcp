@@ -32,6 +32,7 @@ const FUZZY_THRESHOLD = 0.7;
 // @param expected The string that was searched for
 // @param actual The string that was found
 // @returns Character code statistics
+// 1. Get character code data ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getCharacterCodeData(
   expected: string,
   actual: string,
@@ -88,6 +89,7 @@ function getCharacterCodeData(
     uniqueCount: characterCodes.size,
   };
 }
+// 2. Perform search replace ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function performSearchReplace(filePath: string, block: SearchReplace, expectedReplacements: number=1): Promise<ServerResult> {
   // Get file extension for diagnostics using path module.
   const fileExtension = path.extname(filePath).toLowerCase();
@@ -306,6 +308,7 @@ RECOMMENDATION: For large search/replace operations, consider breaking them into
 // @param expected The string that was searched for
 // @param actual The string that was found
 // @returns A formatted string showing character-level differences
+// 3. Highlight differences ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function highlightDifferences(expected: string, actual: string): string {
   // Implementation of a simplified character-level diff
 
@@ -336,6 +339,7 @@ function highlightDifferences(expected: string, actual: string): string {
 // 1. Text files: String replacement (old_string/new_string)
 // - Uses fuzzy matching for resilience
 // - Handles expected_replacements parameter
+// 4. Handle edit block ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleEditBlock(args: unknown): Promise<ServerResult> {
   const parsed = EditBlockArgsSchema.parse(args);
 

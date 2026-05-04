@@ -25,12 +25,12 @@ export interface ClientInfo {
 
 const WINDOWS_ALLOWED_DIRECTORIES_SEPARATOR = ";";
 
-// 1. Get configured allowed directories from environment ―――――――――――――――――――――――――――――――――――――――――――
+// 1. Get configured allowed directories ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getConfiguredAllowedDirectories(): string[] | undefined {
   const rawAllowedDirectories = process.env.FS_MCP_ALLOWED_DIRECTORIES;
 
   if (rawAllowedDirectories === undefined) {
-    return undefined;
+    return ;
   }
   return rawAllowedDirectories
     .split(os.platform() === "win32" ? WINDOWS_ALLOWED_DIRECTORIES_SEPARATOR : path.delimiter)
@@ -38,7 +38,7 @@ function getConfiguredAllowedDirectories(): string[] | undefined {
     .filter((directory) => directory.length > 0);
 }
 
-// 2. Get default allowed directories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Get default allowed directories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getDefaultAllowedDirectories(): string[] {
   const configuredDirectories = getConfiguredAllowedDirectories();
 
@@ -48,7 +48,7 @@ function getDefaultAllowedDirectories(): string[] {
   return [];
 }
 
-// 3. Get default shell ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Get default shell ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getDefaultShell(): string {
   if (os.platform() === "win32") {
     return "pwsh.exe";
@@ -61,7 +61,7 @@ function getDefaultShell(): string {
   return os.platform() === "darwin" ? "/bin/zsh" : "/bin/sh";
 }
 
-// 4. Get default blocked commands ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Get default blocked commands ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getDefaultBlockedCommands(): string[] {
   return [
     // Disk and partition management
@@ -109,7 +109,7 @@ function getDefaultBlockedCommands(): string[] {
   ];
 }
 
-// 5. Singleton config manager for the server ――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Config manager ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 class ConfigManager {
   private config: ServerConfig = {};
   private initialized = false;
@@ -130,6 +130,7 @@ class ConfigManager {
   }
 
   // 5-3. Create default runtime configuration ――――――――――――――――――――――――――――――――――――――――――
+  // 6. Get default config ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private getDefaultConfig(): ServerConfig {
     return {
       allowedDirectories: getDefaultAllowedDirectories(),

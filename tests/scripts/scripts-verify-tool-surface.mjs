@@ -8,6 +8,7 @@
 import { CONFIG_TOOL_CATALOG } from "../../out/tools/tools-config.js";
 import { getDispatchableToolNames } from "../../out/tools/tools-dispatcher.js";
 import { FILESYSTEM_TOOL_CATALOG } from "../../out/tools/tools-filesystem.js";
+import { GIT_TOOL_CATALOG } from "../../out/tools/tools-git.js";
 import { PROCESS_TOOL_CATALOG } from "../../out/tools/tools-process.js";
 
 // 1. collection helpers ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -34,7 +35,7 @@ function difference(left, right) {
 
 // 2. tool surface check ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function verifyToolSurface() {
-  const catalogNames = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG]
+  const catalogNames = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...GIT_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG]
     .map((tool) => tool.name)
     .sort();
   const dispatchableNames = getDispatchableToolNames().sort();
