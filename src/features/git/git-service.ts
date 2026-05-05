@@ -11,7 +11,7 @@ import path from "node:path";
 import { promisify } from "node:util";
 import type { ServerResult } from "@assets/type/common";
 import { createToolTextResponse } from "@cores/responses/responses-tool-result";
-import { validatePath } from "@features/filesystem/filesystem-service";
+import { readFileInternal, validatePath } from "@features/filesystem/filesystem-service";
 import type { GIT_INPUT_SCHEMAS, GitToolName } from "@schemas/schemas-git";
 import type { z } from "zod";
 
@@ -240,20 +240,42 @@ function splitLines(text: string): string[] {
 function normalizeCommitMessage(message: string): string {
   return message.replace(ESCAPED_NEWLINE_PATTERN, "\n").replace(ESCAPED_CARRIAGE_RETURN_PATTERN, "\r").replace(ESCAPED_TAB_PATTERN, "\t");
 }
-// 6. Resolve existing path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Resolve git text argument ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function resolveGitTextArgument(value: string | undefined, filePath: string | undefined, offset: number, length: number | undefined, label: string): Promise<string | undefined> {
+  if (value !== undefined) {
+    return value;
+  }
+  if (filePath === undefined) {
+    return undefined;
+  }
+  const text = await readFileInternal(filePath, offset, length);
+  if (text.length === 0) {
+    throw new Error(`${label} file is empty: ${filePath}`);
+  }
+  return text;
+}
+// 7. Require git text argument ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function requireGitTextArgument(value: string | undefined, filePath: string | undefined, offset: number, length: number | undefined, label: string): Promise<string> {
+  const text = await resolveGitTextArgument(value, filePath, offset, length, label);
+  if (text === undefined) {
+    throw new Error(`${label} is required`);
+  }
+  return text;
+}
+// 8. Resolve existing path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function resolveExistingPath(requestedPath: string): Promise<string> {
   return await validatePath(requestedPath);
 }
-// 7. Resolve creation path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Resolve creation path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function resolveCreationPath(requestedPath: string): Promise<string> {
   const validatedPath = await validatePath(requestedPath);
   return path.resolve(validatedPath);
 }
-// 8. Ensure directory exists ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Ensure directory exists ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function ensureDirectoryExists(targetPath: string): Promise<void> {
   await fs.mkdir(targetPath, { recursive: true });
 }
-// 9. Get repository root ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11. Get repository root ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function getRepositoryRoot(cwd: string): Promise<string> {
   const commandResult = await runGitCommand(["rev-parse", "--show-toplevel"], { cwd });
   return commandResult.stdout.trim();
@@ -716,11 +738,12 @@ async function runGitAdd(input: GitArgsMap["git_add"]): Promise<Record<string, u
 // 39. Run git commit ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitCommit(input: GitArgsMap["git_commit"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
+  const commitMessage = await requireGitTextArgument(input.message, input.messagePath, input.messageOffset, input.messageLength, "message");
 
   if (input.filesToStage && input.filesToStage.length > 0) {
     await runGitCommand(["add", ...input.filesToStage], { cwd });
   }
-  const commitArgs = ["commit", "-m", normalizeCommitMessage(input.message), ...(input.amend ? ["--amend"] : []), ...(input.allowEmpty ? ["--allow-empty"] : []), ...(input.noVerify ? ["--no-verify"] : []), ...(input.author ? ["--author", `${input.author.name} <${input.author.email}>`] : [])];
+  const commitArgs = ["commit", "-m", normalizeCommitMessage(commitMessage), ...(input.amend ? ["--amend"] : []), ...(input.allowEmpty ? ["--allow-empty"] : []), ...(input.noVerify ? ["--no-verify"] : []), ...(input.author ? ["--author", `${input.author.name} <${input.author.email}>`] : [])];
   let signingWarning: string | undefined;
   let commitResult = await runGitCommand(commitArgs, { cwd, allowFailure: true });
 
@@ -1033,8 +1056,9 @@ async function runGitFetch(input: GitArgsMap["git_fetch"]): Promise<Record<strin
 // 48. Run git merge ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runGitMerge(input: GitArgsMap["git_merge"]): Promise<Record<string, unknown>> {
   const cwd = await resolveRepositoryPath(input.path);
+  const mergeMessage = await resolveGitTextArgument(input.message, input.messagePath, input.messageOffset, input.messageLength, "message");
   const previousHead = await getHeadCommit(cwd);
-  const mergeResult = await runGitCommand(["merge", ...(input.noFastForward ? ["--no-ff"] : []), ...(input.squash ? ["--squash"] : []), ...(input.message ? ["-m", input.message] : []), ...(input.strategy ? ["--strategy", input.strategy] : []), input.branch], { cwd, allowFailure: true });
+  const mergeResult = await runGitCommand(["merge", ...(input.noFastForward ? ["--no-ff"] : []), ...(input.squash ? ["--squash"] : []), ...(mergeMessage ? ["-m", mergeMessage] : []), ...(input.strategy ? ["--strategy", input.strategy] : []), input.branch], { cwd, allowFailure: true });
   const currentHead = await getHeadCommit(cwd);
   const conflictedFiles = await getConflictedFiles(cwd);
   const mergedFiles = previousHead && currentHead && previousHead !== currentHead ? await getChangedFilesBetween(cwd, previousHead, currentHead) : [];
@@ -1045,7 +1069,7 @@ async function runGitMerge(input: GitArgsMap["git_merge"]): Promise<Record<strin
     conflictedFiles,
     fastForward: mergeResult.exitCode === 0 && !input.squash && previousHead !== currentHead,
     mergedFiles,
-    message: input.message ?? (mergeResult.stdout.trim() || mergeResult.stderr.trim()),
+    message: mergeMessage ?? (mergeResult.stdout.trim() || mergeResult.stderr.trim()),
     strategy: input.strategy ?? "ort",
   };
 }
@@ -1273,7 +1297,8 @@ async function runGitStash(input: GitArgsMap["git_stash"]): Promise<Record<strin
       conflicts: conflictedFiles.length > 0,
     };
   }
-  const pushResult = await runGitCommand(["stash", "push", ...(input.includeUntracked ? ["--include-untracked"] : []), ...(input.keepIndex ? ["--keep-index"] : []), ...(input.message ? ["-m", input.message] : [])], { cwd });
+  const stashMessage = await resolveGitTextArgument(input.message, input.messagePath, input.messageOffset, input.messageLength, "message");
+  const pushResult = await runGitCommand(["stash", "push", ...(input.includeUntracked ? ["--include-untracked"] : []), ...(input.keepIndex ? ["--keep-index"] : []), ...(stashMessage ? ["-m", stashMessage] : [])], { cwd });
   const createdMatch = pushResult.stdout.match(STASH_CREATED_PATTERN);
 
   return {
@@ -1329,7 +1354,8 @@ async function runGitTag(input: GitArgsMap["git_tag"]): Promise<Record<string, u
   if (!input.tagName) {
   	throw new Error("tagName is required for create mode.");
   }
-  await runGitCommand(["tag", ...(input.force ? ["--force"] : []), ...(input.message || input.annotated ? ["-a"] : []), ...(input.message ? ["-m", input.message] : []), input.tagName, ...(input.commit ? [input.commit] : [])], { cwd });
+  const tagMessage = await resolveGitTextArgument(input.message, input.messagePath, input.messageOffset, input.messageLength, "message");
+  await runGitCommand(["tag", ...(input.force ? ["--force"] : []), ...(tagMessage || input.annotated ? ["-a"] : []), ...(tagMessage ? ["-m", tagMessage] : []), input.tagName, ...(input.commit ? [input.commit] : [])], { cwd });
 
   return {
     success: true,

@@ -9,6 +9,7 @@ import {platform} from "node:os";
 import type {OutputEvent, ServerResult, TimingInfo} from "@assets/type/common";
 import {capture} from "@cores/runtime/runtime-output-capture";
 import {configManager} from "@features/config/config-store";
+import {readFileInternal} from "@features/filesystem/filesystem-service";
 import {commandManager} from "@features/process/process-command-policy";
 import {analyzeProcessState, cleanProcessOutput, formatProcessStateMessage, type ProcessState} from "@features/process/process-repl-detector";
 import {terminalManager} from "@features/process/process-terminal-service";
@@ -19,6 +20,17 @@ type DiagnosticExitReason = TimingInfo["exitReason"] | "process_finished" | "no_
 type DiagnosticTimingInfo = Omit<TimingInfo, "exitReason"> & {
   exitReason: DiagnosticExitReason;
 };
+
+// 1. Resolve process text argument ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function resolveProcessTextArgument(value: string | undefined, filePath: string | undefined, offset: number, length: number | undefined, label: string): Promise<string> {
+  if (value !== undefined) {
+    return value;
+  }
+  if (filePath === undefined) {
+    throw new Error(`${label} or ${label}_path is required`);
+  }
+  return readFileInternal(filePath, offset, length);
+}
 
 // 1. Start a new process (renamed from execute_command) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Includes early detection of process waiting for input
@@ -32,26 +44,35 @@ export async function startProcess(args: unknown): Promise<ServerResult> {
       isError: true,
     };
   }
+  let commandToRun: string;
   try {
-    const commands = commandManager.extractCommands(parsed.data.command).join(", ");
+    commandToRun = await resolveProcessTextArgument(parsed.data.command, parsed.data.command_path, parsed.data.command_offset, parsed.data.command_length, "command");
+  }
+  catch (error) {
+    return {
+      content: [{text: `Error: ${error instanceof Error ? error.message : String(error)}`, type: "text" }],
+      isError: true,
+    };
+  }
+  try {
+    const commands = commandManager.extractCommands(commandToRun).join(", ");
     capture("server_start_process", {
-      command: commandManager.getBaseCommand(parsed.data.command),
+      command: commandManager.getBaseCommand(commandToRun),
       commands: commands,
     });
   }
   catch (_error) {
     capture("server_start_process", {
-      command: commandManager.getBaseCommand(parsed.data.command),
+      command: commandManager.getBaseCommand(commandToRun),
     });
   }
-  const isAllowed = await commandManager.validateCommand(parsed.data.command);
+  const isAllowed = await commandManager.validateCommand(commandToRun);
   if (!isAllowed) {
     return {
-      content: [{text: `Error: Command not allowed: ${parsed.data.command}`, type: "text" }],
+      content: [{text: `Error: Command not allowed: ${commandToRun}`, type: "text" }],
       isError: true,
     };
   }
-  const commandToRun = parsed.data.command;
 
   // Handle node:local - runs Node.js code directly on MCP server
   if (commandToRun.trim() === "node:local") {
@@ -306,7 +327,17 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
       isError: true,
     };
   }
-  const {pid, input, timeout_ms = 8000, wait_for_prompt = true, verbose_timing = false} = parsed.data;
+  const {pid, timeout_ms = 8000, wait_for_prompt = true, verbose_timing = false} = parsed.data;
+  let input: string;
+  try {
+    input = await resolveProcessTextArgument(parsed.data.input, parsed.data.input_path, parsed.data.input_offset, parsed.data.input_length, "input");
+  }
+  catch (error) {
+    return {
+      content: [{text: `Error: ${error instanceof Error ? error.message : String(error)}`, type: "text" }],
+      isError: true,
+    };
+  }
 
   // Check if this is a virtual Node session (node:local)
   const virtualNodeSession = getVirtualNodeSession(pid);

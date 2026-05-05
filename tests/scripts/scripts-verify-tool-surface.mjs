@@ -56,6 +56,14 @@ function verifyToolSurface() {
     failures.push(`Dispatchers missing from catalog: ${staleDispatchers.join(", ")}`);
   }
 
+  const toolsMissingArgsPath = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...GIT_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG]
+    .filter((tool) => !JSON.stringify(tool.inputSchema).includes("args_path"))
+    .map((tool) => tool.name)
+    .sort();
+  if (toolsMissingArgsPath.length > 0) {
+    failures.push(`Tools missing args_path schema: ${toolsMissingArgsPath.join(", ")}`);
+  }
+
   if (failures.length > 0) {
     console.error(failures.join("\n"));
     process.exitCode = 1;

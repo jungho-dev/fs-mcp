@@ -11,6 +11,7 @@ const OptionalRepoPathSchema = z.string().optional();
 const CommitRefSchema = z.string();
 const ConfirmSchema = z.enum(["Y", "y", "Yes", "yes"]);
 const ReviewTypeSchema = z.enum(["security", "features", "storyline", "gaps", "breaking_changes", "quality"]);
+const INLINE_TEXT_ARGUMENT_MAX_LENGTH = 2000;
 
 export const GIT_INPUT_SCHEMAS = {
   git_add: z
@@ -105,7 +106,10 @@ export const GIT_INPUT_SCHEMAS = {
   git_commit: z
     .object({
       path: OptionalRepoPathSchema,
-      message: z.string(),
+      message: z.string().max(INLINE_TEXT_ARGUMENT_MAX_LENGTH, "Use messagePath for long commit messages").optional(),
+      messagePath: z.string().optional(),
+      messageOffset: z.number().optional().default(0),
+      messageLength: z.number().optional(),
       author: z
         .object({
           name: z.string().min(1),
@@ -117,7 +121,10 @@ export const GIT_INPUT_SCHEMAS = {
       noVerify: z.boolean().optional(),
       filesToStage: z.array(z.string()).optional(),
     })
-    .strict(),
+    .strict()
+    .refine((args) => args.message !== undefined || args.messagePath !== undefined, {
+      message: "Either message or messagePath is required",
+    }),
   git_diff: z
     .object({
       path: OptionalRepoPathSchema,
@@ -169,7 +176,10 @@ export const GIT_INPUT_SCHEMAS = {
     .object({
       path: OptionalRepoPathSchema,
       branch: z.string(),
-      message: z.string().optional(),
+      message: z.string().max(INLINE_TEXT_ARGUMENT_MAX_LENGTH, "Use messagePath for long merge messages").optional(),
+      messagePath: z.string().optional(),
+      messageOffset: z.number().optional().default(0),
+      messageLength: z.number().optional(),
       noFastForward: z.boolean().optional(),
       squash: z.boolean().optional(),
       strategy: z.enum(["ort", "recursive", "octopus", "ours", "subtree"]).optional(),
@@ -257,7 +267,10 @@ export const GIT_INPUT_SCHEMAS = {
       path: OptionalRepoPathSchema,
       mode: z.enum(["list", "push", "pop", "apply", "drop", "clear"]).optional(),
       stashRef: z.string().optional(),
-      message: z.string().optional(),
+      message: z.string().max(INLINE_TEXT_ARGUMENT_MAX_LENGTH, "Use messagePath for long stash messages").optional(),
+      messagePath: z.string().optional(),
+      messageOffset: z.number().optional().default(0),
+      messageLength: z.number().optional(),
       includeUntracked: z.boolean().optional(),
       keepIndex: z.boolean().optional(),
       limit: z.number().int().positive().max(1000).optional(),
@@ -278,7 +291,10 @@ export const GIT_INPUT_SCHEMAS = {
       annotated: z.boolean().optional(),
       force: z.boolean().optional(),
       limit: z.number().int().positive().max(1000).optional(),
-      message: z.string().optional(),
+      message: z.string().max(INLINE_TEXT_ARGUMENT_MAX_LENGTH, "Use messagePath for long tag messages").optional(),
+      messagePath: z.string().optional(),
+      messageOffset: z.number().optional().default(0),
+      messageLength: z.number().optional(),
     })
     .strict(),
   git_worktree: z

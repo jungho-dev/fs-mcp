@@ -28,6 +28,7 @@ const TEST_GROUPS = {
     "./contracts/tool-result-response.contract.test.js",
     "./contracts/tool-routing.contract.test.js",
     "./contracts/tool-surface.contract.test.js",
+    "./contracts/version.contract.test.js",
   ],
   smoke: [
     "./smoke/config/allowed-directories.test.js",

@@ -6,7 +6,7 @@
  */
 
 import path from "node:path";
-import { runGitCommand, splitLines } from "@features/git/git-runtime";
+import { resolveGitTextArgument, runGitCommand, splitLines } from "@features/git/git-runtime";
 import { ensureDirectoryExists, ensureProtectedBranchConfirmation, getCurrentBranch, getHeadCommit, resolveCreationPath, resolveRepositoryPath } from "@features/git/git-session";
 import { getChangedFilesBetween, getConflictedFiles, getRecentTags } from "@features/git/git-status-support";
 import type { GitArgsMap, GitToolOutput } from "@features/git/git-types";
@@ -175,8 +175,9 @@ export async function runGitCherryPick(input: GitArgsMap["git_cherry_pick"]): Pr
 // 5. Run git merge ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitMerge(input: GitArgsMap["git_merge"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
+  const mergeMessage = await resolveGitTextArgument(input.message, input.messagePath, input.messageOffset, input.messageLength, "message");
   const previousHead = await getHeadCommit(cwd);
-  const mergeResult = await runGitCommand(["merge", ...(input.noFastForward ? ["--no-ff"] : []), ...(input.squash ? ["--squash"] : []), ...(input.message ? ["-m", input.message] : []), ...(input.strategy ? ["--strategy", input.strategy] : []), input.branch], { cwd, allowFailure: true });
+  const mergeResult = await runGitCommand(["merge", ...(input.noFastForward ? ["--no-ff"] : []), ...(input.squash ? ["--squash"] : []), ...(mergeMessage ? ["-m", mergeMessage] : []), ...(input.strategy ? ["--strategy", input.strategy] : []), input.branch], { cwd, allowFailure: true });
   const currentHead = await getHeadCommit(cwd);
   const conflictedFiles = await getConflictedFiles(cwd);
   const mergedFiles = previousHead && currentHead && previousHead !== currentHead ? await getChangedFilesBetween(cwd, previousHead, currentHead) : [];
@@ -187,7 +188,7 @@ export async function runGitMerge(input: GitArgsMap["git_merge"]): Promise<GitTo
     conflictedFiles,
     fastForward: mergeResult.exitCode === 0 && !input.squash && previousHead !== currentHead,
     mergedFiles,
-    message: input.message ?? (mergeResult.stdout.trim() || mergeResult.stderr.trim()),
+    message: mergeMessage ?? (mergeResult.stdout.trim() || mergeResult.stderr.trim()),
     strategy: input.strategy ?? "ort",
   };
 }
@@ -307,7 +308,8 @@ export async function runGitStash(input: GitArgsMap["git_stash"]): Promise<GitTo
       conflicts: conflictedFiles.length > 0,
     };
   }
-  const pushResult = await runGitCommand(["stash", "push", ...(input.includeUntracked ? ["--include-untracked"] : []), ...(input.keepIndex ? ["--keep-index"] : []), ...(input.message ? ["-m", input.message] : [])], { cwd });
+  const stashMessage = await resolveGitTextArgument(input.message, input.messagePath, input.messageOffset, input.messageLength, "message");
+  const pushResult = await runGitCommand(["stash", "push", ...(input.includeUntracked ? ["--include-untracked"] : []), ...(input.keepIndex ? ["--keep-index"] : []), ...(stashMessage ? ["-m", stashMessage] : [])], { cwd });
   const createdMatch = pushResult.stdout.match(STASH_CREATED_PATTERN);
 
   return {
@@ -365,7 +367,8 @@ export async function runGitTag(input: GitArgsMap["git_tag"]): Promise<GitToolOu
   if (!input.tagName) {
   	throw new Error("tagName is required for create mode.");
   }
-  await runGitCommand(["tag", ...(input.force ? ["--force"] : []), ...(input.message || input.annotated ? ["-a"] : []), ...(input.message ? ["-m", input.message] : []), input.tagName, ...(input.commit ? [input.commit] : [])], { cwd });
+  const tagMessage = await resolveGitTextArgument(input.message, input.messagePath, input.messageOffset, input.messageLength, "message");
+  await runGitCommand(["tag", ...(input.force ? ["--force"] : []), ...(tagMessage || input.annotated ? ["-a"] : []), ...(tagMessage ? ["-m", tagMessage] : []), input.tagName, ...(input.commit ? [input.commit] : [])], { cwd });
 
   return {
     success: true,

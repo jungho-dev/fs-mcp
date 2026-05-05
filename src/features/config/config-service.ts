@@ -13,10 +13,18 @@ import {getSystemInfo} from "@cores/runtime/runtime-info";
 import {currentClient} from "@cores/server/server-create-mcp-server";
 import {CONFIG_FIELD_DEFINITIONS, CONFIG_FIELD_KEYS, CONFIG_QUERY_DEFINITIONS, type ConfigQueryKey, isConfigFieldKey} from "@features/config/config-metadata";
 import {configManager} from "@features/config/config-store";
+import {readFileInternal} from "@features/filesystem/filesystem-service";
 import {GetConfigValueArgsSchema, SetConfigValueArgsSchema} from "@schemas/schemas-config";
 
 const ALLOWED_CONFIG_KEYS = new Set(CONFIG_FIELD_KEYS);
+const CONFIG_DEBUG_LOG_ENABLED = process.env.FS_MCP_DEBUG_CONFIG === "1";
 const SHELL_LINE_SEPARATOR_REGEX = /\r?\n/;
+
+function logConfigDebug(message: string): void {
+  if (CONFIG_DEBUG_LOG_ENABLED) {
+    console.error(message);
+  }
+}
 
 // 1. Normalize array config value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function normalizeArrayConfigValue(key: string, value: unknown): unknown {
@@ -145,11 +153,11 @@ function createSystemInfoSnapshot(): ReturnType<typeof getSystemInfo> & {
 }
 // 6. Get config value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getConfigValue(args: unknown): Promise<ServerResult> {
-  console.error(`getConfigValue called with args: ${JSON.stringify(args)}`);
+  logConfigDebug(`getConfigValue called with args: ${JSON.stringify(args)}`);
   const parsed = GetConfigValueArgsSchema.safeParse(args);
 
   if (!parsed.success) {
-    console.error(`Invalid arguments for get_configs: ${parsed.error}`);
+    logConfigDebug(`Invalid arguments for get_configs: ${parsed.error}`);
     return {
       content: [
         {
@@ -190,7 +198,7 @@ export async function getConfigValue(args: unknown): Promise<ServerResult> {
         isError: true,
       };
     }
-    console.error(`getConfigValue result for ${key}: ${formatConfigValue(value)}`);
+    logConfigDebug(`getConfigValue result for ${key}: ${formatConfigValue(value)}`);
     return {
       content: [
         {
@@ -224,11 +232,11 @@ export async function getConfigValue(args: unknown): Promise<ServerResult> {
 }
 // 7. Set config value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function setConfigValue(args: unknown): Promise<ServerResult> {
-  console.error(`setConfigValue called with args: ${JSON.stringify(args)}`);
+  logConfigDebug(`setConfigValue called with args: ${JSON.stringify(args)}`);
   try {
     const parsed = SetConfigValueArgsSchema.safeParse(args);
     if (!parsed.success) {
-      console.error(`Invalid arguments for set_config_value: ${parsed.error}`);
+      logConfigDebug(`Invalid arguments for set_config_value: ${parsed.error}`);
       return {
         content: [
           {
@@ -252,17 +260,18 @@ export async function setConfigValue(args: unknown): Promise<ServerResult> {
     }
     try {
       const fieldDefinition = CONFIG_FIELD_DEFINITIONS[parsed.data.key];
+      const rawValue = parsed.data.value ?? await readFileInternal(parsed.data.value_path ?? "", parsed.data.value_offset, parsed.data.value_length);
       // Parse string values that should be arrays or objects
-      let valueToStore = normalizeArrayConfigValue(parsed.data.key, parsed.data.value);
+      let valueToStore = normalizeArrayConfigValue(parsed.data.key, rawValue);
 
       // If the value is a string that looks like an array or object, try to parse it
       if (typeof valueToStore === "string" && (valueToStore.startsWith("[") || valueToStore.startsWith("{"))) {
         try {
           valueToStore = JSON.parse(valueToStore);
-          console.error(`Parsed string value to object/array: ${JSON.stringify(valueToStore)}`);
+          logConfigDebug(`Parsed string value to object/array: ${JSON.stringify(valueToStore)}`);
         }
         catch (parseError) {
-          console.error(`Failed to parse string as JSON, using as-is: ${parseError}`);
+          logConfigDebug(`Failed to parse string as JSON, using as-is: ${parseError}`);
         }
       }
       // Special handling for known array configuration keys
@@ -274,7 +283,7 @@ export async function setConfigValue(args: unknown): Promise<ServerResult> {
             valueToStore = parsedValue;
           }
           catch (parseError) {
-            console.error(`Failed to parse string as array for ${parsed.data.key}: ${parseError}`);
+            logConfigDebug(`Failed to parse string as array for ${parsed.data.key}: ${parseError}`);
             // If parsing failed and it's a single value, convert to an array with one item
             if (!originalString.includes("[")) {
             	valueToStore = [originalString];
@@ -287,14 +296,14 @@ export async function setConfigValue(args: unknown): Promise<ServerResult> {
         }
         // Ensure the value is an array after all our conversions
         if (!Array.isArray(valueToStore)) {
-          console.error(`Value for ${parsed.data.key} is still not an array, converting to array`);
+          logConfigDebug(`Value for ${parsed.data.key} is still not an array, converting to array`);
           valueToStore = [String(valueToStore)];
         }
       }
       await configManager.setValue(parsed.data.key, valueToStore);
       // Get the updated configuration to show the user
       const updatedConfig = await configManager.getConfig();
-      console.error(`setConfigValue: Successfully set ${parsed.data.key} to ${JSON.stringify(valueToStore)}`);
+      logConfigDebug(`setConfigValue: Successfully set ${parsed.data.key} to ${JSON.stringify(valueToStore)}`);
       return {
         content: [
           {

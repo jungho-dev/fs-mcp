@@ -8,6 +8,7 @@
 import type { ServerResult } from "@assets/type/common";
 import { createBatchToolResponse, runParallelBatch } from "@controllers/controllers-batch";
 import { capture } from "@cores/runtime/runtime-output-capture";
+import { readFileInternal } from "@features/filesystem/filesystem-service";
 import { searchManager } from "@features/search/search-service";
 import { GetMoreSearchResultsArgsSchema, GetSearchResultsArgsSchema, StartSearchArgsSchema, StartSearchesArgsSchema, StopSearchArgsSchema, StopSearchesArgsSchema } from "@schemas/schemas-search";
 
@@ -21,9 +22,10 @@ export async function handleStartSearch(args: unknown): Promise<ServerResult> {
     };
   }
   try {
+    const pattern = parsed.data.pattern ?? await readFileInternal(parsed.data.pattern_path ?? "", parsed.data.pattern_offset, parsed.data.pattern_length);
     const result = await searchManager.startSearch({
       rootPath: parsed.data.path,
-      pattern: parsed.data.pattern,
+      pattern: pattern,
       searchType: parsed.data.searchType,
       filePattern: parsed.data.filePattern,
       ignoreCase: parsed.data.ignoreCase,
@@ -38,7 +40,7 @@ export async function handleStartSearch(args: unknown): Promise<ServerResult> {
     const searchTypeText = parsed.data.searchType === "content" ? "content search" : "file search";
 
     let output = `Started ${searchTypeText} session: ${result.sessionId}\n`;
-    output += `Pattern: "${parsed.data.pattern}"\n`;
+    output += `Pattern: "${pattern}"\n`;
     output += `Path: ${parsed.data.path}\n`;
     output += `Status: ${result.isComplete ? "COMPLETED" : "RUNNING"}\n`;
     output += `Runtime: ${Math.round(result.runtime)}ms\n`;

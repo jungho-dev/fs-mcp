@@ -5,7 +5,7 @@
  * @since 2026-05-02
  */
 
-import type { Dirent } from "node:fs";
+import type { Dirent, Stats } from "node:fs";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -632,7 +632,36 @@ export async function moveFile(sourcePath: string, destinationPath: string): Pro
   const validDestPath = await validatePath(destinationPath);
   await fs.rename(validSourcePath, validDestPath);
 }
-// 21. Search files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 21. Remove path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export async function removePath(filePath: string, recursive: boolean = false, force: boolean = false): Promise<void> {
+  const validPath = await validatePath(filePath);
+  let stats: Stats;
+
+  try {
+    stats = await fs.lstat(validPath);
+  }
+  catch (error) {
+    const err = error as NodeJS.ErrnoException;
+    if (force && err.code === "ENOENT") {
+      await fs.rm(validPath, { force, recursive });
+      return;
+    }
+    throw error;
+  }
+  const isDirectory = stats.isDirectory();
+
+  capture("server_remove_path", {
+    isDirectory,
+    isFile: stats.isFile(),
+    recursive,
+  });
+  if (isDirectory && !recursive) {
+    await fs.rmdir(validPath);
+    return;
+  }
+  await fs.rm(validPath, { force, recursive });
+}
+// 22. Search files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function searchFiles(rootPath: string, pattern: string): Promise<string[]> {
   // Use the new search manager for better performance
   // This provides a temporary compatibility layer until we fully migrate to search sessions
@@ -689,7 +718,7 @@ export async function searchFiles(rootPath: string, pattern: string): Promise<st
   }
 }
 
-// 22. Append file search results ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 23. Append file search results ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function appendFileSearchResults(target: string[], searchResults: SearchResult[]): void {
   for (const searchResult of searchResults) {
     if (isFileSearchResult(searchResult)) {
@@ -698,27 +727,27 @@ function appendFileSearchResults(target: string[], searchResults: SearchResult[]
   }
 }
 
-// 23. Is file search result ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 24. Is file search result ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isFileSearchResult(searchResult: SearchResult): boolean {
   return searchResult.type === "file" && searchResult.file !== LAST_READ_MARKER_FILE;
 }
 
-// 24. Wait for search poll ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 25. Wait for search poll ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function waitForSearchPoll(): Promise<void> {
   await new Promise<void>((resolve) => setTimeout(resolve, SEARCH_POLL_INTERVAL_MS));
 }
 
-// 25. Is search compatibility timeout ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 26. Is search compatibility timeout ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isSearchCompatibilityTimeout(startTime: number): boolean {
   return Date.now() - startTime > SEARCH_COMPAT_TIMEOUT_MS;
 }
 
 // Keep the original Node.js implementation as fallback
-// 26. Search files node js ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 27. Search files node js ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function searchFilesNodeJS(rootPath: string, pattern: string): Promise<string[]> {
   const results: string[] = [];
 
-  // 27. Search ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 28. Search ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async function search(currentPath: string): Promise<void> {
     let entries: Dirent[];
     try {
@@ -767,7 +796,7 @@ async function searchFilesNodeJS(rootPath: string, pattern: string): Promise<str
     throw error;
   }
 }
-// 28. Get file info ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 29. Get file info ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getFileInfo(filePath: string): Promise<LegacyFileInfo> {
   const validPath = await validatePath(filePath);
 

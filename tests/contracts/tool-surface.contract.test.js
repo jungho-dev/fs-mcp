@@ -29,9 +29,19 @@ function testCatalogAndDispatcherAlignment() {
   assert.equal(new Set(catalogNames).size, catalogNames.length);
 }
 
-// 2. test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. shared args_path schema exposure ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function testArgsPathSchemaExposure() {
+  const tools = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG, ...GIT_TOOL_CATALOG];
+
+  for (const tool of tools) {
+    assert.equal(JSON.stringify(tool.inputSchema).includes("args_path"), true, `${tool.name} must expose args_path`);
+  }
+}
+
+// 3. test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function main() {
   testCatalogAndDispatcherAlignment();
+  testArgsPathSchemaExposure();
 }
 
 main();

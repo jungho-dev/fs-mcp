@@ -22,6 +22,12 @@ const SOURCE_FILE = path.join(TEST_DIR, "source.txt");
 const EXTRA_FILE = path.join(TEST_DIR, "extra.txt");
 const LARGE_FILE = path.join(TEST_DIR, "large.txt");
 const LARGE_WRITTEN_FILE = path.join(TEST_DIR, "large-written.txt");
+const LARGE_WRITE_REF_FILE = path.join(TEST_DIR, "large-write-ref.txt");
+const LARGE_EDIT_OLD_REF_FILE = path.join(TEST_DIR, "large-edit-old-ref.txt");
+const LARGE_EDIT_NEW_REF_FILE = path.join(TEST_DIR, "large-edit-new-ref.txt");
+const ARGS_PATH_EDIT_FILE = path.join(TEST_DIR, "args-path-edit.txt");
+const ARGS_PATH_EDIT_SECOND_FILE = path.join(TEST_DIR, "args-path-edit-second.txt");
+const ARGS_PATH_EDIT_ARGS_FILE = path.join(TEST_DIR, "args-path-edit-args.json");
 const MOVED_FILE = path.join(TEST_DIR, "moved.txt");
 const RENAMED_FILE = path.join(TEST_DIR, "renamed.txt");
 const WRITTEN_FILE = path.join(TEST_DIR, "written.txt");
@@ -62,6 +68,20 @@ function extractBatchResults(result) {
   return batchPayload.results;
 }
 
+// 1. Path exists helper ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function pathExists(filePath) {
+  try {
+    await fs.stat(filePath);
+    return true;
+  }
+  catch (error) {
+    if (error.code === "ENOENT") {
+      return false;
+    }
+    throw error;
+  }
+}
+
 async function setup() {
   const originalConfig = await configManager.getConfig();
 
@@ -70,6 +90,11 @@ async function setup() {
   await fs.writeFile(SOURCE_FILE, "old value\n", "utf8");
   await fs.writeFile(EXTRA_FILE, "extra value\n", "utf8");
   await fs.writeFile(LARGE_FILE, LARGE_TEXT, "utf8");
+  await fs.writeFile(LARGE_WRITE_REF_FILE, TEN_THOUSAND_A, "utf8");
+  await fs.writeFile(LARGE_EDIT_OLD_REF_FILE, TEN_THOUSAND_A, "utf8");
+  await fs.writeFile(LARGE_EDIT_NEW_REF_FILE, TEN_THOUSAND_B, "utf8");
+  await fs.writeFile(ARGS_PATH_EDIT_FILE, "alpha\nbeta\n", "utf8");
+  await fs.writeFile(ARGS_PATH_EDIT_SECOND_FILE, "one\ntwo\n", "utf8");
   await fs.writeFile(MANY_LINE_SOURCE_FILE, MANY_LINE_TEXT, "utf8");
   await configManager.updateConfig({
     ...originalConfig,
@@ -128,6 +153,7 @@ function testLargeUnstructuredResultPreview() {
   assert.match(batchResult.content[0].text, OMITTED_PATTERN);
   assert.ok(batchResult.content[0].text.length <= 30);
   assert.doesNotMatch(batchResult.content[0].text, UNSTRUCTURED_LINE_PATTERN);
+  assert.match(batchResult.structuredContent.textContent, UNSTRUCTURED_LINE_PATTERN);
 }
 
 async function testCreateAndListDirectorySurface() {
@@ -168,7 +194,7 @@ async function testWriteMoveInfoAndEditSurface() {
   const largeWriteResult = await dispatchToolCall("write_files", {
     items: [
       {
-        content: TEN_THOUSAND_A,
+        content_path: LARGE_WRITE_REF_FILE,
         mode: "rewrite",
         path: LARGE_WRITTEN_FILE,
       },
@@ -177,8 +203,7 @@ async function testWriteMoveInfoAndEditSurface() {
   const largeWriteBatchResults = extractBatchResults(largeWriteResult);
 
   assert.equal(largeWriteBatchResults[0].ok, true);
-  assert.equal(largeWriteBatchResults[0].input.content.omitted, true);
-  assert.equal(largeWriteBatchResults[0].input.content.originalLength, TEN_THOUSAND_A.length);
+  assert.equal(largeWriteBatchResults[0].input.content_path, LARGE_WRITE_REF_FILE);
   assert.equal(await fs.readFile(LARGE_WRITTEN_FILE, "utf8"), TEN_THOUSAND_A);
 
   const editResult = await dispatchToolCall("edit_blocks", {
@@ -199,17 +224,43 @@ async function testWriteMoveInfoAndEditSurface() {
       {
         expected_replacements: 1,
         file_path: MANY_LINE_SOURCE_FILE,
-        new_string: TEN_THOUSAND_B,
-        old_string: TEN_THOUSAND_A,
+        new_string_path: LARGE_EDIT_NEW_REF_FILE,
+        old_string_path: LARGE_EDIT_OLD_REF_FILE,
       },
     ],
   });
   const largeEditBatchResults = extractBatchResults(largeEditResult);
   assert.equal(largeEditBatchResults[0].ok, true);
-  assert.equal(largeEditBatchResults[0].input.old_string.omitted, true);
-  assert.equal(largeEditBatchResults[0].input.old_string.originalLength, TEN_THOUSAND_A.length);
-  assert.equal(largeEditBatchResults[0].input.new_string.omitted, true);
-  assert.equal(largeEditBatchResults[0].input.new_string.originalLength, TEN_THOUSAND_B.length);
+  assert.equal(largeEditBatchResults[0].input.old_string_path, LARGE_EDIT_OLD_REF_FILE);
+  assert.equal(largeEditBatchResults[0].input.new_string_path, LARGE_EDIT_NEW_REF_FILE);
+
+  const argsPathEditPayload = {
+    items: [
+      {
+        expected_replacements: 1,
+        file_path: ARGS_PATH_EDIT_FILE,
+        new_string: "gamma",
+        old_string: "alpha",
+      },
+      {
+        expected_replacements: 1,
+        file_path: ARGS_PATH_EDIT_SECOND_FILE,
+        new_string: "delta",
+        old_string: "two",
+      },
+    ],
+  };
+  const argsPathCall = { args_path: ARGS_PATH_EDIT_ARGS_FILE };
+
+  await fs.writeFile(ARGS_PATH_EDIT_ARGS_FILE, JSON.stringify(argsPathEditPayload), "utf8");
+  assert.ok(JSON.stringify(argsPathCall).length < JSON.stringify(argsPathEditPayload).length);
+  const argsPathEditResult = await dispatchToolCall("edit_blocks", argsPathCall);
+  const argsPathEditBatchResults = extractBatchResults(argsPathEditResult);
+  assert.equal(argsPathEditBatchResults.length, 2);
+  assert.equal(argsPathEditBatchResults[0].ok, true);
+  assert.equal(argsPathEditBatchResults[1].ok, true);
+  assert.equal(await fs.readFile(ARGS_PATH_EDIT_FILE, "utf8"), "gamma\nbeta\n");
+  assert.equal(await fs.readFile(ARGS_PATH_EDIT_SECOND_FILE, "utf8"), "one\ndelta\n");
 
   const largeReadResult = await dispatchToolCall("read_files", {
     paths: [MANY_LINE_SOURCE_FILE],
@@ -257,6 +308,19 @@ async function testWriteMoveInfoAndEditSurface() {
   assert.equal(editedText, "new value\n");
   assert.equal(largeEditedText, MANY_LINE_REPLACED_TEXT);
   assert.equal(movedText, "written value\n");
+
+  const removeResult = await dispatchToolCall("remove_files", {
+    items: [
+      { path: MOVED_FILE },
+      { path: CREATED_DIR },
+    ],
+  });
+  const removeBatchResults = extractBatchResults(removeResult);
+  assert.equal(removeBatchResults.length, 2);
+  assert.equal(removeBatchResults[0].ok, true);
+  assert.equal(removeBatchResults[1].ok, true);
+  assert.equal(await pathExists(MOVED_FILE), false);
+  assert.equal(await pathExists(CREATED_DIR), false);
 }
 
 async function main() {

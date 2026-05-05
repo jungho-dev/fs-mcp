@@ -5,6 +5,7 @@
  * @since 2026-05-03
  */
 
+import { withArgsPathSchema } from "@schemas/schemas-args-ref";
 import { InteractWithProcessesArgsSchema, KillProcessesArgsSchema, ListProcessesArgsSchema, ListSessionsArgsSchema, ReadProcessOutputsArgsSchema, StartProcessesArgsSchema } from "@schemas/schemas-process";
 import { CMD_PREFIX_DESCRIPTION, OS_GUIDANCE, PATH_GUIDANCE, type ToolCatalogEntry } from "@tools/tools-const";
 import { zodToJsonSchema } from "zod-to-json-schema";
@@ -15,13 +16,14 @@ export const PROCESS_TOOL_CATALOG: ToolCatalogEntry[] = [
     name: "start_processes",
     description: (`
       Start one or many terminal processes in parallel.
-      Use items: [{ command, timeout_ms, shell?, verbose_timing? }].
+      Use items: [{ command?, command_path?, timeout_ms, shell?, verbose_timing? }].
+      Inline command is capped; use command_path for long commands so tool-call logs do not echo the full command.
       ALWAYS USE FOR: Local file analysis, CSV processing, data exploration, system commands
       ${PATH_GUIDANCE}
       ${OS_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(StartProcessesArgsSchema),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(StartProcessesArgsSchema)),
     annotations: {
       title: "Start Terminal Processes",
       readOnlyHint: false,
@@ -35,7 +37,7 @@ export const PROCESS_TOOL_CATALOG: ToolCatalogEntry[] = [
       Read one or many process outputs in parallel.
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(ReadProcessOutputsArgsSchema),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(ReadProcessOutputsArgsSchema)),
     annotations: {
       title: "Read Process Outputs",
       readOnlyHint: true,
@@ -45,10 +47,11 @@ export const PROCESS_TOOL_CATALOG: ToolCatalogEntry[] = [
     name: "interact_with_processes",
     description: (`
       Interact with one or many running processes in parallel.
+      Inline input is capped; use input_path for large stdin payloads so tool-call logs do not echo the full input.
       ALWAYS USE FOR: CSV analysis, JSON processing, file statistics, data visualization prep, ANY local file work
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(InteractWithProcessesArgsSchema),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(InteractWithProcessesArgsSchema)),
     annotations: {
       title: "Send Input to Processes",
       readOnlyHint: false,
@@ -70,7 +73,7 @@ export const PROCESS_TOOL_CATALOG: ToolCatalogEntry[] = [
       - Long runtime with blocked status may indicate stuck process
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(ListSessionsArgsSchema),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(ListSessionsArgsSchema)),
     annotations: {
       title: "List Terminal Sessions",
       readOnlyHint: true,
@@ -83,7 +86,7 @@ export const PROCESS_TOOL_CATALOG: ToolCatalogEntry[] = [
       Returns process information including PID, command name, CPU usage, and memory usage.
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(ListProcessesArgsSchema),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(ListProcessesArgsSchema)),
     annotations: {
       title: "List Running Processes",
       readOnlyHint: true,
@@ -95,7 +98,7 @@ export const PROCESS_TOOL_CATALOG: ToolCatalogEntry[] = [
       Kill one or many processes in parallel.
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(KillProcessesArgsSchema),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(KillProcessesArgsSchema)),
     annotations: {
       title: "Kill Processes",
       readOnlyHint: false,

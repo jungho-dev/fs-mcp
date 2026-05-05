@@ -335,6 +335,17 @@ function highlightDifferences(expected: string, actual: string): string {
   // Format the output as a character-level diff
   return `${commonPrefix}{-${expectedDiff}-}{+${actualDiff}+}${commonSuffix}`;
 }
+
+// 4. Resolve edit text argument ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function resolveEditTextArgument(value: string | undefined, filePath: string | undefined, offset: number, length: number | undefined, label: string): Promise<string> {
+  if (value !== undefined) {
+    return value;
+  }
+  if (filePath === undefined) {
+    throw new Error(`${label} or ${label}_path is required`);
+  }
+  return readFileInternal(filePath, offset, length);
+}
 // 3. Handle edit_block command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // 1. Text files: String replacement (old_string/new_string)
 // - Uses fuzzy matching for resilience
@@ -342,6 +353,8 @@ function highlightDifferences(expected: string, actual: string): string {
 // 4. Handle edit block ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleEditBlock(args: unknown): Promise<ServerResult> {
   const parsed = EditBlockArgsSchema.parse(args);
+  const oldString = await resolveEditTextArgument(parsed.old_string, parsed.old_string_path, parsed.old_string_offset, parsed.old_string_length, "old_string");
+  const newString = await resolveEditTextArgument(parsed.new_string, parsed.new_string_path, parsed.new_string_offset, parsed.new_string_length, "new_string");
 
   // Validate path and resolve handler once.
   let validatedPath: string;
@@ -364,8 +377,8 @@ export async function handleEditBlock(args: unknown): Promise<ServerResult> {
     try {
       const result = await handler.editRange?.(validatedPath, "", {
         expected_replacements: parsed.expected_replacements,
-        new_string: parsed.new_string,
-        old_string: parsed.old_string,
+        new_string: newString,
+        old_string: oldString,
       });
 
       if (result === undefined) {
@@ -398,8 +411,8 @@ export async function handleEditBlock(args: unknown): Promise<ServerResult> {
   return performSearchReplace(
     parsed.file_path,
     {
-      replace: parsed.new_string,
-      search: parsed.old_string,
+      replace: newString,
+      search: oldString,
     },
     parsed.expected_replacements,
   );

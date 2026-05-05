@@ -7,6 +7,7 @@
 
 import {execFile} from "node:child_process";
 import {promisify} from "node:util";
+import {readFileInternal} from "@features/filesystem/filesystem-service";
 import type {GitCommandError, GitCommandResult} from "@features/git/git-types";
 
 const execFileAsync = promisify(execFile);
@@ -68,13 +69,37 @@ export async function runGitCommand(args: string[], options: { cwd?: string; all
   return commandResult;
 }
 
-// 2. Split lines ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Resolve git text argument ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export async function resolveGitTextArgument(value: string | undefined, filePath: string | undefined, offset: number, length: number | undefined, label: string): Promise<string | undefined> {
+  if (value !== undefined) {
+    return value;
+  }
+  if (filePath === undefined) {
+    return undefined;
+  }
+  const text = await readFileInternal(filePath, offset, length);
+  if (text.length === 0) {
+    throw new Error(`${label} file is empty: ${filePath}`);
+  }
+  return text;
+}
+
+// 3. Require git text argument ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export async function requireGitTextArgument(value: string | undefined, filePath: string | undefined, offset: number, length: number | undefined, label: string): Promise<string> {
+  const text = await resolveGitTextArgument(value, filePath, offset, length, label);
+  if (text === undefined) {
+    throw new Error(`${label} is required`);
+  }
+  return text;
+}
+
+// 4. Split lines ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function splitLines(text: string): string[] {
   const splitResult = text.replace(/\\r\\n/g, "\\n").replace(/\\r/g, "\\n").split("\\n").filter((line) => line.length > 0);
   return splitResult;
 }
 
-// 3. Normalize commit message ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Normalize commit message ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function normalizeCommitMessage(message: string): string {
   const normalizedMessage = message.replace(/\\\\n/g, "\\n").replace(/\\\\r/g, "\\r").replace(/\\\\t/g, "\\t");
   return normalizedMessage;

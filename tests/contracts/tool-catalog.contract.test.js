@@ -16,6 +16,7 @@ const EXPECTED_TOOL_NAMES = [
   "list_directories",
   "move_files",
   "rename_files",
+  "remove_files",
   "start_searches",
   "get_search_results",
   "stop_searches",

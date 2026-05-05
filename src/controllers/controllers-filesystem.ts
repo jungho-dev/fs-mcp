@@ -14,7 +14,7 @@ import { createBatchToolResponse, runParallelBatch } from "@controllers/controll
 import { createErrorResponse } from "@cores/responses/responses-error";
 import { configManager } from "@features/config/config-store";
 import { resolveAbsolutePath } from "@features/filesystem/filesystem-path-resolver";
-import { createDirectory, getFileInfo, listDirectory, moveFile, readFile, readMultipleFiles, writeFile } from "@features/filesystem/filesystem-service";
+import { createDirectory, getFileInfo, listDirectory, moveFile, readFile, readFileInternal, readMultipleFiles, removePath, writeFile } from "@features/filesystem/filesystem-service";
 import {
   CreateDirectoriesArgsSchema,
   CreateDirectoryArgsSchema,
@@ -27,6 +27,8 @@ import {
   ReadFileArgsSchema,
   ReadFilesArgsSchema,
   ReadMultipleFilesArgsSchema,
+  RemoveFilesArgsSchema,
+  RemovePathArgsSchema,
   RenameFileArgsSchema,
   RenameFilesArgsSchema,
   WriteFileArgsSchema,
@@ -175,8 +177,9 @@ export async function handleWriteFile(args: unknown): Promise<ServerResult> {
     // Get the large-write warning threshold from configuration
     const config = await configManager.getConfig();
     const warningLineLimit = config.fileWriteLineLimit ?? 50;
+    const content = parsed.content ?? await readFileInternal(parsed.content_path ?? "", parsed.content_offset, parsed.content_length);
 
-    const lines = parsed.content.split("\n");
+    const lines = content.split("\n");
     const lineCount = lines.length;
     let warningMessage = "";
     if (lineCount > warningLineLimit) {
@@ -185,7 +188,7 @@ export async function handleWriteFile(args: unknown): Promise<ServerResult> {
 Performance tip: For optimal speed, consider chunking files into ≤30 line pieces in future operations.`;
     }
     // Pass the mode parameter to writeFile
-    await writeFile(parsed.path, parsed.content, parsed.mode);
+    await writeFile(parsed.path, content, parsed.mode);
 
     // Provide more informative message based on mode
     const modeMessage = parsed.mode === "append" ? "appended to" : "wrote to";
@@ -300,7 +303,30 @@ export async function handleRenameFile(args: unknown): Promise<ServerResult> {
     return createErrorResponse(errorMessage);
   }
 }
-// 10. Format value ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 10. Handle remove path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export async function handleRemovePath(args: unknown): Promise<ServerResult> {
+  try {
+    const parsed = RemovePathArgsSchema.parse(args);
+    const resolvedPath = resolveAbsolutePath(parsed.path);
+
+    await removePath(parsed.path, parsed.recursive, parsed.force);
+    return {
+      content: [{ type: "text", text: `Successfully removed ${parsed.path}` }],
+      structuredContent: {
+        fileName: path.basename(resolvedPath),
+        filePath: resolvedPath,
+        fileType: "text" as const,
+        recursive: parsed.recursive,
+      },
+    };
+  }
+  catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return createErrorResponse(errorMessage);
+  }
+}
+// 11. Format value ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function formatValue(value: unknown, indent: string = ""): string {
   if (value === null || value === undefined) {
     return String(value);
@@ -326,7 +352,7 @@ function formatValue(value: unknown, indent: string = ""): string {
   }
   return String(value);
 }
-// 11. Handle get file info ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 12. Handle get file info ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleGetFileInfo(args: unknown): Promise<ServerResult> {
   try {
     const parsed = GetFileInfoArgsSchema.parse(args);
@@ -344,14 +370,16 @@ export async function handleGetFileInfo(args: unknown): Promise<ServerResult> {
           text: formattedText,
         },
       ],
+      structuredContent: info,
     };
-  } catch (error) {
+  }
+  catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     return createErrorResponse(errorMessage);
   }
 }
 
-// 12. Handle read files ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 13. Handle read files ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleReadFiles(args: unknown): Promise<ServerResult> {
   const parsed = ReadFilesArgsSchema.parse(args);
   const items = parsed.items ?? parsed.paths?.map((filePath) => ({ path: filePath })) ?? [];
@@ -361,7 +389,7 @@ export async function handleReadFiles(args: unknown): Promise<ServerResult> {
   return response;
 }
 
-// 13. Handle write files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 14. Handle write files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleWriteFiles(args: unknown): Promise<ServerResult> {
   const parsed = WriteFilesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleWriteFile(item));
@@ -370,7 +398,7 @@ export async function handleWriteFiles(args: unknown): Promise<ServerResult> {
   return response;
 }
 
-// 14. Handle create directories ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 15. Handle create directories ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleCreateDirectories(args: unknown): Promise<ServerResult> {
   const parsed = CreateDirectoriesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.paths, (dirPath) => handleCreateDirectory({ path: dirPath }));
@@ -379,7 +407,7 @@ export async function handleCreateDirectories(args: unknown): Promise<ServerResu
   return response;
 }
 
-// 15. Handle list directories ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 16. Handle list directories ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleListDirectories(args: unknown): Promise<ServerResult> {
   const parsed = ListDirectoriesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleListDirectory(item));
@@ -388,7 +416,7 @@ export async function handleListDirectories(args: unknown): Promise<ServerResult
   return response;
 }
 
-// 16. Handle move files ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 17. Handle move files ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleMoveFiles(args: unknown): Promise<ServerResult> {
   const parsed = MoveFilesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleMoveFile(item));
@@ -397,7 +425,7 @@ export async function handleMoveFiles(args: unknown): Promise<ServerResult> {
   return response;
 }
 
-// 17. Handle rename files ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 18. Handle rename files ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleRenameFiles(args: unknown): Promise<ServerResult> {
   const parsed = RenameFilesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleRenameFile(item));
@@ -406,7 +434,16 @@ export async function handleRenameFiles(args: unknown): Promise<ServerResult> {
   return response;
 }
 
-// 18. Handle get file infos ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 19. Handle remove files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export async function handleRemoveFiles(args: unknown): Promise<ServerResult> {
+  const parsed = RemoveFilesArgsSchema.parse(args);
+  const results = await runParallelBatch(parsed.items, (item) => handleRemovePath(item));
+  const response = createBatchToolResponse("remove_files", results);
+
+  return response;
+}
+
+// 20. Handle get file infos ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleGetFileInfos(args: unknown): Promise<ServerResult> {
   const parsed = GetFileInfosArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.paths, (filePath) => handleGetFileInfo({ path: filePath }));

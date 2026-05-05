@@ -21,6 +21,11 @@ interface CompactedStringPayload {
   originalLength: number;
   preview: string;
 }
+interface PreservedTextPayload extends Record<string, unknown> {
+  lineCount: number;
+  originalLength: number;
+  textContent: string;
+}
 
 const BATCH_INPUT_PREVIEW_LENGTH = 160;
 const BATCH_RESULT_PREVIEW_LENGTH = 30;
@@ -82,7 +87,36 @@ function extractPrimaryText(result: ServerResult): string {
   return primaryText;
 }
 
-// 6. Has large structured payload ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Extract text content ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function extractTextContent(result: ServerResult): string {
+  const textChunks = result.content
+    .filter((item) => item.type === "text" && typeof item.text === "string")
+    .map((item) => item.text ?? "");
+
+  return textChunks.join("\n");
+}
+
+// 7. Create preserved text payload ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function createPreservedTextPayload(text: string): PreservedTextPayload {
+  return {
+    lineCount: countLines(text),
+    originalLength: text.length,
+    textContent: text,
+  };
+}
+
+// 8. Preserve unstructured result text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function preserveUnstructuredResultText(result: ServerResult, text: string): ServerResult {
+  if (result.structuredContent !== undefined || text.length <= BATCH_RESULT_PREVIEW_LENGTH) {
+    return result;
+  }
+  return {
+    ...result,
+    structuredContent: createPreservedTextPayload(text),
+  };
+}
+
+// 9. Has large structured payload ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function hasLargeStructuredPayload(result: ServerResult): boolean {
   const structuredContent = result.structuredContent;
   let hasPayload = false;
@@ -97,7 +131,7 @@ function hasLargeStructuredPayload(result: ServerResult): boolean {
   return hasPayload;
 }
 
-// 7. Create result text preview ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Create result text preview ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createResultTextPreview(text: string): string {
   const compactedText = text.replace(WHITESPACE_PATTERN, " ").trim();
   const suffix = " ... (omitted)";
@@ -110,16 +144,18 @@ function createResultTextPreview(text: string): string {
   return preview;
 }
 
-// 8. Compact batch result ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11. Compact batch result ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function compactBatchResult(result: ServerResult): ServerResult {
   const primaryText = extractPrimaryText(result);
+  const originalText = extractTextContent(result);
+  const preservedResult = preserveUnstructuredResultText(result, originalText);
 
-  if (!hasLargeStructuredPayload(result) && primaryText.length <= BATCH_RESULT_PREVIEW_LENGTH) {
-    return result;
+  if (!hasLargeStructuredPayload(preservedResult) && primaryText.length <= BATCH_RESULT_PREVIEW_LENGTH) {
+    return preservedResult;
   }
   return {
-    ...result,
-    content: result.content.map((item) => {
+    ...preservedResult,
+    content: preservedResult.content.map((item) => {
       if (item.type === "text" && typeof item.text === "string") {
         return {
           ...item,
@@ -131,7 +167,7 @@ function compactBatchResult(result: ServerResult): ServerResult {
   };
 }
 
-// 9. Run parallel batch ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 12. Run parallel batch ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runParallelBatch<T>(items: T[], runItem: (item: T) => Promise<ServerResult>): Promise<BatchToolItemResult<T>[]> {
   const results = await Promise.all(
     items.map(async (item, index) => {
@@ -155,7 +191,7 @@ export async function runParallelBatch<T>(items: T[], runItem: (item: T) => Prom
   return results;
 }
 
-// 10. Create batch tool response ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 13. Create batch tool response ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function createBatchToolResponse<T>(toolName: string, items: BatchToolItemResult<T>[]): ServerResult {
   const totalCount = items.length;
   const failedCount = items.filter((item) => !item.ok).length;

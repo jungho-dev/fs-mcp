@@ -7,9 +7,14 @@
 
 import {z} from "zod";
 
+const INLINE_TEXT_ARGUMENT_MAX_LENGTH = 2000;
+
 export const StartSearchArgsSchema = z.object({
   path: z.string(),
-  pattern: z.string(),
+  pattern: z.string().max(INLINE_TEXT_ARGUMENT_MAX_LENGTH, "Use pattern_path for large patterns").optional(),
+  pattern_path: z.string().optional(),
+  pattern_offset: z.number().optional().default(0),
+  pattern_length: z.number().optional(),
   searchType: z.enum(["files", "content"]).default("files"),
   filePattern: z.string().optional(),
   ignoreCase: z.boolean().optional().default(true),
@@ -19,6 +24,8 @@ export const StartSearchArgsSchema = z.object({
   timeout_ms: z.number().optional(),
   earlyTermination: z.boolean().optional(),
   literalSearch: z.boolean().optional().default(false),
+}).refine((args) => args.pattern !== undefined || args.pattern_path !== undefined, {
+  message: "Either pattern or pattern_path is required",
 });
 
 export const StartSearchesArgsSchema = z.object({

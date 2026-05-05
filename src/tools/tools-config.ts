@@ -5,6 +5,7 @@
  * @since 2026-05-03
  */
 
+import { withArgsPathSchema } from "@schemas/schemas-args-ref";
 import { GetConfigsArgsSchema, SetConfigValuesArgsSchema } from "@schemas/schemas-config";
 import { CMD_PREFIX_DESCRIPTION, type ToolCatalogEntry } from "@tools/tools-const";
 import { zodToJsonSchema } from "zod-to-json-schema";
@@ -29,7 +30,7 @@ export const CONFIG_TOOL_CATALOG: ToolCatalogEntry[] = [
       When items is omitted, all supported keys are returned.
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(GetConfigsArgsSchema),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(GetConfigsArgsSchema)),
     annotations: {
       title: "Get Configurations",
       readOnlyHint: true,
@@ -39,9 +40,10 @@ export const CONFIG_TOOL_CATALOG: ToolCatalogEntry[] = [
     name: "set_config_values",
     description: (`
       Set one or many configuration values in parallel.
+      Inline string values are capped; use value_path for large values so tool-call logs do not echo the full value.
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(SetConfigValuesArgsSchema),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(SetConfigValuesArgsSchema)),
     annotations: {
       title: "Set Configuration Values",
       readOnlyHint: false,

@@ -7,6 +7,8 @@
 
 import {z} from "zod";
 
+const INLINE_TEXT_ARGUMENT_MAX_LENGTH = 2000;
+
 export const ReadFileArgsSchema = z.object({
   path: z.string(),
   isUrl: z.boolean().optional().default(false),
@@ -28,8 +30,13 @@ export const ReadFilesArgsSchema = z.object({
 
 export const WriteFileArgsSchema = z.object({
   path: z.string(),
-  content: z.string(),
+  content: z.string().max(INLINE_TEXT_ARGUMENT_MAX_LENGTH, "Use content_path for large content").optional(),
+  content_path: z.string().optional(),
+  content_offset: z.number().optional().default(0),
+  content_length: z.number().optional(),
   mode: z.enum(["rewrite", "append"]).default("rewrite"),
+}).refine((args) => args.content !== undefined || args.content_path !== undefined, {
+  message: "Either content or content_path is required",
 });
 
 export const WriteFilesArgsSchema = z.object({
@@ -69,6 +76,16 @@ export const RenameFileArgsSchema = z.object({
 
 export const RenameFilesArgsSchema = z.object({
   items: z.array(RenameFileArgsSchema).min(1),
+});
+
+export const RemovePathArgsSchema = z.object({
+  path: z.string(),
+  recursive: z.boolean().optional().default(false),
+  force: z.boolean().optional().default(false),
+});
+
+export const RemoveFilesArgsSchema = z.object({
+  items: z.array(RemovePathArgsSchema).min(1),
 });
 
 export const GetFileInfoArgsSchema = z.object({

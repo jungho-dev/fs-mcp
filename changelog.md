@@ -1,5 +1,11 @@
 # Changelog
 
+## [Unreleased]
+
+* sync runtime version metadata with package version
+* run the full verify suite before npm publish
+* refresh Korean README and architecture paths for the current source layout
+
 ## [1.0.3] - 2026-05-02
 
 * pin `zod` to the v3 line used by `zod-to-json-schema` so published tool schemas stay valid
@@ -86,3 +92,7 @@
 ## \[ 1.1.7 \]
 
 - 2026-05-05 (00:16:23)
+
+## \[ 1.1.8 \]
+
+- 2026-05-06 (01:40:23)

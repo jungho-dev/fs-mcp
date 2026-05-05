@@ -5,6 +5,7 @@
  * @since 2026-05-03
  */
 
+import { withArgsPathSchema } from "@schemas/schemas-args-ref";
 import { EditBlockArgsSchema } from "@schemas/schemas-edit";
 import { CMD_PREFIX_DESCRIPTION, PATH_GUIDANCE, type ToolCatalogEntry } from "@tools/tools-const";
 import { zodToJsonSchema } from "zod-to-json-schema";
@@ -50,7 +51,7 @@ export const EDIT_TOOL_CATALOG: ToolCatalogEntry[] = [
       ${PATH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(EditBlockArgsSchema),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(EditBlockArgsSchema)),
     annotations: {
       title: "Edit Block",
       readOnlyHint: false,

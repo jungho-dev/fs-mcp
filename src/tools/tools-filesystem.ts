@@ -6,7 +6,8 @@
  */
 
 import { EditBlocksArgsSchema } from "@schemas/schemas-edit";
-import { CreateDirectoriesArgsSchema, GetFileInfosArgsSchema, ListDirectoriesArgsSchema, MoveFilesArgsSchema, ReadFilesArgsSchema, RenameFilesArgsSchema, WriteFilesArgsSchema } from "@schemas/schemas-filesystem";
+import { withArgsPathSchema } from "@schemas/schemas-args-ref";
+import { CreateDirectoriesArgsSchema, GetFileInfosArgsSchema, ListDirectoriesArgsSchema, MoveFilesArgsSchema, ReadFilesArgsSchema, RemoveFilesArgsSchema, RenameFilesArgsSchema, WriteFilesArgsSchema } from "@schemas/schemas-filesystem";
 import { GetSearchResultsArgsSchema, ListSearchesArgsSchema, StartSearchesArgsSchema, StopSearchesArgsSchema } from "@schemas/schemas-search";
 import { CMD_PREFIX_DESCRIPTION, PATH_GUIDANCE, type ToolCatalogEntry } from "@tools/tools-const";
 import { zodToJsonSchema } from "zod-to-json-schema";
@@ -24,7 +25,7 @@ export const FILESYSTEM_TOOL_CATALOG: ToolCatalogEntry[] = [
       ${PATH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
     `,
-    inputSchema: zodToJsonSchema(ReadFilesArgsSchema),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(ReadFilesArgsSchema)),
     annotations: {
       title: "Read Files",
       readOnlyHint: true,
@@ -35,10 +36,12 @@ export const FILESYSTEM_TOOL_CATALOG: ToolCatalogEntry[] = [
     name: "write_files",
     description: (`
       Write one or many files in parallel.
+      Use items: [{ path, content?, content_path?, content_offset?, content_length?, mode? }].
+      Inline content is capped; use content_path for large content so tool-call logs do not echo the full text.
       ${PATH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(WriteFilesArgsSchema),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(WriteFilesArgsSchema)),
     annotations: {
       title: "Write Files",
       readOnlyHint: false,
@@ -53,7 +56,7 @@ export const FILESYSTEM_TOOL_CATALOG: ToolCatalogEntry[] = [
       ${PATH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(CreateDirectoriesArgsSchema),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(CreateDirectoriesArgsSchema)),
     annotations: {
       title: "Create Directories",
       readOnlyHint: false,
@@ -67,7 +70,7 @@ export const FILESYSTEM_TOOL_CATALOG: ToolCatalogEntry[] = [
       ${PATH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(ListDirectoriesArgsSchema),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(ListDirectoriesArgsSchema)),
     annotations: {
       title: "List Directories",
       readOnlyHint: true,
@@ -80,7 +83,7 @@ export const FILESYSTEM_TOOL_CATALOG: ToolCatalogEntry[] = [
       ${PATH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(MoveFilesArgsSchema),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(MoveFilesArgsSchema)),
     annotations: {
       title: "Move/Rename Files",
       readOnlyHint: false,
@@ -97,9 +100,26 @@ export const FILESYSTEM_TOOL_CATALOG: ToolCatalogEntry[] = [
       ${PATH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(RenameFilesArgsSchema),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(RenameFilesArgsSchema)),
     annotations: {
       title: "Rename Files",
+      readOnlyHint: false,
+      destructiveHint: true,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "remove_files",
+    description: (`
+      Delete one or many files or directories in parallel.
+      Use items: [{ path, recursive?, force? }].
+      recursive defaults to false so non-empty directories fail unless explicitly requested.
+      ${PATH_GUIDANCE}
+      ${CMD_PREFIX_DESCRIPTION}
+    `),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(RemoveFilesArgsSchema)),
+    annotations: {
+      title: "Remove Files",
       readOnlyHint: false,
       destructiveHint: true,
       openWorldHint: false,
@@ -109,10 +129,11 @@ export const FILESYSTEM_TOOL_CATALOG: ToolCatalogEntry[] = [
     name: "start_searches",
     description: (`
       Start one or many searches in parallel.
+      Inline pattern is capped; use pattern_path for large patterns so tool-call logs do not echo the full pattern.
       ${PATH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(StartSearchesArgsSchema),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(StartSearchesArgsSchema)),
     annotations: {
       title: "Start Searches",
       readOnlyHint: true,
@@ -124,7 +145,7 @@ export const FILESYSTEM_TOOL_CATALOG: ToolCatalogEntry[] = [
       Read one or many active search sessions in parallel.
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(GetSearchResultsArgsSchema),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(GetSearchResultsArgsSchema)),
     annotations: {
       title: "Get Search Results",
       readOnlyHint: true,
@@ -136,7 +157,7 @@ export const FILESYSTEM_TOOL_CATALOG: ToolCatalogEntry[] = [
       Stop one or many active searches in parallel.
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(StopSearchesArgsSchema),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(StopSearchesArgsSchema)),
     annotations: {
       title: "Stop Searches",
       readOnlyHint: false,
@@ -152,7 +173,7 @@ export const FILESYSTEM_TOOL_CATALOG: ToolCatalogEntry[] = [
       multiple concurrent searches.
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(ListSearchesArgsSchema),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(ListSearchesArgsSchema)),
     annotations: {
       title: "List Active Searches",
       readOnlyHint: true,
@@ -165,7 +186,7 @@ export const FILESYSTEM_TOOL_CATALOG: ToolCatalogEntry[] = [
       ${PATH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(GetFileInfosArgsSchema),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(GetFileInfosArgsSchema)),
     annotations: {
       title: "Get File Information",
       readOnlyHint: true,
@@ -175,11 +196,12 @@ export const FILESYSTEM_TOOL_CATALOG: ToolCatalogEntry[] = [
     name: "edit_blocks",
     description: (`
       Apply one or many exact edit operations in parallel.
-      Use items: [{ file_path, old_string, new_string, expected_replacements? }].
+      Use items: [{ file_path, old_string?, old_string_path?, new_string?, new_string_path?, expected_replacements? }].
+      Inline old_string/new_string are capped; use old_string_path/new_string_path for large text so tool-call logs do not echo full blocks.
       ${PATH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(EditBlocksArgsSchema),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(EditBlocksArgsSchema)),
     annotations: {
       title: "Edit Blocks",
       readOnlyHint: false,
