@@ -32,7 +32,7 @@ const MOVED_FILE = path.join(TEST_DIR, "moved.txt");
 const RENAMED_FILE = path.join(TEST_DIR, "renamed.txt");
 const WRITTEN_FILE = path.join(TEST_DIR, "written.txt");
 const MANY_LINE_SOURCE_FILE = path.join(TEST_DIR, "many-line-source.txt");
-const DISPLAY_LINE_SPLIT_PATTERN = /\r?\n/;
+const BATCH_RESULT_PREVIEW_MAX_CHARS = 160;
 const OLD_VALUE_PATTERN = /old value/;
 const EXTRA_VALUE_PATTERN = /extra value/;
 const CREATED_DIR_PATTERN = /created-dir/;
@@ -48,17 +48,18 @@ const MANY_LINE_PREFIX = Array.from({ length: 1100 }, (_value, index) => `prefix
 const MANY_LINE_TEXT = `${MANY_LINE_PREFIX}\n${TEN_THOUSAND_A}\n`;
 const MANY_LINE_REPLACED_TEXT = `${MANY_LINE_PREFIX}\n${TEN_THOUSAND_B}\n`;
 
+// 1. Parse tool output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function parseToolOutput(result) {
   assert.equal(result.content.length, 1);
   assert.equal(result.content[0].type, "text");
   assert.equal(typeof result.content[0].text, "string");
+  assert.equal(result.content[0].text, "");
   assert.equal(typeof result.structuredContent, "object");
   assert.notEqual(result.structuredContent, null);
-  assert.ok(result.content[0].text.split(DISPLAY_LINE_SPLIT_PATTERN).length <= 5);
-  assert.ok(result.content[0].text.length <= 30);
   return result.structuredContent;
 }
 
+// 2. Extract batch results ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractBatchResults(result) {
   const output = parseToolOutput(result);
   const batchPayload = output.data.structuredContent;
@@ -68,7 +69,7 @@ function extractBatchResults(result) {
   return batchPayload.results;
 }
 
-// 1. Path exists helper ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Path exists helper ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function pathExists(filePath) {
   try {
     await fs.stat(filePath);
@@ -82,6 +83,7 @@ async function pathExists(filePath) {
   }
 }
 
+// 4. Setup ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function setup() {
   const originalConfig = await configManager.getConfig();
 
@@ -105,11 +107,13 @@ async function setup() {
   return originalConfig;
 }
 
+// 5. Teardown ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function teardown(originalConfig) {
   await configManager.updateConfig(originalConfig);
   await fs.rm(TEST_DIR, { recursive: true, force: true });
 }
 
+// 6. Test read files surface ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testReadFilesSurface() {
   const result = await dispatchToolCall("read_files", {
     paths: [SOURCE_FILE, EXTRA_FILE],
@@ -118,8 +122,8 @@ async function testReadFilesSurface() {
 
   assert.equal(batchResults.length, 2);
   assert.equal(batchResults[0].ok, true);
-  assert.ok(batchResults[0].result.content[0].text.length <= 30);
-  assert.ok(batchResults[1].result.content[0].text.length <= 30);
+  assert.ok(batchResults[0].result.content[0].text.length <= BATCH_RESULT_PREVIEW_MAX_CHARS);
+  assert.ok(batchResults[1].result.content[0].text.length <= BATCH_RESULT_PREVIEW_MAX_CHARS);
   assert.match(batchResults[0].result.structuredContent.textContent, OLD_VALUE_PATTERN);
   assert.match(batchResults[1].result.structuredContent.textContent, EXTRA_VALUE_PATTERN);
 
@@ -130,13 +134,15 @@ async function testReadFilesSurface() {
 
   assert.equal(largeBatchResults[0].ok, true);
   assert.match(largeBatchResults[0].result.content[0].text, OMITTED_PATTERN);
-  assert.ok(largeBatchResults[0].result.content[0].text.length <= 30);
+  assert.ok(largeBatchResults[0].result.content[0].text.length <= BATCH_RESULT_PREVIEW_MAX_CHARS);
   assert.match(largeBatchResults[0].result.structuredContent.textContent, READING_TWO_LINES_PATTERN);
   assert.match(largeBatchResults[0].result.structuredContent.textContent, THREE_HUNDRED_X_PATTERN);
   assert.match(largeBatchResults[0].result.structuredContent.textContent, THREE_HUNDRED_Y_PATTERN);
 }
 
+// 7. Test large unstructured result preview ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testLargeUnstructuredResultPreview() {
+  const unstructuredLineZeroPattern = /unstructured line 0/;
   const largeText = Array.from({ length: 80 }, (_value, index) => `unstructured line ${index} ${"z".repeat(40)}`).join("\n");
   const result = createBatchToolResponse("synthetic_tool", [
     {
@@ -151,11 +157,13 @@ function testLargeUnstructuredResultPreview() {
   const batchResult = result.structuredContent.results[0].result;
 
   assert.match(batchResult.content[0].text, OMITTED_PATTERN);
-  assert.ok(batchResult.content[0].text.length <= 30);
+  assert.ok(batchResult.content[0].text.length <= BATCH_RESULT_PREVIEW_MAX_CHARS);
+  assert.match(batchResult.content[0].text, unstructuredLineZeroPattern);
   assert.doesNotMatch(batchResult.content[0].text, UNSTRUCTURED_LINE_PATTERN);
   assert.match(batchResult.structuredContent.textContent, UNSTRUCTURED_LINE_PATTERN);
 }
 
+// 8. Test create and list directory surface ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testCreateAndListDirectorySurface() {
   const createResult = await dispatchToolCall("create_directories", {
     paths: [CREATED_DIR],
@@ -178,6 +186,7 @@ async function testCreateAndListDirectorySurface() {
   assert.match(listBatchResults[0].result.structuredContent.listing, CREATED_DIR_PATTERN);
 }
 
+// 9. Test write move info and edit surface ――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testWriteMoveInfoAndEditSurface() {
   const writeResult = await dispatchToolCall("write_files", {
     items: [
@@ -268,7 +277,7 @@ async function testWriteMoveInfoAndEditSurface() {
   const largeReadBatchResults = extractBatchResults(largeReadResult);
   assert.equal(largeReadBatchResults[0].ok, true);
   assert.match(largeReadBatchResults[0].result.content[0].text, OMITTED_PATTERN);
-  assert.ok(largeReadBatchResults[0].result.content[0].text.length <= 30);
+  assert.ok(largeReadBatchResults[0].result.content[0].text.length <= BATCH_RESULT_PREVIEW_MAX_CHARS);
   assert.ok(largeReadBatchResults[0].result.structuredContent.textContent.includes(TEN_THOUSAND_B));
 
   const renameResult = await dispatchToolCall("rename_files", {
@@ -323,6 +332,7 @@ async function testWriteMoveInfoAndEditSurface() {
   assert.equal(await pathExists(CREATED_DIR), false);
 }
 
+// 10. Main ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function main() {
   const originalConfig = await setup();
 
@@ -331,7 +341,8 @@ async function main() {
     testLargeUnstructuredResultPreview();
     await testCreateAndListDirectorySurface();
     await testWriteMoveInfoAndEditSurface();
-  } finally {
+  }
+  finally {
     await teardown(originalConfig);
   }
 }

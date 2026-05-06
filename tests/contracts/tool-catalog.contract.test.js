@@ -31,6 +31,7 @@ const EXPECTED_TOOL_NAMES = [
   "kill_processes",
 ];
 
+// 1. Test tool catalog shape ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testToolCatalogShape() {
   const tools = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG];
 
@@ -41,6 +42,7 @@ function testToolCatalogShape() {
   );
 }
 
+// 2. Run all tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runAllTests() {
   testToolCatalogShape();
   return true;

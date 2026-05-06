@@ -151,6 +151,10 @@
 **/*.tmp.*
 **/*.bak
 **/*.bak.*
+**/*jungho
+**/*.jungho.*
+**/*.base
+**/*.base.*
 **/*.backup
 **/*.backup.*
 **/*.orig

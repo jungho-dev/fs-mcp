@@ -9,10 +9,11 @@ import type { ServerResult } from "@assets/type/common";
 import { createToolErrorResponse } from "@cores/responses/responses-tool-result";
 import { capture } from "@cores/runtime/runtime-output-capture";
 
-// 1. Creates a standard error response for tools ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Creates a standard error response for tools ――――――――――――――――――――――――――――――――――――――――――――――――――
 // @param message The error message
 // @returns A ServerResult with the error message
-// 1. Create error response ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 1. Create error response ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function createErrorResponse(message: string): ServerResult {
   capture("server_request_error", {
     error: message,

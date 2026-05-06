@@ -77,7 +77,7 @@ are MCP adapters and not reusable domain services.
   `isError`, and optional `_meta`.
 - `dispatchToolCall` normalizes every non-normalized handler result exactly once through
   `normalizeToolResult`.
-- The visible `content[0].text` preview is capped to five lines and 500 characters for transcript readability.
+- The visible `content[0].text` is intentionally empty so transcripts show only the tool call.
 - `structuredContent.data` stores the normalized text, content array, and original structured payload for clients
   that need machine-readable result data.
 - `createBatchToolResponse` summarizes each batch item and compacts large nested input fields such as `content`,

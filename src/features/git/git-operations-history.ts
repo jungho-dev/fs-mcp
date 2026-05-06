@@ -14,7 +14,7 @@ const BLAME_HEADER_PATTERN = /^[0-9a-f]{40}\\s+\\d+\\s+\\d+/;
 const REFLOG_FORMAT = "%gD%x1f%H%x1f%gs%x1f%ct";
 const CHANGELOG_COMMIT_FORMAT = "%h%x1f%an%x1f%ct%x1f%d%x1f%s%x1e";
 
-// 1. Run git blame ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Run git blame ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitBlame(input: GitArgsMap["git_blame"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const blameResult = await runGitCommand(["blame", "--line-porcelain", ...(input.ignoreWhitespace ? ["-w"] : []), ...(input.startLine && input.endLine ? ["-L", `${String(input.startLine)},${String(input.endLine)}`] : []), input.filePath], { cwd });
@@ -26,15 +26,15 @@ export async function runGitBlame(input: GitArgsMap["git_blame"]): Promise<GitTo
 
   splitLines(blameResult.stdout).forEach((line) => {
     if (BLAME_HEADER_PATTERN.test(line)) {
-    	const parts = line.split(" ");
+      const parts = line.split(" ");
       currentHash = parts[0];
       currentLineNumber = Number.parseInt(parts[2], 10);
     }
     else if (line.startsWith("author ")) {
-    	currentAuthor = line.slice(7);
+      currentAuthor = line.slice(7);
     }
     else if (line.startsWith("author-time ")) {
-    	currentTimestamp = Number.parseInt(line.slice(12), 10);
+      currentTimestamp = Number.parseInt(line.slice(12), 10);
     }
     else if (line.startsWith("\t")) {
       lines.push({
@@ -55,7 +55,7 @@ export async function runGitBlame(input: GitArgsMap["git_blame"]): Promise<GitTo
   };
 }
 
-// 2. Run git reflog ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Run git reflog ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitReflog(input: GitArgsMap["git_reflog"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const ref = input.ref ?? "HEAD";
@@ -80,7 +80,7 @@ export async function runGitReflog(input: GitArgsMap["git_reflog"]): Promise<Git
   };
 }
 
-// 3. Run git changelog analyze ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Run git changelog analyze ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitChangelogAnalyze(input: GitArgsMap["git_changelog_analyze"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const branch = input.branch ?? "HEAD";
@@ -118,7 +118,7 @@ export async function runGitChangelogAnalyze(input: GitArgsMap["git_changelog_an
   };
 }
 
-// 4. Run git wrapup instructions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Run git wrapup instructions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitWrapupInstructions(input: GitArgsMap["git_wrapup_instructions"]): Promise<GitToolOutput> {
   const createTag = input.createTag ?? true;
   const instructions = ["Acceptance criteria:", "1. Inspect git diff and understand each change before grouping commits.", "2. Update changelog or release metadata when this repository requires it.", "3. Run the smallest real verification set for the changed surface.", "4. Create atomic Conventional Commit messages only after verification passes.", "5. Confirm the working tree is clean after commits.", ...(createTag ? ["6. Create an annotated semantic-version tag only when release tagging is in scope."] : []), "Stop and report if conflicts, unexplained changes, or failing checks remain."].join("\n");

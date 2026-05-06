@@ -16,7 +16,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..", "..");
 
-// 1. Read package version ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Read package version ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function readPackageVersion() {
   const packageJsonPath = path.join(projectRoot, "package.json");
   const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
@@ -25,14 +25,14 @@ async function readPackageVersion() {
   return packageJson.version;
 }
 
-// 2. Runtime version contract ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Runtime version contract ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testRuntimeVersionMatchesPackage() {
   const packageVersion = await readPackageVersion();
 
   assert.equal(VERSION, packageVersion);
 }
 
-// 3. Config version contract ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Config version contract ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testConfigVersionMatchesPackage() {
   const packageVersion = await readPackageVersion();
   const config = await configManager.getConfig();
@@ -40,7 +40,7 @@ async function testConfigVersionMatchesPackage() {
   assert.equal(config.version, packageVersion);
 }
 
-// 4. Test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function main() {
   await testRuntimeVersionMatchesPackage();
   await testConfigVersionMatchesPackage();

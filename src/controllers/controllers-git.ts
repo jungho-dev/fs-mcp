@@ -10,7 +10,7 @@ import {createErrorResponse} from "@cores/responses/responses-error";
 import {executeGitTool} from "@features/git/git-service";
 import {GIT_INPUT_SCHEMAS, type GitToolName} from "@schemas/schemas-git";
 
-// 1. Handle git tool ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Handle git tool ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleGitTool(name: GitToolName, args: unknown): Promise<ServerResult> {
   let response: ServerResult;
 

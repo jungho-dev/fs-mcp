@@ -47,17 +47,17 @@ type DocxEditContent = {
   expected_replacements?: number;
 };
 
-// 1. Is docx edit content ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Is docx edit content ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isDocxEditContent(value: unknown): value is DocxEditContent {
   return typeof value === "object" && value !== null;
 }
 const HEADER_FOOTER_XML_PARTS = ["word/header1.xml", "word/header2.xml", "word/header3.xml", "word/footer1.xml", "word/footer2.xml", "word/footer3.xml"];
 
-// 1. XML transform ――――――――――――――――――――――――――――――――――――――――――――――
+// 1. XML transform ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 
-// 1. Pretty-print XML: split tags onto separate lines with indentation ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Pretty-print XML: split tags onto separate lines with indentation ――――――――――――――――――――――――――――
 // Preserves text node content exactly. compact→pretty→compact is lossless.
-// 2. Pretty print XML ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Pretty print XML ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function prettyPrintXml(xml: string): string {
   const parts = xml.split(XML_TAG_BOUNDARY_PATTERN);
   const lines: string[] = [];
@@ -84,9 +84,10 @@ function prettyPrintXml(xml: string): string {
   }
   return lines.join("\n");
 }
-// 2. Compact pretty-printed XML back — strip leading indentation, join lines ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 2. Compact pretty XML lines ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Does NOT touch whitespace inside <w:t> text nodes.
-// 3. Compact XML ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Compact XML ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function compactXml(prettyXml: string): string {
   return prettyXml
     .split("\n")
@@ -94,14 +95,15 @@ function compactXml(prettyXml: string): string {
     .join("");
 }
 
-// 2. DOCX ZIP helpers ――――――――――――――――――――――――――――――――――――――――――――
+// 2. DOCX ZIP helpers ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 
 interface DocxZipContents {
   documentXml: string;
   xmlParts: Map<string, string>;
   zip: PizZip;
 }
-// 4. Load docx zip ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 4. Load docx zip ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function loadDocxZip(buf: Buffer): DocxZipContents {
   const zip = new PizZip(buf);
   const docFile = zip.file("word/document.xml");
@@ -115,7 +117,8 @@ function loadDocxZip(buf: Buffer): DocxZipContents {
     if (relativePath.endsWith(".xml") || relativePath.endsWith(".rels")) {
       try {
         xmlParts.set(relativePath, zipFiles[relativePath].asText());
-      } catch {
+      }
+      catch {
         /* skip binary entries */
       }
     }
@@ -127,16 +130,17 @@ function loadDocxZip(buf: Buffer): DocxZipContents {
   };
 }
 
-// 3. Outline extraction ―――――――――――――――――――――――――――――――――――――――――――
+// 3. Outline extraction ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 
-// 3. Extract a text-bearing outline from document.xml ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Extract a text-bearing outline from document.xml ―――――――――――――――――――――――――――――――――――――――――――――
 // Walks direct children of <w:body> and for each:
 // - w:p (paragraph): extracts text from <w:t> elements, shows style
 // - w:tbl (table): extracts cell text for each row
 // - mc:AlternateContent / shapes / drawings: shows size, skips content
 // - w:sdt: looks inside for text/tables
 // Returns a human-readable outline with enough context for editing.
-// 5. Extract outline ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 5. Extract outline ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractOutline(xml: string): string {
   const lines: string[] = [];
 
@@ -156,8 +160,7 @@ function extractOutline(xml: string): string {
   let tableCount = 0;
   let imageCount = 0;
 
-  for (let i = 0; i < children.length; i++) {
-    const child = children[i];
+  for (const [index, child] of children.entries()) {
     const tagMatch = child.match(XML_TAG_NAME_PATTERN);
     if (!tagMatch) {
       continue;
@@ -170,14 +173,15 @@ function extractOutline(xml: string): string {
       const style = extractParagraphStyle(child);
       const hasDrawing = child.includes("<w:drawing") || child.includes("<mc:AlternateContent");
 
-      let line = `[${i}] w:p`;
+      let line = `[${index}] w:p`;
       if (style) {
         line += ` style="${style}"`;
       }
       if (text && hasDrawing) {
         line += ` (+ drawing/image)`;
         imageCount++;
-      } else if (hasDrawing) {
+      }
+      else if (hasDrawing) {
         line += ` [drawing/image, ${(child.length / 1024).toFixed(1)}KB]`;
         imageCount++;
         if (!text) {
@@ -190,38 +194,42 @@ function extractOutline(xml: string): string {
         const joined = textFragments.join("");
         if (joined.length > 500) {
           line += `\n  ${textFragments.slice(0, 8).join("")}...`;
-        } else {
+        }
+        else {
           line += `\n  ${joined}`;
         }
-      } else if (!hasDrawing) {
+      }
+      else if (!hasDrawing) {
         line += " (empty)";
       }
       lines.push(line);
       paragraphCount++;
-    } else if (tag === "w:tbl") {
+    }
+    else if (tag === "w:tbl") {
       const rows = extractTableRows(child);
-      let line = `[${i}] w:tbl (${rows.length} rows)`;
+      let line = `[${index}] w:tbl (${rows.length} rows)`;
       const style = extractTableStyle(child);
       if (style) {
         line += ` style="${style}"`;
       }
       // Show all rows (tables usually contain the real content)
-      for (let r = 0; r < rows.length; r++) {
-        const cells = rows[r].map((c) => {
+      for (const [rowIndex, row] of rows.entries()) {
+        const cells = row.map((c) => {
           if (!c || c.trim() === "") {
             return "";
           }
           return c.length > 60 ? `${c.slice(0, 60)}…` : c;
         });
-        line += `\n  row${r}: [${cells.join(" | ")}]`;
+        line += `\n  row${rowIndex}: [${cells.join(" | ")}]`;
       }
       lines.push(line);
       tableCount++;
-    } else if (tag === "w:sdt") {
+    }
+    else if (tag === "w:sdt") {
       // Structured document tag — look inside for content
       const sdtFragments = extractTextFragments(child);
       const innerTables = (child.match(WORD_TABLE_TAG_PATTERN) || []).length;
-      let line = `[${i}] w:sdt`;
+      let line = `[${index}] w:sdt`;
       if (innerTables > 0) {
         line += ` (contains ${innerTables} table${innerTables > 1 ? "s" : ""})`;
         tableCount += innerTables;
@@ -230,18 +238,22 @@ function extractOutline(xml: string): string {
         const joined = sdtFragments.join("");
         if (joined.length > 150) {
           line += `\n  ${sdtFragments.slice(0, 3).join("")}...`;
-        } else {
+        }
+        else {
           line += `\n  ${joined}`;
         }
       }
       lines.push(line);
-    } else if (tag === "w:sectPr") {
-      lines.push(`[${i}] w:sectPr (section properties)`);
-    } else if (tag === "mc:AlternateContent") {
-      lines.push(`[${i}] mc:AlternateContent [drawing, ${(child.length / 1024).toFixed(1)}KB — skipped]`);
+    }
+    else if (tag === "w:sectPr") {
+      lines.push(`[${index}] w:sectPr (section properties)`);
+    }
+    else if (tag === "mc:AlternateContent") {
+      lines.push(`[${index}] mc:AlternateContent [drawing, ${(child.length / 1024).toFixed(1)}KB — skipped]`);
       imageCount++;
-    } else {
-      lines.push(`[${i}] ${tag} (${(child.length / 1024).toFixed(1)}KB)`);
+    }
+    else {
+      lines.push(`[${index}] ${tag} (${(child.length / 1024).toFixed(1)}KB)`);
     }
   }
   // Summary header
@@ -250,9 +262,9 @@ function extractOutline(xml: string): string {
   return `${header}\n${lines.join("\n")}`;
 }
 
-// 4. XML text extraction helpers ―――――――――――――――――――――――――――――――――――
+// 4. XML text extraction helpers ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 
-// 6. Extract all text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Extract all text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractAllText(xml: string): string {
   const texts: string[] = [];
 
@@ -263,7 +275,8 @@ function extractAllText(xml: string): string {
   }
   return texts.join("").trim();
 }
-// 7. Extract text fragments ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 7. Extract text fragments ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractTextFragments(xml: string): string[] {
   const fragments: string[] = [];
 
@@ -274,17 +287,20 @@ function extractTextFragments(xml: string): string[] {
   }
   return fragments;
 }
-// 8. Extract paragraph style ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 8. Extract paragraph style ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractParagraphStyle(xml: string): string | null {
   const match = xml.match(WORD_PARAGRAPH_STYLE_PATTERN);
   return match?.[1] ?? null;
 }
-// 9. Extract table style ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 9. Extract table style ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractTableStyle(xml: string): string | null {
   const match = xml.match(WORD_TABLE_STYLE_PATTERN);
   return match?.[1] ?? null;
 }
-// 10. Extract table rows ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 10. Extract table rows ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractTableRows(tableXml: string): string[][] {
   const rows: string[][] = [];
   // Find each <w:tr>...</w:tr> using nesting-aware extraction
@@ -301,9 +317,10 @@ function extractTableRows(tableXml: string): string[][] {
   }
   return rows;
 }
-// 9. Extract all occurrences of a named element from XML, respecting nesting ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 9. Extract nested XML elements ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Returns array of full element strings including open/close tags.
-// 11. Extract nested elements ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11. Extract nested elements ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractNestedElements(xml: string, tagName: string): string[] {
   const results: string[] = [];
   const openTag = `<${tagName}`;
@@ -345,7 +362,8 @@ function extractNestedElements(xml: string, tagName: string): string[] {
           depth++;
         }
         pos = nextOpen + openTag.length;
-      } else {
+      }
+      else {
         depth--;
         if (depth === 0) {
           results.push(xml.slice(openPos, nextCloseTag + closeTag.length));
@@ -357,9 +375,10 @@ function extractNestedElements(xml: string, tagName: string): string[] {
   }
   return results;
 }
-// 10. Split XML into top-level elements respecting nesting depth ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 10. Split XML into top-level elements respecting nesting depth ――――――――――――――――――――――――――――――――――
 // E.g. for body content, returns each direct child element as a string.
-// 12. Split top level elements ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 12. Split top level elements ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function splitTopLevelElements(xml: string): string[] {
   const elements: string[] = [];
   let depth = 0;
@@ -386,7 +405,8 @@ function splitTopLevelElements(xml: string): string[] {
           i = closeEnd + 1;
           continue;
         }
-      } else if (xml[i + 1] === "?" || xml[i + 1] === "!") {
+      }
+      else if (xml[i + 1] === "?" || xml[i + 1] === "!") {
         // Processing instruction or comment — skip
         const end = xml.indexOf(">", i);
         if (end === -1) {
@@ -394,7 +414,8 @@ function splitTopLevelElements(xml: string): string[] {
         }
         i = end + 1;
         continue;
-      } else {
+      }
+      else {
         // Opening tag
         if (depth === 0) {
           currentStart = i;
@@ -412,7 +433,8 @@ function splitTopLevelElements(xml: string): string[] {
             i = tagEnd + 1;
             continue;
           }
-        } else {
+        }
+        else {
           depth++;
         }
         i = tagEnd + 1;
@@ -423,7 +445,8 @@ function splitTopLevelElements(xml: string): string[] {
   }
   return elements.filter((e) => e.length > 0);
 }
-// 13. Extract header footer outline ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 13. Extract header footer outline ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractHeaderFooterOutline(zip: PizZip): string {
   const parts: string[] = [];
   const zipFiles = zip.files;
@@ -436,10 +459,12 @@ function extractHeaderFooterOutline(zip: PizZip): string {
         const name = relativePath.replace("word/", "");
         if (text) {
           parts.push(`${name}: "${text.length > 100 ? `${text.slice(0, 100)}...` : text}"`);
-        } else {
+        }
+        else {
           parts.push(`${name}: (no text content)`);
         }
-      } catch {
+      }
+      catch {
         /* skip */
       }
     }
@@ -447,15 +472,16 @@ function extractHeaderFooterOutline(zip: PizZip): string {
   return parts.length > 0 ? `\n\nHeaders/Footers:\n${parts.join("\n")}` : "";
 }
 
-// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――═
+// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // DOCX creation helpers
-// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――═
+// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 
-// 14. Escape XML ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 14. Escape XML ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function escapeXml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
-// 15. Create minimal docx zip ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 15. Create minimal docx zip ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createMinimalDocxZip(documentXml: string): PizZip {
   const zip = new PizZip();
 
@@ -506,11 +532,11 @@ function createMinimalDocxZip(documentXml: string): PizZip {
   return zip;
 }
 
-// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――═
+// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Count occurrences helper
-// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――═
+// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 
-// 16. Count occurrences ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 16. Count occurrences ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function countOccurrences(haystack: string, needle: string): number {
   let count = 0;
   let pos = haystack.indexOf(needle);
@@ -521,20 +547,24 @@ function countOccurrences(haystack: string, needle: string): number {
   return count;
 }
 
-// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――═
+// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // DocxFileHandler — implements FileHandler
-// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――═
+// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 
-// 17. Docx file handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 17. Docx file handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export class DocxFileHandler implements FileHandler {
   private readonly extensions = [".docx"];
 
+  // 18. Can handle ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   canHandle(path: string): boolean {
     return this.extensions.some((e) => path.toLowerCase().endsWith(e));
   }
-  // 12. Read DOCX content ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 12. Read DOCX content ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   // Default (offset=0, no explicit length or default length): returns outline
   // With offset/length: returns raw pretty-printed XML with line pagination
+
+  // 19. Read ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async read(path: string, options?: ReadOptions): Promise<FileResult> {
     const buf = await fs.readFile(path);
     const { zip, documentXml } = loadDocxZip(buf);
@@ -554,7 +584,8 @@ export class DocxFileHandler implements FileHandler {
       if (offset < 0) {
         startLine = Math.max(0, totalLines + offset);
         sliceLength = totalLines - startLine;
-      } else {
+      }
+      else {
         startLine = offset;
         sliceLength = length ?? totalLines;
       }
@@ -579,9 +610,12 @@ export class DocxFileHandler implements FileHandler {
       metadata: { isDocx: true, lineCount: totalLines },
     };
   }
-  // 13. Write/create a DOCX file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 13. Write/create a DOCX file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   // Content is plain text — each line becomes a paragraph.
   // Lines starting with # become headings (# = Heading1, ## = Heading2, etc.)
+
+  // 20. Write ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async write(path: string, content: unknown, mode?: "rewrite" | "append"): Promise<void> {
     if (mode === "append") {
       throw new Error("DOCX append not supported. Use edit_block to modify existing DOCX files.");
@@ -597,9 +631,11 @@ export class DocxFileHandler implements FileHandler {
         const level = headingMatch[1].length;
         const headingText = headingMatch[2];
         paragraphs.push(`<w:p><w:pPr><w:pStyle w:val="Heading${level}"/></w:pPr>` + `<w:r><w:t>${escapeXml(headingText)}</w:t></w:r></w:p>`);
-      } else if (line.trim() === "") {
+      }
+      else if (line.trim() === "") {
         paragraphs.push(`<w:p/>`);
-      } else {
+      }
+      else {
         paragraphs.push(`<w:p><w:r><w:t xml:space="preserve">${escapeXml(line)}</w:t></w:r></w:p>`);
       }
     }
@@ -609,10 +645,13 @@ export class DocxFileHandler implements FileHandler {
     const buf = zip.generate({ type: "nodebuffer", compression: "DEFLATE", compressionOptions: { level: 6 } });
     await fs.writeFile(path, buf);
   }
-  // 14. Edit DOCX via find/replace on pretty-printed XML ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 14. Edit DOCX via find/replace on pretty-printed XML ――――――――――――――――――――――――――――――――――――――――――
   // Works on the same representation that read() returns when using offset/length,
   // so XML fragments copied from read output work as search strings.
   // After editing, XML is compacted and repacked into the DOCX.
+
+  // 21. Edit range ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async editRange(path: string, _range: string, content: unknown, _options?: Record<string, unknown>): Promise<EditResult> {
     try {
       let oldStr: string;
@@ -623,7 +662,8 @@ export class DocxFileHandler implements FileHandler {
         oldStr = content.oldStr ?? content.old_string ?? content.search ?? "";
         newStr = content.newStr ?? content.new_string ?? content.replace ?? "";
         expectedReplacements = content.expectedReplacements ?? content.expected_replacements ?? 1;
-      } else {
+      }
+      else {
         return {
           success: false,
           editsApplied: 0,
@@ -693,7 +733,8 @@ export class DocxFileHandler implements FileHandler {
       if (expectedReplacements === 1) {
         const idx = edited.indexOf(oldStr);
         edited = edited.slice(0, idx) + newStr + edited.slice(idx + oldStr.length);
-      } else {
+      }
+      else {
         edited = edited.split(oldStr).join(newStr);
       }
       // Compact and repack
@@ -708,7 +749,8 @@ export class DocxFileHandler implements FileHandler {
       await fs.writeFile(path, outBuf);
 
       return { success: true, editsApplied: matchCount };
-    } catch (error) {
+    }
+    catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       return {
         success: false,
@@ -717,7 +759,8 @@ export class DocxFileHandler implements FileHandler {
       };
     }
   }
-  // 15. Get DOCX file info ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 15. Get DOCX file info ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async getInfo(path: string): Promise<FileInfo> {
     const stats = await fs.stat(path);
 
@@ -738,7 +781,8 @@ export class DocxFileHandler implements FileHandler {
         imageCount,
         wordCount,
       };
-    } catch {
+    }
+    catch {
       /* return basic info */
     }
     return {

@@ -20,22 +20,24 @@ const ALLOWED_CONFIG_KEYS = new Set(CONFIG_FIELD_KEYS);
 const CONFIG_DEBUG_LOG_ENABLED = process.env.FS_MCP_DEBUG_CONFIG === "1";
 const SHELL_LINE_SEPARATOR_REGEX = /\r?\n/;
 
+// 1. Log config debug ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function logConfigDebug(message: string): void {
   if (CONFIG_DEBUG_LOG_ENABLED) {
     console.error(message);
   }
 }
 
-// 1. Normalize array config value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Normalize array config value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function normalizeArrayConfigValue(key: string, value: unknown): unknown {
   let normalizedValue = value;
 
   if (key === "allowedDirectories" && (value === null || (typeof value === "string" && value.trim().length === 0))) {
-  	normalizedValue = [];
+    normalizedValue = [];
   }
   return normalizedValue;
 }
-// 2. Path exists ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 2. Path exists ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function pathExists(pathValue: string): Promise<boolean> {
   try {
     await access(pathValue, fsConstants.X_OK);
@@ -45,12 +47,13 @@ async function pathExists(pathValue: string): Promise<boolean> {
     return false;
   }
 }
-// 3. Detect available shells ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 3. Detect available shells ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function detectAvailableShells(systemInfo: ReturnType<typeof getSystemInfo>): Promise<string[]> {
   const detected = new Set<string>();
   const add = (shell: string): void => {
     if (shell.trim().length > 0) {
-    	detected.add(shell.trim());
+      detected.add(shell.trim());
     }
   };
 
@@ -72,7 +75,7 @@ async function detectAvailableShells(systemInfo: ReturnType<typeof getSystemInfo
     const availableCandidates = await Promise.all(
       candidates.map(async (shell) => {
         if (shell.includes("\\")) {
-        	return (await pathExists(shell)) ? shell : null;
+          return (await pathExists(shell)) ? shell : null;
         }
         return shell;
       }),
@@ -80,7 +83,7 @@ async function detectAvailableShells(systemInfo: ReturnType<typeof getSystemInfo
 
     for (const shell of availableCandidates) {
       if (shell !== null) {
-      	add(shell);
+        add(shell);
       }
     }
     return [...detected];
@@ -101,7 +104,7 @@ async function detectAvailableShells(systemInfo: ReturnType<typeof getSystemInfo
 
   for (const content of shellFileContents) {
     if (content !== null) {
-    	content
+      content
         .split(SHELL_LINE_SEPARATOR_REGEX)
         .map((line) => line.trim())
         .filter((line) => line.length > 0 && !line.startsWith("#"))
@@ -113,21 +116,23 @@ async function detectAvailableShells(systemInfo: ReturnType<typeof getSystemInfo
 
   for (const shell of availableFallbacks) {
     if (shell !== null) {
-    	add(shell);
+      add(shell);
     }
   }
   return [...detected];
 }
-// 4. Format config value ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 4. Format config value ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function formatConfigValue(value: unknown): string {
   const serializedValue = JSON.stringify(value, null, 2);
 
   if (serializedValue !== undefined) {
-  	return serializedValue;
+    return serializedValue;
   }
   return String(value);
 }
-// 5. Create system info snapshot ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 5. Create system info snapshot ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createSystemInfoSnapshot(): ReturnType<typeof getSystemInfo> & {
   memory: {
     rss: string;
@@ -151,7 +156,8 @@ function createSystemInfoSnapshot(): ReturnType<typeof getSystemInfo> & {
     },
   };
 }
-// 6. Get config value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 6. Get config value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getConfigValue(args: unknown): Promise<ServerResult> {
   logConfigDebug(`getConfigValue called with args: ${JSON.stringify(args)}`);
   const parsed = GetConfigValueArgsSchema.safeParse(args);
@@ -174,16 +180,16 @@ export async function getConfigValue(args: unknown): Promise<ServerResult> {
     let value: unknown;
 
     if (isConfigFieldKey(key) || key === "version") {
-    	value = await configManager.getValue(key);
+      value = await configManager.getValue(key);
     }
     else if (key === "currentClient") {
-    	value = currentClient;
+      value = currentClient;
     }
     else if (key === "systemInfo") {
-    	value = createSystemInfoSnapshot();
+      value = createSystemInfoSnapshot();
     }
     else if (key === "availableShells") {
-    	const systemInfo = getSystemInfo();
+      const systemInfo = getSystemInfo();
 
       value = await detectAvailableShells(systemInfo);
     }
@@ -230,7 +236,8 @@ export async function getConfigValue(args: unknown): Promise<ServerResult> {
     };
   }
 }
-// 7. Set config value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 7. Set config value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function setConfigValue(args: unknown): Promise<ServerResult> {
   logConfigDebug(`setConfigValue called with args: ${JSON.stringify(args)}`);
   try {
@@ -286,12 +293,12 @@ export async function setConfigValue(args: unknown): Promise<ServerResult> {
             logConfigDebug(`Failed to parse string as array for ${parsed.data.key}: ${parseError}`);
             // If parsing failed and it's a single value, convert to an array with one item
             if (!originalString.includes("[")) {
-            	valueToStore = [originalString];
+              valueToStore = [originalString];
             }
           }
         }
         else if (valueToStore !== null) {
-        	// If not a string or array (and not null), convert to an array with one item
+          // If not a string or array (and not null), convert to an array with one item
           valueToStore = [String(valueToStore)];
         }
         // Ensure the value is an array after all our conversions

@@ -11,9 +11,9 @@
 import fs from "node:fs/promises";
 import type {FileHandler, FileInfo, FileResult, ReadOptions} from "@assets/readers/readers-base";
 
-// 1. Image file handler implementation ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Image file handler implementation ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Supports: PNG, JPEG, GIF, WebP, BMP, SVG
-// 1. Image file handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Image file handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export class ImageFileHandler implements FileHandler {
   private static readonly IMAGE_EXTENSIONS = [".png", ".jpg", ".jpeg", ".gif", ".webp", ".bmp", ".svg"];
 
@@ -27,10 +27,13 @@ export class ImageFileHandler implements FileHandler {
     ".svg": "image/svg+xml",
   };
 
+  // 2. Can handle ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   canHandle(path: string): boolean {
     const lowerPath = path.toLowerCase();
     return ImageFileHandler.IMAGE_EXTENSIONS.some((ext) => lowerPath.endsWith(ext));
   }
+
+  // 3. Read ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async read(path: string, _options?: ReadOptions): Promise<FileResult> {
     // Images are always read in full, ignoring offset and length
     const buffer = await fs.readFile(path);
@@ -45,21 +48,23 @@ export class ImageFileHandler implements FileHandler {
       },
     };
   }
+
+  // 4. Write ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async write(path: string, content: unknown, _mode?: "rewrite" | "append"): Promise<void> {
     // If content is base64 string, convert to buffer
     if (typeof content === "string") {
-    	const buffer = Buffer.from(content, "base64");
+      const buffer = Buffer.from(content, "base64");
       await fs.writeFile(path, buffer);
       return;
     }
     if (content instanceof Buffer) {
-    	await fs.writeFile(path, content);
+      await fs.writeFile(path, content);
       return;
     }
-    else {
-    	throw new Error("Image write content must be a base64 string or Buffer.");
-    }
+    throw new Error("Image write content must be a base64 string or Buffer.");
   }
+
+  // 5. Get info ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async getInfo(path: string): Promise<FileInfo> {
     const stats = await fs.stat(path);
 
@@ -77,14 +82,15 @@ export class ImageFileHandler implements FileHandler {
       },
     };
   }
-  // 2. Get MIME type ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 2. Get MIME type ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private getMimeType(path: string): string {
     const lowerPath = path.toLowerCase();
     for (const [ext, mimeType] of Object.entries(ImageFileHandler.IMAGE_MIME_TYPES)) {
       if (lowerPath.endsWith(ext)) {
-      	return mimeType;
+        return mimeType;
       }
     }
-    return "application/octet-stream"; // Fallback
+    return "application/octet-stream";
   }
 }

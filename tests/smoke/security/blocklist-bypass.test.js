@@ -6,6 +6,7 @@
 import assert from "node:assert";
 import { commandManager } from "../../../out/features/process/process-command-policy.js";
 
+// 1. Run tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runTests() {
   // mock config with blocked commands
   const _blockedCmds = ["sudo", "iptables", "rm"];
@@ -43,7 +44,8 @@ async function runTests() {
     const cmds8 = commandManager.extractCommands("$MYVAR ls");
     assert.ok(cmds8.includes("ls"), 'FAIL: should extract "ls" and ignore $MYVAR');
     assert.ok(!cmds8.includes("$MYVAR"), "FAIL: should not include $MYVAR as a command");
-  } catch (error) {
+  }
+  catch (error) {
     console.error("Test failed:", error.message);
     process.exit(1);
   }

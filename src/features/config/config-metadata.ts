@@ -106,12 +106,12 @@ export type ConfigQueryKey = keyof typeof CONFIG_QUERY_DEFINITIONS;
 
 export const CONFIG_QUERY_KEYS = Object.keys(CONFIG_QUERY_DEFINITIONS) as ConfigQueryKey[];
 
-// 1. Is config field key ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Is config field key ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function isConfigFieldKey(value: string): value is ConfigFieldKey {
   return Object.hasOwn(CONFIG_FIELD_DEFINITIONS, value);
 }
 
-// 2. Is config query key ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Is config query key ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function isConfigQueryKey(value: string): value is ConfigQueryKey {
   return Object.hasOwn(CONFIG_QUERY_DEFINITIONS, value);
 }

@@ -10,7 +10,7 @@ import { GetConfigsArgsSchema, SetConfigValuesArgsSchema } from "@schemas/schema
 import { CMD_PREFIX_DESCRIPTION, type ToolCatalogEntry } from "@tools/tools-const";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
-// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export const CONFIG_TOOL_CATALOG: ToolCatalogEntry[] = [
   {
     name: "get_configs",

@@ -9,19 +9,19 @@ import path from "node:path";
 import {CONFLICT_STATUS_CODES, runGitCommand, splitLines} from "@features/git/git-runtime";
 import type {GitStatusBucket, GitStatusSummary, GitWorkingTreeBucket} from "@features/git/git-types";
 
-export const GIT_REF_FIELD_SEPARATOR = "\\u001f";
-export const GIT_REF_RECORD_SEPARATOR = "\\u001e";
+export const GIT_REF_FIELD_SEPARATOR = "\u001f";
+export const GIT_REF_RECORD_SEPARATOR = "\u001e";
 
-const BRANCH_TRACK_PATTERN = /^([^\\s]+)(?: \\[(.*)\\])?$/;
-const AHEAD_PATTERN = /ahead (\\d+)/;
-const BEHIND_PATTERN = /behind (\\d+)/;
-const REMOTE_LINE_PATTERN = /^([^\\s]+)\\s+([^\\s]+)\\s+\\((fetch|push)\\)$/;
-const TRAILING_REF_RECORD_LINE_PATTERN = /\\r?\\n$/;
-const WRAPPED_REFS_PATTERN = /^\\\\((.*)\\\\)$/;
+const BRANCH_TRACK_PATTERN = /^([^\s]+)(?: \[(.*)\])?$/;
+const AHEAD_PATTERN = /ahead (\d+)/;
+const BEHIND_PATTERN = /behind (\d+)/;
+const REMOTE_LINE_PATTERN = /^([^\s]+)\s+([^\s]+)\s+\((fetch|push)\)$/;
+const TRAILING_REF_RECORD_LINE_PATTERN = /\r?\n$/;
+const WRAPPED_REFS_PATTERN = /^\((.*)\)$/;
 const RECENT_COMMIT_FORMAT = "%H%x1f%an%x1f%aI%x1f%s%x1e";
 const RECENT_TAG_FORMAT = `%(refname:short)${GIT_REF_FIELD_SEPARATOR}%(creatordate:iso-strict)${GIT_REF_FIELD_SEPARATOR}%(taggername)${GIT_REF_FIELD_SEPARATOR}%(taggeremail)${GIT_REF_FIELD_SEPARATOR}%(subject)${GIT_REF_FIELD_SEPARATOR}%(body)${GIT_REF_RECORD_SEPARATOR}`;
 
-// 1. Append unique ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Append unique ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function appendUnique(target: string[] | undefined, value: string): string[] {
   const normalizedTarget = target ?? [];
 
@@ -32,7 +32,7 @@ export function appendUnique(target: string[] | undefined, value: string): strin
   return normalizedTarget;
 }
 
-// 2. Add index change ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Add index change ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function addIndexChange(bucket: GitStatusBucket, code: string, pathValue: string): void {
   if (code === "A") {
     bucket.added = appendUnique(bucket.added, pathValue);
@@ -51,7 +51,7 @@ export function addIndexChange(bucket: GitStatusBucket, code: string, pathValue:
   }
 }
 
-// 3. Add working tree change ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Add working tree change ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function addWorkingTreeChange(bucket: GitWorkingTreeBucket, code: string, pathValue: string): void {
   if (code === "A") {
     bucket.added = appendUnique(bucket.added, pathValue);
@@ -64,13 +64,13 @@ export function addWorkingTreeChange(bucket: GitWorkingTreeBucket, code: string,
   }
 }
 
-// 4. Flatten bucket ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Flatten bucket ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function flattenBucket(bucket: GitStatusBucket | GitWorkingTreeBucket): string[] {
   const flattenedValues = Object.values(bucket).flatMap((value) => value ?? []);
   return flattenedValues;
 }
 
-// 5. Parse branch header ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Parse branch header ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function parseBranchHeader(line: string, summary: GitStatusSummary): void {
   const branchLine = line.slice(3);
 
@@ -106,7 +106,7 @@ export function parseBranchHeader(line: string, summary: GitStatusSummary): void
   }
 }
 
-// 6. Parse status summary ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Parse status summary ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function parseStatusSummary(text: string, includeUntracked: boolean): GitStatusSummary {
   const summary: GitStatusSummary = {
     currentBranch: null,
@@ -151,14 +151,14 @@ export function parseStatusSummary(text: string, includeUntracked: boolean): Git
   return summary;
 }
 
-// 7. Get status summary ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Get status summary ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getStatusSummary(cwd: string, includeUntracked: boolean = true): Promise<GitStatusSummary> {
   const statusArgs = ["status", "--short", "--branch", includeUntracked ? "--untracked-files=all" : "--untracked-files=no"];
   const commandResult = await runGitCommand(statusArgs, { cwd });
   return parseStatusSummary(commandResult.stdout, includeUntracked);
 }
 
-// 8. To snake status ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. To snake status ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function toSnakeStatus(summary: GitStatusSummary): Record<string, unknown> {
   return {
     current_branch: summary.currentBranch,
@@ -173,7 +173,7 @@ export function toSnakeStatus(summary: GitStatusSummary): Record<string, unknown
   };
 }
 
-// 9. To snapshot status ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. To snapshot status ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function toSnapshotStatus(summary: GitStatusSummary): Record<string, unknown> {
   return {
     branch: summary.currentBranch,
@@ -188,7 +188,7 @@ export function toSnapshotStatus(summary: GitStatusSummary): Record<string, unkn
   };
 }
 
-// 10. Get remotes ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Get remotes ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getRemotes(cwd: string): Promise<Record<string, string>[]> {
   const commandResult = await runGitCommand(["remote", "-v"], { cwd, allowFailure: true });
   const remoteMap = new Map<string, { name: string; fetchUrl: string; pushUrl: string }>();
@@ -216,7 +216,7 @@ export async function getRemotes(cwd: string): Promise<Record<string, string>[]>
   return [...remoteMap.values()];
 }
 
-// 11. Get recent commits ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11. Get recent commits ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getRecentCommits(cwd: string, limit: number): Promise<Record<string, string>[]> {
   const commandResult = await runGitCommand(["log", `--max-count=${String(limit)}`, `--pretty=format:${RECENT_COMMIT_FORMAT}`], { cwd, allowFailure: true });
 
@@ -225,11 +225,11 @@ export async function getRecentCommits(cwd: string, limit: number): Promise<Reco
   }
 
   return commandResult.stdout
-    .split("\\x1e")
+    .split("\x1e")
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0)
     .map((entry) => {
-      const parts = entry.split("\\x1f");
+      const parts = entry.split("\x1f");
       return {
         hash: parts[0],
         author: parts[1],
@@ -239,7 +239,7 @@ export async function getRecentCommits(cwd: string, limit: number): Promise<Reco
     });
 }
 
-// 12. Get recent tags ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 12. Get recent tags ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getRecentTags(cwd: string, limit: number): Promise<Record<string, string>[]> {
   const commandResult = await runGitCommand([
     "for-each-ref",
@@ -274,7 +274,7 @@ export async function getRecentTags(cwd: string, limit: number): Promise<Record<
     });
 }
 
-// 13. Gather repository snapshot ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 13. Gather repository snapshot ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function gatherRepositorySnapshot(cwd: string): Promise<Record<string, unknown>> {
   const status = await getStatusSummary(cwd, true);
   const recentCommits = await getRecentCommits(cwd, 2);
@@ -289,26 +289,26 @@ export async function gatherRepositorySnapshot(cwd: string): Promise<Record<stri
   };
 }
 
-// 14. Get changed files between ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 14. Get changed files between ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getChangedFilesBetween(cwd: string, left: string, right: string): Promise<string[]> {
   const commandResult = await runGitCommand(["diff", "--name-only", left, right], { cwd, allowFailure: true });
   return splitLines(commandResult.stdout);
 }
 
-// 15. Get conflicted files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 15. Get conflicted files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getConflictedFiles(cwd: string): Promise<string[]> {
   const status = await getStatusSummary(cwd, true);
   return status.conflictedFiles;
 }
 
-// 16. Sum numstat ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 16. Sum numstat ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function sumNumstat(text: string): { filesChanged: number; insertions?: number; deletions?: number } {
   let filesChanged = 0;
   let insertions = 0;
   let deletions = 0;
 
   splitLines(text).forEach((line) => {
-    const parts = line.split("\\t");
+    const parts = line.split("\t");
     const added = parts[0] === "-" ? 0 : Number.parseInt(parts[0], 10);
     const removed = parts[1] === "-" ? 0 : Number.parseInt(parts[1], 10);
 
@@ -325,23 +325,23 @@ export function sumNumstat(text: string): { filesChanged: number; insertions?: n
   };
 }
 
-// 17. Parse refs ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 17. Parse refs ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function parseRefs(refText: string | undefined): string[] | undefined {
   if (!refText) {
-    return ;
+    return undefined;
   }
 
   const normalized = refText.trim();
 
   if (!normalized || normalized === "()") {
-    return ;
+    return undefined;
   }
 
   const refs = normalized.replace(WRAPPED_REFS_PATTERN, "$1").split(",").map((value) => value.trim()).filter((value) => value.length > 0);
   return refs.length > 0 ? refs : undefined;
 }
 
-// 18. Detect auto excluded files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 18. Detect auto excluded files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function detectAutoExcludedFiles(paths: string[], patterns: readonly string[]): string[] {
   const excludedFiles = paths.filter((filePath) => patterns.includes(path.basename(filePath)));
   return excludedFiles;

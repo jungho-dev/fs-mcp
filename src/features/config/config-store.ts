@@ -5,6 +5,7 @@
  * @since 2026-05-02
  */
 
+import {existsSync} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {VERSION} from "@cores/runtime/runtime-version";
@@ -24,13 +25,14 @@ export interface ClientInfo {
 }
 
 const WINDOWS_ALLOWED_DIRECTORIES_SEPARATOR = ";";
+const WINDOWS_POWERSHELL_COMMAND_SUFFIX = "-NoLogo -NoProfile -ExecutionPolicy Bypass -Command";
 
-// 1. Get configured allowed directories ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Get configured allowed directories ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getConfiguredAllowedDirectories(): string[] | undefined {
   const rawAllowedDirectories = process.env.FS_MCP_ALLOWED_DIRECTORIES;
 
   if (rawAllowedDirectories === undefined) {
-    return ;
+    return undefined;
   }
   return rawAllowedDirectories
     .split(os.platform() === "win32" ? WINDOWS_ALLOWED_DIRECTORIES_SEPARATOR : path.delimiter)
@@ -38,7 +40,7 @@ function getConfiguredAllowedDirectories(): string[] | undefined {
     .filter((directory) => directory.length > 0);
 }
 
-// 2. Get default allowed directories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Get default allowed directories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getDefaultAllowedDirectories(): string[] {
   const configuredDirectories = getConfiguredAllowedDirectories();
 
@@ -48,10 +50,37 @@ function getDefaultAllowedDirectories(): string[] {
   return [];
 }
 
-// 3. Get default shell ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Get Windows default shell ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function getWindowsDefaultShell(): string {
+  const userProfile = process.env.USERPROFILE?.trim();
+  const programFiles = process.env.ProgramFiles?.trim();
+  const knownPwshPaths = [
+    programFiles ? path.join(programFiles, "PowerShell", "7", "pwsh.exe") : "",
+    userProfile ? path.join(userProfile, "AppData", "Local", "Programs", "PowerShell", "7", "pwsh.exe") : "",
+  ].filter((shellPath) => shellPath.length > 0);
+
+  const resolvedPwshPath = knownPwshPaths.find((shellPath) => existsSync(shellPath));
+  if (resolvedPwshPath) {
+    return `${resolvedPwshPath} ${WINDOWS_POWERSHELL_COMMAND_SUFFIX}`;
+  }
+  const comSpec = process.env.ComSpec?.trim();
+  if (comSpec && comSpec.length > 0) {
+    return comSpec;
+  }
+  const systemRoot = process.env.SystemRoot?.trim();
+  if (systemRoot && systemRoot.length > 0) {
+    const systemCmdPath = path.join(systemRoot, "System32", "cmd.exe");
+    if (existsSync(systemCmdPath)) {
+      return systemCmdPath;
+    }
+  }
+  return "cmd.exe";
+}
+
+// 4. Get default shell ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getDefaultShell(): string {
   if (os.platform() === "win32") {
-    return "pwsh.exe";
+    return getWindowsDefaultShell();
   }
   const configuredShell = process.env.SHELL?.trim();
 
@@ -61,7 +90,7 @@ function getDefaultShell(): string {
   return os.platform() === "darwin" ? "/bin/zsh" : "/bin/sh";
 }
 
-// 4. Get default blocked commands ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Get default blocked commands ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getDefaultBlockedCommands(): string[] {
   return [
     // Disk and partition management
@@ -109,12 +138,12 @@ function getDefaultBlockedCommands(): string[] {
   ];
 }
 
-// 5. Config manager ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Config manager ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 class ConfigManager {
   private config: ServerConfig = {};
   private initialized = false;
 
-  // 5-1. Initialize runtime configuration ―――――――――――――――――――――――――――――――――――――――――――
+  // 5-1. Initialize runtime configuration ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async init(): Promise<void> {
     if (this.initialized) {
       return;
@@ -124,13 +153,14 @@ class ConfigManager {
     this.initialized = true;
   }
 
-  // 5-2. Alias for init() to maintain backward compatibility ―――――――――――――――――――――――――――
+  // 5-2. Alias for init() to maintain backward compatibility ――――――――――――――――――――――――――――――――――――――
   async loadConfig(): Promise<void> {
     return this.init();
   }
 
-  // 5-3. Create default runtime configuration ――――――――――――――――――――――――――――――――――――――――――
-  // 6. Get default config ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 5-3. Create default runtime configuration ―――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 6. Get default config ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private getDefaultConfig(): ServerConfig {
     return {
       allowedDirectories: getDefaultAllowedDirectories(),
@@ -141,32 +171,32 @@ class ConfigManager {
     };
   }
 
-  // 5-4. Get the entire config ――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 5-4. Get the entire config ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async getConfig(): Promise<ServerConfig> {
     await this.init();
     return {...this.config};
   }
 
-  // 5-5. Get a specific configuration value ―――――――――――――――――――――――――――――――――――――――――――
+  // 5-5. Get a specific configuration value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async getValue(key: string): Promise<unknown> {
     await this.init();
     return this.config[key];
   }
 
-  // 5-6. Set a specific configuration value ―――――――――――――――――――――――――――――――――――――――――――
+  // 5-6. Set a specific configuration value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async setValue(key: string, value: unknown): Promise<void> {
     await this.init();
     this.config[key] = value;
   }
 
-  // 5-7. Update multiple configuration values at once ――――――――――――――――――――――――――――――――――
+  // 5-7. Update multiple configuration values at once ―――――――――――――――――――――――――――――――――――――――――――――
   async updateConfig(updates: Partial<ServerConfig>): Promise<ServerConfig> {
     await this.init();
     this.config = {...this.config, ...updates};
     return {...this.config};
   }
 
-  // 5-8. Reset runtime configuration to defaults ――――――――――――――――――――――――――――――――――――――
+  // 5-8. Reset runtime configuration to defaults ――――――――――――――――――――――――――――――――――――――――――――――――――
   async resetConfig(): Promise<ServerConfig> {
     this.config = this.getDefaultConfig();
     this.config["version"] = VERSION;
@@ -174,7 +204,7 @@ class ConfigManager {
     return {...this.config};
   }
 
-  // 5-9. Runtime config does not create first-run files ―――――――――――――――――――――――――――――――
+  // 5-9. Runtime config does not create first-run files ―――――――――――――――――――――――――――――――――――――――――――
   isFirstRun(): boolean {
     return false;
   }

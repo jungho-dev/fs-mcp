@@ -35,6 +35,7 @@ const TEST_GROUPS = {
     "./smoke/edit/edit-block-basic.test.js",
     "./smoke/filesystem/file-handlers.test.js",
     "./smoke/git/git-basic.test.js",
+    "./smoke/process/list-processes.test.js",
     "./smoke/process/virtual-node-session.test.js",
     "./smoke/search/search-code.test.js",
     "./smoke/search/search-truncation.test.js",
@@ -45,14 +46,17 @@ const TEST_GROUPS = {
 };
 const RUNNABLE_TESTS = Object.values(TEST_GROUPS).flat();
 
+// 1. Write stdout ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function writeStdout(message) {
   process.stdout.write(`${message}\n`);
 }
 
+// 2. Write stderr ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function writeStderr(message) {
   process.stderr.write(`${message}\n`);
 }
 
+// 3. Run test file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runTestFile(testFile) {
   writeStdout(`\n${colors.cyan}Running ${testFile}${colors.reset}`);
 
@@ -84,6 +88,7 @@ async function runTestFile(testFile) {
   });
 }
 
+// 4. Build project ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function buildProject() {
   await new Promise((resolve, reject) => {
     const proc = spawn("bun", ["run", "build"], {
@@ -107,6 +112,7 @@ async function buildProject() {
   });
 }
 
+// 5. Run smoke tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runSmokeTests() {
   if (RUNNABLE_TESTS.length === 0) {
     writeStderr(`${colors.yellow}Warning: No runnable tests configured${colors.reset}`);
@@ -146,6 +152,7 @@ async function runSmokeTests() {
   };
 }
 
+// 6. Main ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function main() {
   try {
     if (shouldSkipBuild) {
@@ -157,7 +164,8 @@ async function main() {
 
     const testResult = await runSmokeTests();
     process.exit(testResult.success ? 0 : 1);
-  } catch (error) {
+  }
+  catch (error) {
     writeStderr(`\n${colors.red}${colors.bold}FATAL ERROR:${colors.reset}`);
     writeStderr(`${colors.red}${error.message}${colors.reset}`);
 

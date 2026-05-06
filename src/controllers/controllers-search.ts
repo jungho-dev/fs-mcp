@@ -12,7 +12,7 @@ import { readFileInternal } from "@features/filesystem/filesystem-service";
 import { searchManager } from "@features/search/search-service";
 import { GetMoreSearchResultsArgsSchema, GetSearchResultsArgsSchema, StartSearchArgsSchema, StartSearchesArgsSchema, StopSearchArgsSchema, StopSearchesArgsSchema } from "@schemas/schemas-search";
 
-// 1. Handle start search ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Handle start search ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStartSearch(args: unknown): Promise<ServerResult> {
   const parsed = StartSearchArgsSchema.safeParse(args);
   if (!parsed.success) {
@@ -52,7 +52,8 @@ export async function handleStartSearch(args: unknown): Promise<ServerResult> {
       for (const searchResult of result.results.slice(0, 10)) {
         if (searchResult.type === "content") {
           output += `${searchResult.file}:${searchResult.line} - ${searchResult.match?.slice(0, 100)}${searchResult.match && searchResult.match.length > 100 ? "..." : ""}\n`;
-        } else {
+        }
+        else {
           output += `${searchResult.file}\n`;
         }
       }
@@ -62,13 +63,15 @@ export async function handleStartSearch(args: unknown): Promise<ServerResult> {
     }
     if (result.isComplete) {
       output += `\nSearch completed.`;
-    } else {
+    }
+    else {
       output += `\nSearch in progress. Use get_more_search_results to get more results.`;
     }
     return {
       content: [{ type: "text", text: output }],
     };
-  } catch (error) {
+  }
+  catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
     capture("search_session_start_error", { error: errorMessage });
 
@@ -78,7 +81,8 @@ export async function handleStartSearch(args: unknown): Promise<ServerResult> {
     };
   }
 }
-// 2. Handle get more search results ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 2. Handle get more search results ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleGetMoreSearchResults(args: unknown): Promise<ServerResult> {
   const parsed = GetMoreSearchResultsArgsSchema.safeParse(args);
   if (!parsed.success) {
@@ -114,7 +118,8 @@ export async function handleGetMoreSearchResults(args: unknown): Promise<ServerR
     if (offset < 0) {
       // Negative offset - tail behavior
       output += `Showing last ${results.returnedCount} results\n\n`;
-    } else {
+    }
+    else {
       // Positive offset - range behavior
       const startPos = offset;
       const endPos = startPos + results.returnedCount - 1;
@@ -123,16 +128,19 @@ export async function handleGetMoreSearchResults(args: unknown): Promise<ServerR
     if (results.results.length === 0) {
       if (results.isComplete) {
         output += results.totalResults === 0 ? "No matches found." : "No results in this range.";
-      } else {
+      }
+      else {
         output += "No results yet, search is still running...";
       }
-    } else {
+    }
+    else {
       output += "Results:\n";
 
       for (const result of results.results) {
         if (result.type === "content") {
           output += `${result.file}:${result.line} - ${result.match?.slice(0, 100)}${result.match && result.match.length > 100 ? "..." : ""}\n`;
-        } else {
+        }
+        else {
           output += `${result.file}\n`;
         }
       }
@@ -153,7 +161,8 @@ export async function handleGetMoreSearchResults(args: unknown): Promise<ServerR
     return {
       content: [{ type: "text", text: output }],
     };
-  } catch (error) {
+  }
+  catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
 
     return {
@@ -162,7 +171,8 @@ export async function handleGetMoreSearchResults(args: unknown): Promise<ServerR
     };
   }
 }
-// 3. Handle stop search ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 3. Handle stop search ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStopSearch(args: unknown): Promise<ServerResult> {
   const parsed = StopSearchArgsSchema.safeParse(args);
   if (!parsed.success) {
@@ -183,7 +193,8 @@ export async function handleStopSearch(args: unknown): Promise<ServerResult> {
           },
         ],
       };
-    } else {
+    }
+    else {
       return {
         content: [
           {
@@ -193,7 +204,8 @@ export async function handleStopSearch(args: unknown): Promise<ServerResult> {
         ],
       };
     }
-  } catch (error) {
+  }
+  catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
 
     return {
@@ -202,7 +214,8 @@ export async function handleStopSearch(args: unknown): Promise<ServerResult> {
     };
   }
 }
-// 4. Handle list searches ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 4. Handle list searches ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleListSearches(): Promise<ServerResult> {
   try {
     const sessions = searchManager.listSearchSessions();
@@ -227,7 +240,8 @@ export async function handleListSearches(): Promise<ServerResult> {
     return {
       content: [{ type: "text", text: output }],
     };
-  } catch (error) {
+  }
+  catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
 
     return {
@@ -237,7 +251,7 @@ export async function handleListSearches(): Promise<ServerResult> {
   }
 }
 
-// 5. Handle start searches ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Handle start searches ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStartSearches(args: unknown): Promise<ServerResult> {
   const parsed = StartSearchesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleStartSearch(item));
@@ -246,7 +260,7 @@ export async function handleStartSearches(args: unknown): Promise<ServerResult> 
   return response;
 }
 
-// 6. Handle get search results ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Handle get search results ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleGetSearchResults(args: unknown): Promise<ServerResult> {
   const parsed = GetSearchResultsArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleGetMoreSearchResults(item));
@@ -255,7 +269,7 @@ export async function handleGetSearchResults(args: unknown): Promise<ServerResul
   return response;
 }
 
-// 7. Handle stop searches ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Handle stop searches ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStopSearches(args: unknown): Promise<ServerResult> {
   const parsed = StopSearchesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.sessionIds, (sessionId) => handleStopSearch({ sessionId: sessionId }));

@@ -11,7 +11,7 @@ import { ensureDirectoryExists, getCurrentBranch, getCurrentGitWorkingDirectory,
 import { gatherRepositorySnapshot, getStatusSummary } from "@features/git/git-status-support";
 import type { GitArgsMap, GitToolOutput } from "@features/git/git-types";
 
-// 1. Run git set working dir ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Run git set working dir ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitSetWorkingDir(input: GitArgsMap["git_set_working_dir"]): Promise<GitToolOutput> {
   const resolvedPath = await resolveCreationPath(input.path);
   const shouldValidateRepository = input.validateGitRepo ?? true;
@@ -27,13 +27,13 @@ export async function runGitSetWorkingDir(input: GitArgsMap["git_set_working_dir
         await runGitCommand(["init", "--initial-branch=main"], { cwd: resolvedPath });
       }
       else {
-      	throw new Error(`Path is not a git repository: ${resolvedPath}. Pass initializeIfNotPresent: true to run git init here.`);
+        throw new Error(`Path is not a git repository: ${resolvedPath}. Pass initializeIfNotPresent: true to run git init here.`);
       }
     }
     setCurrentGitWorkingDirectory(await getRepositoryRoot(resolvedPath));
   }
   else {
-  	setCurrentGitWorkingDirectory(resolvedPath);
+    setCurrentGitWorkingDirectory(resolvedPath);
   }
   let repository: Record<string, unknown> | undefined;
   let enrichmentWarnings: string[] | undefined;
@@ -56,7 +56,7 @@ export async function runGitSetWorkingDir(input: GitArgsMap["git_set_working_dir
   };
 }
 
-// 2. Run git clear working dir ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Run git clear working dir ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitClearWorkingDir(): Promise<GitToolOutput> {
   const previousPath = getCurrentGitWorkingDirectory();
 
@@ -69,7 +69,7 @@ export async function runGitClearWorkingDir(): Promise<GitToolOutput> {
   };
 }
 
-// 3. Run git status ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Run git status ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitStatus(input: GitArgsMap["git_status"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const includeUntracked = input.includeUntracked ?? true;
@@ -89,7 +89,7 @@ export async function runGitStatus(input: GitArgsMap["git_status"]): Promise<Git
   };
 }
 
-// 4. Run git init ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Run git init ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitInit(input: GitArgsMap["git_init"]): Promise<GitToolOutput> {
   const targetPath = await resolveCreationBasePath(input.path);
   const initialBranch = input.initialBranch ?? "main";
@@ -105,7 +105,7 @@ export async function runGitInit(input: GitArgsMap["git_init"]): Promise<GitTool
   };
 }
 
-// 5. Run git clone ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Run git clone ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitClone(input: GitArgsMap["git_clone"]): Promise<GitToolOutput> {
   const destinationPath = await resolveCreationPath(input.path);
 

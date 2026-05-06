@@ -12,26 +12,64 @@ import type {ProcessInfo, ServerResult} from "@assets/type/common";
 import {KillProcessArgsSchema} from "@schemas/schemas-process";
 
 const execAsync = promisify(exec);
-const PROCESS_COLUMN_SPLIT_PATTERN = /\\s+/;
+const PROCESS_COLUMN_SPLIT_PATTERN = /\s+/;
+const WINDOWS_TASKLIST_LINE_PATTERN = /^(.+?)\s+(\d+)\s+(.+?)\s+(\d+)\s+(.+)$/;
 
-// 1. List processes ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Parse Unix process line ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function parseUnixProcessLine(line: string): ProcessInfo | null {
+  const parts = line.trim().split(PROCESS_COLUMN_SPLIT_PATTERN);
+  if (parts.length < 11) {
+    return null;
+  }
+  const pid = Number.parseInt(parts[1], 10);
+  if (Number.isNaN(pid)) {
+    return null;
+  }
+  return {
+    command: parts.slice(10).join(" "),
+    cpu: parts[2],
+    memory: parts[3],
+    pid,
+  };
+}
+
+// 2. Parse Windows process line ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function parseWindowsProcessLine(line: string): ProcessInfo | null {
+  const match = line.trim().match(WINDOWS_TASKLIST_LINE_PATTERN);
+  if (!match) {
+    return null;
+  }
+  const pid = Number.parseInt(match[2], 10);
+  if (Number.isNaN(pid)) {
+    return null;
+  }
+  return {
+    command: match[1].trim(),
+    cpu: "N/A",
+    memory: match[5].trim(),
+    pid,
+  };
+}
+
+// 3. Parse process line ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function parseProcessLine(line: string, platform: NodeJS.Platform): ProcessInfo | null {
+  const parsedProcess = platform === "win32" ? parseWindowsProcessLine(line) : parseUnixProcessLine(line);
+  return parsedProcess;
+}
+
+// 4. List processes ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function listProcesses(): Promise<ServerResult> {
-  const command = os.platform() === "win32" ? "tasklist" : "ps aux";
+  const lineSeparatorPattern = /\r?\n/;
+  const platform = os.platform();
+  const command = platform === "win32" ? "tasklist" : "ps aux";
   try {
     const {stdout} = await execAsync(command);
     const processes = stdout
-      .split("\n")
+      .split(lineSeparatorPattern)
       .slice(1)
       .filter(Boolean)
-      .map((line) => {
-        const parts = line.split(PROCESS_COLUMN_SPLIT_PATTERN);
-        return {
-          command: parts.at(-1),
-          cpu: parts[2],
-          memory: parts[3],
-          pid: Number.parseInt(parts[1], 10),
-        } as ProcessInfo;
-      });
+      .map((line) => parseProcessLine(line, platform))
+      .filter((processInfo): processInfo is ProcessInfo => processInfo !== null);
 
     return {
       content: [
@@ -49,7 +87,8 @@ export async function listProcesses(): Promise<ServerResult> {
     };
   }
 }
-// 2. Kill process ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 5. Kill process ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function killProcess(args: unknown): Promise<ServerResult> {
   const parsed = KillProcessArgsSchema.safeParse(args);
   if (!parsed.success) {

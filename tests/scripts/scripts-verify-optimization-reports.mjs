@@ -8,7 +8,7 @@ const docsPath = path.join(projectRoot, ".docs", "optimization");
 const requiredReportVersions = ["v10", "v11", "v12", "v13", "v14", "v15", "v16", "v17", "v18", "v19", "v20", "v21"];
 const reportPattern = /^fs-mcp-optimization-(v\d+)-\d{4}-\d{2}-\d{2}\.md$/;
 
-// 1. report discovery ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. report discovery ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function collectOptimizationReports() {
   const entries = await readdir(docsPath, { withFileTypes: true });
   const reports = new Map();
@@ -32,7 +32,7 @@ async function collectOptimizationReports() {
   return reports;
 }
 
-// 2. report accumulation check ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. report accumulation check ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function main() {
   const reports = await collectOptimizationReports();
   const failures = [];

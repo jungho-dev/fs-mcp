@@ -74,7 +74,7 @@ tests -> out
 * 개별 handler는 `content`, 선택적 `structuredContent`, 선택적 `isError`, 선택적 `_meta`를 가진
   `ServerResult`를 반환합니다.
 * `dispatchToolCall`은 정규화되지 않은 handler result를 `normalizeToolResult`로 한 번 정규화합니다.
-* 표시용 `content[0].text` preview는 transcript 가독성을 위해 제한됩니다.
+* 표시용 `content[0].text`는 transcript에 tool call만 보이도록 빈 문자열로 둡니다.
 * `structuredContent.data`는 normalized text, content array, 원본 structured payload를 보관합니다.
 * batch helper는 `content`, `old_string`, `new_string`, `textContent`, `imageData`, `listing` 같은
   큰 중첩 입력을 preview 중심으로 압축합니다.

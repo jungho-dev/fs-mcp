@@ -51,8 +51,6 @@
     "isolatedModules": false,
     "moduleDetection": "auto",
     "verbatimModuleSyntax": false,
-    "jsx": "react-jsx",
-    "jsxImportSource": "react",
     "resolveJsonModule": true,
     "resolvePackageJsonExports": true,
     "resolvePackageJsonImports": true,

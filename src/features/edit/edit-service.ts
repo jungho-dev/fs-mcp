@@ -28,11 +28,12 @@ interface SearchReplace {
 // (0-1 scale where 1 is perfect match and 0 is completely different)
 const FUZZY_THRESHOLD = 0.7;
 
-// 1. Extract character code data from diff ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Extract character code data from diff ――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // @param expected The string that was searched for
 // @param actual The string that was found
 // @returns Character code statistics
-// 1. Get character code data ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 1. Get character code data ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getCharacterCodeData(
   expected: string,
   actual: string,
@@ -62,8 +63,8 @@ function getCharacterCodeData(
   const characterCodes = new Map<number, number>();
   const fullDiff = expectedDiff + actualDiff;
 
-  for (let i = 0; i < fullDiff.length; i++) {
-    const charCode = fullDiff.charCodeAt(i);
+  for (const character of fullDiff.split("")) {
+    const charCode = character.charCodeAt(0);
     characterCodes.set(charCode, (characterCodes.get(charCode) || 0) + 1);
   }
   // Create character codes string report
@@ -89,7 +90,8 @@ function getCharacterCodeData(
     uniqueCount: characterCodes.size,
   };
 }
-// 2. Perform search replace ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 2. Perform search replace ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function performSearchReplace(filePath: string, block: SearchReplace, expectedReplacements: number=1): Promise<ServerResult> {
   // Get file extension for diagnostics using path module.
   const fileExtension = path.extname(filePath).toLowerCase();
@@ -151,11 +153,11 @@ export async function performSearchReplace(filePath: string, block: SearchReplac
 
     // If we're only replacing one occurrence, replace it directly
     if (expectedReplacements === 1) {
-    	const searchIndex = newContent.indexOf(normalizedSearch);
+      const searchIndex = newContent.indexOf(normalizedSearch);
       newContent = newContent.slice(0, searchIndex) + normalizeLineEndings(block.replace, fileLineEnding) + newContent.slice(searchIndex + normalizedSearch.length);
     }
     else {
-    	// Replace all occurrences using split and join for multiple replacements
+      // Replace all occurrences using split and join for multiple replacements
       newContent = newContent.split(normalizedSearch).join(normalizeLineEndings(block.replace, fileLineEnding));
     }
     // Check if search or replace text has too many lines
@@ -304,11 +306,13 @@ RECOMMENDATION: For large search/replace operations, consider breaking them into
   }
   throw new Error("Unexpected error during search and replace operation.");
 }
-// 2. Generates a character-level diff using standard {-removed-}{+added+} format ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 2. Character diff formatter ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // @param expected The string that was searched for
 // @param actual The string that was found
 // @returns A formatted string showing character-level differences
-// 3. Highlight differences ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 3. Highlight differences ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function highlightDifferences(expected: string, actual: string): string {
   // Implementation of a simplified character-level diff
 
@@ -336,7 +340,7 @@ function highlightDifferences(expected: string, actual: string): string {
   return `${commonPrefix}{-${expectedDiff}-}{+${actualDiff}+}${commonSuffix}`;
 }
 
-// 4. Resolve edit text argument ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Resolve edit text argument ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function resolveEditTextArgument(value: string | undefined, filePath: string | undefined, offset: number, length: number | undefined, label: string): Promise<string> {
   if (value !== undefined) {
     return value;
@@ -346,11 +350,13 @@ async function resolveEditTextArgument(value: string | undefined, filePath: stri
   }
   return readFileInternal(filePath, offset, length);
 }
-// 3. Handle edit_block command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 3. Handle edit_block command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // 1. Text files: String replacement (old_string/new_string)
 // - Uses fuzzy matching for resilience
 // - Handles expected_replacements parameter
-// 4. Handle edit block ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 4. Handle edit block ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleEditBlock(args: unknown): Promise<ServerResult> {
   const parsed = EditBlockArgsSchema.parse(args);
   const oldString = await resolveEditTextArgument(parsed.old_string, parsed.old_string_path, parsed.old_string_offset, parsed.old_string_length, "old_string");
@@ -382,7 +388,7 @@ export async function handleEditBlock(args: unknown): Promise<ServerResult> {
       });
 
       if (result === undefined) {
-      	return createErrorResponse("File handler did not return an edit result");
+        return createErrorResponse("File handler did not return an edit result");
       }
       if (result.success) {
         const resolvedEditRangePath = resolveAbsolutePath(parsed.file_path);

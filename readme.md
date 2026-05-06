@@ -85,7 +85,7 @@ project root/
 ## Response Shape
 
 Every dispatched tool result is normalized by `src/cores/responses/responses-tool-result.ts`.
-The visible `content[0].text` preview is capped for chat and extension transcript readability.
+The visible `content[0].text` is intentionally empty so chat and extension transcripts show only the tool call.
 The structured payload keeps machine-readable data, while batch helpers compact large nested inputs and duplicate
 text payloads before they are embedded in batch results.
 

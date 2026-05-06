@@ -8,7 +8,7 @@
 // Base interfaces and types for file handling system
 // All file handlers implement the FileHandler interface
 
-// 1. Base interface that all file handlers must implement ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Base interface that all file handlers must implement ―――――――――――――――――――――――――――――――――――――――――
 export interface FileHandler {
 
   // Check if this handler can handle the given file
@@ -42,7 +42,8 @@ export interface FileHandler {
   // @param mode Write mode: 'rewrite' (default) or 'append'
   write: (path: string, content: unknown, mode?: "rewrite" | "append") => Promise<void>;
 }
-// 2. Options for reading files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 2. Options for reading files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export interface ReadOptions {
 
   // Whether to include status messages (default: true)
@@ -56,7 +57,8 @@ export interface ReadOptions {
   // Starting line number
   offset?: number;
 }
-// 3. Result from reading a file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 3. Result from reading a file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export interface FileResult {
   // File content (string for text, Buffer for binary, base64 string for images)
   content: string | Buffer;
@@ -67,7 +69,8 @@ export interface FileResult {
   // MIME type of the content
   mimeType: string;
 }
-// 4. File-type specific metadata ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 4. File-type specific metadata ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export interface FileMetadata {
 
   // Error information if operation failed
@@ -92,7 +95,8 @@ export interface FileMetadata {
   tableCount?: number;
   wordCount?: number;
 }
-// 5. Result from edit operation (used by editRange) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 5. Result from edit operation (used by editRange) ―――――――――――――――――――――――――――――――――――――――――――――――
 export interface EditResult {
 
   // Number of edits successfully applied
@@ -106,7 +110,8 @@ export interface EditResult {
   // Whether all edits succeeded
   success: boolean;
 }
-// 6. File information and metadata ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 6. File information and metadata ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export interface FileInfo {
 
   // Last access time

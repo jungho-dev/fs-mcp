@@ -18,37 +18,32 @@ const RIPGREP_NOT_FOUND_MESSAGE = "ripgrep binary not found. fs-mcp requires rip
 
 let cachedRgPath: string | null = null;
 
-// 1. Get ripgrep path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Get ripgrep path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getRipgrepPath(): Promise<string> {
   if (cachedRgPath) {
-  	return cachedRgPath;
+    return cachedRgPath;
   }
   const bundledPath = await resolveBundledRipgrepPath();
   if (bundledPath) {
-  	return cacheRipgrepPath(bundledPath);
+    return cacheRipgrepPath(bundledPath);
   }
   const systemPath = resolveSystemRipgrepPath();
   if (systemPath) {
-  	return cacheRipgrepPath(systemPath);
+    return cacheRipgrepPath(systemPath);
   }
   const commonPath = resolveCommonRipgrepPath();
   if (commonPath) {
-  	return cacheRipgrepPath(commonPath);
+    return cacheRipgrepPath(commonPath);
   }
   throw new Error(RIPGREP_NOT_FOUND_MESSAGE);
 }
 
-// 2. Clear ripgrep cache ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export function clearRipgrepCache(): void {
-  cachedRgPath = null;
-}
-
-// 3. Resolve bundled ripgrep path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Resolve bundled ripgrep path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function resolveBundledRipgrepPath(): Promise<string | null> {
   try {
     const {rgPath} = await import("@vscode/ripgrep");
     if (existsSync(rgPath)) {
-    	ensureExecutable(rgPath);
+      ensureExecutable(rgPath);
       return rgPath;
     }
   }
@@ -58,7 +53,7 @@ async function resolveBundledRipgrepPath(): Promise<string | null> {
   return null;
 }
 
-// 4. Resolve system ripgrep path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Resolve system ripgrep path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function resolveSystemRipgrepPath(): string | null {
   try {
     const isWindows = process.platform === WINDOWS_PLATFORM;
@@ -66,7 +61,7 @@ function resolveSystemRipgrepPath(): string | null {
     const whichCmd = isWindows ? "where" : "which";
     const result = execSync(`${whichCmd} ${systemRg}`, {encoding: "utf-8"}).trim().split(RIPGREP_PATH_LINE_PATTERN)[0];
     if (result && existsSync(result)) {
-    	return result;
+      return result;
     }
   }
   catch (_e) {
@@ -75,17 +70,17 @@ function resolveSystemRipgrepPath(): string | null {
   return null;
 }
 
-// 5. Resolve common ripgrep path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Resolve common ripgrep path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function resolveCommonRipgrepPath(): string | null {
   for (const possiblePath of getCommonRipgrepPaths()) {
     if (existsSync(possiblePath)) {
-    	return possiblePath;
+      return possiblePath;
     }
   }
   return null;
 }
 
-// 6. Get common ripgrep paths ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Get common ripgrep paths ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getCommonRipgrepPaths(): string[] {
   if (process.platform === WINDOWS_PLATFORM) {
     const commonPaths = [join(homedir(), "scoop", "apps", "ripgrep", "current", "rg.exe"), join(homedir(), ".cargo", "bin", "rg.exe")];
@@ -103,10 +98,10 @@ function getCommonRipgrepPaths(): string[] {
   return ["/usr/local/bin/rg", "/usr/bin/rg", join(homedir(), ".cargo", "bin", "rg"), "/opt/homebrew/bin/rg"];
 }
 
-// 7. Ensure executable ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Ensure executable ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function ensureExecutable(rgPath: string): void {
   if (process.platform === WINDOWS_PLATFORM) {
-  	return;
+    return;
   }
   try {
     chmodSync(rgPath, 0o755);
@@ -116,7 +111,7 @@ function ensureExecutable(rgPath: string): void {
   }
 }
 
-// 8. Cache ripgrep path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Cache ripgrep path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function cacheRipgrepPath(rgPath: string): string {
   cachedRgPath = rgPath;
   return rgPath;

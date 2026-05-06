@@ -13,7 +13,7 @@ import { EditBlocksArgsSchema } from "@schemas/schemas-edit";
 // Uses the enhanced implementation with multiple occurrence support and fuzzy matching
 export { handleEditBlock };
 
-// 1. Handle edit blocks ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Handle edit blocks ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleEditBlocks(args: unknown) {
   const parsed = EditBlocksArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleEditBlock(item));

@@ -7,7 +7,7 @@
 
 import type {SystemInfo} from "@cores/runtime/runtime-info";
 
-// 1. Get os specific guidance ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Get os specific guidance ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function getOSSpecificGuidance(systemInfo: SystemInfo): string {
   const {platformName, defaultShell, isWindows, docker} = systemInfo;
 
@@ -44,10 +44,10 @@ Node: ${docker.containerEnvironment.kubernetesNode}`;
 This fs-mcp instance is running inside a Docker container.`;
 
       if (docker.orchestrator === "docker-compose") {
-      	guidance += ` (Docker Compose)`;
+        guidance += ` (Docker Compose)`;
       }
       else if (docker.orchestrator === "docker-swarm") {
-      	guidance += ` (Docker Swarm)`;
+        guidance += ` (Docker Swarm)`;
       }
     }
     else {
@@ -80,7 +80,7 @@ Rules: Remove drive letter/user prefix, keep full folder structure, mount to /ho
 NOTE: fs-mcp Docker installer mounts host folders to /home/[folder-name].`;
     }
     else {
-    	guidance += `
+      guidance += `
 
 WARNING: No mounted directories detected.
 Files created outside mounted volumes will be lost when the container stops.
@@ -93,7 +93,7 @@ Container: ${docker.containerEnvironment.containerName}`;
     }
   }
   if (isWindows) {
-  	guidance += `
+    guidance += `
 
 WINDOWS-SPECIFIC TROUBLESHOOTING:
 - If Node.js/Python commands fail with "not recognized" errors:
@@ -107,7 +107,7 @@ WINDOWS-SPECIFIC TROUBLESHOOTING:
 - File permissions work differently than Unix systems`;
   }
   else if (systemInfo.isMacOS) {
-  	guidance += `
+    guidance += `
 
 MACOS-SPECIFIC NOTES:
 - Package manager: brew (Homebrew) is commonly used
@@ -118,7 +118,7 @@ MACOS-SPECIFIC NOTES:
 - For file search: Use mdfind (Spotlight) for fastest exact filename searches`;
   }
   else {
-  	guidance += `
+    guidance += `
 
 LINUX-SPECIFIC NOTES:
 - Package managers vary by distro: apt, yum, dnf, pacman, zypper
@@ -129,57 +129,8 @@ LINUX-SPECIFIC NOTES:
   }
   return guidance;
 }
-// 2. Get development tool guidance ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export function getDevelopmentToolGuidance(systemInfo: SystemInfo): string {
-  const {isWindows, isMacOS, nodeInfo, processInfo} = systemInfo;
 
-  // Add detected Node.js info to guidance
-  const nodeGuidance = nodeInfo ? `Node.js: v${nodeInfo.version} (${nodeInfo.path})${nodeInfo.npmVersion ? ` | npm: v${nodeInfo.npmVersion}` : ""}` : "Node.js: Not detected";
-
-  // Add process environment info
-  const envInfo = `
-Current Process Environment:
-- Node: v${processInfo.versions.node}
-- V8: v${processInfo.versions.v8}
-- Architecture: ${processInfo.arch}
-- Platform: ${processInfo.platform}
-- Process ID: ${processInfo.pid}`;
-
-  if (isWindows) {
-    return `
-COMMON WINDOWS DEVELOPMENT TOOLS:
-- ${nodeGuidance}
-- Python: May be 'python' or 'py' command, check both
-- Git: Git Bash provides Unix-like environment
-- WSL: Windows Subsystem for Linux available for Unix tools
-- Visual Studio tools: cl, msbuild for C++ compilation
-
-${envInfo}`;
-  }
-  else if (isMacOS) {
-    return `
-COMMON MACOS DEVELOPMENT TOOLS:
-- Xcode Command Line Tools: Required for many development tools
-- Homebrew: Primary package manager for development tools
-- ${nodeGuidance}
-- Python: Usually python3, check if python points to Python 2
-- Ruby: System Ruby available, rbenv/rvm for version management
-
-${envInfo}`;
-  }
-  else {
-    return `
-COMMON LINUX DEVELOPMENT TOOLS:
-- Package managers: Install tools via distribution package manager
-- Python: Usually python3, python may point to Python 2
-- ${nodeGuidance}
-- Build tools: gcc, make typically available or easily installed
-- Container tools: docker, podman common for development
-
-${envInfo}`;
-  }
-}
-// 3. Get path guidance ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Get path guidance ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function getPathGuidance(systemInfo: SystemInfo): string {
   let guidance = `Always use absolute paths for reliability. Paths are automatically normalized regardless of slash direction.`;
 

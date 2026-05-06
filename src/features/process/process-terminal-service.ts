@@ -9,7 +9,6 @@ import {type SpawnOptions, spawn} from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import type {ActiveSession, CommandExecutionResult, OutputEvent, TerminalSession, TimingInfo} from "@assets/type/common";
-import {capture} from "@cores/runtime/runtime-output-capture";
 import {configManager} from "@features/config/config-store";
 import {analyzeProcessState} from "@features/process/process-repl-detector";
 
@@ -37,13 +36,15 @@ export interface PaginatedOutputResult {
   runtimeMs?: number; // Runtime in milliseconds (for completed processes)
   totalLines: number;
 }
-// 1. Configuration for spawning a shell with appropriate flags ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 1. Configuration for spawning a shell with appropriate flags ――――――――――――――――――――――――――――――――――――
 interface ShellSpawnConfig {
   args: string[];
   executable: string;
   useShellOption: string | boolean;
 }
-// 1. Split shell command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 1. Split shell command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function splitShellCommand(shellCommand: string): string[] {
   const matches = shellCommand.match(/(?:[^\s"']+|"[^"]*"|'[^']*')+/g);
   const parts = matches ?? [shellCommand];
@@ -54,23 +55,26 @@ function splitShellCommand(shellCommand: string): string[] {
     return isQuoted ? part.slice(1, -1) : part;
   });
 }
-// 2. Append command argument ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 2. Append command argument ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function appendCommandArgument(args: string[], commandFlags: string[], command: string, defaultFlag: string): string[] {
   const commandFlagIndex = args.findIndex((arg) => commandFlags.includes(arg.toLowerCase()));
   const commandArgs = commandFlagIndex === -1 ? [...args, defaultFlag, command] : [...args.slice(0, commandFlagIndex + 1), command, ...args.slice(commandFlagIndex + 1)];
 
   return commandArgs;
 }
-// 3. With pwsh output encoding ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 3. With pwsh output encoding ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function withPwshOutputEncoding(command: string): string {
   const outputEncodingCommand = "$OutputEncoding = [Console]::OutputEncoding = [System.Text.UTF8Encoding]::new($false);";
   const encodedCommand = command.includes("[Console]::OutputEncoding") ? command : `${outputEncodingCommand} ${command}`;
 
   return encodedCommand;
 }
-// 2. Get the appropriate spawn configuration for a given shell ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 2. Get the appropriate spawn configuration for a given shell ――――――――――――――――――――――――――――――――――――
 // This handles login shell flags for different shell types
-// 4. Get shell spawn args ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Get shell spawn args ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getShellSpawnArgs(shellPath: string, command: string): ShellSpawnConfig {
   const [shellExecutable, ...shellArgs] = splitShellCommand(shellPath);
   const executable = shellExecutable ?? shellPath;
@@ -119,19 +123,22 @@ function getShellSpawnArgs(shellPath: string, command: string): ShellSpawnConfig
     useShellOption: shellPath,
   };
 }
-// 5. Terminal manager ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 5. Terminal manager ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export class TerminalManager {
   private readonly sessions: Map<number, TerminalSession> = new Map();
   private readonly completedSessions: Map<number, CompletedSession> = new Map();
 
-  // 3. Send input to a running process ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 3. Send input to a running process ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   // @param pid Process ID
   // @param input Text to send to the process
   // @returns Whether input was successfully sent
+
+  // 6. Send input to process ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   sendInputToProcess(pid: number, input: string): boolean {
     const session = this.sessions.get(pid);
     if (!session) {
-    	return false;
+      return false;
     }
     try {
       if (session.process.stdin && !session.process.stdin.destroyed) {
@@ -147,6 +154,8 @@ export class TerminalManager {
       return false;
     }
   }
+
+  // 7. Execute command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async executeCommand(command: string, timeoutMs: number = DEFAULT_COMMAND_TIMEOUT, shell?: string, collectTiming: boolean = false): Promise<CommandExecutionResult> {
     // Get the shell from config if not specified
     let shellToUse: string | boolean | undefined = shell;
@@ -186,7 +195,7 @@ export class TerminalManager {
 
       // Add shell option if needed (for unknown shells)
       if (spawnConfig.useShellOption) {
-      	spawnOptions.shell = spawnConfig.useShellOption;
+        spawnOptions.shell = spawnConfig.useShellOption;
       }
     }
     else {
@@ -247,11 +256,11 @@ export class TerminalManager {
       // Quick prompt patterns for immediate detection
       const resolveOnce = (result: CommandExecutionResult) => {
         if (resolved) {
-        	return;
+          return;
         }
         resolved = true;
         if (periodicCheck) {
-        	clearInterval(periodicCheck);
+          clearInterval(periodicCheck);
         }
         // Add timing info if requested
         if (collectTiming) {
@@ -273,14 +282,14 @@ export class TerminalManager {
       const stdout = childProcess.stdout;
       const stderr = childProcess.stderr;
       if (!stdout || !stderr) {
-      	throw new Error("Spawned process does not expose stdout/stderr streams.");
+        throw new Error("Spawned process does not expose stdout/stderr streams.");
       }
       stdout.on("data", (data: Buffer | string) => {
         const text = data.toString();
         const now = Date.now();
 
         if (!firstOutputTime) {
-        	firstOutputTime = now;
+          firstOutputTime = now;
         }
         lastOutputTime = now;
 
@@ -306,7 +315,7 @@ export class TerminalManager {
           if (collectTiming && outputEvents.length > 0) {
             const lastOutputEvent = outputEvents.at(-1);
             if (lastOutputEvent) {
-            	lastOutputEvent.matchedPattern = "quick_pattern";
+              lastOutputEvent.matchedPattern = "quick_pattern";
             }
           }
           resolveOnce({
@@ -322,7 +331,7 @@ export class TerminalManager {
         const now = Date.now();
 
         if (!firstOutputTime) {
-        	firstOutputTime = now;
+          firstOutputTime = now;
         }
         lastOutputTime = now;
 
@@ -382,7 +391,7 @@ export class TerminalManager {
 
           // Keep only last 100 completed sessions
           if (this.completedSessions.size > 100) {
-          	const oldestKey = Array.from(this.completedSessions.keys())[0];
+            const oldestKey = Array.from(this.completedSessions.keys())[0];
             this.completedSessions.delete(oldestKey);
           }
           this.sessions.delete(childPid);
@@ -396,40 +405,40 @@ export class TerminalManager {
       });
     });
   }
-  // 4. Append text to a session's line buffer ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 4. Append text to a session's line buffer ―――――――――――――――――――――――――――――――――――――――――――――――――――――
   // Handles partial lines and newline splitting
-  // 6. Append to line buffer ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 6. Append to line buffer ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private appendToLineBuffer(session: TerminalSession, text: string): void {
     if (!text) {
-    	return;
+      return;
     }
     // Split text into lines, keeping track of whether text ends with newline
     const lines = text.split("\n");
 
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      const _isLastFragment = i === lines.length - 1;
-      const _endsWithNewline = text.endsWith("\n");
-
+    lines.forEach((line, index) => {
       if (session.outputLines.length === 0) {
-      	// First line ever
+        // First line ever
         session.outputLines.push(line);
       }
-      else if (i === 0) {
-      	// First fragment - append to last line (might be partial)
+      else if (index === 0) {
+        // First fragment - append to last line (might be partial)
         session.outputLines[session.outputLines.length - 1] += line;
       }
       else {
-      	// Subsequent lines - add as new lines
+        // Subsequent lines - add as new lines
         session.outputLines.push(line);
       }
-    }
+    });
   }
-  // 5. Read process output with pagination (like file reading) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 5. Read process output with pagination (like file reading) ――――――――――――――――――――――――――――――――――――
   // @param pid Process ID
   // @param offset Line offset: 0=from lastReadIndex, positive=absolute, negative=tail
   // @param length Max lines to return. Omit to read through available output.
   // @param updateReadIndex Whether to update lastReadIndex (default: true for offset=0)
+
+  // 9. Read output paginated ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   readOutputPaginated(pid: number, offset: number = 0, length?: number): PaginatedOutputResult | null {
     // First check active sessions
     const session = this.sessions.get(pid);
@@ -463,14 +472,15 @@ export class TerminalManager {
     }
     return null;
   }
-  // 7. Read from line buffer ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 7. Read from line buffer ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private readFromLineBuffer(lines: string[], offset: number, length: number | undefined, lastReadIndex: number, updateLastRead: (index: number) => void, isComplete: boolean, exitCode?: number | null, runtimeMs?: number): PaginatedOutputResult {
     const totalLines = lines.length;
     let startIndex: number;
     let linesToRead: string[];
 
     if (offset < 0) {
-    	// Negative offset = start position from end, then read 'length' lines forward
+      // Negative offset = start position from end, then read 'length' lines forward
       // e.g., offset=-50, length=10 means: start 50 lines from end, read 10 lines
       const fromEnd = Math.abs(offset);
       startIndex = Math.max(0, totalLines - fromEnd);
@@ -478,14 +488,14 @@ export class TerminalManager {
       // Don't update lastReadIndex for tail reads
     }
     else if (offset === 0) {
-    	// offset=0 means "from where I last read" (like getNewOutput)
+      // offset=0 means "from where I last read" (like getNewOutput)
       startIndex = lastReadIndex;
       linesToRead = length === undefined ? lines.slice(startIndex) : lines.slice(startIndex, startIndex + length);
       // Update lastReadIndex for "new output" behavior
       updateLastRead(Math.min(startIndex + linesToRead.length, totalLines));
     }
     else {
-    	// Positive offset = absolute position
+      // Positive offset = absolute position
       startIndex = offset;
       linesToRead = length === undefined ? lines.slice(startIndex) : lines.slice(startIndex, startIndex + length);
       // Don't update lastReadIndex for absolute position reads
@@ -505,26 +515,30 @@ export class TerminalManager {
       totalLines,
     };
   }
-  // 7. Get total line count for a process ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 7. Get total line count for a process ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   getOutputLineCount(pid: number): number | null {
     const session = this.sessions.get(pid);
     if (session) {
-    	return session.outputLines.length;
+      return session.outputLines.length;
     }
     const completedSession = this.completedSessions.get(pid);
     if (completedSession) {
-    	return completedSession.outputLines.length;
+      return completedSession.outputLines.length;
     }
     return null;
   }
-  // 8. Legacy method for backward compatibility ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 8. Legacy method for backward compatibility ―――――――――――――――――――――――――――――――――――――――――――――――――――
   // Returns all new output since last read
   // @param maxLines Maximum lines to return. Omit to read all new output.
   // @deprecated Use readOutputPaginated instead
+
+  // 12. Get new output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   getNewOutput(pid: number, maxLines?: number): string | null {
     const result = this.readOutputPaginated(pid, 0, maxLines);
     if (!result) {
-    	return null;
+      return null;
     }
     const output = result.lines.join("\n").trim();
 
@@ -544,8 +558,11 @@ export class TerminalManager {
     }
     return output || null;
   }
-  // 9. Capture a snapshot of current output state for interaction tracking ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 9. Capture a snapshot of current output state for interaction tracking ――――――――――――――――――――――――
   // Used by interactWithProcess to know what output existed before sending input.
+
+  // 13. Capture output snapshot ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   captureOutputSnapshot(pid: number): {totalChars: number; lineCount: number} | null {
     const session = this.sessions.get(pid);
     if (session) {
@@ -560,13 +577,15 @@ export class TerminalManager {
   // Get output that appeared since a snapshot was taken.
   // This handles the case where output is appended to the last line (REPL prompts).
   // Also checks completed sessions in case process finished between snapshot and poll.
+
+  // 14. Get output since snapshot ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   getOutputSinceSnapshot(pid: number, snapshot: {totalChars: number; lineCount: number}): string | null {
     // Check active session first
     const session = this.sessions.get(pid);
     if (session) {
       const fullOutput = session.outputLines.join("\n");
       if (fullOutput.length <= snapshot.totalChars) {
-      	return ""; // No new output
+        return ""; // No new output
       }
       return fullOutput.slice(snapshot.totalChars);
     }
@@ -575,39 +594,43 @@ export class TerminalManager {
     if (completedSession) {
       const fullOutput = completedSession.outputLines.join("\n");
       if (fullOutput.length <= snapshot.totalChars) {
-      	return ""; // No new output
+        return ""; // No new output
       }
       return fullOutput.slice(snapshot.totalChars);
     }
     return null;
   }
-  // 10. Get a session by PID ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 10. Get a session by PID ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   // @param pid Process ID
   // @returns The session or undefined if not found
+
+  // 15. Get session ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   getSession(pid: number): TerminalSession | undefined {
     return this.sessions.get(pid);
   }
+
+  // 16. Force terminate ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   forceTerminate(pid: number): boolean {
     const session = this.sessions.get(pid);
     if (!session) {
-    	return false;
+      return false;
     }
     try {
       session.process.kill("SIGINT");
       setTimeout(() => {
         if (this.sessions.has(pid)) {
-        	session.process.kill("SIGKILL");
+          session.process.kill("SIGKILL");
         }
       }, 1000);
       return true;
     }
-    catch (error) {
-      // Convert error to string, handling both Error objects and other types
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      capture("server_request_error", {error: errorMessage, message: `Failed to terminate process ${pid}:`});
+    catch (_error) {
       return false;
     }
   }
+
+  // 17. List active sessions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   listActiveSessions(): ActiveSession[] {
     const now = new Date();
     return Array.from(this.sessions.values()).map((session) => ({
@@ -616,6 +639,8 @@ export class TerminalManager {
       runtime: now.getTime() - session.startTime.getTime(),
     }));
   }
+
+  // 18. List completed sessions ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   listCompletedSessions(): CompletedSession[] {
     return Array.from(this.completedSessions.values());
   }

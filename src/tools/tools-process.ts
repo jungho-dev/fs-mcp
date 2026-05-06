@@ -10,7 +10,7 @@ import { InteractWithProcessesArgsSchema, KillProcessesArgsSchema, ListProcesses
 import { CMD_PREFIX_DESCRIPTION, OS_GUIDANCE, PATH_GUIDANCE, type ToolCatalogEntry } from "@tools/tools-const";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
-// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export const PROCESS_TOOL_CATALOG: ToolCatalogEntry[] = [
   {
     name: "start_processes",

@@ -23,35 +23,39 @@ let textHandler: TextFileHandler | null = null;
 let binaryHandler: BinaryFileHandler | null = null;
 let docxHandler: DocxFileHandler | null = null;
 
-// 1. Get image handler ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Get image handler ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getImageHandler(): ImageFileHandler {
   if (!imageHandler) {
-  	imageHandler = new ImageFileHandler();
+    imageHandler = new ImageFileHandler();
   }
   return imageHandler;
 }
-// 2. Get text handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 2. Get text handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getTextHandler(): TextFileHandler {
   if (!textHandler) {
-  	textHandler = new TextFileHandler();
+    textHandler = new TextFileHandler();
   }
   return textHandler;
 }
-// 3. Get binary handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 3. Get binary handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getBinaryHandler(): BinaryFileHandler {
   if (!binaryHandler) {
-  	binaryHandler = new BinaryFileHandler();
+    binaryHandler = new BinaryFileHandler();
   }
   return binaryHandler;
 }
-// 4. Get docx handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 4. Get docx handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getDocxHandler(): DocxFileHandler {
   if (!docxHandler) {
-  	docxHandler = new DocxFileHandler();
+    docxHandler = new DocxFileHandler();
   }
   return docxHandler;
 }
-// 2. Get the appropriate file handler for a given file path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 2. Get the appropriate file handler for a given file path ―――――――――――――――――――――――――――――――――――――――
 // Each handler's canHandle() determines if it can process the file.
 // Extension-based handlers (DOCX, Image) return sync boolean.
 // BinaryFileHandler uses async isBinaryFile for content-based detection.
@@ -62,28 +66,31 @@ function getDocxHandler(): DocxFileHandler {
 // 4. Text files (default)
 // @param filePath File path to get handler for
 // @returns FileHandler instance that can handle this file
-// 5. Get file handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 5. Get file handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getFileHandler(filePath: string): Promise<FileHandler> {
   // Check DOCX first (extension-based, sync)
   if (getDocxHandler().canHandle(filePath)) {
-  	return getDocxHandler();
+    return getDocxHandler();
   }
   // Check Image (extension-based, sync - images are binary but handled specially)
   if (getImageHandler().canHandle(filePath)) {
-  	return getImageHandler();
+    return getImageHandler();
   }
   // Check Binary (content-based, async via isBinaryFile)
   if (await getBinaryHandler().canHandle(filePath)) {
-  	return getBinaryHandler();
+    return getBinaryHandler();
   }
   // Default to text handler
   return getTextHandler();
 }
-// 3. Check if a file path is an image file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 3. Check if a file path is an image file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Delegates to ImageFileHandler.canHandle to avoid duplicating extension logic
 // @param path File path
 // @returns true if file is an image format
-// 6. Is image file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 6. Is image file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function isImageFile(path: string): boolean {
   return getImageHandler().canHandle(path);
 }

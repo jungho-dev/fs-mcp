@@ -55,13 +55,6 @@ export interface ActiveSession {
   pid: number;
   runtime: number;
 }
-export interface CompletedSession {
-  endTime: Date;
-  exitCode: number | null;
-  output: string;
-  pid: number;
-  startTime: Date;
-}
 export interface ServerResponseContent {
   data?: string;
   mimeType?: string;
@@ -91,4 +84,3 @@ export interface ServerResult {
   isError?: boolean;
   structuredContent?: FilePreviewStructuredContent | Record<string, unknown>;
 }
-export type ToolHandler<T = unknown> = (args: T) => Promise<ServerResult>;

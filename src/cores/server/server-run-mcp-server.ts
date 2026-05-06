@@ -18,17 +18,18 @@ type DeferredStartupMessage = {
 
 const deferredMessages: DeferredStartupMessage[] = [];
 
-// 1. Defer log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Defer log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function deferLog(level: LogLevel, message: string): void {
   deferredMessages.push({level, message});
 }
-// 2. Flush startup logs ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 2. Flush startup logs ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function flushStartupLogs(transport: Pick<FilteredStdioServerTransport, "sendLog">, messages: DeferredStartupMessage[]): DeferredStartupMessage[] {
   const sentMessages: DeferredStartupMessage[] = [];
   while (messages.length > 0) {
     const message = messages.shift();
     if (!message) {
-    	continue;
+      continue;
     }
     transport.sendLog(message.level, message.message);
     sentMessages.push(message);
@@ -36,7 +37,22 @@ export function flushStartupLogs(transport: Pick<FilteredStdioServerTransport, "
   return sentMessages;
 }
 
-// 3. Run server ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Is protocol JSON parse error ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function isProtocolJsonParseError(errorMessage: string): boolean {
+  return errorMessage.includes("JSON") && errorMessage.includes("Unexpected token");
+}
+
+// 4. Handle fatal process error ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function handleFatalProcessError(captureKey: string, label: string, errorMessage: string): void {
+  capture(captureKey, {
+    error: errorMessage,
+    isProtocolJsonParseError: isProtocolJsonParseError(errorMessage),
+  });
+  logger.error(`${label}: ${errorMessage}`);
+  process.exit(1);
+}
+
+// 5. Run server ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runServer () {
   try {
     // Create transport FIRST so all logging gets properly buffered
@@ -61,34 +77,12 @@ export async function runServer () {
     }
     process.on("uncaughtException", async (error) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
-
-      // If this is a JSON parsing error, log it to stderr but don't crash
-      if (errorMessage.includes("JSON") && errorMessage.includes("Unexpected token")) {
-        logger.error(`JSON parsing error: ${errorMessage}`);
-        return;
-      }
-      capture("run_server_uncaught_exception", {
-        error: errorMessage,
-      });
-
-      logger.error(`Uncaught exception: ${errorMessage}`);
-      process.exit(1);
+      handleFatalProcessError("run_server_uncaught_exception", isProtocolJsonParseError(errorMessage) ? "Fatal JSON parsing error" : "Uncaught exception", errorMessage);
     });
 
     process.on("unhandledRejection", async (reason) => {
       const errorMessage = reason instanceof Error ? reason.message : String(reason);
-
-      // If this is a JSON parsing error, log it to stderr but don't crash
-      if (errorMessage.includes("JSON") && errorMessage.includes("Unexpected token")) {
-        logger.error(`JSON parsing rejection: ${errorMessage}`);
-        return;
-      }
-      capture("run_server_unhandled_rejection", {
-        error: errorMessage,
-      });
-
-      logger.error(`Unhandled rejection: ${errorMessage}`);
-      process.exit(1);
+      handleFatalProcessError("run_server_unhandled_rejection", isProtocolJsonParseError(errorMessage) ? "Fatal JSON parsing rejection" : "Unhandled rejection", errorMessage);
     });
 
     capture("run_server_start");
@@ -113,7 +107,7 @@ export async function runServer () {
     const errorMessage = error instanceof Error ? error.message : String(error);
     logger.error(`FATAL ERROR: ${errorMessage}`);
     if (error instanceof Error && error.stack) {
-    	logger.debug(error.stack);
+      logger.debug(error.stack);
     }
     const errorNotification = {
       jsonrpc: "2.0" as const,
@@ -133,9 +127,9 @@ export async function runServer () {
   }
 }
 
-// 4. Start server ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Start server ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function startServer () {
-  void runServer().catch (async (error) => {
+  void runServer().catch(async (error) => {
     const errorMessage = error instanceof Error ? error.message : String(error);
     console.error(`RUNTIME ERROR: ${errorMessage}`);
     console.error(error instanceof Error && error.stack ? error.stack : "No stack trace available");

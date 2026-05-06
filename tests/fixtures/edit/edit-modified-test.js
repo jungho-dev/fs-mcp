@@ -2,6 +2,8 @@
  * Test performance with large files of different line ending types
  * This is a modified version to work with the 100-line limit
  */
+
+// 1. Test large file performance ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function _testLargeFilePerformance() {
   const LARGE_FILE_LF = path.join(TEST_DIR, "large_lf.txt");
   const LARGE_FILE_CRLF = path.join(TEST_DIR, "large_crlf.txt");
@@ -42,7 +44,8 @@ async function _testLargeFilePerformance() {
     const _timeCRLF = Date.now() - startCRLF;
 
     assert.ok(result.content[0].text.includes("Successfully applied 1 edit"), "Should handle large CRLF file");
-  } catch (error) {
+  }
+  catch (error) {
     console.error("Test failed:", error);
     throw error;
   }

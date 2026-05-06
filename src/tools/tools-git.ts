@@ -5,10 +5,10 @@
  * @since 2026-05-03
  */
 
-import {withArgsPathSchema} from "@schemas/schemas-args-ref";
-import {GIT_INPUT_SCHEMAS, type GitToolName} from "@schemas/schemas-git";
-import {CMD_PREFIX_DESCRIPTION, PATH_GUIDANCE, type ToolCatalogEntry} from "@tools/tools-const";
-import {zodToJsonSchema} from "zod-to-json-schema";
+import { withArgsPathSchema } from "@schemas/schemas-args-ref";
+import { GIT_INPUT_SCHEMAS, type GitToolName } from "@schemas/schemas-git";
+import { CMD_PREFIX_DESCRIPTION, PATH_GUIDANCE, type ToolCatalogEntry } from "@tools/tools-const";
+import { zodToJsonSchema } from "zod-to-json-schema";
 
 type GitToolDescription = {
   name: GitToolName;
@@ -52,7 +52,7 @@ const GIT_TOOL_DESCRIPTIONS: GitToolDescription[] = [
   { name: "git_wrapup_instructions", title: "Git Wrapup Instructions", description: ["Return a git session wrap-up checklist with repository snapshot.", CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: true },
 ];
 
-// 1. git tool catalog build ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. git tool catalog build ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export const GIT_TOOL_CATALOG: ToolCatalogEntry[] = GIT_TOOL_DESCRIPTIONS.map((tool) => ({
   name: tool.name,
   description: tool.description,

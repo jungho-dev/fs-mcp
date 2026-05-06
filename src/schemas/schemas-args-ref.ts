@@ -15,7 +15,7 @@ export const ArgsPathArgsSchema = z
   })
   .strict();
 
-// 1. With args path schema ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. With args path schema ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function withArgsPathSchema<T extends z.ZodTypeAny>(schema: T): z.ZodUnion<[typeof ArgsPathArgsSchema, T]> {
   return z.union([ArgsPathArgsSchema, schema]);
 }

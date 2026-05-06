@@ -28,23 +28,25 @@ interface PreservedTextPayload extends Record<string, unknown> {
 }
 
 const BATCH_INPUT_PREVIEW_LENGTH = 160;
-const BATCH_RESULT_PREVIEW_LENGTH = 30;
+const BATCH_RESULT_PREVIEW_LENGTH = 160;
 const BATCH_LARGE_INPUT_FIELDS = new Set(["blob", "content", "data", "imageData", "listing", "new_string", "old_string", "textContent"]);
+const BATCH_SUMMARY_INPUT_KEYS = ["path", "file_path", "source", "destination", "args_path", "sessionId", "pid", "key", "name"];
+const BATCH_SUMMARY_INPUT_PREVIEW_LENGTH = 80;
 const BATCH_STRUCTURED_PAYLOAD_FIELDS = ["imageData", "listing", "textContent"];
 const LINE_SPLIT_PATTERN = /\r\n|\r|\n/;
 const WHITESPACE_PATTERN = /\s+/g;
 
-// 1. Is record ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Is record ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// 2. Count lines ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Count lines ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function countLines(value: string): number {
   return value.length === 0 ? 0 : value.split(LINE_SPLIT_PATTERN).length;
 }
 
-// 3. Create compacted string payload ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Create compacted string payload ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createCompactedStringPayload(value: string, previewLength: number): CompactedStringPayload {
   const preview = value.length <= previewLength ? value : `${value.slice(0, previewLength)}...`;
 
@@ -56,7 +58,7 @@ function createCompactedStringPayload(value: string, previewLength: number): Com
   };
 }
 
-// 4. Compact batch input ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Compact batch input ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function compactBatchInput(value: unknown, fieldName: string | null = null): unknown {
   if (typeof value === "string") {
     if (fieldName !== null && BATCH_LARGE_INPUT_FIELDS.has(fieldName) && value.length > BATCH_INPUT_PREVIEW_LENGTH) {
@@ -73,7 +75,43 @@ function compactBatchInput(value: unknown, fieldName: string | null = null): unk
   return value;
 }
 
-// 5. Extract primary text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4-1. Create summary text preview ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function createSummaryTextPreview(value: string, maxLength: number): string {
+  const compactedValue = value.replace(WHITESPACE_PATTERN, " ").trim();
+  let preview = compactedValue;
+
+  if (compactedValue.length > maxLength) {
+    preview = `${compactedValue.slice(0, Math.max(0, maxLength - 3))}...`;
+  }
+  return preview;
+}
+
+// 4-2. Create summary input preview ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function createSummaryInputPreview(input: unknown): string {
+  let inputPreview = "";
+
+  if (typeof input === "string" || typeof input === "number" || typeof input === "boolean") {
+    inputPreview = String(input);
+  }
+  else if (Array.isArray(input)) {
+    inputPreview = `[${input.length} items]`;
+  }
+  else if (isRecord(input)) {
+    const source = input.source;
+    const destination = input.destination;
+
+    if (typeof source === "string" && typeof destination === "string") {
+      inputPreview = `${source} -> ${destination}`;
+    }
+    else {
+      const summaryKey = BATCH_SUMMARY_INPUT_KEYS.find((key) => input[key] !== undefined);
+      inputPreview = summaryKey !== undefined ? String(input[summaryKey]) : JSON.stringify(compactBatchInput(input));
+    }
+  }
+  return createSummaryTextPreview(inputPreview, BATCH_SUMMARY_INPUT_PREVIEW_LENGTH);
+}
+
+// 5. Extract primary text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractPrimaryText(result: ServerResult): string {
   const textChunks = result.content
     .filter((item) => item.type === "text" && typeof item.text === "string")
@@ -87,7 +125,7 @@ function extractPrimaryText(result: ServerResult): string {
   return primaryText;
 }
 
-// 6. Extract text content ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Extract text content ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractTextContent(result: ServerResult): string {
   const textChunks = result.content
     .filter((item) => item.type === "text" && typeof item.text === "string")
@@ -96,7 +134,7 @@ function extractTextContent(result: ServerResult): string {
   return textChunks.join("\n");
 }
 
-// 7. Create preserved text payload ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Create preserved text payload ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createPreservedTextPayload(text: string): PreservedTextPayload {
   return {
     lineCount: countLines(text),
@@ -105,7 +143,7 @@ function createPreservedTextPayload(text: string): PreservedTextPayload {
   };
 }
 
-// 8. Preserve unstructured result text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Preserve unstructured result text ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function preserveUnstructuredResultText(result: ServerResult, text: string): ServerResult {
   if (result.structuredContent !== undefined || text.length <= BATCH_RESULT_PREVIEW_LENGTH) {
     return result;
@@ -116,7 +154,7 @@ function preserveUnstructuredResultText(result: ServerResult, text: string): Ser
   };
 }
 
-// 9. Has large structured payload ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Has large structured payload ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function hasLargeStructuredPayload(result: ServerResult): boolean {
   const structuredContent = result.structuredContent;
   let hasPayload = false;
@@ -131,7 +169,7 @@ function hasLargeStructuredPayload(result: ServerResult): boolean {
   return hasPayload;
 }
 
-// 10. Create result text preview ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Create result text preview ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createResultTextPreview(text: string): string {
   const compactedText = text.replace(WHITESPACE_PATTERN, " ").trim();
   const suffix = " ... (omitted)";
@@ -144,7 +182,7 @@ function createResultTextPreview(text: string): string {
   return preview;
 }
 
-// 11. Compact batch result ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11. Compact batch result ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function compactBatchResult(result: ServerResult): ServerResult {
   const primaryText = extractPrimaryText(result);
   const originalText = extractTextContent(result);
@@ -167,7 +205,18 @@ function compactBatchResult(result: ServerResult): ServerResult {
   };
 }
 
-// 12. Run parallel batch ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11-1. Create batch summary line ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function createBatchSummaryLine<T>(item: BatchToolItemResult<T>): string {
+  const statusText = item.ok ? "OK" : "ERROR";
+  const inputPreview = createSummaryInputPreview(item.input);
+  const textPreview = createResultTextPreview(extractPrimaryText(item.result));
+  const detailParts = [inputPreview, textPreview].filter((part) => part.length > 0);
+  const detailText = detailParts.length > 0 ? ` ${detailParts.join(": ")}` : "";
+
+  return `- [${item.index}] ${statusText}${detailText}`;
+}
+
+// 12. Run parallel batch ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runParallelBatch<T>(items: T[], runItem: (item: T) => Promise<ServerResult>): Promise<BatchToolItemResult<T>[]> {
   const results = await Promise.all(
     items.map(async (item, index) => {
@@ -175,7 +224,8 @@ export async function runParallelBatch<T>(items: T[], runItem: (item: T) => Prom
 
       try {
         itemResult = await runItem(item);
-      } catch (error) {
+      }
+      catch (error) {
         itemResult = createErrorResponse(error instanceof Error ? error.message : String(error));
       }
 
@@ -191,17 +241,12 @@ export async function runParallelBatch<T>(items: T[], runItem: (item: T) => Prom
   return results;
 }
 
-// 13. Create batch tool response ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 13. Create batch tool response ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function createBatchToolResponse<T>(toolName: string, items: BatchToolItemResult<T>[]): ServerResult {
   const totalCount = items.length;
   const failedCount = items.filter((item) => !item.ok).length;
   const succeededCount = totalCount - failedCount;
-  const summaryLines = items.map((item) => {
-    const statusText = item.ok ? "OK" : "ERROR";
-    const textPreview = extractPrimaryText(item.result).slice(0, BATCH_RESULT_PREVIEW_LENGTH);
-
-    return `[${item.index}] ${statusText} ${textPreview}`;
-  });
+  const summaryLines = items.map((item) => createBatchSummaryLine(item));
   const summaryHeader = `${toolName}: ${succeededCount}/${totalCount} succeeded${failedCount > 0 ? `, ${failedCount} failed` : ""}`;
   const response: ServerResult = {
     content: [

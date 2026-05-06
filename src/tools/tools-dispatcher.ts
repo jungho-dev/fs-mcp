@@ -19,7 +19,7 @@ import {capture} from "@cores/runtime/runtime-output-capture";
 import {readFileInternal} from "@features/filesystem/filesystem-service";
 import type {GitToolName} from "@schemas/schemas-git";
 
-// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export type ToolDispatchHandler = (args: unknown) => Promise<ServerResult> | ServerResult;
 
 type ToolArgsReference = {
@@ -30,11 +30,12 @@ type ToolArgsReference = {
 
 const ARGS_PATH_FIELD_NAMES = new Set(["args_path", "args_offset", "args_length"]);
 
+// 1. Is record ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// 1. Resolve args path number ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Resolve args path number ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function resolveArgsPathNumber(value: unknown, fieldName: string): number | undefined {
   if (value === undefined) {
     return undefined;
@@ -45,7 +46,7 @@ function resolveArgsPathNumber(value: unknown, fieldName: string): number | unde
   return value;
 }
 
-// 2. Resolve tool args reference ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Resolve tool args reference ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function resolveToolArgsReference(args: unknown): Promise<unknown> {
   if (!isRecord(args)) {
     return args;
@@ -117,7 +118,7 @@ const GIT_TOOL_DISPATCHERS = Object.fromEntries(
   GIT_TOOL_NAMES.map((toolName) => [toolName, (args: unknown) => handleGitTool(toolName, args)]),
 ) as Record<GitToolName, ToolDispatchHandler>;
 
-// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export const TOOL_DISPATCHERS: Readonly<Record<string, ToolDispatchHandler>> = {
   get_configs: (args: unknown) => handleGetConfigs(args),
   set_config_values: (args: unknown) => handleSetConfigValues(args),
@@ -143,14 +144,12 @@ export const TOOL_DISPATCHERS: Readonly<Record<string, ToolDispatchHandler>> = {
   ...GIT_TOOL_DISPATCHERS,
 };
 
-// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-// 1. Get dispatchable tool names ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Get dispatchable tool names ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function getDispatchableToolNames(): string[] {
   return Object.keys(TOOL_DISPATCHERS);
 }
 
-// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-// 2. Dispatch tool call ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Dispatch tool call ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function dispatchToolCall(name: string, args: unknown): Promise<ServerResult> {
   const startTime = Date.now();
   const normalizeDispatchResult = (result: ServerResult): ServerResult => normalizeToolResult(name, result, Date.now() - startTime);

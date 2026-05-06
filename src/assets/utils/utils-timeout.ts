@@ -5,14 +5,15 @@
  * @since 2026-05-02
  */
 
-// 1. Executes a promise with a timeout. If the promise doesn't resolve or reject within ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Execute promise with timeout ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // the specified timeout, returns the provided default value.
 // @param operation The promise to execute
 // @param timeoutMs Timeout in milliseconds
 // @param operationName Name of the operation (for logs)
 // @param defaultValue Value to return if the operation times out
 // @returns Promise that resolves with the operation result or the default value on timeout
-// 1. With timeout ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 1. With timeout ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function withTimeout<T>(operation: Promise<T>, timeoutMs: number, operationName: string, defaultValue: T): Promise<T> {
   // Don't sanitize operation name for logs; callers decide how to report it.
   return new Promise((resolve, reject) => {
@@ -23,7 +24,7 @@ export function withTimeout<T>(operation: Promise<T>, timeoutMs: number, operati
       if (!isCompleted) {
         isCompleted = true;
         if (defaultValue !== null) {
-        	resolve(defaultValue);
+          resolve(defaultValue);
         }
         else {
           // Keep the original operation name in the error message
@@ -37,20 +38,20 @@ export function withTimeout<T>(operation: Promise<T>, timeoutMs: number, operati
     operation
       .then((result) => {
         if (!isCompleted) {
-        	isCompleted = true;
+          isCompleted = true;
           clearTimeout(timeoutId);
           resolve(result);
         }
       })
-      .catch ((error) => {
+      .catch((error) => {
         if (!isCompleted) {
           isCompleted = true;
           clearTimeout(timeoutId);
           if (defaultValue !== null) {
-          	resolve(defaultValue);
+            resolve(defaultValue);
           }
           else {
-          	// Pass the original error unchanged so callers can choose their own sanitization.
+            // Pass the original error unchanged so callers can choose their own sanitization.
             reject(error);
           }
         }

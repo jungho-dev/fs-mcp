@@ -14,12 +14,13 @@ const ignoredDirectories = new Set([".git", "node_modules", "out", "fixtures"]);
 const textFileExtensions = new Set([".json", ".mjs", ".ts", ".ts", ".js", ".md", ".txt"]);
 const forbiddenRuntimeTerm = ["caff", "einate"].join("");
 
-// 1. filesystem helpers ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. filesystem helpers ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function pathExists(targetPath) {
   try {
     await stat(targetPath);
     return true;
-  } catch (error) {
+  }
+  catch (error) {
     if (error && error.code === "ENOENT") {
       return false;
     }
@@ -27,6 +28,7 @@ async function pathExists(targetPath) {
   }
 }
 
+// 2. Collect text files ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function collectTextFiles(targetPath, results = []) {
   const targetStat = await stat(targetPath);
   if (targetStat.isFile()) {
@@ -37,26 +39,26 @@ async function collectTextFiles(targetPath, results = []) {
   }
 
   const entries = await readdir(targetPath, { withFileTypes: true });
-  for (const entry of entries) {
+  await Promise.all(entries.map(async (entry) => {
     if (entry.isDirectory() && ignoredDirectories.has(entry.name)) {
-      continue;
+      return;
     }
 
     const entryPath = path.join(targetPath, entry.name);
     if (entry.isDirectory()) {
       await collectTextFiles(entryPath, results);
-      continue;
+      return;
     }
 
     if (textFileExtensions.has(path.extname(entry.name))) {
       results.push(entryPath);
     }
-  }
+  }));
 
   return results;
 }
 
-// 2. boundary checks ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. boundary checks ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function verifySourceRootEntries() {
   const entries = await readdir(sourceRoot, { withFileTypes: true });
   const names = new Set(entries.map((entry) => entry.name));
@@ -75,12 +77,14 @@ async function verifySourceRootEntries() {
   return failures;
 }
 
+// 4. Verify test root entries ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function verifyTestRootEntries() {
+  const rootTestFilePattern = /^test.*\.(js|mjs)$/;
   const entries = await readdir(testRoot, { withFileTypes: true });
   const names = new Set(entries.map((entry) => entry.name));
   const missingEntries = [...requiredTestEntries].filter((entry) => !names.has(entry)).sort();
   const rootTestFiles = entries
-    .filter((entry) => entry.isFile() && /^test.*\.(js|mjs)$/.test(entry.name))
+    .filter((entry) => entry.isFile() && rootTestFilePattern.test(entry.name))
     .map((entry) => entry.name)
     .sort();
   const failures = [];
@@ -96,27 +100,28 @@ async function verifyTestRootEntries() {
   return failures;
 }
 
+// 5. Verify forbidden runtime terms ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function verifyForbiddenRuntimeTerms() {
   const failures = [];
 
-  for (const surface of scannedTextSurfaces) {
+  await Promise.all(scannedTextSurfaces.map(async (surface) => {
     if (!(await pathExists(surface))) {
-      continue;
+      return;
     }
 
     const files = await collectTextFiles(surface);
-    for (const file of files) {
+    await Promise.all(files.map(async (file) => {
       const content = await readFile(file, "utf8");
       if (content.toLowerCase().includes(forbiddenRuntimeTerm)) {
         failures.push(`Forbidden removed platform helper reference: ${path.relative(projectRoot, file)}`);
       }
-    }
-  }
+    }));
+  }));
 
   return failures;
 }
 
-// 3. script runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. script runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function main() {
   const failures = [...(await verifySourceRootEntries()), ...(await verifyTestRootEntries()), ...(await verifyForbiddenRuntimeTerms())];
 

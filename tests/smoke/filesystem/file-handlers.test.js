@@ -33,20 +33,26 @@ const MD_FILE = path.join(TEST_DIR, "test.md");
 const HTML_FILE = path.join(TEST_DIR, "test.html");
 const IMAGE_FILE = path.join(TEST_DIR, "test.png");
 const SVG_FILE = path.join(TEST_DIR, "test.svg");
+const TINY_PNG_BYTES = [
+  137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 4, 0, 0, 0, 181, 28, 12,
+  2, 0, 0, 0, 11, 73, 68, 65, 84, 120, 218, 99, 252, 255, 31, 0, 3, 3, 2, 0, 238, 169, 235, 25, 0, 0, 0, 0, 73, 69,
+  78, 68, 174, 66, 96, 130,
+];
 
-// 1. Helper function to clean up test directories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function cleanupTestDirectories() {
+// 1. Helper function to clean up test directories ―――――――――――――――――――――――――――――――――――――――――――――――――
+async function cleanupTestDirectories () {
   try {
     await fs.rm(TEST_DIR, { recursive: true, force: true });
-  } catch (error) {
+  }
+  catch (error) {
     if (error.code !== "ENOENT") {
       console.error("Error during cleanup:", error);
     }
   }
 }
 
-// 2. Setup function ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function setup() {
+// 2. Setup function ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function setup () {
   // Clean up before tests (in case previous run left files)
   await cleanupTestDirectories();
 
@@ -58,28 +64,31 @@ async function setup() {
   return originalConfig;
 }
 
-// 3. Teardown function ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Teardown function ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Always runs cleanup, restores config only if provided
-async function teardown(originalConfig) {
+
+// 3. Teardown ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function teardown (originalConfig) {
   // Always clean up test directories, even if setup failed
   try {
     await cleanupTestDirectories();
-  } catch (error) {
+  }
+  catch (error) {
     console.error("Warning: Failed to clean up test directories:", error.message);
   }
-
   // Restore config only if we have the original
   if (originalConfig) {
     try {
       await configManager.updateConfig(originalConfig);
-    } catch (error) {
+    }
+    catch (error) {
       console.error("Warning: Failed to restore config:", error.message);
     }
   }
 }
 
-// 4. Test 1: Handler factory returns correct types ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function testHandlerFactory() {
+// 4. Test 1: Handler factory returns correct types ――――――――――――――――――――――――――――――――――――――――――――――――
+async function testHandlerFactory () {
   const testCases = [
     { file: "test.txt", expected: "TextFileHandler" },
     { file: "test.js", expected: "TextFileHandler" },
@@ -92,14 +101,14 @@ async function testHandlerFactory() {
     { file: "test.webp", expected: "ImageFileHandler" },
   ];
 
-  for (const { file, expected } of testCases) {
+  await Promise.all(testCases.map(async ({ file, expected }) => {
     const handler = await getFileHandler(file);
     assert.strictEqual(handler.constructor.name, expected, `${file} should use ${expected} but got ${handler.constructor.name}`);
-  }
+  }));
 }
 
-// 5. Test 2: FileResult interface consistency ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function testFileResultInterface() {
+// 5. Test 2: FileResult interface consistency ―――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function testFileResultInterface () {
   // Create a text file
   await fs.writeFile(TEXT_FILE, "Hello, World!\nLine 2\nLine 3");
 
@@ -117,8 +126,8 @@ async function testFileResultInterface() {
   }
 }
 
-// 6. Test 3: ReadOptions interface ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function testReadOptionsInterface() {
+// 6. Test 3: ReadOptions interface ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function testReadOptionsInterface () {
   await fs.writeFile(TEXT_FILE, "Line 1\nLine 2\nLine 3\nLine 4\nLine 5");
 
   // Test offset option
@@ -133,8 +142,8 @@ async function testReadOptionsInterface() {
   assert.ok(content2.includes("Line 2"), "Should include Line 2");
 }
 
-// 7. Test 4: Handler canHandle method ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function testCanHandle() {
+// 7. Test 4: Handler canHandle method ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function testCanHandle () {
   const textHandler = await getFileHandler("test.txt");
   const imageHandler = await getFileHandler("test.png");
 
@@ -147,8 +156,8 @@ async function testCanHandle() {
   assert.ok(textHandler.canHandle("file.txt"), "Text handler should handle .txt");
 }
 
-// 8. Test 5: Text handler read/write ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function testTextHandler() {
+// 8. Test 5: Text handler read/write ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function testTextHandler () {
   const content = "Test content\nWith multiple lines\nAnd special chars: äöü";
 
   // Write
@@ -162,7 +171,8 @@ async function testTextHandler() {
 }
 
 // 9. Test 6: Text handler with JSON file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function testJsonFile() {
+async function testJsonFile () {
+  const statusPrefixPattern = /^\[.*?\]\n\n/;
   const data = { name: "Test", values: [1, 2, 3] };
   const content = JSON.stringify(data, null, 2);
 
@@ -170,14 +180,14 @@ async function testJsonFile() {
 
   const result = await readFile(JSON_FILE);
   const readContent = result.content.toString();
-  const parsed = JSON.parse(readContent.replace(/^\[.*?\]\n\n/, "")); // Remove status message
+  const parsed = JSON.parse(readContent.replace(statusPrefixPattern, "")); // Remove status message
 
   assert.strictEqual(parsed.name, "Test", "JSON should be preserved");
   assert.deepStrictEqual(parsed.values, [1, 2, 3], "Array should be preserved");
 }
 
-// 10. Test 7: File info returns correct structure ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function testFileInfo() {
+// 10. Test 7: File info returns correct structure ―――――――――――――――――――――――――――――――――――――――――――――――――
+async function testFileInfo () {
   await fs.writeFile(TEXT_FILE, "Some content");
 
   const info = await getFileInfo(TEXT_FILE);
@@ -193,8 +203,8 @@ async function testFileInfo() {
   assert.ok(info.isFile === true || info.isFile === "true", "Should be a file");
 }
 
-// 11. Test 8: Write mode (rewrite vs append) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function testWriteModes() {
+// 11. Test 8: Write mode (rewrite vs append) ――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function testWriteModes () {
   // Initial write (rewrite mode - default)
   await writeFile(TEXT_FILE, "Initial content");
 
@@ -213,17 +223,17 @@ async function testWriteModes() {
   assert.ok(content.includes("Appended content"), "Should have appended");
 }
 
-// 12. Test 9: read_file handler returns preview structured content for markdown/text ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function testReadFilePreviewMetadata() {
+// 12. Read file preview metadata ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function testReadFilePreviewMetadata () {
   const markdownContent = "# Title\n\n```js\nconst x = 1;\n```";
   const textContent = "hello\nplain text";
-  const tinyPngBase64 = "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO6p6xkAAAAASUVORK5CYII=";
   const tinySvg = '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect width="1" height="1"/></svg>';
+  const htmlContent = ["<h1>Preview</h1>", "<", "script", ">alert(1)</", "script", ">"].join("");
 
   await fs.writeFile(MD_FILE, markdownContent);
   await fs.writeFile(TEXT_FILE, textContent);
-  await fs.writeFile(HTML_FILE, "<h1>Preview</h1><script>alert(1)</script>");
-  await fs.writeFile(IMAGE_FILE, Buffer.from(tinyPngBase64, "base64"));
+  await fs.writeFile(HTML_FILE, htmlContent);
+  await fs.writeFile(IMAGE_FILE, Buffer.from(TINY_PNG_BYTES));
   await fs.writeFile(SVG_FILE, tinySvg);
 
   const markdownResult = await handleReadFile({ path: MD_FILE });
@@ -270,8 +280,9 @@ async function testReadFilePreviewMetadata() {
   assert.ok(nullArgsResult.content[0].text.includes("Error: No arguments provided for read_file command"), "Null-args should include standard error text");
 }
 
-// 13. Test 10: Markdown exact-match save flow works through edit_block ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function testMarkdownExactMatchSave() {
+// 13. Test 10: Markdown exact-match save flow works through edit_block ――――――――――――――――――――――――――――
+async function testMarkdownExactMatchSave () {
+  const readingStatusPattern = /\[Reading \d+ lines? from/;
   const originalContent = "# Title\n\nOriginal paragraph.\n";
   const updatedContent = "# Title\n\nUpdated paragraph.\n";
 
@@ -291,14 +302,14 @@ async function testMarkdownExactMatchSave() {
   assert.strictEqual(result.content[0].type, "text", "edit_block result[0] should be text");
   assert.ok(result.structuredContent, "edit_block should return structuredContent");
   assert.ok(result.structuredContent.filePath, "edit_block structuredContent should include filePath");
-  assert.match(result.content[0].text, /\[Reading \d+ lines? from/, "edit_block should return a file-preview status line");
+  assert.match(result.content[0].text, readingStatusPattern, "edit_block should return a file-preview status line");
 
   const readBack = await fs.readFile(MD_FILE, "utf8");
   assert.strictEqual(readBack, updatedContent, "Markdown file should be rewritten with the updated content");
 }
 
-// 14. Run all tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function runAllTests() {
+// 14. Run all tests ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function runAllTests () {
   await testHandlerFactory();
   await testFileResultInterface();
   await testReadOptionsInterface();
@@ -311,17 +322,19 @@ async function runAllTests() {
   await testMarkdownExactMatchSave();
 }
 
-// Export the main test function
-export default async function runTests() {
+// 15. Run tests ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export default async function runTests () {
   let originalConfig;
   try {
     originalConfig = await setup();
     await runAllTests();
-  } catch (error) {
+  }
+  catch (error) {
     console.error("Test failed:", error.message);
     console.error(error.stack);
     return false;
-  } finally {
+  }
+  finally {
     // Always run teardown to clean up test directories and restore config
     // teardown handles the case where originalConfig is undefined
     await teardown(originalConfig);

@@ -10,13 +10,14 @@ const __dirname = path.dirname(__filename);
 const SEARCH_FIXTURE_DIR = path.join(__dirname, "..", "..", "fixtures", "output");
 const SEARCH_FIXTURE_PATH = path.join(SEARCH_FIXTURE_DIR, "output-file-with-1500-lines.txt");
 
-// 1. Helper function to wait for search completion and get all results ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Helper function to wait for search completion and get all results ――――――――――――――――――――――――――――
 async function searchAndWaitForCompletion(searchArgs, timeout = 30_000) {
+  const startedSessionPattern = /Started .* session:\s*([a-zA-Z0-9_-]+)/;
   const result = await handleStartSearch(searchArgs);
   let completedResult;
 
   // Extract session ID from result with tighter regex
-  const sessionIdMatch = result.content[0].text.match(/Started .* session:\s*([a-zA-Z0-9_-]+)/);
+  const sessionIdMatch = result.content[0].text.match(startedSessionPattern);
   if (!sessionIdMatch) {
     throw new Error("Could not extract session ID from search result");
   }
@@ -26,6 +27,7 @@ async function searchAndWaitForCompletion(searchArgs, timeout = 30_000) {
     // Wait for completion by polling
     const startTime = Date.now();
     while (Date.now() - startTime < timeout) {
+      // biome-ignore lint/performance/noAwaitInLoops: Polling requires sequential reads.
       const moreResults = await handleGetMoreSearchResults({ sessionId });
       const resultText = moreResults.content[0].text;
 
@@ -45,11 +47,13 @@ async function searchAndWaitForCompletion(searchArgs, timeout = 30_000) {
     if (!completedResult) {
       throw new Error("Search timed out");
     }
-  } finally {
+  }
+  finally {
     // Always stop the search session to prevent hanging
     try {
       await handleStopSearch({ sessionId });
-    } catch {
+    }
+    catch {
       // Ignore errors when stopping - session might already be completed
     }
   }
@@ -57,6 +61,7 @@ async function searchAndWaitForCompletion(searchArgs, timeout = 30_000) {
   return completedResult;
 }
 
+// 2. Test search truncation ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testSearchTruncation() {
   try {
     await configManager.setValue("allowedDirectories", [SEARCH_FIXTURE_DIR]);
@@ -83,7 +88,8 @@ async function testSearchTruncation() {
     if (finalResult.content[0].text.includes("Results truncated")) {
       const _truncationIndex = finalResult.content[0].text.indexOf("Results truncated");
     }
-  } catch (error) {
+  }
+  catch (error) {
     console.error("Test failed:", error);
     throw error;
   }

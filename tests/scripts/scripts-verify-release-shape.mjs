@@ -7,12 +7,13 @@ const projectRoot = path.resolve(path.dirname(scriptPath), "..", "..");
 const ignoredDirectories = new Set([".git", "node_modules"]);
 const forbiddenSuffixes = [".map", ".d.ts"];
 
-// 1. filesystem helpers ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. filesystem helpers ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function pathExists(targetPath) {
   try {
     await stat(targetPath);
     return true;
-  } catch (error) {
+  }
+  catch (error) {
     if (error && error.code === "ENOENT") {
       return false;
     }
@@ -20,40 +21,40 @@ async function pathExists(targetPath) {
   }
 }
 
-// 2. forbidden artifact scan ――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. forbidden artifact scan ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function collectForbiddenArtifacts(directoryPath, results = []) {
   const entries = await readdir(directoryPath, { withFileTypes: true });
 
-  for (const entry of entries) {
+  await Promise.all(entries.map(async (entry) => {
     if (ignoredDirectories.has(entry.name)) {
-      continue;
+      return;
     }
 
     const entryPath = path.join(directoryPath, entry.name);
     if (entry.isDirectory()) {
       await collectForbiddenArtifacts(entryPath, results);
-      continue;
+      return;
     }
 
     if (forbiddenSuffixes.some((suffix) => entry.name.endsWith(suffix))) {
       results.push(path.relative(projectRoot, entryPath));
     }
-  }
+  }));
 
   return results;
 }
 
-// 3. release shape check ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. release shape check ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function main() {
   const requiredDirectories = ["src", "out", "tests", path.join("tests", "scripts")];
   const missingDirectories = [];
 
-  for (const directory of requiredDirectories) {
+  await Promise.all(requiredDirectories.map(async (directory) => {
     const directoryPath = path.join(projectRoot, directory);
     if (!(await pathExists(directoryPath))) {
       missingDirectories.push(directory);
     }
-  }
+  }));
 
   const forbiddenArtifacts = await collectForbiddenArtifacts(projectRoot);
   const distExists = await pathExists(path.join(projectRoot, "dist"));

@@ -15,7 +15,7 @@ import {dispatchToolCall} from "../../../out/tools/tools-dispatcher.js";
 
 const execFileAsync = promisify(execFile);
 
-// 1. standard output parser ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. standard output parser ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function parseStandardOutput(result) {
   assert.notEqual(result.isError, true);
   assert.equal(Array.isArray(result.content), true);
@@ -25,13 +25,13 @@ function parseStandardOutput(result) {
   return result.structuredContent.data.structuredContent;
 }
 
-// 2. git fixture setup ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. git fixture setup ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function setupRepository(repoPath) {
   await execFileAsync("git", ["config", "user.name", "fs-mcp-test"], {cwd: repoPath, windowsHide: true});
   await execFileAsync("git", ["config", "user.email", "fs-mcp@example.com"], {cwd: repoPath, windowsHide: true});
 }
 
-// 3. smoke flow ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. smoke flow ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testGitBasicFlow() {
   const repoPath = await fs.mkdtemp(path.join(os.tmpdir(), "fs-mcp-git-basic-"));
 
@@ -65,12 +65,13 @@ async function testGitBasicFlow() {
     assert.equal(logOutput.success, true);
     assert.equal(logOutput.totalCount, 1);
     assert.equal(logOutput.commits[0].subject, "feat: add demo file");
-  } finally {
+  }
+  finally {
     await fs.rm(repoPath, {recursive: true, force: true});
   }
 }
 
-// 4. test runner ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function main() {
   await testGitBasicFlow();
 }

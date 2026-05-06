@@ -11,6 +11,7 @@ import {normalizeToolResult} from "@cores/responses/responses-tool-result";
 import {type LogLevel, logger, logToStderr} from "@cores/runtime/runtime-app-logger";
 import {capture} from "@cores/runtime/runtime-output-capture";
 import {VERSION} from "@cores/runtime/runtime-version";
+import {runWithGitSessionScope} from "@features/git/git-session";
 import {Server} from "@modelcontextprotocol/sdk/server/index.js";
 import {type CallToolRequest, CallToolRequestSchema, type InitializeRequest, InitializeRequestSchema, LATEST_PROTOCOL_VERSION, ListResourcesRequestSchema, ListResourceTemplatesRequestSchema, ListToolsRequestSchema, SUPPORTED_PROTOCOL_VERSIONS} from "@modelcontextprotocol/sdk/types.js";
 import {CONFIG_TOOL_CATALOG} from "@tools/tools-config";
@@ -37,22 +38,29 @@ type RequestMetadata = {
 
 const deferredMessages: Array<{level: LogLevel; message: string}> = [];
 
-// 1. Defer log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Defer log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function deferLog(level: LogLevel, message: string): void {
   deferredMessages.push({level, message});
 }
-// 2. Has request metadata ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 2. Has request metadata ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function hasRequestMetadata(value: unknown): value is RequestMetadata {
   return typeof value === "object" && value !== null;
 }
 
+// 3. Build current client session key ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function buildCurrentClientSessionKey(): string {
+  return `${currentClient.name}@${currentClient.version}`;
+}
+
 // Function to flush deferred messages after initialization
-// 3. Flush deferred messages ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 4. Flush deferred messages ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function flushDeferredMessages(): void {
   while (deferredMessages.length > 0) {
     const msg = deferredMessages.shift();
     if (!msg) {
-    	continue;
+      continue;
     }
     logger[msg.level](msg.message);
   }
@@ -76,7 +84,7 @@ export const server = new Server(
 // Store current client info (simple variable)
 let currentClient: CurrentClient = {name: "uninitialized", version: "uninitialized"};
 
-// 4. Update current client ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Update current client ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function updateCurrentClient(clientInfo: ClientInfoUpdate): Promise<boolean> {
   if (clientInfo.name !== currentClient.name || clientInfo.version !== currentClient.version) {
     const nameChanged = clientInfo.name !== currentClient.name;
@@ -90,7 +98,7 @@ async function updateCurrentClient(clientInfo: ClientInfoUpdate): Promise<boolea
     if (nameChanged) {
       const transport = globalThis.mcpTransport;
       if (transport && typeof transport.configureForClient === "function") {
-      	transport.configureForClient(currentClient.name);
+        transport.configureForClient(currentClient.name);
       }
     }
     return true;
@@ -104,7 +112,7 @@ server.setRequestHandler(InitializeRequestSchema, async (request: InitializeRequ
     // Extract and store current client information
     const clientInfo = request.params?.clientInfo;
     if (clientInfo) {
-    	await updateCurrentClient(clientInfo);
+      await updateCurrentClient(clientInfo);
     }
     capture("run_server_mcp_initialized");
 
@@ -138,7 +146,8 @@ export {currentClient};
 deferLog("info", "Setting up request ..");
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-  // 5. Create tool catalog ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 6. Create tool catalog ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   function createToolCatalog(): ToolCatalogEntry[] {
     return [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG, ...GIT_TOOL_CATALOG];
   }
@@ -160,9 +169,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest)
   try {
     const metadata = request.params._meta;
     if (hasRequestMetadata(metadata) && metadata.clientInfo) {
-    	await updateCurrentClient(metadata.clientInfo);
+      await updateCurrentClient(metadata.clientInfo);
     }
-    const result = await dispatchToolCall(name, args);
+    const result = await runWithGitSessionScope(buildCurrentClientSessionKey(), async () => await dispatchToolCall(name, args));
     return result;
   }
   catch (error) {

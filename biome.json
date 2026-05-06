@@ -118,8 +118,7 @@
           "level": "warn",
           "fix": "safe"
         },
-        "useSolidForComponent": "warn",
-        "useTopLevelRegex": "error"
+        "useSolidForComponent": "warn"
       },
       "security": {
         "noBlankTarget": {
@@ -829,10 +828,7 @@
               "level": "error",
               "fix": "safe"
             },
-            "noUselessUndefined": {
-              "level": "error",
-              "fix": "safe"
-            },
+            "noUselessUndefined": "off",
             "noUselessUndefinedInitialization": {
               "level": "error",
               "fix": "safe"
@@ -1329,10 +1325,7 @@
               "level": "error",
               "fix": "safe"
             },
-            "noUselessUndefined": {
-              "level": "error",
-              "fix": "safe"
-            },
+            "noUselessUndefined": "off",
             "noUselessUndefinedInitialization": {
               "level": "error",
               "fix": "safe"
@@ -1795,10 +1788,7 @@
               "level": "warn",
               "fix": "safe"
             },
-            "noUselessUndefined": {
-              "level": "error",
-              "fix": "safe"
-            },
+            "noUselessUndefined": "off",
             "useDateNow": {
               "level": "error",
               "fix": "safe"
@@ -2242,10 +2232,7 @@
               "level": "error",
               "fix": "safe"
             },
-            "noUselessUndefined": {
-              "level": "error",
-              "fix": "safe"
-            },
+            "noUselessUndefined": "off",
             "noUselessUndefinedInitialization": {
               "level": "error",
               "fix": "safe"
@@ -2816,10 +2803,7 @@
               "level": "warn",
               "fix": "safe"
             },
-            "noUselessUndefined": {
-              "level": "error",
-              "fix": "safe"
-            },
+            "noUselessUndefined": "off",
             "useDateNow": {
               "level": "error",
               "fix": "safe"

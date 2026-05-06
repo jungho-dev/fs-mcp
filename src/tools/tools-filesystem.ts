@@ -5,14 +5,14 @@
  * @since 2026-05-03
  */
 
-import { EditBlocksArgsSchema } from "@schemas/schemas-edit";
 import { withArgsPathSchema } from "@schemas/schemas-args-ref";
+import { EditBlocksArgsSchema } from "@schemas/schemas-edit";
 import { CreateDirectoriesArgsSchema, GetFileInfosArgsSchema, ListDirectoriesArgsSchema, MoveFilesArgsSchema, ReadFilesArgsSchema, RemoveFilesArgsSchema, RenameFilesArgsSchema, WriteFilesArgsSchema } from "@schemas/schemas-filesystem";
 import { GetSearchResultsArgsSchema, ListSearchesArgsSchema, StartSearchesArgsSchema, StopSearchesArgsSchema } from "@schemas/schemas-search";
 import { CMD_PREFIX_DESCRIPTION, PATH_GUIDANCE, type ToolCatalogEntry } from "@tools/tools-const";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
-// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export const FILESYSTEM_TOOL_CATALOG: ToolCatalogEntry[] = [
   {
     name: "read_files",

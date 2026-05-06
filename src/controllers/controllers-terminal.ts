@@ -7,9 +7,8 @@
 
 import type { ServerResult } from "@assets/type/common";
 import { createBatchToolResponse, runParallelBatch } from "@controllers/controllers-batch";
-import { forceTerminate, interactWithProcess, listSessions, readProcessOutput, startProcess } from "@features/process/process-runner";
+import { interactWithProcess, listSessions, readProcessOutput, startProcess } from "@features/process/process-runner";
 import {
-  ForceTerminateArgsSchema,
   InteractWithProcessesArgsSchema,
   ReadProcessOutputArgsSchema,
   ReadProcessOutputsArgsSchema,
@@ -17,31 +16,29 @@ import {
   StartProcessesArgsSchema,
 } from "@schemas/schemas-process";
 
-// 1. Handle start process ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Handle start process ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStartProcess(args: unknown): Promise<ServerResult> {
   const parsed = StartProcessArgsSchema.parse(args);
   return startProcess(parsed);
 }
-// 2. Handle read process output ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 2. Handle read process output ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleReadProcessOutput(args: unknown): Promise<ServerResult> {
   const parsed = ReadProcessOutputArgsSchema.parse(args);
   return readProcessOutput(parsed);
 }
-// 3. Handle interact with process ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 3. Handle interact with process ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleInteractWithProcess(args: unknown): Promise<ServerResult> {
   return interactWithProcess(args);
 }
-// 4. Handle force terminate ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function handleForceTerminate(args: unknown): Promise<ServerResult> {
-  const parsed = ForceTerminateArgsSchema.parse(args);
-  return forceTerminate(parsed);
-}
-// 5. Handle list sessions ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 4. Handle list sessions ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleListSessions(): Promise<ServerResult> {
   return listSessions();
 }
 
-// 6. Handle start processes ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Handle start processes ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStartProcesses(args: unknown): Promise<ServerResult> {
   const parsed = StartProcessesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleStartProcess(item));
@@ -50,7 +47,7 @@ export async function handleStartProcesses(args: unknown): Promise<ServerResult>
   return response;
 }
 
-// 7. Handle read process outputs ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Handle read process outputs ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleReadProcessOutputs(args: unknown): Promise<ServerResult> {
   const parsed = ReadProcessOutputsArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleReadProcessOutput(item));
@@ -59,7 +56,7 @@ export async function handleReadProcessOutputs(args: unknown): Promise<ServerRes
   return response;
 }
 
-// 8. Handle interact with processes ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Handle interact with processes ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleInteractWithProcesses(args: unknown): Promise<ServerResult> {
   const parsed = InteractWithProcessesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleInteractWithProcess(item));

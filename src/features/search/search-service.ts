@@ -68,16 +68,18 @@ export interface SearchSessionOptions {
   searchType: "files" | "content";
   timeout?: number;
 }
-// 1. Search Session Manager - handles ripgrep processes like terminal sessions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 1. Search session manager ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Supports both file search and content search with progressive results
-// 1. Search manager ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Search manager ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export class SearchManager {
   private readonly sessions = new Map<string, SearchSession>();
   private sessionCounter = 0;
 
-  // 2. Start a new search session (like start_process) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 2. Start a new search session (like start_process) ――――――――――――――――――――――――――――――――――――――――――――
   // Returns immediately with initial state and results
 
+  // 2. Start search ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async startSearch(options: SearchSessionOptions): Promise<{
     sessionId: string;
     isComplete: boolean;
@@ -106,7 +108,7 @@ export class SearchManager {
     const rgProcess = spawn(rgPath, args, {windowsHide: true}); // Prevent visible console windows on Windows
 
     if (!rgProcess.pid) {
-    	throw new Error("Failed to start ripgrep process");
+      throw new Error("Failed to start ripgrep process");
     }
     // Create session
     const session: SearchSession = {
@@ -139,21 +141,21 @@ export class SearchManager {
     if (timeoutMs) {
       killTimer = setTimeout(() => {
         if (!session.isComplete && !session.process.killed) {
-        	session.process.kill("SIGTERM");
+          session.process.kill("SIGTERM");
         }
       }, timeoutMs);
     }
     // Clear timer on process completion
     session.process.once("close", () => {
       if (killTimer) {
-      	clearTimeout(killTimer);
+        clearTimeout(killTimer);
         killTimer = null;
       }
     });
 
     session.process.once("error", () => {
       if (killTimer) {
-      	clearTimeout(killTimer);
+        clearTimeout(killTimer);
         killTimer = null;
       }
     });
@@ -178,7 +180,7 @@ export class SearchManager {
             session.totalMatches++;
           }
         })
-        .catch ((err) => {
+        .catch((err) => {
           capture("docx_search_error", {error: err instanceof Error ? err.message : String(err)});
         });
     }
@@ -206,6 +208,8 @@ export class SearchManager {
   }
   // Read search results with offset-based pagination (like read_file)
   // Supports both range reading and tail behavior
+
+  // 3. Read search results ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   readSearchResults(
     sessionId: string,
     offset: number = 0,
@@ -266,22 +270,24 @@ export class SearchManager {
       wasIncomplete: session.wasIncomplete,
     };
   }
-  // 3. Terminate a search session (like force_terminate) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 3. Terminate a search session (like force_terminate) ――――――――――――――――――――――――――――――――――――――――――
   terminateSearch(sessionId: string): boolean {
     const session = this.sessions.get(sessionId);
 
     if (!session) {
-    	return false;
+      return false;
     }
     if (!session.process.killed) {
-    	session.process.kill("SIGTERM");
+      session.process.kill("SIGTERM");
     }
     // Don't delete session immediately - let user read final results
     // It will be cleaned up by cleanup process
 
     return true;
   }
-  // 4. Get list of active search sessions (like list_sessions) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 4. Get list of active search sessions (like list_sessions) ――――――――――――――――――――――――――――――――――――
   listSearchSessions(): Array<{
     id: string;
     searchType: string;
@@ -301,25 +307,27 @@ export class SearchManager {
       totalResults: session.totalMatches + session.totalContextLines,
     }));
   }
-  // 2. Should include docx search ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 2. Should include docx search ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private shouldIncludeDocxSearch(filePattern?: string, rootPath?: string): boolean {
     if (rootPath) {
       const lowerPath = rootPath.toLowerCase();
       if (DOCX_EXTENSIONS.some((ext) => lowerPath.endsWith(ext))) {
-      	return true;
+        return true;
       }
     }
     if (filePattern) {
       const lowerPattern = filePattern.toLowerCase();
       if (DOCX_EXTENSIONS.some((ext) => lowerPattern.includes(`*${ext}`) || lowerPattern.endsWith(ext))) {
-      	return true;
+        return true;
       }
     }
     return false;
   }
-  // 6. Search DOCX files for content matches ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 6. Search DOCX files for content matches ――――――――――――――――――――――――――――――――――――――――――――――――――――――
   // Extracts <w:t> text from document.xml and searches it
-  // 3. Search docx files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 3. Search docx files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private async searchDocxFiles(rootPath: string, pattern: string, ignoreCase: boolean, maxResults?: number, filePattern?: string, _literalSearch?: boolean): Promise<SearchResult[]> {
     const results: SearchResult[] = [];
 
@@ -338,7 +346,7 @@ export class SearchManager {
         const fileName = path.basename(filePath);
         return patterns.some((pat) => {
           if (pat.includes("*")) {
-          	return buildGlobPatternRegExp(pat).test(fileName);
+            return buildGlobPatternRegExp(pat).test(fileName);
           }
           return fileName.toLowerCase() === pat.toLowerCase();
         });
@@ -346,7 +354,7 @@ export class SearchManager {
     }
     for (const filePath of docxFiles) {
       if (maxResults && results.length >= maxResults) {
-      	break;
+        break;
       }
       try {
         // biome-ignore lint/performance/noAwaitInLoops: DOCX files are scanned sequentially to honor maxResults short-circuiting.
@@ -355,22 +363,22 @@ export class SearchManager {
 
         for (const xmlPath of DOCX_TEXT_XML_PARTS) {
           if (maxResults && results.length >= maxResults) {
-          	break;
+            break;
           }
           const file = zip.file(xmlPath);
           if (!file) {
-          	continue;
+            continue;
           }
           const xml = file.asText();
           let lineNum = 0;
 
           for (const m of xml.matchAll(WORD_TEXT_PATTERN)) {
             if (maxResults && results.length >= maxResults) {
-            	break;
+              break;
             }
             const text = m[1];
             if (!text?.trim()) {
-            	continue;
+              continue;
             }
             lineNum++;
 
@@ -394,12 +402,13 @@ export class SearchManager {
     }
     return results;
   }
-  // 4. Find docx files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 4. Find docx files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private async findDocxFiles(rootPath: string): Promise<string[]> {
     const docxFiles: string[] = [];
     const isDocx = (name: string) => name.toLowerCase().endsWith(".docx");
 
-    // 5. Walk ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+    // 5. Walk ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
     async function walk(dir: string): Promise<void> {
       try {
         const entries = await fs.readdir(dir, {withFileTypes: true});
@@ -408,11 +417,11 @@ export class SearchManager {
           if (entry.isDirectory()) {
             if (!entry.name.startsWith(".") && entry.name !== "node_modules") {
               // biome-ignore lint/performance/noAwaitInLoops: Recursive walk is sequential to keep traversal bounded and simple.
-            	await walk(fullPath);
+              await walk(fullPath);
             }
           }
           else if (entry.isFile() && isDocx(entry.name)) {
-          	docxFiles.push(fullPath);
+            docxFiles.push(fullPath);
           }
         }
       }
@@ -423,10 +432,10 @@ export class SearchManager {
     try {
       const stats = await fs.stat(rootPath);
       if (stats.isFile() && isDocx(rootPath)) {
-      	return [rootPath];
+        return [rootPath];
       }
       else if (stats.isDirectory()) {
-      	await walk(rootPath);
+        await walk(rootPath);
       }
     }
     catch {
@@ -434,7 +443,8 @@ export class SearchManager {
     }
     return docxFiles;
   }
-  // 6. Get match context ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 6. Get match context ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private getMatchContext(text: string, matchStart: number, matchLength: number): string {
     const start = Math.max(0, matchStart - MATCH_CONTEXT_CHARS);
     const end = Math.min(text.length, matchStart + matchLength + MATCH_CONTEXT_CHARS);
@@ -450,32 +460,39 @@ export class SearchManager {
     }
     return context;
   }
-  // 9. Clean up completed sessions older than specified time ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 9. Clean up completed sessions older than specified time ――――――――――――――――――――――――――――――――――――――
   // Called automatically by cleanup interval
+
+  // 11. Cleanup sessions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   cleanupSessions(maxAge: number = SEARCH_CLEANUP_INTERVAL_MS): void {
     const cutoffTime = Date.now() - maxAge;
 
     for (const [sessionId, session] of this.sessions) {
       if (session.isComplete && session.lastReadTime < cutoffTime) {
-      	this.sessions.delete(sessionId);
+        this.sessions.delete(sessionId);
       }
     }
   }
-  // 10. Get total number of active sessions (excluding completed ones) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 10. Get total number of active sessions (excluding completed ones) ――――――――――――――――――――――――――――
   getActiveSessionCount(): number {
     return Array.from(this.sessions.values()).filter((session) => !session.isComplete).length;
   }
-  // 11. Detect if pattern looks like an exact filename ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 11. Detect if pattern looks like an exact filename ――――――――――――――――――――――――――――――――――――――――――――
   // (has file extension and no glob wildcards)
-  // 7. Is exact filename ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 7. Is exact filename ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private isExactFilename(pattern: string): boolean {
     return EXACT_FILENAME_PATTERN.test(pattern) && !this.isGlobPattern(pattern);
   }
-  // 8. Is glob pattern ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 8. Is glob pattern ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private isGlobPattern(pattern: string): boolean {
     return GLOB_META_CHARS.some((char) => pattern.includes(char));
   }
-  // 9. Build ripgrep args ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 9. Build ripgrep args ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private buildRipgrepArgs(options: SearchSessionOptions): string[] {
     const args: string[] = [];
 
@@ -485,25 +502,25 @@ export class SearchManager {
 
       // Add literal search support for content searches
       if (options.literalSearch) {
-      	args.push("-F"); // Fixed string matching (literal)
+        args.push("-F"); // Fixed string matching (literal)
       }
       if (options.contextLines && options.contextLines > 0) {
-      	args.push("-C", options.contextLines.toString());
+        args.push("-C", options.contextLines.toString());
       }
     }
     else {
-    	// File search mode
+      // File search mode
       args.push("--files");
     }
     // Case-insensitive: content searches use -i flag, file searches use --iglob
     if (options.searchType === "content" && options.ignoreCase !== false) {
-    	args.push("-i");
+      args.push("-i");
     }
     if (options.includeHidden) {
-    	args.push("--hidden");
+      args.push("--hidden");
     }
     if (options.maxResults && options.maxResults > 0) {
-    	args.push("-m", options.maxResults.toString());
+      args.push("-m", options.maxResults.toString());
     }
     // File pattern filtering (for file type restrictions like *.js, *.d.ts)
     if (options.filePattern) {
@@ -514,15 +531,15 @@ export class SearchManager {
 
       for (const p of patterns) {
         if (options.searchType === "content") {
-        	args.push("-g", p);
+          args.push("-g", p);
         }
         else {
           // For file search: use --iglob for case-insensitive or --glob for case-sensitive
           if (options.ignoreCase !== false) {
-          	args.push("--iglob", p);
+            args.push("--iglob", p);
           }
           else {
-          	args.push("--glob", p);
+            args.push("--glob", p);
           }
         }
       }
@@ -533,11 +550,11 @@ export class SearchManager {
       const globFlag = options.ignoreCase !== false ? "--iglob" : "--glob";
 
       if (this.isExactFilename(options.pattern)) {
-      	// Exact filename: use appropriate glob flag with the exact pattern
+        // Exact filename: use appropriate glob flag with the exact pattern
         args.push(globFlag, options.pattern);
       }
       else if (this.isGlobPattern(options.pattern)) {
-      	// Already a glob pattern: use appropriate glob flag as-is
+        // Already a glob pattern: use appropriate glob flag as-is
         args.push(globFlag, options.pattern);
       }
       else {
@@ -548,13 +565,14 @@ export class SearchManager {
       args.push(options.rootPath);
     }
     else {
-    	// Content search: terminate options before the pattern to prevent
+      // Content search: terminate options before the pattern to prevent
       // patterns starting with '-' being interpreted as flags
       args.push("--", options.pattern, options.rootPath);
     }
     return args;
   }
-  // 10. Setup process handlers ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 10. Setup process handlers ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private setupProcessHandlers(session: SearchSession): void {
     const {process} = session;
 
@@ -576,11 +594,11 @@ export class SearchManager {
 
         // Skip empty lines and lines with just symbols/numbers/colons
         if (!trimmed || ERROR_NOISE_LINE_PATTERN.test(trimmed)) {
-        	return false;
+          return false;
         }
         // Skip all ripgrep system errors that start with "rg:"
         if (trimmed.startsWith(RIPGREP_ERROR_PREFIX)) {
-        	return false;
+          return false;
         }
         return true;
       });
@@ -601,14 +619,14 @@ export class SearchManager {
     process.on("close", (code: number) => {
       // Process any remaining buffer content
       if (session.buffer.trim()) {
-      	this.processBufferedOutput(session, true);
+        this.processBufferedOutput(session, true);
       }
       session.isComplete = true;
 
       // Track if search was incomplete due to access issues
       // Ripgrep exit code 2 means "some files couldn't be searched"
       if (code === 2) {
-      	session.wasIncomplete = true;
+        session.wasIncomplete = true;
       }
       // Only treat as error if:
       // 1. Unexpected exit code (not 0, 1, or 2) AND
@@ -621,7 +639,7 @@ export class SearchManager {
       }
       // If we have results, don't mark as error even if there were permission issues
       if (session.totalMatches > 0) {
-      	session.isError = false;
+        session.isError = false;
       }
       capture("search_session_completed", {
         exitCode: code,
@@ -643,30 +661,31 @@ export class SearchManager {
       // Rely on cleanupSessions(maxAge) only; no per-session timer
     });
   }
-  // 11. Process buffered output ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 11. Process buffered output ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private processBufferedOutput(session: SearchSession, isFinal: boolean = false): void {
     const lines = session.buffer.split(SEARCH_LINE_SEPARATOR);
 
     // Keep the last incomplete line in the buffer unless this is final processing
     if (!isFinal) {
-    	session.buffer = lines.pop() || "";
+      session.buffer = lines.pop() || "";
     }
     else {
-    	session.buffer = "";
+      session.buffer = "";
     }
     for (const line of lines) {
       if (!line.trim()) {
-      	continue;
+        continue;
       }
       const result = this.parseLine(line, session.options.searchType);
       if (result) {
         session.results.push(result);
         // Separate counting of matches vs context lines
         if (result.type === "content" && line.includes(RIPGREP_CONTEXT_TYPE_TOKEN)) {
-        	session.totalContextLines++;
+          session.totalContextLines++;
         }
         else {
-        	session.totalMatches++;
+          session.totalMatches++;
         }
         // Early termination for exact filename matches (if enabled)
         if (
@@ -681,7 +700,7 @@ export class SearchManager {
             // Found exact match, terminate search early
             setTimeout(() => {
               if (!session.process.killed) {
-              	session.process.kill("SIGTERM");
+                session.process.kill("SIGTERM");
               }
             }, EARLY_TERMINATION_DELAY_MS);
             break;
@@ -690,7 +709,8 @@ export class SearchManager {
       }
     }
   }
-  // 12. Parse line ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 12. Parse line ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private parseLine(line: string, searchType: "files" | "content"): SearchResult | null {
     if (searchType === "content") {
       // Parse JSON output from content search
@@ -717,7 +737,7 @@ export class SearchManager {
         }
         // Handle summary to reconcile totals
         if (parsed.type === "summary") {
-        	// Optional: could reconcile totalMatches with parsed.data.stats?.matchedLines
+          // Optional: could reconcile totalMatches with parsed.data.stats?.matchedLines
           return null;
         }
         return null;
@@ -737,7 +757,7 @@ export class SearchManager {
   }
 }
 
-// 13. Build glob pattern reg exp ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 13. Build glob pattern reg exp ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function buildGlobPatternRegExp(pattern: string): RegExp {
   const regexPattern = pattern.replace(GLOB_REGEX_ESCAPE_PATTERN, "\\$&").replace(GLOB_ASTERISK_PATTERN, ".*");
   return new RegExp(`^${regexPattern}$`, "i");
@@ -749,7 +769,7 @@ export const searchManager = new SearchManager();
 // Cleanup management - run on fixed schedule
 let cleanupInterval: NodeJS.Timeout | null = null;
 
-// 14. Start cleanup if needed ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 14. Start cleanup if needed ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function startCleanupIfNeeded(): void {
   if (!cleanupInterval) {
     cleanupInterval = setInterval(() => {

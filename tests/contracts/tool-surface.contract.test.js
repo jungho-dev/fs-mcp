@@ -12,12 +12,13 @@ import { FILESYSTEM_TOOL_CATALOG } from "../../out/tools/tools-filesystem.js";
 import { GIT_TOOL_CATALOG } from "../../out/tools/tools-git.js";
 import { PROCESS_TOOL_CATALOG } from "../../out/tools/tools-process.js";
 
+// 1. Sorted difference ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function sortedDifference(left, right) {
   const rightSet = new Set(right);
   return left.filter((value) => !rightSet.has(value)).sort();
 }
 
-// 1. catalog and dispatcher alignment ―――――――――――――――――――――――――――――――――――――――――――――――
+// 1. catalog and dispatcher alignment ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testCatalogAndDispatcherAlignment() {
   const catalogNames = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG, ...GIT_TOOL_CATALOG]
     .map((tool) => tool.name)
@@ -29,7 +30,7 @@ function testCatalogAndDispatcherAlignment() {
   assert.equal(new Set(catalogNames).size, catalogNames.length);
 }
 
-// 2. shared args_path schema exposure ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. shared args_path schema exposure ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testArgsPathSchemaExposure() {
   const tools = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG, ...GIT_TOOL_CATALOG];
 
@@ -38,7 +39,7 @@ function testArgsPathSchemaExposure() {
   }
 }
 
-// 3. test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function main() {
   testCatalogAndDispatcherAlignment();
   testArgsPathSchemaExposure();

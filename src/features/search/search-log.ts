@@ -27,21 +27,23 @@ export interface FuzzySearchLogEntry {
   timestamp: Date;
   uniqueCharacterCount: number;
 }
-// 1. Fuzzy search logger ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 1. Fuzzy search logger ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 class FuzzySearchLogger {
   private readonly logPath: string;
   private initialized = false;
 
-  // 2. Constructor ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 2. Constructor ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   constructor() {
     // Create log file in a dedicated directory
     const logDir = path.join(os.homedir(), ".fs-mcp-logs");
     this.logPath = path.join(logDir, "fuzzy-search.log");
   }
-  // 3. Ensure log file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 3. Ensure log file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private async ensureLogFile(): Promise<void> {
     if (this.initialized) {
-    	return;
+      return;
     }
     try {
       // Create log directory if it doesn't exist
@@ -64,6 +66,8 @@ class FuzzySearchLogger {
       throw error;
     }
   }
+
+  // 3. Log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async log(entry: FuzzySearchLogEntry): Promise<void> {
     try {
       await this.ensureLogFile();
@@ -77,10 +81,14 @@ class FuzzySearchLogger {
       console.error("Failed to write to fuzzy search log:", error);
     }
   }
+
+  // 4. Get log path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async getLogPath(): Promise<string> {
     await this.ensureLogFile();
     return this.logPath;
   }
+
+  // 5. Get recent logs ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async getRecentLogs(count: number = 10): Promise<string[]> {
     try {
       await this.ensureLogFile();
@@ -95,6 +103,8 @@ class FuzzySearchLogger {
       return [];
     }
   }
+
+  // 6. Clear log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async clearLog(): Promise<void> {
     try {
       // Recreate with just headers

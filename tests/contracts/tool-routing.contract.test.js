@@ -6,25 +6,25 @@
  */
 
 import assert from "node:assert/strict";
+import { normalizeToolResult } from "../../out/cores/responses/responses-tool-result.js";
 import { dispatchToolCall, getDispatchableToolNames } from "../../out/tools/tools-dispatcher.js";
 
-const DISPLAY_MAX_CHARS = 30;
-const DISPLAY_LINE_SPLIT_PATTERN = /\r?\n/;
+const HIDDEN_DISPLAY_TEXT = "";
 const UNKNOWN_TOOL_PATTERN = /Unknown tool: missing_tool_for_contract_test/;
 
-// 1. standard output parser ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. standard output parser ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function parseStandardOutput(result) {
   assert.equal(result.content.length, 1);
   assert.equal(result.content[0].type, "text");
   assert.equal(typeof result.content[0].text, "string");
-  assert.ok(result.content[0].text.length <= DISPLAY_MAX_CHARS);
+  assert.equal(result.content[0].text, HIDDEN_DISPLAY_TEXT);
   assert.equal(typeof result.structuredContent, "object");
   assert.notEqual(result.structuredContent, null);
-  assert.ok(result.content[0].text.split(DISPLAY_LINE_SPLIT_PATTERN).length <= 5);
 
   return result.structuredContent;
 }
 
+// 2. Assert standard tool result ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function assertStandardToolResult(result, toolName, status) {
   const output = parseStandardOutput(result);
 
@@ -40,7 +40,7 @@ function assertStandardToolResult(result, toolName, status) {
   return output;
 }
 
-// 2. unknown tool contract ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. unknown tool contract ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testUnknownToolResponse() {
   const result = await dispatchToolCall("missing_tool_for_contract_test", {});
   const output = assertStandardToolResult(result, "missing_tool_for_contract_test", "error");
@@ -49,7 +49,7 @@ async function testUnknownToolResponse() {
   assert.match(output.data.text, UNKNOWN_TOOL_PATTERN);
 }
 
-// 3. dispatcher output contract ――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. dispatcher output contract ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testDispatcherNormalizesKnownToolResponse() {
   const result = await dispatchToolCall("get_configs", {
     items: [
@@ -64,6 +64,19 @@ async function testDispatcherNormalizesKnownToolResponse() {
   assert.equal(output.data.structuredContent.succeededCount, 2);
 }
 
+// 4. hidden display data preservation ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function testHiddenDisplayPreservesStructuredData() {
+  const longText = Array.from({ length: 20 }, (_value, index) => `synthetic output line ${index} ${"x".repeat(80)}`).join("\n");
+  const result = normalizeToolResult("synthetic_tool", {
+    content: [{ type: "text", text: longText }],
+  }, 1);
+  const output = assertStandardToolResult(result, "synthetic_tool", "success");
+
+  assert.equal(result.content[0].text, HIDDEN_DISPLAY_TEXT);
+  assert.equal(output.data.text, longText);
+}
+
+// 6. Test get configs supports default batch ――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testGetConfigsSupportsDefaultBatch() {
   const result = await dispatchToolCall("get_configs", {});
   const output = assertStandardToolResult(result, "get_configs", "success");
@@ -71,7 +84,9 @@ async function testGetConfigsSupportsDefaultBatch() {
   assert.equal(output.error, null);
   assert.ok(output.data.structuredContent.totalCount > 2);
 }
-async function testEveryDispatchableToolDisplayTextIsCapped() {
+
+// 7. Test every dispatchable tool hides display text ――――――――――――――――――――――――――――――――――――――――――――――
+async function testEveryDispatchableToolHidesDisplayText() {
   for (const toolName of getDispatchableToolNames()) {
     // Invalid args keep the check side-effect-light while still proving dispatcher normalization.
     // No-arg tools may run normally; they are read-only listings.
@@ -81,16 +96,17 @@ async function testEveryDispatchableToolDisplayTextIsCapped() {
     assert.equal(result.content.length, 1, toolName);
     assert.equal(result.content[0].type, "text", toolName);
     assert.equal(typeof result.content[0].text, "string", toolName);
-    assert.ok(result.content[0].text.length <= DISPLAY_MAX_CHARS, toolName);
+    assert.equal(result.content[0].text, HIDDEN_DISPLAY_TEXT, toolName);
   }
 }
 
-// 4. test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function main() {
   await testUnknownToolResponse();
   await testDispatcherNormalizesKnownToolResponse();
+  testHiddenDisplayPreservesStructuredData();
   await testGetConfigsSupportsDefaultBatch();
-  await testEveryDispatchableToolDisplayTextIsCapped();
+  await testEveryDispatchableToolHidesDisplayText();
 }
 
 main().catch((error) => {

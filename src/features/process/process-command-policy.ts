@@ -13,9 +13,10 @@ const COMMAND_SEPARATORS = [";", "&&", "||", "|", "&"] as const;
 const ENV_ASSIGNMENT_PATTERN = /\w+=\S+\s*/g;
 const WHITESPACE_PATTERN = /\s+/;
 
-// 1. Command manager ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Command manager ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 class CommandManager {
-  // 1-1. base command logging name ――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 1-1. base command logging name ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   getBaseCommand(command: string): string {
     const firstToken = command.trim().split(WHITESPACE_PATTERN)[0] ?? "";
     const baseCommand = firstToken.toLowerCase();
@@ -23,7 +24,7 @@ class CommandManager {
     return baseCommand;
   }
 
-  // 1-2. command chain extraction ――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 1-2. command chain extraction ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   extractCommands(commandString: string): string[] {
     let extractedCommands: string[] = [];
 
@@ -137,7 +138,7 @@ class CommandManager {
     return extractedCommands;
   }
 
-  // 1-3. command token normalization ――――――――――――――――――――――――――――――――――――――――――――――
+  // 1-3. command token normalization ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   extractBaseCommand(commandStr: string): string | null {
     let baseCommand: string | null = null;
 
@@ -169,7 +170,7 @@ class CommandManager {
     return baseCommand;
   }
 
-  // 1-4. blocked command validation ―――――――――――――――――――――――――――――――――――――――――――――――
+  // 1-4. blocked command validation ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async validateCommand(command: string): Promise<boolean> {
     let isAllowed = false;
 
@@ -192,8 +193,9 @@ class CommandManager {
     return isAllowed;
   }
 
-  // 1-5. balanced parenthesis range ―――――――――――――――――――――――――――――――――――――――――――――――
-  // 2. Find balanced group end ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 1-5. balanced parenthesis range ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 2. Find balanced group end ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private findBalancedGroupEnd(commandSource: string, openParenIndex: number): number | null {
     let groupEnd: number | null = null;
     let openParens = 1;
@@ -220,8 +222,9 @@ class CommandManager {
     return groupEnd;
   }
 
-  // 1-6. backtick substitution range ――――――――――――――――――――――――――――――――――――――――――――――
-  // 3. Find backtick end ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 1-6. backtick substitution range ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 3. Find backtick end ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private findBacktickEnd(commandSource: string, backtickStart: number): number | null {
     let backtickEnd: number | null = null;
     let index = backtickStart + 1;
@@ -237,8 +240,9 @@ class CommandManager {
     return backtickEnd;
   }
 
-  // 1-7. command separator match ――――――――――――――――――――――――――――――――――――――――――――――――――
-  // 4. Find separator ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 1-7. command separator match ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 4. Find separator ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private findSeparator(commandSource: string, index: number): string | null {
     let matchedSeparator: string | null = null;
 
@@ -251,8 +255,9 @@ class CommandManager {
     return matchedSeparator;
   }
 
-  // 1-8. extracted command append ―――――――――――――――――――――――――――――――――――――――――――――――――
-  // 5. Push base command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 1-8. extracted command append ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 5. Push base command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private pushBaseCommand(commands: string[], command: string): void {
     const baseCommand = this.extractBaseCommand(command.trim());
 
@@ -261,8 +266,9 @@ class CommandManager {
     }
   }
 
-  // 1-9. first executable token ―――――――――――――――――――――――――――――――――――――――――――――――――――
-  // 6. Find first command token ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 1-9. first executable token ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 6. Find first command token ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private findFirstCommandToken(tokens: string[]): string | null {
     let firstToken: string | null = null;
 
@@ -279,5 +285,5 @@ class CommandManager {
   }
 }
 
-// 2. singleton export ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. singleton export ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export const commandManager = new CommandManager();

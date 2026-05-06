@@ -21,21 +21,24 @@ interface LogNotification {
     data: unknown;
   };
 }
-// 1. Is structured log data ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 1. Is structured log data ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isStructuredLogData(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-// 2. Create log payload ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 2. Create log payload ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createLogPayload(message: string, data?: unknown): string | Record<string, unknown> {
   if (data === undefined) {
-  	return message;
+    return message;
   }
   if (isStructuredLogData(data)) {
     return {message, ...data};
   }
   return {data, message};
 }
-// 3. Format log argument ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 3. Format log argument ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function formatLogArgument(value: unknown): string {
   if (typeof value === "object" && value !== null) {
     try {
@@ -47,14 +50,16 @@ function formatLogArgument(value: unknown): string {
   }
   return String(value);
 }
-// 4. Write to stdout ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 4. Write to stdout ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function writeToStdout(write: typeof process.stdout.write, chunk: string | Uint8Array, encodingOrCallback?: BufferEncoding | StdoutWriteCallback, callback?: StdoutWriteCallback): boolean {
   const writeArgs = callback !== undefined ? [chunk, encodingOrCallback, callback] : encodingOrCallback !== undefined ? [chunk, encodingOrCallback] : [chunk];
   return Reflect.apply(write, process.stdout, writeArgs) as boolean;
 }
-// 1. Enhanced StdioServerTransport that wraps console output in valid JSON-RPC structures ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 1. JSON-RPC console wrapping transport ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // instead of filtering them out. This prevents crashes while maintaining debug visibility.
-// 5. Filtered stdio server transport ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Filtered stdio server transport ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export class FilteredStdioServerTransport extends StdioServerTransport {
   private readonly originalConsole: {
     log: typeof console.log;
@@ -73,7 +78,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
   private clientName: string = "unknown";
   private disableNotifications: boolean = false;
 
-  // 6. Constructor ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 6. Constructor ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   constructor() {
     super();
 
@@ -97,7 +102,8 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
     // Note: We defer the initialization notification until enableNotifications() is called
     // to ensure MCP protocol compliance - notifications must not be sent before initialization
   }
-  // 7. Enable notifications ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 7. Enable notifications ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public enableNotifications(): void {
     this.isInitialized = true;
 
@@ -128,9 +134,10 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
     }
     this.sendLogNotification("info", ["JSON-RPC notifications enabled"]);
   }
-  // 3. Configure client-specific behavior ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 3. Configure client-specific behavior ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   // Call this BEFORE enableNotifications()
-  // 8. Configure for client ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 8. Configure for client ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public configureForClient(clientName: string): void {
     this.clientName = clientName.toLowerCase();
 
@@ -141,20 +148,23 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
     }
   }
   // Check if notifications are enabled
-  // 9. Is notifications enabled ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 9. Is notifications enabled ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public get isNotificationsEnabled(): boolean {
     return this.isInitialized;
   }
   // Get the current count of buffered messages
-  // 10. Buffered message count ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 10. Buffered message count ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public get bufferedMessageCount(): number {
     return this.messageBuffer.length;
   }
-  // 11. Setup console redirection ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 11. Setup console redirection ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private setupConsoleRedirection(): void {
     console.log = (...args: unknown[]) => {
       if (this.isInitialized) {
-      	this.sendLogNotification("info", args);
+        this.sendLogNotification("info", args);
       }
       else {
         // Buffer for later replay to client
@@ -168,7 +178,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
 
     console.info = (...args: unknown[]) => {
       if (this.isInitialized) {
-      	this.sendLogNotification("info", args);
+        this.sendLogNotification("info", args);
       }
       else {
         this.messageBuffer.push({
@@ -181,7 +191,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
 
     console.warn = (...args: unknown[]) => {
       if (this.isInitialized) {
-      	this.sendLogNotification("warning", args);
+        this.sendLogNotification("warning", args);
       }
       else {
         this.messageBuffer.push({
@@ -194,7 +204,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
 
     console.error = (...args: unknown[]) => {
       if (this.isInitialized) {
-      	this.sendLogNotification("error", args);
+        this.sendLogNotification("error", args);
       }
       else {
         this.messageBuffer.push({
@@ -207,7 +217,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
 
     console.debug = (...args: unknown[]) => {
       if (this.isInitialized) {
-      	this.sendLogNotification("debug", args);
+        this.sendLogNotification("debug", args);
       }
       else {
         this.messageBuffer.push({
@@ -218,7 +228,8 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
       }
     };
   }
-  // 12. Setup stdout filtering ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 12. Setup stdout filtering ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private setupStdoutFiltering(): void {
     process.stdout.write = (buffer: string | Uint8Array, encodingOrCallback?: BufferEncoding | StdoutWriteCallback, callback?: StdoutWriteCallback): boolean => {
       const encoding = typeof encodingOrCallback === "string" ? encodingOrCallback : undefined;
@@ -230,13 +241,13 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
 
         // Check if this looks like a valid JSON-RPC message
         if (trimmed.startsWith("{") && (trimmed.includes('"jsonrpc"') || trimmed.includes('"method"') || trimmed.includes('"id"'))) {
-        	// This looks like a valid JSON-RPC message, allow it
+          // This looks like a valid JSON-RPC message, allow it
           return writeToStdout(this.originalStdoutWrite, buffer, encoding, resolvedCallback);
         }
         else if (trimmed.length > 0) {
           // Non-JSON-RPC output, wrap it in a log notification
           if (this.isInitialized) {
-          	this.sendLogNotification("info", [buffer.replace(TRAILING_NEWLINE_REGEX, "")]);
+            this.sendLogNotification("info", [buffer.replace(TRAILING_NEWLINE_REGEX, "")]);
           }
           else {
             // Buffer for later replay to client
@@ -247,7 +258,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
             });
           }
           if (resolvedCallback) {
-          	resolvedCallback();
+            resolvedCallback();
           }
           return true;
         }
@@ -256,21 +267,22 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
       return writeToStdout(this.originalStdoutWrite, buffer, encoding, resolvedCallback);
     };
   }
-  // 13. Send log notification ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 13. Send log notification ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private sendLogNotification(level: LogLevel, args: unknown[]): void {
     // Skip if notifications are disabled (e.g., for Cline)
     if (this.disableNotifications) {
-    	return;
+      return;
     }
     try {
       // For data, we can send structured data or string according to MCP spec
       let data: unknown;
       if (args.length === 1 && typeof args[0] === "object" && args[0] !== null) {
-      	// Single object - send as structured data
+        // Single object - send as structured data
         data = args[0];
       }
       else {
-      	// Multiple args or primitives - convert to string
+        // Multiple args or primitives - convert to string
         data = args.map((arg) => formatLogArgument(arg)).join(" ");
       }
       const notification: LogNotification = {
@@ -300,13 +312,14 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
       writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fallbackNotification)}\n`);
     }
   }
-  // 4. Public method to send log notifications from anywhere in the application ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 4. Public log notification sender ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   // Now properly buffers messages before MCP initialization to avoid breaking stdio protocol
-  // 14. Send log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 14. Send log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public sendLog(level: LogLevel, message: string, data?: unknown): void {
     // Skip if notifications are disabled (e.g., for Cline)
     if (this.disableNotifications) {
-    	return;
+      return;
     }
     // Buffer messages before initialization to avoid breaking MCP protocol
     // MCP requires client to send first message - server cannot write to stdout before that
@@ -345,11 +358,12 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
       writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fallbackNotification)}\n`);
     }
   }
-  // 15. Send progress ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 15. Send progress ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public sendProgress(token: string, value: number, total?: number): void {
     // Don't send progress before initialization - would break MCP protocol
     if (!this.isInitialized) {
-    	return;
+      return;
     }
     try {
       const notification = {
@@ -378,11 +392,12 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
       writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fallbackNotification)}\n`);
     }
   }
-  // 16. Send custom notification ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 16. Send custom notification ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public sendCustomNotification(method: string, params: unknown): void {
     // Don't send custom notifications before initialization - would break MCP protocol
     if (!this.isInitialized) {
-    	return;
+      return;
     }
     try {
       const notification = {
@@ -407,17 +422,18 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
       writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fallbackNotification)}\n`);
     }
   }
-  // 17. Cleanup ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+  // 17. Cleanup ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public cleanup(): void {
     if (this.originalConsole) {
-    	console.log = this.originalConsole.log;
+      console.log = this.originalConsole.log;
       console.warn = this.originalConsole.warn;
       console.error = this.originalConsole.error;
       console.debug = this.originalConsole.debug;
       console.info = this.originalConsole.info;
     }
     if (this.originalStdoutWrite) {
-    	process.stdout.write = this.originalStdoutWrite;
+      process.stdout.write = this.originalStdoutWrite;
     }
   }
 }

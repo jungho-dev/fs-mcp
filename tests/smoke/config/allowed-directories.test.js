@@ -33,16 +33,17 @@ const isWindows = process.platform === "win32";
 const TEST_ROOT_PATH = isWindows ? path.parse(TEST_DIR).root.replaceAll("\\", "/") : "/";
 const TEST_ROOT_WILDCARD = isWindows ? `${path.parse(TEST_DIR).root}*` : null;
 
-// 1. Helper function to clean up test directories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Helper function to clean up test directories ―――――――――――――――――――――――――――――――――――――――――――――――――
 async function cleanupTestDirectories() {
   try {
     await fs.rm(TEST_DIR, { recursive: true, force: true });
     await fs.rm(OUTSIDE_DIR, { recursive: true, force: true });
 
     // Clean up additional test directories
-    await fs.rm(path.join(__dirname, "test_dir_abc"), { recursive: true, force: true }).catch(() => {});
-    await fs.rm(path.join(__dirname, "test_dir_abc_xyz"), { recursive: true, force: true }).catch(() => {});
-  } catch (error) {
+    await fs.rm(path.join(__dirname, "test_dir_abc"), { recursive: true, force: true }).catch(() => undefined);
+    await fs.rm(path.join(__dirname, "test_dir_abc_xyz"), { recursive: true, force: true }).catch(() => undefined);
+  }
+  catch (error) {
     // Ignore errors if directory doesn't exist
     if (error.code !== "ENOENT") {
       console.error("Error during cleanup:", error);
@@ -50,22 +51,24 @@ async function cleanupTestDirectories() {
   }
 }
 
-// 2. Check if a path is accessible ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Check if a path is accessible ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function isPathAccessible(testPath) {
   try {
     const _validatedPath = await validatePath(testPath);
     return true;
-  } catch (_error) {
+  }
+  catch (_error) {
     return false;
   }
 }
 
+// 3. Is path inside ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isPathInside(parentPath, childPath) {
   const relativePath = path.relative(path.resolve(parentPath), path.resolve(childPath));
   return relativePath.length === 0 || (!relativePath.startsWith("..") && !path.isAbsolute(relativePath));
 }
 
-// 3. Setup function to prepare the test environment ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Setup function to prepare the test environment ―――――――――――――――――――――――――――――――――――――――――――――――
 async function setup() {
   // Clean up before tests
   await cleanupTestDirectories();
@@ -83,7 +86,7 @@ async function setup() {
   return originalConfig;
 }
 
-// 4. Teardown function to clean up after tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Teardown function to clean up after tests ――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function teardown(originalConfig) {
   // Reset configuration to original
   await configManager.updateConfig(originalConfig);
@@ -92,7 +95,7 @@ async function teardown(originalConfig) {
   await cleanupTestDirectories();
 }
 
-// 5. Test empty allowedDirectories array (should allow full access) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Test empty allowedDirectories array (should allow full access) ―――――――――――――――――――――――――――――――
 async function testEmptyAllowedDirectories() {
   // Set empty allowedDirectories
   await configManager.setValue("allowedDirectories", []);
@@ -114,9 +117,10 @@ async function testEmptyAllowedDirectories() {
   assert.strictEqual(rootAccess, true, "Root path should be accessible with empty allowedDirectories");
 }
 
-// 6. Test empty allowedDirectories values from config tool input ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Test empty allowedDirectories values from config tool input ――――――――――――――――――――――――――――――――――
 async function testEmptyAllowedDirectoriesInputValues() {
   for (const emptyValue of ["", "   ", null]) {
+    // biome-ignore lint/performance/noAwaitInLoops: Config mutation assertions must stay sequential.
     const result = await setConfigValue({
       key: "allowedDirectories",
       value: emptyValue,
@@ -132,7 +136,7 @@ async function testEmptyAllowedDirectoriesInputValues() {
   }
 }
 
-// 7. Test with specific directory in allowedDirectories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Test with specific directory in allowedDirectories ―――――――――――――――――――――――――――――――――――――――――――
 async function testSpecificAllowedDirectory() {
   // Set allowedDirectories to just the test directory
   await configManager.setValue("allowedDirectories", [TEST_DIR]);
@@ -158,9 +162,11 @@ async function testSpecificAllowedDirectory() {
   assert.strictEqual(rootAccess, false, "Root path should not be accessible");
 }
 
-// 8. Test with root directory in allowedDirectories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Test with root directory in allowedDirectories ―――――――――――――――――――――――――――――――――――――――――――――――
 // NOTE: Windows drive wildcard coverage is handled separately in
 // testWindowsDriveWildcardAllowedDirectories().
+
+// 9. Test root in allowed directories ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testRootInAllowedDirectories() {
   // Set allowedDirectories to include root path
   await configManager.setValue("allowedDirectories", [TEST_ROOT_PATH]);
@@ -180,7 +186,8 @@ async function testRootInAllowedDirectories() {
     // Since we're on Windows, the drive root access check above is sufficient when set as
     // an allowed directory. This is sufficient to demonstrate the root path allowance is working as expected.
     // We'll skip the other path tests that would fail in the current implementation.
-  } else {
+  }
+  else {
     const homeAccess = await isPathAccessible(HOME_DIR);
     const testDirAccess = await isPathAccessible(TEST_DIR);
     const outsideDirAccess = await isPathAccessible(OUTSIDE_DIR);
@@ -192,7 +199,7 @@ async function testRootInAllowedDirectories() {
   }
 }
 
-// 9. Test with Windows drive wildcard in allowedDirectories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Test with Windows drive wildcard in allowedDirectories ―――――――――――――――――――――――――――――――――――――――
 async function testWindowsDriveWildcardAllowedDirectories() {
   if (!isWindows || !TEST_ROOT_WILDCARD) {
     return;
@@ -214,7 +221,7 @@ async function testWindowsDriveWildcardAllowedDirectories() {
   assert.strictEqual(outsideDirAccess, true, "Outside directory should be accessible with Windows drive wildcard");
 }
 
-// 10. Test with home directory in allowedDirectories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Test with home directory in allowedDirectories ――――――――――――――――――――――――――――――――――――――――――――――
 async function testHomeAllowedDirectory() {
   // Set allowedDirectories to just the home directory
   await configManager.setValue("allowedDirectories", [HOME_DIR]);
@@ -243,14 +250,15 @@ async function testHomeAllowedDirectory() {
   // On Windows, the temp directory is often inside the user home directory
   if (isOutsideDirInHome) {
     assert.strictEqual(outsideDirAccess, true, "Outside directory is inside home, so it should be accessible");
-  } else {
+  }
+  else {
     assert.strictEqual(outsideDirAccess, false, "Outside directory should not be accessible");
   }
 
   assert.strictEqual(rootAccess, false, "Root path should not be accessible");
 }
 
-// 11. Test with specific directory with slash at the end in allowedDirectories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11. Specific allowed directory with slash ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testSpecificAllowedDirectoryWithSlash() {
   // Set allowedDirectories to just the test directory
   await configManager.setValue("allowedDirectories", [TEST_DIR_WITH_SLASH]);
@@ -277,7 +285,7 @@ async function testSpecificAllowedDirectoryWithSlash() {
   assert.strictEqual(rootAccess, false, "Root path should not be accessible");
 }
 
-// 12. Test that a path sharing a prefix with an allowed directory (but not a subdirectory) is correctly blocked ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 12. Prefix path blocking ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testPrefixPathBlocking() {
   // Create a directory with a name that would be caught by string prefix matching
   // Deliberately use path names that are clearly not subdirectories of each other
@@ -315,14 +323,15 @@ async function testPrefixPathBlocking() {
     // Prefix-matching directory should NOT be accessible
     assert.strictEqual(prefixDirAccess, false, "Prefix-matching directory should not be accessible");
     assert.strictEqual(prefixFileAccess, false, "Files in prefix-matching directory should not be accessible");
-  } finally {
+  }
+  finally {
     // Clean up test directories
-    await fs.rm(baseDir, { recursive: true, force: true }).catch(() => {});
-    await fs.rm(prefixMatchDir, { recursive: true, force: true }).catch(() => {});
+    await fs.rm(baseDir, { recursive: true, force: true }).catch(() => undefined);
+    await fs.rm(prefixMatchDir, { recursive: true, force: true }).catch(() => undefined);
   }
 }
 
-// 13. Main test function ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 13. Main test function ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testAllowedDirectories() {
   // Test 1: Empty allowedDirectories array
   await testEmptyAllowedDirectories();
@@ -350,15 +359,19 @@ async function testAllowedDirectories() {
 }
 
 // Export the main test function
+
+// 15. Run tests ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export default async function runTests() {
   let originalConfig;
   try {
     originalConfig = await setup();
     await testAllowedDirectories();
-  } catch (error) {
+  }
+  catch (error) {
     console.error("Test failed:", error.message);
     return false;
-  } finally {
+  }
+  finally {
     if (originalConfig) {
       await teardown(originalConfig);
     }

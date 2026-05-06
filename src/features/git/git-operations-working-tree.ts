@@ -15,7 +15,7 @@ const COMMIT_SUMMARY_FORMAT = "%H%x1f%an <%ae>%x1f%ct%x1f%s";
 const SIGNATURE_STATUS_FORMAT = "%G?";
 const GIT_LOG_FORMAT = "%H%x1f%h%x1f%an%x1f%ae%x1f%ct%x1f%P%x1f%d%x1f%s%x1f%b%x1e";
 
-// 1. Run git add ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Run git add ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitAdd(input: GitArgsMap["git_add"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
 
@@ -41,7 +41,7 @@ export async function runGitAdd(input: GitArgsMap["git_add"]): Promise<GitToolOu
   };
 }
 
-// 2. Run git commit ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Run git commit ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitCommit(input: GitArgsMap["git_commit"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const commitMessage = await requireGitTextArgument(input.message, input.messagePath, input.messageOffset, input.messageLength, "message");
@@ -62,12 +62,12 @@ export async function runGitCommit(input: GitArgsMap["git_commit"]): Promise<Git
     }
   }
   if (commitResult.exitCode !== 0) {
-  	throw new Error([commitResult.stderr.trim(), commitResult.stdout.trim()].filter((value) => value.length > 0).join("\n"));
+    throw new Error([commitResult.stderr.trim(), commitResult.stdout.trim()].filter((value) => value.length > 0).join("\n"));
   }
   const headCommit = await getHeadCommit(cwd);
 
   if (!headCommit) {
-  	throw new Error("Commit completed but HEAD is unavailable.");
+    throw new Error("Commit completed but HEAD is unavailable.");
   }
   const summaryResult = await runGitCommand(["show", "--stat", `--format=${COMMIT_SUMMARY_FORMAT}`, "-1", headCommit], { cwd });
   const headerLine = splitLines(summaryResult.stdout)[0];
@@ -95,7 +95,7 @@ export async function runGitCommit(input: GitArgsMap["git_commit"]): Promise<Git
   };
 }
 
-// 3. Run git diff ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Run git diff ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitDiff(input: GitArgsMap["git_diff"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const contextLines = input.contextLines ?? 3;
@@ -114,7 +114,7 @@ export async function runGitDiff(input: GitArgsMap["git_diff"]): Promise<GitTool
     const untrackedResult = await runGitCommand(["ls-files", "--others", "--exclude-standard"], { cwd, allowFailure: true });
     untrackedFiles = splitLines(untrackedResult.stdout);
     if (untrackedFiles.length > 0) {
-    	diffText = diffText.length > 0 ? `${diffText}\n\n# Untracked files\n${untrackedFiles.join("\n")}` : `# Untracked files\n${untrackedFiles.join("\n")}`;
+      diffText = diffText.length > 0 ? `${diffText}\n\n# Untracked files\n${untrackedFiles.join("\n")}` : `# Untracked files\n${untrackedFiles.join("\n")}`;
     }
   }
   const nameOnlyResult = autoExclude ? await runGitCommand(["diff", "--name-only", ...diffRange, "--", ...pathspecs], { cwd, allowFailure: true }) : null;
@@ -130,7 +130,7 @@ export async function runGitDiff(input: GitArgsMap["git_diff"]): Promise<GitTool
   };
 }
 
-// 4. Run git log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Run git log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitLog(input: GitArgsMap["git_log"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const maxCount = input.maxCount ?? 20;
@@ -188,7 +188,7 @@ export async function runGitLog(input: GitArgsMap["git_log"]): Promise<GitToolOu
   };
 }
 
-// 5. Run git show ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Run git show ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitShow(input: GitArgsMap["git_show"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const targetObject = input.filePath ? `${input.object}:${input.filePath}` : input.object;

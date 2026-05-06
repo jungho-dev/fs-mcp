@@ -72,7 +72,7 @@ export interface SystemInfo {
   };
 }
 
-// 1. Detect container environment ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Detect container environment ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function detectContainerEnvironment(): { isContainer: boolean; containerType: ContainerInfo["containerType"]; orchestrator: ContainerInfo["orchestrator"] } {
   // Method 1: Check environment variables first (most reliable when set)
 
@@ -130,7 +130,8 @@ function detectContainerEnvironment(): { isContainer: boolean; containerType: Co
       if (cgroup.includes("containerd")) {
         return { isContainer: true, containerType: "other", orchestrator: null };
       }
-    } catch (_error) {
+    }
+    catch (_error) {
       // /proc/1/cgroup might not exist
     }
   }
@@ -154,7 +155,8 @@ function detectContainerEnvironment(): { isContainer: boolean; containerType: Co
         // Generic container detection
         return { isContainer: true, containerType: "other", orchestrator: null };
       }
-    } catch (_error) {
+    }
+    catch (_error) {
       // /proc/1/environ might not exist or be accessible
     }
   }
@@ -167,7 +169,8 @@ function detectContainerEnvironment(): { isContainer: boolean; containerType: Co
     if (hostname?.includes("-") && hostname.split("-").length >= 3 && fs.existsSync("/var/run/secrets/kubernetes.io")) {
       return { isContainer: true, containerType: "kubernetes", orchestrator: "kubernetes" };
     }
-  } catch (_error) {
+  }
+  catch (_error) {
     // Hostname check failed
   }
 
@@ -186,7 +189,7 @@ function detectContainerEnvironment(): { isContainer: boolean; containerType: Co
   return { isContainer: false, containerType: null, orchestrator: null };
 }
 
-// 2. Discover container mounts ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Discover container mounts ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function discoverContainerMounts(isContainer: boolean): DockerMount[] {
   const mounts: DockerMount[] = [];
 
@@ -281,7 +284,8 @@ function discoverContainerMounts(isContainer: boolean): DockerMount[] {
           }
         }
       }
-    } catch (_error) {
+    }
+    catch (_error) {
       // /proc/mounts might not be available
     }
   }
@@ -307,12 +311,14 @@ function discoverContainerMounts(isContainer: boolean): DockerMount[] {
               });
             }
           }
-        } catch (_itemError) {
+        }
+        catch (_itemError) {
           // Skip items we can't stat
         }
       }
     }
-  } catch (_error) {
+  }
+  catch (_error) {
     // /mnt directory doesn't exist or not accessible
   }
 
@@ -355,19 +361,21 @@ function discoverContainerMounts(isContainer: boolean): DockerMount[] {
               });
             }
           }
-        } catch (_itemError) {
+        }
+        catch (_itemError) {
           // Skip items we can't stat
         }
       }
     }
-  } catch (_error) {
+  }
+  catch (_error) {
     // /home directory doesn't exist or not accessible
   }
 
   return mounts;
 }
 
-// 3. Get container environment ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Get container environment ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getContainerEnvironment(containerType: ContainerInfo["containerType"]): ContainerInfo["containerEnvironment"] {
   const env: ContainerInfo["containerEnvironment"] = {};
 
@@ -377,7 +385,8 @@ function getContainerEnvironment(containerType: ContainerInfo["containerType"]):
     if (hostname && hostname !== "localhost") {
       env.containerName = hostname;
     }
-  } catch (_error) {
+  }
+  catch (_error) {
     // Hostname not available
   }
 
@@ -386,9 +395,11 @@ function getContainerEnvironment(containerType: ContainerInfo["containerType"]):
     // Try multiple sources for Docker image name
     if (process.env.DOCKER_IMAGE) {
       env.dockerImage = process.env.DOCKER_IMAGE;
-    } else if (process.env.IMAGE_NAME) {
+    }
+    else if (process.env.IMAGE_NAME) {
       env.dockerImage = process.env.IMAGE_NAME;
-    } else if (process.env.CONTAINER_IMAGE) {
+    }
+    else if (process.env.CONTAINER_IMAGE) {
       env.dockerImage = process.env.CONTAINER_IMAGE;
     }
 
@@ -403,7 +414,8 @@ function getContainerEnvironment(containerType: ContainerInfo["containerType"]):
           env.containerName = containerIdMatch[1].slice(0, 12);
         }
       }
-    } catch (_error) {
+    }
+    catch (_error) {
       // Ignore errors reading cgroup
     }
   }
@@ -425,7 +437,8 @@ function getContainerEnvironment(containerType: ContainerInfo["containerType"]):
     // Try to get container image from common Kubernetes environment variables
     if (process.env.CONTAINER_IMAGE) {
       env.dockerImage = process.env.CONTAINER_IMAGE;
-    } else if (process.env.IMAGE_NAME) {
+    }
+    else if (process.env.IMAGE_NAME) {
       env.dockerImage = process.env.IMAGE_NAME;
     }
 
@@ -437,7 +450,8 @@ function getContainerEnvironment(containerType: ContainerInfo["containerType"]):
           env.kubernetesNamespace = namespace;
         }
       }
-    } catch (_error) {
+    }
+    catch (_error) {
       // Service account info not available
     }
   }
@@ -462,7 +476,7 @@ function getContainerEnvironment(containerType: ContainerInfo["containerType"]):
   return Object.keys(env).length > 0 ? env : undefined;
 }
 
-// 4. Detect node info ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Detect node info ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function detectNodeInfo(): SystemInfo["nodeInfo"] {
   try {
     // Get Node.js version from current process
@@ -479,12 +493,13 @@ function detectNodeInfo(): SystemInfo["nodeInfo"] {
       path,
       ...(npmVersion && { npmVersion }),
     };
-  } catch (_error) {
+  }
+  catch (_error) {
     return;
   }
 }
 
-// 5. Detect python info ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Detect python info ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function detectPythonInfo(): SystemInfo["pythonInfo"] {
   // Try python commands in order of preference
   const pythonCommands =
@@ -508,7 +523,8 @@ function detectPythonInfo(): SystemInfo["pythonInfo"] {
           version: version.replace("Python ", ""),
         };
       }
-    } catch {
+    }
+    catch {
       // Command not found or failed, try next
     }
   }
@@ -516,7 +532,7 @@ function detectPythonInfo(): SystemInfo["pythonInfo"] {
   return { available: false, command: "" };
 }
 
-// 6. Get system info ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Get system info ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function getSystemInfo(): SystemInfo {
   const platform = os.platform();
   const isWindows = platform === "win32";
@@ -543,7 +559,8 @@ export function getSystemInfo(): SystemInfo {
       temp: tempDir,
       absolute: path.join(homeDir, "path", "to", "file.txt"),
     };
-  } else if (isMacOS) {
+  }
+  else if (isMacOS) {
     platformName = "macOS";
     defaultShell = "zsh";
     pathSeparator = "/";
@@ -552,7 +569,8 @@ export function getSystemInfo(): SystemInfo {
       temp: tempDir,
       absolute: path.join(homeDir, "path", "to", "file.txt"),
     };
-  } else if (isLinux) {
+  }
+  else if (isLinux) {
     platformName = "Linux";
     defaultShell = "bash";
     pathSeparator = "/";
@@ -561,7 +579,8 @@ export function getSystemInfo(): SystemInfo {
       temp: tempDir,
       absolute: path.join(homeDir, "path", "to", "file.txt"),
     };
-  } else {
+  }
+  else {
     // Fallback for other Unix-like systems
     platformName = "Unix";
     defaultShell = "bash";
@@ -582,20 +601,26 @@ export function getSystemInfo(): SystemInfo {
       if (containerDetection.orchestrator === "kubernetes") {
         containerLabel += " Pod";
       }
-    } else if (containerDetection.containerType === "docker") {
+    }
+    else if (containerDetection.containerType === "docker") {
       containerLabel = "Docker";
       if (containerDetection.orchestrator === "docker-compose") {
         containerLabel += " Compose";
-      } else if (containerDetection.orchestrator === "docker-swarm") {
+      }
+      else if (containerDetection.orchestrator === "docker-swarm") {
         containerLabel += " Swarm";
       }
-    } else if (containerDetection.containerType === "podman") {
+    }
+    else if (containerDetection.containerType === "podman") {
       containerLabel = "Podman";
-    } else if (containerDetection.containerType === "lxc") {
+    }
+    else if (containerDetection.containerType === "lxc") {
       containerLabel = "LXC";
-    } else if (containerDetection.containerType === "systemd-nspawn") {
+    }
+    else if (containerDetection.containerType === "systemd-nspawn") {
       containerLabel = "systemd-nspawn";
-    } else {
+    }
+    else {
       containerLabel = "Container";
     }
 

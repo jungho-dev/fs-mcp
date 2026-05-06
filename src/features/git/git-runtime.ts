@@ -36,7 +36,7 @@ export const AUTO_EXCLUDE_PATTERNS = [
 export const PROTECTED_BRANCHES = new Set(["main", "master", "production", "prod", "release"]);
 export const CONFLICT_STATUS_CODES = new Set(["DD", "AU", "UD", "UA", "DU", "AA", "UU"]);
 
-// 1. Run git command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Run git command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitCommand(args: string[], options: { cwd?: string; allowFailure?: boolean } = {}): Promise<GitCommandResult> {
   let commandResult: GitCommandResult;
 
@@ -61,7 +61,7 @@ export async function runGitCommand(args: string[], options: { cwd?: string; all
       commandResult = failedResult;
     }
     else {
-      const errorMessage = [failedResult.stderr.trim(), failedResult.stdout.trim()].filter((value) => value.length > 0).join("\\n");
+      const errorMessage = [failedResult.stderr.trim(), failedResult.stdout.trim()].filter((value) => value.length > 0).join("\n");
       throw new Error(errorMessage.length > 0 ? errorMessage : commandError.message);
     }
   }
@@ -69,7 +69,7 @@ export async function runGitCommand(args: string[], options: { cwd?: string; all
   return commandResult;
 }
 
-// 2. Resolve git text argument ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Resolve git text argument ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function resolveGitTextArgument(value: string | undefined, filePath: string | undefined, offset: number, length: number | undefined, label: string): Promise<string | undefined> {
   if (value !== undefined) {
     return value;
@@ -84,7 +84,7 @@ export async function resolveGitTextArgument(value: string | undefined, filePath
   return text;
 }
 
-// 3. Require git text argument ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Require git text argument ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function requireGitTextArgument(value: string | undefined, filePath: string | undefined, offset: number, length: number | undefined, label: string): Promise<string> {
   const text = await resolveGitTextArgument(value, filePath, offset, length, label);
   if (text === undefined) {
@@ -93,14 +93,14 @@ export async function requireGitTextArgument(value: string | undefined, filePath
   return text;
 }
 
-// 4. Split lines ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Split lines ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function splitLines(text: string): string[] {
-  const splitResult = text.replace(/\\r\\n/g, "\\n").replace(/\\r/g, "\\n").split("\\n").filter((line) => line.length > 0);
+  const splitResult = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n").filter((line) => line.length > 0);
   return splitResult;
 }
 
-// 5. Normalize commit message ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Normalize commit message ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function normalizeCommitMessage(message: string): string {
-  const normalizedMessage = message.replace(/\\\\n/g, "\\n").replace(/\\\\r/g, "\\r").replace(/\\\\t/g, "\\t");
+  const normalizedMessage = message.replace(/\\n/g, "\n").replace(/\\r/g, "\r").replace(/\\t/g, "\t");
   return normalizedMessage;
 }

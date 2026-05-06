@@ -9,13 +9,14 @@ const __dirname = path.dirname(__filename);
 
 const TEST_FILEPATH = path.join(__dirname, "test.txt");
 
+// 1. Setup ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function setup() {
   // Save original config to restore later
   const originalConfig = await configManager.getConfig();
   return originalConfig;
 }
 
-// 1. Teardown function to clean up after tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Teardown function to clean up after tests ――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function teardown(originalConfig) {
   // Reset configuration to original
   await configManager.updateConfig(originalConfig);
@@ -24,6 +25,8 @@ async function teardown(originalConfig) {
 }
 
 // Export the main test function
+
+// 3. Test edit block ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testEditBlock() {
   try {
     await configManager.setValue("allowedDirectories", [__dirname]);
@@ -42,30 +45,34 @@ async function testEditBlock() {
 
     const fileContent = await fs.readFile(TEST_FILEPATH, "utf8");
 
-    if (fileContent.includes("new content")) {
-    } else {
+    if (!fileContent.includes("new content")) {
       throw new Error("Replace test failed!");
     }
 
     // Cleanup
     await fs.unlink(TEST_FILEPATH);
     return true;
-  } catch (error) {
+  }
+  catch (error) {
     console.error("Test failed:", error);
     return false;
   }
 }
 
 // Export the main test function
+
+// 4. Run tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export default async function runTests() {
   let originalConfig;
   try {
     originalConfig = await setup();
     await testEditBlock();
-  } catch (error) {
+  }
+  catch (error) {
     console.error("Test failed:", error.message);
     return false;
-  } finally {
+  }
+  finally {
     if (originalConfig) {
       await teardown(originalConfig);
     }

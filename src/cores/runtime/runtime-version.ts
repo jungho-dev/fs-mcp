@@ -5,4 +5,4 @@
  * @since 2026-05-02
  */
 
-export const VERSION = "1.1.7";
+export const VERSION = "1.1.9";

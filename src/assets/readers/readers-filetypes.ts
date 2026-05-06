@@ -16,20 +16,20 @@ export const TEXT_PREVIEW_EXTENSIONS = new Set([".txt", ".text", ".log", ".json"
 
 const TEXT_PREVIEW_BASENAMES = new Set([".env", ".gitignore", ".gitattributes", "dockerfile", "makefile"]);
 
-// 1. Resolve preview file type ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Resolve preview file type ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function resolvePreviewFileType(filePath: string): PreviewFileType {
   const normalizedPath = filePath.toLowerCase();
   const extension = path.extname(normalizedPath);
   const basename = path.basename(normalizedPath);
 
   if (MARKDOWN_PREVIEW_EXTENSIONS.has(extension)) {
-  	return "markdown";
+    return "markdown";
   }
   if (HTML_PREVIEW_EXTENSIONS.has(extension)) {
-  	return "html";
+    return "html";
   }
   if (TEXT_PREVIEW_EXTENSIONS.has(extension) || TEXT_PREVIEW_BASENAMES.has(basename)) {
-  	return "text";
+    return "text";
   }
   return "unsupported";
 }

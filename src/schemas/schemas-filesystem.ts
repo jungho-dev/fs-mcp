@@ -17,10 +17,6 @@ export const ReadFileArgsSchema = z.object({
   options: z.record(z.any()).optional(),
 });
 
-export const ReadMultipleFilesArgsSchema = z.object({
-  paths: z.array(z.string()),
-});
-
 export const ReadFilesArgsSchema = z.object({
   paths: z.array(z.string()).min(1).optional(),
   items: z.array(ReadFileArgsSchema).min(1).optional(),

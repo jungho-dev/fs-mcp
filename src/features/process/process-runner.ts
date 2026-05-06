@@ -21,7 +21,7 @@ type DiagnosticTimingInfo = Omit<TimingInfo, "exitReason"> & {
   exitReason: DiagnosticExitReason;
 };
 
-// 1. Resolve process text argument ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Resolve process text argument ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function resolveProcessTextArgument(value: string | undefined, filePath: string | undefined, offset: number, length: number | undefined, label: string): Promise<string> {
   if (value !== undefined) {
     return value;
@@ -32,9 +32,9 @@ async function resolveProcessTextArgument(value: string | undefined, filePath: s
   return readFileInternal(filePath, offset, length);
 }
 
-// 1. Start a new process (renamed from execute_command) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Start a new process (renamed from execute_command) ―――――――――――――――――――――――――――――――――――――――――――
 // Includes early detection of process waiting for input
-// 1. Start process ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Start process ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function startProcess(args: unknown): Promise<ServerResult> {
   const parsed = StartProcessArgsSchema.safeParse(args);
   if (!parsed.success) {
@@ -76,25 +76,25 @@ export async function startProcess(args: unknown): Promise<ServerResult> {
 
   // Handle node:local - runs Node.js code directly on MCP server
   if (commandToRun.trim() === "node:local") {
-  	return startVirtualNodeSession(parsed.data.timeout_ms || 30_000);
+    return startVirtualNodeSession(parsed.data.timeout_ms || 30_000);
   }
   let shellUsed: string | undefined = parsed.data.shell;
 
   if (!shellUsed) {
     const config = await configManager.getConfig();
     if (config.defaultShell) {
-    	shellUsed = config.defaultShell;
+      shellUsed = config.defaultShell;
     }
     else {
       const isWindows = platform() === "win32";
       if (isWindows && process.env.COMSPEC) {
-      	shellUsed = process.env.COMSPEC;
+        shellUsed = process.env.COMSPEC;
       }
       else if (!isWindows && process.env.SHELL) {
-      	shellUsed = process.env.SHELL;
+        shellUsed = process.env.SHELL;
       }
       else {
-      	shellUsed = isWindows ? "cmd.exe" : "/bin/sh";
+        shellUsed = isWindows ? "cmd.exe" : "/bin/sh";
       }
     }
   }
@@ -117,12 +117,12 @@ export async function startProcess(args: unknown): Promise<ServerResult> {
     statusMessage = `\n${formatProcessStateMessage(processState, result.pid)}`;
   }
   else if (result.isBlocked) {
-  	statusMessage = "\nProcess is running. Use read_process_output to get more output.";
+    statusMessage = "\nProcess is running. Use read_process_output to get more output.";
   }
   // Add timing information if requested
   let timingMessage = "";
   if (result.timingInfo) {
-  	timingMessage = formatTimingInfo(result.timingInfo);
+    timingMessage = formatTimingInfo(result.timingInfo);
   }
   return {
     content: [
@@ -133,7 +133,8 @@ export async function startProcess(args: unknown): Promise<ServerResult> {
     ],
   };
 }
-// 2. Format initial output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 2. Format initial output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function formatInitialOutput(output: string): string {
   const normalizedOutput = output
     .replace(/\r\n/g, "\n")
@@ -142,19 +143,21 @@ function formatInitialOutput(output: string): string {
 
   return normalizedOutput || "(no initial output)";
 }
-// 3. Format start process message ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 3. Format start process message ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function formatStartProcessMessage(pid: number, shell: string | undefined, output: string, statusMessage: string, timingMessage: string): string {
   const messageParts = [`Process started with PID ${pid}`, `PID: ${pid}`, `Shell: ${shell ?? "(default)"}`, "", "Output:", formatInitialOutput(output)];
 
   if (statusMessage.trim()) {
-  	messageParts.push("", statusMessage.trim());
+    messageParts.push("", statusMessage.trim());
   }
   if (timingMessage.trim()) {
-  	messageParts.push("", timingMessage.trim());
+    messageParts.push("", timingMessage.trim());
   }
   return messageParts.join("\n");
 }
-// 4. Format timing info ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 4. Format timing info ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function formatTimingInfo(timing: DiagnosticTimingInfo): string {
   let msg = "\n\nTiming Information:\n";
   msg += `  Exit Reason: ${timing.exitReason}\n`;
@@ -178,9 +181,10 @@ function formatTimingInfo(timing: DiagnosticTimingInfo): string {
   }
   return msg;
 }
-// 2. Read output from a running process with file-like pagination ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 2. Read output from a running process with file-like pagination ―――――――――――――――――――――――――――――――――
 // Supports offset/length parameters for controlled reading
-// 5. Read process output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Read process output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function readProcessOutput(args: unknown): Promise<ServerResult> {
   const parsed = ReadProcessOutputArgsSchema.safeParse(args);
   if (!parsed.success) {
@@ -209,7 +213,7 @@ export async function readProcessOutput(args: unknown): Promise<ServerResult> {
         // Check if there's already new output
         const currentLines = terminalManager.getOutputLineCount(pid) || 0;
         if (currentLines > session.lastReadIndex) {
-        	resolve();
+          resolve();
           return;
         }
         let resolved = false;
@@ -218,16 +222,16 @@ export async function readProcessOutput(args: unknown): Promise<ServerResult> {
 
         const cleanup = () => {
           if (interval) {
-          	clearInterval(interval);
+            clearInterval(interval);
           }
           if (timeout) {
-          	clearTimeout(timeout);
+            clearTimeout(timeout);
           }
         };
 
         const resolveOnce = () => {
           if (resolved) {
-          	return;
+            return;
           }
           resolved = true;
           cleanup();
@@ -238,7 +242,7 @@ export async function readProcessOutput(args: unknown): Promise<ServerResult> {
         interval = setInterval(() => {
           const newLineCount = terminalManager.getOutputLineCount(pid) || 0;
           if (newLineCount > session.lastReadIndex) {
-          	resolveOnce();
+            resolveOnce();
           }
         }, 50);
 
@@ -313,9 +317,10 @@ export async function readProcessOutput(args: unknown): Promise<ServerResult> {
     ],
   };
 }
-// 3. Interact with a running process (renamed from send_input) ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 3. Interact with a running process (renamed from send_input) ――――――――――――――――――――――――――――――――――――
 // Automatically detects when process is ready and returns output
-// 6. Interact with process ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Interact with process ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function interactWithProcess(args: unknown): Promise<ServerResult> {
   const parsed = InteractWithProcessArgsSchema.safeParse(args);
   if (!parsed.success) {
@@ -420,11 +425,11 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
 
         const resolveOnce = () => {
           if (resolved) {
-          	return;
+            return;
           }
           resolved = true;
           if (interval) {
-          	clearInterval(interval);
+            clearInterval(interval);
           }
           resolve();
         };
@@ -432,7 +437,7 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
         // Fast-polling check - check every 50ms for quick responses
         interval = setInterval(() => {
           if (resolved) {
-          	return;
+            return;
           }
           // Use snapshot-based reading to handle REPL prompt line appending
           const newOutput = outputSnapshot ? terminalManager.getOutputSinceSnapshot(pid, outputSnapshot) : terminalManager.getNewOutput(pid);
@@ -440,7 +445,7 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
           if (newOutput && newOutput.length > lastOutputLength) {
             const now = Date.now();
             if (!firstOutputTime) {
-            	firstOutputTime = now;
+              firstOutputTime = now;
             }
             lastOutputTime = now;
 
@@ -467,7 +472,7 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
               if (verbose_timing && outputEvents.length > 0) {
                 const lastOutputEvent = outputEvents.at(-1);
                 if (lastOutputEvent) {
-                	lastOutputEvent.matchedPattern = "periodic_check";
+                  lastOutputEvent.matchedPattern = "periodic_check";
                 }
               }
               resolveOnce();
@@ -475,14 +480,14 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
             }
             // Also exit if process finished
             if (processState.isFinished) {
-            	exitReason = "process_finished";
+              exitReason = "process_finished";
               resolveOnce();
               return;
             }
           }
           attempts++;
           if (attempts >= maxAttempts) {
-          	exitReason = "timeout";
+            exitReason = "timeout";
             resolveOnce();
           }
         }, pollIntervalMs);
@@ -497,7 +502,7 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
 
     // Determine final state
     if (!processState) {
-    	processState = analyzeProcessState(output, pid);
+      processState = analyzeProcessState(output, pid);
     }
     let statusMessage = "";
     if (processState.isWaitingForInput) {
@@ -507,7 +512,7 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
       statusMessage = `\n${formatProcessStateMessage(processState, pid)}`;
     }
     else if (timeoutReached) {
-    	statusMessage = "\nResponse may be incomplete (timeout reached)";
+      statusMessage = "\nResponse may be incomplete (timeout reached)";
     }
     // Add timing information if requested
     let timingMessage = "";
@@ -542,13 +547,13 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
       responseText += `:\n\nOutput:\n${cleanOutput}`;
     }
     else {
-    	responseText += `.\n(No output produced)`;
+      responseText += `.\n(No output produced)`;
     }
     if (statusMessage) {
       responseText += `\n\n${statusMessage}`;
     }
     if (timingMessage) {
-    	responseText += timingMessage;
+      responseText += timingMessage;
     }
     return {
       content: [
@@ -570,7 +575,8 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
     };
   }
 }
-// 7. Force terminate ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 7. Force terminate ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function forceTerminate(args: unknown): Promise<ServerResult> {
   const parsed = ForceTerminateArgsSchema.safeParse(args);
   if (!parsed.success) {
@@ -602,7 +608,8 @@ export async function forceTerminate(args: unknown): Promise<ServerResult> {
     ],
   };
 }
-// 8. List sessions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+
+// 8. List sessions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function listSessions(): Promise<ServerResult> {
   const sessions = terminalManager.listActiveSessions();
 

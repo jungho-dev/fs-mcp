@@ -14,6 +14,8 @@ import { startProcess } from "../../../out/features/process/process-runner.js";
 
 // We need a wrapper because startProcess in tools/improved-process-tools.js returns a ServerResult
 // but our tests expect to receive the actual command result
+
+// 1. Execute command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function executeCommand(command, timeout_ms = 2000, shell = null) {
   const args = {
     command: command,
@@ -44,11 +46,12 @@ const SAFE_COMMANDS = ['echo "Hello World"', "pwd", "date"];
 
 const POTENTIALLY_HARMFUL_COMMANDS = ["rm", "mkfs", "dd"];
 
-// 1. Helper function to clean up test directories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Helper function to clean up test directories ―――――――――――――――――――――――――――――――――――――――――――――――――
 async function cleanupTestDirectories() {
   try {
     await fs.rm(TEST_DIR, { recursive: true, force: true });
-  } catch (error) {
+  }
+  catch (error) {
     // Ignore errors if directory doesn't exist
     if (error.code !== "ENOENT") {
       console.error("Error during cleanup:", error);
@@ -56,8 +59,9 @@ async function cleanupTestDirectories() {
   }
 }
 
-// 2. Execute a command and return true if it executed successfully, false if blocked ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Try command helper ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function tryCommand(command) {
+  const pidPattern = /PID (\d+)/;
   try {
     const result = await executeCommand(command, null, 2000);
 
@@ -73,9 +77,10 @@ async function tryCommand(command) {
     return {
       blocked: false,
       output: result.content?.[0] ? result.content[0].text : "",
-      pid: result.content?.[0]?.text ? Number.parseInt(result.content[0].text.match(/PID (\d+)/)?.[1] || "-1", 10) : -1,
+      pid: result.content?.[0]?.text ? Number.parseInt(result.content[0].text.match(pidPattern)?.[1] || "-1", 10) : -1,
     };
-  } catch (error) {
+  }
+  catch (error) {
     // Check if the error message indicates blocking
     if (error.message && (error.message.includes("Command not allowed") || error.message.includes("blocked by configuration"))) {
       return {
@@ -88,7 +93,7 @@ async function tryCommand(command) {
   }
 }
 
-// 3. Setup function to prepare the test environment ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Setup function to prepare the test environment ―――――――――――――――――――――――――――――――――――――――――――――――
 async function setup() {
   // Clean up before tests
   await cleanupTestDirectories();
@@ -104,7 +109,7 @@ async function setup() {
   return originalConfig;
 }
 
-// 4. Teardown function to clean up after tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Teardown function to clean up after tests ――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function teardown(originalConfig) {
   // Reset configuration to original
   await configManager.updateConfig(originalConfig);
@@ -113,7 +118,7 @@ async function teardown(originalConfig) {
   await cleanupTestDirectories();
 }
 
-// 5. Test execution of non-blocked commands ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Test execution of non-blocked commands ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testNonBlockedCommands() {
   // Set blockedCommands to include specific harmful commands
   const blockedCommands = ["rm -rf /", ":(){ :|:& };:", "> /dev/sda", "dd if=/dev/zero of=/dev/sda", "mkfs", "mkfs.ext4", "format"];
@@ -133,7 +138,7 @@ async function testNonBlockedCommands() {
   );
 }
 
-// 6. Test execution of blocked commands ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Test execution of blocked commands ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testBlockedCommandsExecution() {
   // Set blockedCommands to block our test harmful commands
   const blockedCommands = POTENTIALLY_HARMFUL_COMMANDS.slice();
@@ -156,7 +161,7 @@ async function testBlockedCommandsExecution() {
   );
 }
 
-// 7. Test updating blockedCommands list ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Test updating blockedCommands list ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testUpdatingBlockedCommands() {
   // Start with one blocked command
   const testCommand = "echo";
@@ -174,7 +179,7 @@ async function testUpdatingBlockedCommands() {
   assert.strictEqual(isAllowed2, true, "Command should be allowed after update");
 }
 
-// 8. Test empty blockedCommands array ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Test empty blockedCommands array ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testEmptyBlockedCommands() {
   // Set blockedCommands to empty array
   await configManager.setValue("blockedCommands", []);
@@ -194,7 +199,7 @@ async function testEmptyBlockedCommands() {
   );
 }
 
-// 9. Main test function ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Main test function ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runBlockedCommandsTests() {
   // Test 1: Execution of non-blocked commands
   await testNonBlockedCommands();
@@ -210,15 +215,19 @@ async function runBlockedCommandsTests() {
 }
 
 // Export the main test function
+
+// 11. Run tests ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export default async function runTests() {
   let originalConfig;
   try {
     originalConfig = await setup();
     await runBlockedCommandsTests();
-  } catch (error) {
+  }
+  catch (error) {
     console.error("Test failed:", error.message);
     return false;
-  } finally {
+  }
+  finally {
     if (originalConfig) {
       await teardown(originalConfig);
     }

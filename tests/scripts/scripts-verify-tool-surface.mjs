@@ -11,7 +11,7 @@ import { FILESYSTEM_TOOL_CATALOG } from "../../out/tools/tools-filesystem.js";
 import { GIT_TOOL_CATALOG } from "../../out/tools/tools-git.js";
 import { PROCESS_TOOL_CATALOG } from "../../out/tools/tools-process.js";
 
-// 1. collection helpers ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. collection helpers ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function findDuplicates(values) {
   const seen = new Set();
   const duplicates = new Set();
@@ -28,12 +28,13 @@ function findDuplicates(values) {
   return [...duplicates].sort();
 }
 
+// 2. Difference ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function difference(left, right) {
   const rightSet = new Set(right);
   return left.filter((value) => !rightSet.has(value)).sort();
 }
 
-// 2. tool surface check ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. tool surface check ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function verifyToolSurface() {
   const catalogNames = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...GIT_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG]
     .map((tool) => tool.name)
