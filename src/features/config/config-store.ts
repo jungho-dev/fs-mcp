@@ -5,10 +5,10 @@
  * @since 2026-05-02
  */
 
-import {existsSync} from "node:fs";
+import {existsSync, readFileSync} from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import {VERSION} from "@cores/runtime/runtime-version";
+import {fileURLToPath} from "node:url";
 
 export interface ServerConfig {
   allowedDirectories?: string[];
@@ -31,6 +31,18 @@ export interface ClientInfo {
 
 const WINDOWS_ALLOWED_DIRECTORIES_SEPARATOR = ";";
 const WINDOWS_POWERSHELL_COMMAND_SUFFIX = "-NoLogo -NoProfile -ExecutionPolicy Bypass -Command";
+const PACKAGE_JSON_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "package.json");
+
+function readPackageVersion(): string {
+  const packageData = JSON.parse(readFileSync(PACKAGE_JSON_PATH, "utf8")) as unknown;
+
+  if (typeof packageData !== "object" || packageData === null || !("version" in packageData) || typeof packageData.version !== "string") {
+    throw new Error("package.json version must be a string");
+  }
+  return packageData.version;
+}
+
+export const PACKAGE_VERSION = readPackageVersion();
 
 // 1. Get configured allowed directories ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getConfiguredAllowedDirectories(): string[] | undefined {
@@ -154,7 +166,7 @@ class ConfigManager {
       return;
     }
     this.config = this.getDefaultConfig();
-    this.config["version"] = VERSION;
+    this.config["version"] = PACKAGE_VERSION;
     this.initialized = true;
   }
 
@@ -163,8 +175,6 @@ class ConfigManager {
     return this.init();
   }
 
-  // 5-3. Create default runtime configuration ―――――――――――――――――――――――――――――――――――――――――――――――――――――
-
   // 6. Get default config ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private getDefaultConfig(): ServerConfig {
     return {
@@ -172,7 +182,7 @@ class ConfigManager {
       blockedCommands: getDefaultBlockedCommands(),
       contextIndexAutoMinChars: 5000,
       contextIndexAutoMinLines: 120,
-      contextIndexDbPath: "~/.codex/fs-mcp/foo.sqlite",
+      contextIndexDbPath: "~/.codex/sqlite/fs-mcp.sqlite",
       contextIndexEnabled: true,
       contextIndexMaxEntryChars: 1_000_000,
       defaultShell: getDefaultShell(),
@@ -191,7 +201,7 @@ class ConfigManager {
   getConfigSync(): ServerConfig {
     if (!this.initialized) {
       this.config = this.getDefaultConfig();
-      this.config["version"] = VERSION;
+      this.config["version"] = PACKAGE_VERSION;
       this.initialized = true;
     }
     return {...this.config};
@@ -219,7 +229,7 @@ class ConfigManager {
   // 5-8. Reset runtime configuration to defaults ――――――――――――――――――――――――――――――――――――――――――――――――――
   async resetConfig(): Promise<ServerConfig> {
     this.config = this.getDefaultConfig();
-    this.config["version"] = VERSION;
+    this.config["version"] = PACKAGE_VERSION;
     this.initialized = true;
     return {...this.config};
   }

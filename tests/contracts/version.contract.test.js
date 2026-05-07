@@ -9,8 +9,7 @@ import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { VERSION } from "../../out/cores/runtime/runtime-version.js";
-import { configManager } from "../../out/features/config/config-store.js";
+import { configManager, PACKAGE_VERSION } from "../../out/features/config/config-store.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -29,7 +28,7 @@ async function readPackageVersion() {
 async function testRuntimeVersionMatchesPackage() {
   const packageVersion = await readPackageVersion();
 
-  assert.equal(VERSION, packageVersion);
+  assert.equal(PACKAGE_VERSION, packageVersion);
 }
 
 // 3. Config version contract ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――

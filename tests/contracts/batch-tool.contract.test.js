@@ -53,7 +53,7 @@ function parseToolOutput(result) {
   assert.equal(result.content.length, 1);
   assert.equal(result.content[0].type, "text");
   assert.equal(typeof result.content[0].text, "string");
-  assert.equal(result.content[0].text, "");
+  assert.ok(result.content[0].text.length > 0);
   assert.equal(typeof result.structuredContent, "object");
   assert.notEqual(result.structuredContent, null);
   return result.structuredContent;

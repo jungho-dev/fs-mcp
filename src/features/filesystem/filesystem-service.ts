@@ -13,7 +13,6 @@ import type { FileInfo, FileResult, ReadOptions } from "@assets/readers/readers-
 import { getFileHandler } from "@assets/readers/readers-factory";
 import { TextFileHandler } from "@assets/readers/readers-text";
 import { withTimeout } from "@assets/utils/utils-timeout";
-import { capture } from "@cores/runtime/runtime-output-capture";
 import { configManager } from "@features/config/config-store";
 import { FILE_OPERATION_TIMEOUTS } from "@features/filesystem/filesystem-limits";
 
@@ -230,10 +229,6 @@ export async function validatePath(requestedPath: string): Promise<string> {
       const err = error as NodeJS.ErrnoException;
       // Only throw for non-ENOENT errors (e.g., permission denied, I/O errors)
       if (!err.code || err.code !== "ENOENT") {
-        capture("server_path_realpath_error", {
-          error: err.message,
-          path: absoluteOriginal,
-        });
         throw new Error(`Failed to resolve symlink for path: ${absoluteOriginal}. Error: ${err.message}`);
       }
     }
@@ -241,10 +236,6 @@ export async function validatePath(requestedPath: string): Promise<string> {
 
     // Check if path is allowed
     if (!(await isPathAllowed(pathForNextCheck))) {
-      capture("server_path_validation_error", {
-        error: "Path not allowed",
-        allowedDirsCount: (await getAllowedDirs()).length,
-      });
 
       throw new Error(`Path not allowed: ${requestedPath}. Must be within one of these directories: ${(await getAllowedDirs()).join(", ")}`);
     }
@@ -275,9 +266,6 @@ export async function validatePath(requestedPath: string): Promise<string> {
 
   if (result === null) {
     // Keep original path in error for AI while using a generic operation name.
-    capture("server_path_validation_timeout", {
-      timeoutMs: FILE_OPERATION_TIMEOUTS.PATH_VALIDATION,
-    });
 
     throw new Error(`Path validation failed for path: ${requestedPath}`);
   }
@@ -402,17 +390,10 @@ export async function readFileFromDisk(filePath: string, options?: ReadOptions):
     const stats = await fs.stat(validPath);
 
     // Report file extension without capturing the file path.
-    capture("server_read_file", {
-      fileExtension: fileExtension,
-      offset: offset,
-      length: length,
-      fileSize: stats.size,
-    });
   }
   catch (error) {
     console.error(`error catch ${error}`);
     const errorMessage = error instanceof Error ? error.message : String(error);
-    capture("server_read_file_error", { error: errorMessage, fileExtension: fileExtension });
     // If we can't stat the file, continue anyway and let the read operation handle errors
   }
   // Use withTimeout to handle potential hangs
@@ -533,12 +514,6 @@ export async function writeFile(filePath: string, content: string, mode: "rewrit
   const lineCount = TextFileHandler.countLines(content);
 
   // Report file extension and operation details without capturing the file path.
-  capture("server_write_file", {
-    fileExtension: fileExtension,
-    mode: mode,
-    contentBytes: contentBytes,
-    lineCount: lineCount,
-  });
 
   // Get appropriate handler for this file type (async - includes binary detection)
   const handler = await getFileHandler(validPath);
@@ -646,11 +621,6 @@ export async function removePath(filePath: string, recursive: boolean = false, f
   }
   const isDirectory = stats.isDirectory();
 
-  capture("server_remove_path", {
-    isDirectory,
-    isFile: stats.isFile(),
-    recursive,
-  });
   if (isDirectory && !recursive) {
     await fs.rmdir(validPath);
     return;

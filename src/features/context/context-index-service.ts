@@ -41,13 +41,13 @@ interface ContextIndexConfig {
   maxEntryChars: number;
 }
 
-const DEFAULT_CONTEXT_INDEX_DB_PATH = "~/.codex/fs-mcp/foo.sqlite";
+const DEFAULT_CONTEXT_INDEX_DB_PATH = "~/.codex/sqlite/fs-mcp.sqlite";
 const DEFAULT_AUTO_MIN_CHARS = 5000;
 const DEFAULT_AUTO_MIN_LINES = 120;
 const DEFAULT_MAX_ENTRY_CHARS = 1_000_000;
 const CONTEXT_CHUNK_LINE_COUNT = 80;
 const CONTEXT_CHUNK_LINE_OVERLAP = 20;
-const CONTEXT_PREVIEW_LENGTH = 500;
+const CONTEXT_PREVIEW_LENGTH = 160;
 const LINE_SPLIT_PATTERN = /\r\n|\r|\n/;
 const TOKEN_PATTERN = /[\p{L}\p{N}_]+/gu;
 
@@ -72,7 +72,25 @@ type ContextChunkRow = {
 
 // 1. Count lines ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function countLines(value: string): number {
-  return value.length === 0 ? 0 : value.split(LINE_SPLIT_PATTERN).length;
+  if (value.length === 0) {
+    return 0;
+  }
+  let lineCount = 1;
+
+  for (let index = 0; index < value.length; index++) {
+    const code = value.charCodeAt(index);
+
+    if (code === 10) {
+      lineCount += 1;
+    }
+    else if (code === 13) {
+      lineCount += 1;
+      if (value.charCodeAt(index + 1) === 10) {
+        index += 1;
+      }
+    }
+  }
+  return lineCount;
 }
 
 // 2. Expand home path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -220,9 +238,9 @@ class ContextIndexService {
     const indexId = createIndexId();
     const createdAt = new Date().toISOString();
     const originalLength = content.length;
-    const lineCount = countLines(content);
     const indexedText = content.slice(0, config.maxEntryChars);
     const lines = indexedText.split(LINE_SPLIT_PATTERN);
+    const lineCount = content.length === 0 ? 0 : indexedText.length === content.length ? lines.length : countLines(content);
     const insertDocument = db.prepare("INSERT INTO context_documents (index_id, source, tool_name, created_at, original_length, line_count) VALUES (?, ?, ?, ?, ?, ?)");
     const insertChunk = db.prepare("INSERT INTO context_chunks (chunk_id, index_id, chunk_index, source, text, line_start, line_end) VALUES (?, ?, ?, ?, ?, ?, ?)");
     const insertFts = db.prepare("INSERT INTO context_chunks_fts (chunk_id, index_id, source, text) VALUES (?, ?, ?, ?)");

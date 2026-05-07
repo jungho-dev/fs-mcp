@@ -23,13 +23,13 @@ export interface ToolResultError {
   message: string;
 }
 export interface StandardToolOutput {
-  data: {
-    text: string;
-    content: ServerResponseContent[];
-    structuredContent: ServerResult["structuredContent"] | null;
-  };
   contextIndexError?: string;
   contextIndexes?: unknown[];
+  data: {
+    content: ServerResponseContent[];
+    structuredContent: ServerResult["structuredContent"] | null;
+    text: string;
+  };
   durationMs: number | null;
   error: ToolResultError | null;
   schemaVersion: 1;
@@ -72,10 +72,35 @@ function createCombinedText(content: ServerResponseContent[]): string {
 }
 
 // 4. Create display text ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function stringifyDisplayStructuredContent(value: ServerResult["structuredContent"] | null): string {
+  if (value === null || value === undefined) {
+    return "";
+  }
+  try {
+    return JSON.stringify(value, null, 2) ?? String(value);
+  }
+  catch {
+    return String(value);
+  }
+}
+
 function createDisplayText(toolName: string, output: StandardToolOutput): string {
-  void toolName;
-  void output;
-  return "";
+  const text = output.data.text;
+  const structuredText = stringifyDisplayStructuredContent(output.data.structuredContent);
+
+  if (text.trim().length > 0 && structuredText.length > 0) {
+    return `${text}\n\n${structuredText}`;
+  }
+  if (text.trim().length > 0) {
+    return text;
+  }
+  if (structuredText.length > 0) {
+    return structuredText;
+  }
+  if (output.error?.message !== undefined && output.error.message.length > 0) {
+    return output.error.message;
+  }
+  return `${toolName}: ${output.status}`;
 }
 
 // 5. Create error details ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -179,14 +204,17 @@ export function createToolErrorResponse(message: string, options: ToolResponseOp
 // 12. Normalize tool result ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function normalizeToolResult(toolName: string, result: ServerResult, durationMs?: number): ServerResult {
   if (isNormalizedToolResult(result)) {
+    const output = result.structuredContent as StandardToolOutput;
+
     return {
       ...result,
-      content: [{ text: "", type: "text" }],
+      content: [{ text: createDisplayText(toolName, output), type: "text" }],
     };
   }
   const originalContent = normalizeContent(result.content);
   const fsMcpResult = createResultMetadata(toolName, result, originalContent, durationMs);
-  const standardOutput = compactStandardToolOutput(toolName, createStandardOutput(toolName, result, originalContent, durationMs));
+  const originalOutput = createStandardOutput(toolName, result, originalContent, durationMs);
+  const standardOutput = compactStandardToolOutput(toolName, originalOutput);
   const normalizedResult: ServerResult = {
     _meta: {
       ...result._meta,
@@ -194,7 +222,7 @@ export function normalizeToolResult(toolName: string, result: ServerResult, dura
     },
     content: [
       {
-        text: createDisplayText(toolName, standardOutput),
+        text: createDisplayText(toolName, originalOutput),
         type: "text",
       },
     ],

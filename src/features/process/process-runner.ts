@@ -7,7 +7,6 @@
 
 import {platform} from "node:os";
 import type {OutputEvent, ServerResult, TimingInfo} from "@assets/type/common";
-import {capture} from "@cores/runtime/runtime-output-capture";
 import {configManager} from "@features/config/config-store";
 import {readFileInternal} from "@features/filesystem/filesystem-service";
 import {commandManager} from "@features/process/process-command-policy";
@@ -38,7 +37,6 @@ async function resolveProcessTextArgument(value: string | undefined, filePath: s
 export async function startProcess(args: unknown): Promise<ServerResult> {
   const parsed = StartProcessArgsSchema.safeParse(args);
   if (!parsed.success) {
-    capture("server_start_process_failed");
     return {
       content: [{text: `Error: Invalid arguments for start_process: ${parsed.error}`, type: "text" }],
       isError: true,
@@ -56,15 +54,8 @@ export async function startProcess(args: unknown): Promise<ServerResult> {
   }
   try {
     const commands = commandManager.extractCommands(commandToRun).join(", ");
-    capture("server_start_process", {
-      command: commandManager.getBaseCommand(commandToRun),
-      commands: commands,
-    });
   }
   catch (_error) {
-    capture("server_start_process", {
-      command: commandManager.getBaseCommand(commandToRun),
-    });
   }
   const isAllowed = await commandManager.validateCommand(commandToRun);
   if (!isAllowed) {
@@ -324,9 +315,6 @@ export async function readProcessOutput(args: unknown): Promise<ServerResult> {
 export async function interactWithProcess(args: unknown): Promise<ServerResult> {
   const parsed = InteractWithProcessArgsSchema.safeParse(args);
   if (!parsed.success) {
-    capture("server_interact_with_process_failed", {
-      error: "Invalid arguments",
-    });
     return {
       content: [{text: `Error: Invalid arguments for interact_with_process: ${parsed.error}`, type: "text" }],
       isError: true,
@@ -347,10 +335,6 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
   // Check if this is a virtual Node session (node:local)
   const virtualNodeSession = getVirtualNodeSession(pid);
   if (virtualNodeSession) {
-    capture("server_interact_with_process_node_fallback", {
-      inputLength: input.length,
-      pid: pid,
-    });
 
     // Execute code via temp file approach
     // Respect per-call timeout if provided, otherwise use session default
@@ -365,10 +349,6 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
   let exitReason: "early_exit_quick_pattern" | "early_exit_periodic_check" | "process_finished" | "timeout" | "no_wait" = "timeout";
 
   try {
-    capture("server_interact_with_process", {
-      inputLength: input.length,
-      pid: pid,
-    });
 
     // Capture output snapshot BEFORE sending input
     // This handles REPLs where output is appended to the prompt line
@@ -566,9 +546,6 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
   }
   catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    capture("server_interact_with_process_error", {
-      error: errorMessage,
-    });
     return {
       content: [{text: `Error interacting with process: ${errorMessage}`, type: "text" }],
       isError: true,

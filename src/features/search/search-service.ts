@@ -8,7 +8,6 @@
 import {type ChildProcess, spawn} from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import {capture} from "@cores/runtime/runtime-output-capture";
 import {validatePath} from "@features/filesystem/filesystem-service";
 import {getRipgrepPath} from "@features/search/search-ripgrep-adapter";
 import PizZip from "pizzip";
@@ -160,14 +159,6 @@ export class SearchManager {
       }
     });
 
-    capture("search_session_started", {
-      hasTimeout: !!timeoutMs,
-      requestedPath: options.rootPath,
-      searchType: options.searchType,
-      sessionId,
-      timeoutMs,
-      validatedPath: validPath,
-    });
 
     // For content searches, also search DOCX files
     const shouldSearchDocx = options.searchType === "content" && this.shouldIncludeDocxSearch(options.filePattern, validPath);
@@ -181,7 +172,6 @@ export class SearchManager {
           }
         })
         .catch((err) => {
-          capture("docx_search_error", {error: err instanceof Error ? err.message : String(err)});
         });
     }
     // Wait for first chunk of data or early completion instead of fixed delay
@@ -608,10 +598,6 @@ export class SearchManager {
         const meaningfulErrors = filteredErrors.join(SEARCH_LINE_SEPARATOR).trim();
         if (meaningfulErrors) {
           session.error = `${(session.error || "") + meaningfulErrors}\n`;
-          capture("search_session_error", {
-            error: meaningfulErrors.slice(0, DISPLAY_MAX_CHARS),
-            sessionId: session.id,
-          });
         }
       }
     });
@@ -641,14 +627,6 @@ export class SearchManager {
       if (session.totalMatches > 0) {
         session.isError = false;
       }
-      capture("search_session_completed", {
-        exitCode: code,
-        runtime: Date.now() - session.startTime,
-        sessionId: session.id,
-        totalMatches: session.totalMatches,
-        totalResults: session.totalMatches + session.totalContextLines,
-        wasIncomplete: session.wasIncomplete || false, // NEW: Track incomplete searches
-      });
 
       // Rely on cleanupSessions(maxAge) only; no per-session timer
     });

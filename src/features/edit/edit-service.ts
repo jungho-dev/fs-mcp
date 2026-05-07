@@ -11,7 +11,6 @@ import path from "node:path";
 import {resolvePreviewFileType} from "@assets/readers/readers-filetypes";
 import type {ServerResult} from "@assets/type/common";
 import {createErrorResponse} from "@cores/responses/responses-error";
-import {capture} from "@cores/runtime/runtime-output-capture";
 import {configManager} from "@features/config/config-store";
 import {detectLineEnding, normalizeLineEndings} from "@features/edit/edit-line-ending-policy";
 import {resolveAbsolutePath} from "@features/filesystem/filesystem-path-resolver";
@@ -97,18 +96,9 @@ export async function performSearchReplace(filePath: string, block: SearchReplac
   const fileExtension = path.extname(filePath).toLowerCase();
 
   // Report file extension and string sizes without capturing the file path.
-  capture("server_edit_block", {
-    expectedReplacements: expectedReplacements,
-    fileExtension: fileExtension,
-    newStringLength: block.replace.length,
-    newStringLines: block.replace.split("\n").length,
-    oldStringLength: block.search.length,
-    oldStringLines: block.search.split("\n").length,
-  });
   // Check for empty search string to prevent infinite loops
   if (block.search === "") {
     // Report file extension without capturing the file path.
-    capture("server_edit_block_empty_search", {expectedReplacements, fileExtension: fileExtension });
     return {
       content: [
         {
@@ -124,7 +114,6 @@ export async function performSearchReplace(filePath: string, block: SearchReplac
 
   // Make sure content is a string
   if (typeof content !== "string") {
-    capture("server_edit_block_content_not_string", {expectedReplacements, fileExtension: fileExtension });
     throw new Error(`Wrong content for file ${filePath}`);
   }
   // Get the large-edit warning threshold from configuration
@@ -173,7 +162,6 @@ export async function performSearchReplace(filePath: string, block: SearchReplac
 RECOMMENDATION: For large search/replace operations, consider breaking them into smaller chunks with fewer lines.`;
     }
     await writeFile(filePath, newContent);
-    capture("server_edit_block_exact_success", {expectedReplacements, fileExtension: fileExtension, hasWarning: warningMessage !== ""});
     const resolvedEditPath = resolveAbsolutePath(filePath);
 
     // Show a partial preview centered on the edited area
@@ -206,7 +194,6 @@ RECOMMENDATION: For large search/replace operations, consider breaking them into
   }
   // If exact match found but count doesn't match expected, inform the user
   if (count > 0 && count !== expectedReplacements) {
-    capture("server_edit_block_unexpected_count", {expectedReplacements, expectedReplacementsCount: count, fileExtension: fileExtension });
     return {
       content: [
         {
@@ -273,7 +260,6 @@ RECOMMENDATION: For large search/replace operations, consider breaking them into
     // Check if the fuzzy match is "close enough"
     if (similarity >= FUZZY_THRESHOLD) {
       // Capture the fuzzy search event with all data
-      capture("server_fuzzy_search_performed", fuzzySearchData);
 
       // If we allow fuzzy matches, we would make the replacement here
       // For now, we'll return a detailed message about the fuzzy match
@@ -289,10 +275,6 @@ RECOMMENDATION: For large search/replace operations, consider breaking them into
     else {
       // If the fuzzy match isn't close enough
       // Still capture the fuzzy search event with all data
-      capture("server_fuzzy_search_performed", {
-        ...fuzzySearchData,
-        below_threshold: true,
-      });
 
       return {
         content: [

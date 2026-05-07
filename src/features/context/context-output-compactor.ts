@@ -10,31 +10,62 @@ import type {StandardToolOutput} from "@cores/responses/responses-tool-result";
 import {type ContextIndexReference, contextIndexService} from "@features/context/context-index-service";
 
 interface CompactionState {
+  indexedPayloads: number;
   references: ContextIndexReference[];
   seen: Map<string, ContextIndexReference>;
   toolName: string;
 }
 
 const STRUCTURED_CONTEXT_FIELDS = new Set(["diff", "listing", "output", "stderr", "stdout", "textContent"]);
+const STRUCTURED_COLLECTION_FIELDS = new Set(["batchResults", "branches", "commits", "contexts", "documents", "entries", "files", "items", "matches", "processes", "resources", "results", "sessions", "stashes", "tags", "tools"]);
 
 // 1. Is record ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// 2. Create indexed text summary ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function createIndexedTextSummary(reference: ContextIndexReference): string {
-  return [
-    `Indexed large output: ${reference.indexId}`,
-    `Source: ${reference.source}`,
-    `Original: ${reference.lineCount} lines, ${reference.originalLength} chars`,
-    "",
-    "Preview:",
-    reference.preview,
-  ].join("\n");
+// 2. Safe stringify ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function safeStringify(value: unknown): string | null {
+  try {
+    return JSON.stringify(value);
+  }
+  catch {
+    return null;
+  }
 }
 
-// 3. Index once ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Count payload items ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function countPayloadItems(value: unknown): number | null {
+  if (Array.isArray(value)) {
+    return value.length;
+  }
+  if (isRecord(value)) {
+    return Object.keys(value).length;
+  }
+  return null;
+}
+
+// 4. Create indexed text summary ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function createIndexedTextSummary(reference: ContextIndexReference): string {
+  return [`Indexed output: ${reference.indexId}`, `Original: ${reference.originalLength} chars`, "Preview:", reference.preview].join("\n");
+}
+
+// 5. Create indexed structured summary ―――――――――――――――――――――――――――――――――――――――――――――――――――――
+function createIndexedStructuredSummary(reference: ContextIndexReference, value: unknown): Record<string, unknown> {
+  const itemCount = countPayloadItems(value);
+
+  return {
+    indexId: reference.indexId,
+    indexed: true,
+    itemCount: itemCount ?? undefined,
+    omitted: true,
+    originalLength: reference.originalLength,
+    payloadType: Array.isArray(value) ? "array" : "object",
+    preview: reference.preview,
+  };
+}
+
+// 6. Index once ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function indexOnce(value: string, source: string, state: CompactionState): ContextIndexReference {
   const cached = state.seen.get(value);
 
@@ -45,10 +76,11 @@ function indexOnce(value: string, source: string, state: CompactionState): Conte
 
   state.seen.set(value, reference);
   state.references.push(reference);
+  state.indexedPayloads += 1;
   return reference;
 }
 
-// 4. Compact content item ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Compact content item ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function compactContentItem(item: ServerResponseContent, index: number, state: CompactionState): ServerResponseContent {
   if (item.type !== "text" || typeof item.text !== "string" || !contextIndexService.shouldAutoIndex(item.text)) {
     return item;
@@ -61,13 +93,33 @@ function compactContentItem(item: ServerResponseContent, index: number, state: C
   };
 }
 
-// 5. Compact structured value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Compact structured collection ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function compactStructuredCollection(value: unknown, fieldName: string | null, sourcePath: string, state: CompactionState): unknown | null {
+  if (fieldName === null || !STRUCTURED_COLLECTION_FIELDS.has(fieldName) || (!Array.isArray(value) && !isRecord(value))) {
+    return null;
+  }
+  const serialized = safeStringify(value);
+
+  if (serialized === null || !contextIndexService.shouldAutoIndex(serialized)) {
+    return null;
+  }
+  const reference = indexOnce(serialized, `${state.toolName}:${sourcePath}`, state);
+
+  return createIndexedStructuredSummary(reference, value);
+}
+
+// 9. Compact structured value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function compactStructuredValue(value: unknown, fieldName: string | null, sourcePath: string, state: CompactionState): unknown {
   if (typeof value === "string") {
     if (fieldName !== null && STRUCTURED_CONTEXT_FIELDS.has(fieldName) && contextIndexService.shouldAutoIndex(value)) {
       return indexOnce(value, `${state.toolName}:${sourcePath}`, state);
     }
     return value;
+  }
+  const compactedCollection = compactStructuredCollection(value, fieldName, sourcePath, state);
+
+  if (compactedCollection !== null) {
+    return compactedCollection;
   }
   if (Array.isArray(value)) {
     return value.map((item, index) => compactStructuredValue(item, null, `${sourcePath}[${index}]`, state));
@@ -80,12 +132,13 @@ function compactStructuredValue(value: unknown, fieldName: string | null, source
   );
 }
 
-// 6. Compact standard output ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Compact standard output ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function compactStandardToolOutput(toolName: string, output: StandardToolOutput): StandardToolOutput {
   if (!contextIndexService.getRuntimeConfig().enabled) {
     return output;
   }
   const state: CompactionState = {
+    indexedPayloads: 0,
     references: [],
     seen: new Map(),
     toolName,

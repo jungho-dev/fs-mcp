@@ -92,7 +92,7 @@ async function testDefaultDbPathConfig() {
   assert.equal(config.contextIndexDbPath, TEST_DB, "test override should be active");
   await configManager.resetConfig();
   const defaultConfig = await configManager.getConfig();
-  assert.equal(defaultConfig.contextIndexDbPath, "~/.codex/fs-mcp/foo.sqlite", "default context DB path should match plan");
+  assert.equal(defaultConfig.contextIndexDbPath, "~/.codex/sqlite/fs-mcp.sqlite", "default context DB path should match plan");
   await configManager.updateConfig({
     ...config,
     contextIndexDbPath: TEST_DB,

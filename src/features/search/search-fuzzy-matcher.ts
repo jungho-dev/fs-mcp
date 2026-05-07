@@ -5,7 +5,6 @@
  * @since 2026-05-02
  */
 
-import {capture} from "@cores/runtime/runtime-output-capture";
 import {distance} from "fastest-levenshtein";
 
 // 1. Recursive fuzzy matcher ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -37,12 +36,6 @@ export function recursiveFuzzyIndexOf(
     const executionTime = performance.now() - startTime;
 
     // Capture detailed metrics for the recursive search for in-depth analysis
-    capture("fuzzy_search_recursive_metrics", {
-      execution_time_ms: executionTime,
-      query_length: query.length,
-      result_distance: result.distance,
-      text_length: text.length,
-    });
 
     return result;
   }
@@ -126,13 +119,6 @@ function iterativeReduction(
   const executionTime = performance.now() - startTime;
 
   // Capture metrics for the iterative refinement phase
-  capture("fuzzy_search_iterative_metrics", {
-    execution_time_ms: executionTime,
-    final_distance: bestDistance,
-    iterations: iterations,
-    query_length: query.length,
-    segment_length: end - start,
-  });
 
   return {
     distance: bestDistance,

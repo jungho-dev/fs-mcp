@@ -2,13 +2,6 @@ import assert from "node:assert/strict";
 import { createToolErrorResponse, createToolTextResponse, normalizeToolResult } from "../../out/cores/responses/responses-tool-result.js";
 import { configManager } from "../../out/features/config/config-store.js";
 
-const HIDDEN_DISPLAY_TEXT = "";
-
-// 1. standard output parser ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function assertHiddenDisplayText(result) {
-  assert.equal(result.content[0].text, HIDDEN_DISPLAY_TEXT);
-}
-
 // 2. Parse standard output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function parseStandardOutput(result) {
   assert.equal(result.content.length, 1);
@@ -16,7 +9,6 @@ function parseStandardOutput(result) {
   assert.equal(typeof result.content[0].text, "string");
   assert.equal(typeof result.structuredContent, "object");
   assert.notEqual(result.structuredContent, null);
-  assertHiddenDisplayText(result);
 
   return result.structuredContent;
 }
@@ -36,6 +28,8 @@ function testSuccessEnvelope() {
   assert.equal(output.durationMs, 7);
   assert.equal(output.error, null);
   assert.equal(output.data.text, "ok");
+  assert.match(normalized.content[0].text, /^ok/);
+  assert.match(normalized.content[0].text, /"value": 42/);
   assert.deepEqual(output.data.content, [{ type: "text", text: "ok" }]);
   assert.deepEqual(output.data.structuredContent, { value: 42 });
   assert.equal(normalized.structuredContent.toolName, "contract_tool");
@@ -55,6 +49,7 @@ function testErrorEnvelope() {
   assert.equal(output.status, "error");
   assert.deepEqual(output.error, { message: "Error: boom" });
   assert.equal(output.data.text, "Error: boom");
+  assert.equal(normalized.content[0].text, "Error: boom");
   assert.equal(output.data.content[0].text, "Error: boom");
   assert.equal(normalized._meta.fsMcpResult.status, "error");
   assert.equal(normalized._meta.fsMcpResult.errorMessage, "Error: boom");
@@ -68,6 +63,7 @@ function testEmptyContentFallback() {
   assert.deepEqual(output.data.content, [{ type: "text", text: "" }]);
   assert.equal(output.data.text, "");
   assert.equal(output.data.structuredContent, null);
+  assert.equal(normalized.content[0].text, "empty_tool: success");
   assert.deepEqual(normalized._meta.fsMcpResult.contentTypes, ["text"]);
 }
 
@@ -81,26 +77,26 @@ function testDurationShapeWithoutTiming() {
   assert.equal(normalized._meta.fsMcpResult.durationMs, null);
 }
 
-// 6. normalized result hidden display contract ――――――――――――――――――――――――――――――――――――――――――――――――――――
-function testNormalizedResultStillHidesDisplay() {
+// 6. normalized result display contract ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function testNormalizedResultRestoresDisplay() {
   const normalized = normalizeToolResult("already_normalized_tool", createToolTextResponse("visible data"), 2);
   normalized.content[0].text = "should not be shown";
 
   const renormalized = normalizeToolResult("already_normalized_tool", normalized, 3);
   const output = parseStandardOutput(renormalized);
 
-  assert.equal(renormalized.content[0].text, HIDDEN_DISPLAY_TEXT);
+  assert.equal(renormalized.content[0].text, "visible data");
   assert.equal(output.data.text, "visible data");
 }
 
-// 7. hidden display preserves structured data ―――――――――――――――――――――――――――――――――――――――――――――――――――――
-function testHiddenDisplayPreservesStructuredText() {
+// 7. display preserves structured data ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function testDisplayPreservesStructuredText() {
   const fullText = Array.from({ length: 6 }, (_value, index) => `line${index + 1} ${"x".repeat(320)}`).join("\n");
   const normalized = normalizeToolResult("preview_tool", createToolTextResponse(fullText), 9);
   const output = parseStandardOutput(normalized);
 
   assert.equal(output.data.text, fullText);
-  assert.equal(normalized.content[0].text, HIDDEN_DISPLAY_TEXT);
+  assert.equal(normalized.content[0].text, fullText);
 }
 
 // 9. Test long text structured data preserved ―――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -110,7 +106,7 @@ function testLongTextStructuredDataPreserved() {
   const output = parseStandardOutput(normalized);
 
   assert.equal(output.data.text, fullText);
-  assert.equal(normalized.content[0].text, HIDDEN_DISPLAY_TEXT);
+  assert.equal(normalized.content[0].text, fullText);
 }
 
 // 10. Test existing summary preserved ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -126,7 +122,7 @@ function testExistingSummaryPreserved() {
   const normalized = normalizeToolResult("batch_tool", createToolTextResponse(batchText), 5);
   const output = parseStandardOutput(normalized);
 
-  assert.equal(normalized.content[0].text, HIDDEN_DISPLAY_TEXT);
+  assert.equal(normalized.content[0].text, batchText);
   assert.equal(output.data.text, batchText);
 }
 
@@ -143,8 +139,8 @@ async function main() {
     testErrorEnvelope();
     testEmptyContentFallback();
     testDurationShapeWithoutTiming();
-    testNormalizedResultStillHidesDisplay();
-    testHiddenDisplayPreservesStructuredText();
+    testNormalizedResultRestoresDisplay();
+    testDisplayPreservesStructuredText();
     testLongTextStructuredDataPreserved();
     testExistingSummaryPreserved();
   }

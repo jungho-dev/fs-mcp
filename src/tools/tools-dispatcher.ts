@@ -16,7 +16,6 @@ import {handleGetSearchResults, handleListSearches, handleStartSearches, handleS
 import {handleInteractWithProcesses, handleListSessions, handleReadProcessOutputs, handleStartProcesses} from "@controllers/controllers-terminal";
 import {createErrorResponse} from "@cores/responses/responses-error";
 import {normalizeToolResult} from "@cores/responses/responses-tool-result";
-import {capture} from "@cores/runtime/runtime-output-capture";
 import {readFileInternal} from "@features/filesystem/filesystem-service";
 import type {GitToolName} from "@schemas/schemas-git";
 
@@ -161,7 +160,6 @@ export async function dispatchToolCall(name: string, args: unknown): Promise<Ser
 
   const dispatcher = TOOL_DISPATCHERS[name];
   if (!dispatcher) {
-    capture("server_unknown_tool", {name});
     return normalizeDispatchResult(createErrorResponse(`Unknown tool: ${name}`));
   }
   try {
@@ -172,7 +170,6 @@ export async function dispatchToolCall(name: string, args: unknown): Promise<Ser
   }
   catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    capture("server_tool_dispatch_error", {name, error: errorMessage});
 
     return normalizeDispatchResult(createErrorResponse(errorMessage));
   }

@@ -9,14 +9,14 @@ import type {ServerResult} from "@assets/type/common";
 import {createErrorResponse} from "@cores/responses/responses-error";
 import {normalizeToolResult} from "@cores/responses/responses-tool-result";
 import {type LogLevel, logger, logToStderr} from "@cores/runtime/runtime-app-logger";
-import {capture} from "@cores/runtime/runtime-output-capture";
-import {VERSION} from "@cores/runtime/runtime-version";
+import {SERVER_INSTRUCTIONS} from "@cores/server/server-instructions";
+import {PACKAGE_VERSION} from "@features/config/config-store";
 import {runWithGitSessionScope} from "@features/git/git-session";
 import {Server} from "@modelcontextprotocol/sdk/server/index.js";
 import {type CallToolRequest, CallToolRequestSchema, type InitializeRequest, InitializeRequestSchema, LATEST_PROTOCOL_VERSION, ListResourcesRequestSchema, ListResourceTemplatesRequestSchema, ListToolsRequestSchema, SUPPORTED_PROTOCOL_VERSIONS} from "@modelcontextprotocol/sdk/types.js";
 import {CONFIG_TOOL_CATALOG} from "@tools/tools-config";
-import {CONTEXT_TOOL_CATALOG} from "@tools/tools-context";
 import type {ToolCatalogEntry} from "@tools/tools-const";
+import {CONTEXT_TOOL_CATALOG} from "@tools/tools-context";
 import {dispatchToolCall} from "@tools/tools-dispatcher";
 import {FILESYSTEM_TOOL_CATALOG} from "@tools/tools-filesystem";
 import {GIT_TOOL_CATALOG} from "@tools/tools-git";
@@ -71,7 +71,7 @@ deferLog("info", "Loading create-mcp-server.ts");
 export const server = new Server(
   {
     name: "fs-mcp",
-    version: VERSION,
+    version: PACKAGE_VERSION,
   },
   {
     capabilities: {
@@ -79,6 +79,7 @@ export const server = new Server(
       resources: {},
       tools: {},
     },
+    instructions: SERVER_INSTRUCTIONS,
   },
 );
 
@@ -115,8 +116,6 @@ server.setRequestHandler(InitializeRequestSchema, async (request: InitializeRequ
     if (clientInfo) {
       await updateCurrentClient(clientInfo);
     }
-    capture("run_server_mcp_initialized");
-
     // Negotiate protocol version with client
     const requestedVersion = request.params?.protocolVersion;
     const protocolVersion = requestedVersion && SUPPORTED_PROTOCOL_VERSIONS.includes(requestedVersion) ? requestedVersion : LATEST_PROTOCOL_VERSION;
@@ -128,10 +127,11 @@ server.setRequestHandler(InitializeRequestSchema, async (request: InitializeRequ
         resources: {},
         tools: {},
       },
+      instructions: SERVER_INSTRUCTIONS,
       protocolVersion,
       serverInfo: {
         name: "fs-mcp",
-        version: VERSION,
+        version: PACKAGE_VERSION,
       },
     };
   }

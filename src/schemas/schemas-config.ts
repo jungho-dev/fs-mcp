@@ -8,7 +8,7 @@
 import { CONFIG_QUERY_KEYS, isConfigQueryKey } from "@features/config/config-metadata";
 import { z } from "zod";
 
-const INLINE_TEXT_ARGUMENT_MAX_LENGTH = 2000;
+const INLINE_TEXT_ARGUMENT_MAX_LENGTH = 50_000;
 
 export const GetConfigValueArgsSchema = z.object({
   key: z.string().refine((value) => isConfigQueryKey(value), {

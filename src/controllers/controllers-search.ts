@@ -7,7 +7,6 @@
 
 import type { ServerResult } from "@assets/type/common";
 import { createBatchToolResponse, runParallelBatch } from "@controllers/controllers-batch";
-import { capture } from "@cores/runtime/runtime-output-capture";
 import { readFileInternal } from "@features/filesystem/filesystem-service";
 import { searchManager } from "@features/search/search-service";
 import { GetMoreSearchResultsArgsSchema, GetSearchResultsArgsSchema, StartSearchArgsSchema, StartSearchesArgsSchema, StopSearchArgsSchema, StopSearchesArgsSchema } from "@schemas/schemas-search";
@@ -73,8 +72,6 @@ export async function handleStartSearch(args: unknown): Promise<ServerResult> {
   }
   catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    capture("search_session_start_error", { error: errorMessage });
-
     return {
       content: [{ type: "text", text: `Error starting search session: ${errorMessage}` }],
       isError: true,

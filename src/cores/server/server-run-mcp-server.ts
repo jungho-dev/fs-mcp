@@ -6,7 +6,6 @@
  */
 
 import {type LogLevel, logger} from "@cores/runtime/runtime-app-logger";
-import {capture} from "@cores/runtime/runtime-output-capture";
 import {flushDeferredMessages, server} from "@cores/server/server-create-mcp-server";
 import {FilteredStdioServerTransport} from "@cores/transport/transport-stdio-transport";
 import {configManager} from "@features/config/config-store";
@@ -44,10 +43,6 @@ function isProtocolJsonParseError(errorMessage: string): boolean {
 
 // 4. Handle fatal process error ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function handleFatalProcessError(captureKey: string, label: string, errorMessage: string): void {
-  capture(captureKey, {
-    error: errorMessage,
-    isProtocolJsonParseError: isProtocolJsonParseError(errorMessage),
-  });
   logger.error(`${label}: ${errorMessage}`);
   process.exit(1);
 }
@@ -85,7 +80,6 @@ export async function runServer () {
       handleFatalProcessError("run_server_unhandled_rejection", isProtocolJsonParseError(errorMessage) ? "Fatal JSON parsing rejection" : "Unhandled rejection", errorMessage);
     });
 
-    capture("run_server_start");
 
     deferLog("info", "Connecting server...");
 
@@ -120,9 +114,6 @@ export async function runServer () {
     };
     process.stdout.write(`${JSON.stringify(errorNotification)}\n`);
 
-    capture("run_server_failed_start_error", {
-      error: errorMessage,
-    });
     process.exit(1);
   }
 }
@@ -141,9 +132,6 @@ export function startServer () {
       })}\n`,
     );
 
-    capture("run_server_fatal_error", {
-      error: errorMessage,
-    });
     process.exit(1);
   });
 }

@@ -7,7 +7,7 @@
 
 import {z} from "zod";
 
-const INLINE_TEXT_ARGUMENT_MAX_LENGTH = 2000;
+const INLINE_TEXT_ARGUMENT_MAX_LENGTH = 50_000;
 
 export const IndexContextArgsSchema = z.object({
   source: z.string().optional(),

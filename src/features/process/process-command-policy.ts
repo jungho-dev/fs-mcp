@@ -6,7 +6,6 @@
  */
 
 import path from "node:path";
-import {capture} from "@cores/runtime/runtime-output-capture";
 import {configManager} from "@features/config/config-store";
 
 const COMMAND_SEPARATORS = [";", "&&", "||", "|", "&"] as const;
@@ -127,9 +126,6 @@ class CommandManager {
       extractedCommands = [...new Set(commands)];
     }
     catch (_error) {
-      capture("server_request_error", {
-        error: "Error extracting commands",
-      });
 
       const baseCommand = this.extractBaseCommand(commandString);
       extractedCommands = baseCommand ? [baseCommand] : [];
@@ -163,7 +159,6 @@ class CommandManager {
       }
     }
     catch (_error) {
-      capture("Error extracting base command");
       baseCommand = null;
     }
 
@@ -184,9 +179,6 @@ class CommandManager {
     }
     catch (error) {
       console.error("Error validating command:", error);
-      capture("server_validate_command_error", {
-        error: error instanceof Error ? error.message : String(error),
-      });
       isAllowed = false;
     }
 

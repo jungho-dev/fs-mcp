@@ -11,7 +11,7 @@ const OptionalRepoPathSchema = z.string().optional();
 const CommitRefSchema = z.string();
 const ConfirmSchema = z.enum(["Y", "y", "Yes", "yes"]);
 const ReviewTypeSchema = z.enum(["security", "features", "storyline", "gaps", "breaking_changes", "quality"]);
-const INLINE_TEXT_ARGUMENT_MAX_LENGTH = 2000;
+const INLINE_TEXT_ARGUMENT_MAX_LENGTH = 50_000;
 
 export const GIT_INPUT_SCHEMAS = {
   git_add: z
