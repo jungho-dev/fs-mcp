@@ -7,6 +7,7 @@
 
 import assert from "node:assert/strict";
 import { CONFIG_TOOL_CATALOG } from "../../out/tools/tools-config.js";
+import { CONTEXT_TOOL_CATALOG } from "../../out/tools/tools-context.js";
 import { getDispatchableToolNames } from "../../out/tools/tools-dispatcher.js";
 import { FILESYSTEM_TOOL_CATALOG } from "../../out/tools/tools-filesystem.js";
 import { GIT_TOOL_CATALOG } from "../../out/tools/tools-git.js";
@@ -20,7 +21,7 @@ function sortedDifference(left, right) {
 
 // 1. catalog and dispatcher alignment ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testCatalogAndDispatcherAlignment() {
-  const catalogNames = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG, ...GIT_TOOL_CATALOG]
+  const catalogNames = [...CONFIG_TOOL_CATALOG, ...CONTEXT_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG, ...GIT_TOOL_CATALOG]
     .map((tool) => tool.name)
     .sort();
   const dispatchableNames = getDispatchableToolNames().sort();
@@ -32,7 +33,7 @@ function testCatalogAndDispatcherAlignment() {
 
 // 2. shared args_path schema exposure ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testArgsPathSchemaExposure() {
-  const tools = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG, ...GIT_TOOL_CATALOG];
+  const tools = [...CONFIG_TOOL_CATALOG, ...CONTEXT_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG, ...GIT_TOOL_CATALOG];
 
   for (const tool of tools) {
     assert.equal(JSON.stringify(tool.inputSchema).includes("args_path"), true, `${tool.name} must expose args_path`);

@@ -4,7 +4,7 @@
   "description": "MCP server for file system operations",
   "publisher": "JUNGHO",
   "license": "Apache-2.0",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "type": "module",
   "main": "./out/index.mjs",
   "exports": {
@@ -54,17 +54,7 @@
     "git": "bun ~/.bootstrap/bootstrap-sync.ts --git",
     "swc": "bun ~/.bootstrap/bootstrap-sync.ts --swc",
     "sync": "bun ~/.bootstrap/bootstrap-sync.ts --sync",
-    "tools": "bun ~/.bootstrap/bootstrap-sync.ts --tools",
-    "test": "bun tests/run-all-tests.js",
-    "typecheck": "bunx tsc --noEmit",
-    "build": "bunx shx rm -rf out && bunx swc src -d out --config-file ./.server.swcrc --strip-leading-paths",
-    "verify": "bun run typecheck && bun run build && bun run verify:source && bun run verify:shape && bun run verify:tools && bun run verify:reports && bun run test",
-    "publish:npm": "bun run verify && npm publish --access public",
-    "verify:reports": "bun tests/scripts/scripts-verify-optimization-reports.mjs",
-    "verify:shape": "bun tests/scripts/scripts-verify-release-shape.mjs",
-    "verify:source": "bun tests/scripts/scripts-verify-source-boundaries.mjs",
-    "verify:tools": "bun tests/scripts/scripts-verify-tool-surface.mjs",
-    "publish": "npm run publish:npm"
+    "tools": "bun ~/.bootstrap/bootstrap-sync.ts --tools"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",

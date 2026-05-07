@@ -37,6 +37,20 @@ function normalizeArrayConfigValue(key: string, value: unknown): unknown {
   return normalizedValue;
 }
 
+// 2. Normalize context index config value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function normalizeContextIndexConfigValue(key: string, value: unknown): unknown {
+  if (key === "contextIndexEnabled" && typeof value !== "boolean") {
+    throw new Error("contextIndexEnabled must be a boolean");
+  }
+  if (key === "contextIndexDbPath" && (typeof value !== "string" || value.trim().length === 0)) {
+    throw new Error("contextIndexDbPath must be a non-empty string");
+  }
+  if ((key === "contextIndexAutoMinChars" || key === "contextIndexAutoMinLines" || key === "contextIndexMaxEntryChars") && (typeof value !== "number" || !Number.isFinite(value) || value < 0)) {
+    throw new Error(`${key} must be a non-negative finite number`);
+  }
+  return value;
+}
+
 // 2. Path exists ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function pathExists(pathValue: string): Promise<boolean> {
   try {
@@ -307,6 +321,7 @@ export async function setConfigValue(args: unknown): Promise<ServerResult> {
           valueToStore = [String(valueToStore)];
         }
       }
+      valueToStore = normalizeContextIndexConfigValue(parsed.data.key, valueToStore);
       await configManager.setValue(parsed.data.key, valueToStore);
       // Get the updated configuration to show the user
       const updatedConfig = await configManager.getConfig();

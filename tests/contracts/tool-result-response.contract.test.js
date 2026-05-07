@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { createToolErrorResponse, createToolTextResponse, normalizeToolResult } from "../../out/cores/responses/responses-tool-result.js";
+import { configManager } from "../../out/features/config/config-store.js";
 
 const HIDDEN_DISPLAY_TEXT = "";
 
@@ -130,15 +131,29 @@ function testExistingSummaryPreserved() {
 }
 
 // 8. test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function main() {
-  testSuccessEnvelope();
-  testErrorEnvelope();
-  testEmptyContentFallback();
-  testDurationShapeWithoutTiming();
-  testNormalizedResultStillHidesDisplay();
-  testHiddenDisplayPreservesStructuredText();
-  testLongTextStructuredDataPreserved();
-  testExistingSummaryPreserved();
+async function main() {
+  const originalConfig = await configManager.getConfig();
+
+  try {
+    await configManager.updateConfig({
+      ...originalConfig,
+      contextIndexEnabled: false,
+    });
+    testSuccessEnvelope();
+    testErrorEnvelope();
+    testEmptyContentFallback();
+    testDurationShapeWithoutTiming();
+    testNormalizedResultStillHidesDisplay();
+    testHiddenDisplayPreservesStructuredText();
+    testLongTextStructuredDataPreserved();
+    testExistingSummaryPreserved();
+  }
+  finally {
+    await configManager.updateConfig(originalConfig);
+  }
 }
 
-main();
+main().catch((error) => {
+  console.error(error);
+  process.exitCode = 1;
+});

@@ -4,12 +4,17 @@
 
 import assert from "node:assert";
 import {CONFIG_TOOL_CATALOG} from "../../out/tools/tools-config.js";
+import {CONTEXT_TOOL_CATALOG} from "../../out/tools/tools-context.js";
 import {FILESYSTEM_TOOL_CATALOG} from "../../out/tools/tools-filesystem.js";
 import {PROCESS_TOOL_CATALOG} from "../../out/tools/tools-process.js";
 
 const EXPECTED_TOOL_NAMES = [
   "get_configs",
   "set_config_values",
+  "index_contexts",
+  "search_contexts",
+  "list_contexts",
+  "clear_contexts",
   "read_files",
   "write_files",
   "create_directories",
@@ -33,7 +38,7 @@ const EXPECTED_TOOL_NAMES = [
 
 // 1. Test tool catalog shape ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testToolCatalogShape() {
-  const tools = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG];
+  const tools = [...CONFIG_TOOL_CATALOG, ...CONTEXT_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG];
 
   assert.strictEqual(tools.length, EXPECTED_TOOL_NAMES.length);
   assert.deepStrictEqual(

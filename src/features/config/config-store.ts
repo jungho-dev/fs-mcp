@@ -14,6 +14,11 @@ export interface ServerConfig {
   allowedDirectories?: string[];
   blockedCommands?: string[];
   currentClient?: ClientInfo; // Current connected client information
+  contextIndexAutoMinChars?: number;
+  contextIndexAutoMinLines?: number;
+  contextIndexDbPath?: string;
+  contextIndexEnabled?: boolean;
+  contextIndexMaxEntryChars?: number;
   defaultShell?: string;
   fileReadLineLimit?: number; // Legacy read hint; read operations are uncapped unless length is provided
   fileWriteLineLimit?: number; // Large write/edit warning threshold
@@ -165,6 +170,11 @@ class ConfigManager {
     return {
       allowedDirectories: getDefaultAllowedDirectories(),
       blockedCommands: getDefaultBlockedCommands(),
+      contextIndexAutoMinChars: 5000,
+      contextIndexAutoMinLines: 120,
+      contextIndexDbPath: "~/.codex/fs-mcp/foo.sqlite",
+      contextIndexEnabled: true,
+      contextIndexMaxEntryChars: 1_000_000,
       defaultShell: getDefaultShell(),
       fileReadLineLimit: 50_000,
       fileWriteLineLimit: 50_000,
@@ -174,6 +184,16 @@ class ConfigManager {
   // 5-4. Get the entire config ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async getConfig(): Promise<ServerConfig> {
     await this.init();
+    return {...this.config};
+  }
+
+  // 5-4-1. Get the entire config synchronously ――――――――――――――――――――――――――――――――――――――――――――――――――
+  getConfigSync(): ServerConfig {
+    if (!this.initialized) {
+      this.config = this.getDefaultConfig();
+      this.config["version"] = VERSION;
+      this.initialized = true;
+    }
     return {...this.config};
   }
 

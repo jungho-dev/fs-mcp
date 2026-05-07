@@ -34,6 +34,31 @@ export const CONFIG_FIELD_DEFINITIONS = {
     label: "Blocked Commands",
     valueType: "array",
   },
+  contextIndexAutoMinChars: {
+    description: "Minimum character count that triggers automatic SQLite context indexing for large tool output.",
+    label: "Context Index Auto Min Chars",
+    valueType: "number",
+  },
+  contextIndexAutoMinLines: {
+    description: "Minimum line count that triggers automatic SQLite context indexing for large tool output.",
+    label: "Context Index Auto Min Lines",
+    valueType: "number",
+  },
+  contextIndexDbPath: {
+    description: "SQLite database path used by the fs-mcp context index. Tilde expands to the current user's home directory.",
+    label: "Context Index DB Path",
+    valueType: "string",
+  },
+  contextIndexEnabled: {
+    description: "Controls whether large tool output is automatically compacted into the SQLite context index.",
+    label: "Context Index Enabled",
+    valueType: "boolean",
+  },
+  contextIndexMaxEntryChars: {
+    description: "Maximum characters indexed per context entry. The response metadata still records the original size.",
+    label: "Context Index Max Entry Chars",
+    valueType: "number",
+  },
   defaultShell: {
     description: "This is the shell used for new command sessions (for example /bin/bash or /bin/zsh). Only change this if you know your environment requires a specific shell.",
     label: "Default Shell",
@@ -75,6 +100,26 @@ export const CONFIG_QUERY_DEFINITIONS = {
     editable: false,
     label: "Current Client",
     valueType: "object",
+  },
+  contextIndexAutoMinChars: {
+    ...CONFIG_FIELD_DEFINITIONS.contextIndexAutoMinChars,
+    editable: true,
+  },
+  contextIndexAutoMinLines: {
+    ...CONFIG_FIELD_DEFINITIONS.contextIndexAutoMinLines,
+    editable: true,
+  },
+  contextIndexDbPath: {
+    ...CONFIG_FIELD_DEFINITIONS.contextIndexDbPath,
+    editable: true,
+  },
+  contextIndexEnabled: {
+    ...CONFIG_FIELD_DEFINITIONS.contextIndexEnabled,
+    editable: true,
+  },
+  contextIndexMaxEntryChars: {
+    ...CONFIG_FIELD_DEFINITIONS.contextIndexMaxEntryChars,
+    editable: true,
   },
   defaultShell: {
     ...CONFIG_FIELD_DEFINITIONS.defaultShell,

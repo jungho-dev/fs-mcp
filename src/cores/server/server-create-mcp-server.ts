@@ -15,6 +15,7 @@ import {runWithGitSessionScope} from "@features/git/git-session";
 import {Server} from "@modelcontextprotocol/sdk/server/index.js";
 import {type CallToolRequest, CallToolRequestSchema, type InitializeRequest, InitializeRequestSchema, LATEST_PROTOCOL_VERSION, ListResourcesRequestSchema, ListResourceTemplatesRequestSchema, ListToolsRequestSchema, SUPPORTED_PROTOCOL_VERSIONS} from "@modelcontextprotocol/sdk/types.js";
 import {CONFIG_TOOL_CATALOG} from "@tools/tools-config";
+import {CONTEXT_TOOL_CATALOG} from "@tools/tools-context";
 import type {ToolCatalogEntry} from "@tools/tools-const";
 import {dispatchToolCall} from "@tools/tools-dispatcher";
 import {FILESYSTEM_TOOL_CATALOG} from "@tools/tools-filesystem";
@@ -149,7 +150,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
 
   // 6. Create tool catalog ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   function createToolCatalog(): ToolCatalogEntry[] {
-    return [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG, ...GIT_TOOL_CATALOG];
+    return [...CONFIG_TOOL_CATALOG, ...CONTEXT_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG, ...GIT_TOOL_CATALOG];
   }
   try {
     return {

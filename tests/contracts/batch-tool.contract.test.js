@@ -101,6 +101,7 @@ async function setup() {
   await configManager.updateConfig({
     ...originalConfig,
     allowedDirectories: [TEST_DIR],
+    contextIndexEnabled: false,
     fileReadLineLimit: 1,
   });
 

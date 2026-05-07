@@ -19,6 +19,11 @@ export const CONFIG_TOOL_CATALOG: ToolCatalogEntry[] = [
       Use items: [{ key }].
       Supported keys:
       - blockedCommands (array of blocked shell commands)
+      - contextIndexEnabled (whether large outputs are compacted into SQLite context index)
+      - contextIndexDbPath (SQLite database path for context index)
+      - contextIndexAutoMinChars (character threshold for automatic context indexing)
+      - contextIndexAutoMinLines (line threshold for automatic context indexing)
+      - contextIndexMaxEntryChars (maximum characters indexed per context entry)
       - defaultShell (shell to use for commands)
       - allowedDirectories (paths the server can access)
       - fileReadLineLimit (legacy read hint; reads are uncapped unless length is provided)

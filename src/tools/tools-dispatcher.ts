@@ -6,6 +6,7 @@
  */
 
 import type {ServerResult} from "@assets/type/common";
+import {handleClearContexts, handleIndexContexts, handleListContexts, handleSearchContexts} from "@controllers/controllers-context";
 import {handleGetConfigs, handleSetConfigValues} from "@controllers/controllers-config";
 import {handleEditBlocks} from "@controllers/controllers-edit";
 import {handleCreateDirectories, handleGetFileInfos, handleListDirectories, handleMoveFiles, handleReadFiles, handleRemoveFiles, handleRenameFiles, handleWriteFiles} from "@controllers/controllers-filesystem";
@@ -122,6 +123,10 @@ const GIT_TOOL_DISPATCHERS = Object.fromEntries(
 export const TOOL_DISPATCHERS: Readonly<Record<string, ToolDispatchHandler>> = {
   get_configs: (args: unknown) => handleGetConfigs(args),
   set_config_values: (args: unknown) => handleSetConfigValues(args),
+  index_contexts: (args: unknown) => handleIndexContexts(args),
+  search_contexts: (args: unknown) => handleSearchContexts(args),
+  list_contexts: (args: unknown) => handleListContexts(args),
+  clear_contexts: (args: unknown) => handleClearContexts(args),
   start_processes: (args: unknown) => handleStartProcesses(args),
   read_process_outputs: (args: unknown) => handleReadProcessOutputs(args),
   interact_with_processes: (args: unknown) => handleInteractWithProcesses(args),

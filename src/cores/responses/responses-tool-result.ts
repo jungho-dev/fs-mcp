@@ -6,6 +6,7 @@
  */
 
 import type { ServerResponseContent, ServerResult } from "@assets/type/common";
+import {compactStandardToolOutput} from "@features/context/context-output-compactor";
 
 export type ToolResultStatus = "success" | "error";
 
@@ -27,6 +28,8 @@ export interface StandardToolOutput {
     content: ServerResponseContent[];
     structuredContent: ServerResult["structuredContent"] | null;
   };
+  contextIndexError?: string;
+  contextIndexes?: unknown[];
   durationMs: number | null;
   error: ToolResultError | null;
   schemaVersion: 1;
@@ -183,7 +186,7 @@ export function normalizeToolResult(toolName: string, result: ServerResult, dura
   }
   const originalContent = normalizeContent(result.content);
   const fsMcpResult = createResultMetadata(toolName, result, originalContent, durationMs);
-  const standardOutput = createStandardOutput(toolName, result, originalContent, durationMs);
+  const standardOutput = compactStandardToolOutput(toolName, createStandardOutput(toolName, result, originalContent, durationMs));
   const normalizedResult: ServerResult = {
     _meta: {
       ...result._meta,
