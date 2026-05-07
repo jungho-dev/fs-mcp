@@ -13,12 +13,12 @@ import {fileURLToPath} from "node:url";
 export interface ServerConfig {
   allowedDirectories?: string[];
   blockedCommands?: string[];
-  currentClient?: ClientInfo; // Current connected client information
   contextIndexAutoMinChars?: number;
   contextIndexAutoMinLines?: number;
   contextIndexDbPath?: string;
   contextIndexEnabled?: boolean;
   contextIndexMaxEntryChars?: number;
+  currentClient?: ClientInfo; // Current connected client information
   defaultShell?: string;
   fileReadLineLimit?: number; // Legacy read hint; read operations are uncapped unless length is provided
   fileWriteLineLimit?: number; // Large write/edit warning threshold
@@ -183,7 +183,7 @@ class ConfigManager {
       contextIndexAutoMinChars: 5000,
       contextIndexAutoMinLines: 120,
       contextIndexDbPath: "~/.codex/sqlite/fs-mcp.sqlite",
-      contextIndexEnabled: true,
+      contextIndexEnabled: false,
       contextIndexMaxEntryChars: 1_000_000,
       defaultShell: getDefaultShell(),
       fileReadLineLimit: 50_000,

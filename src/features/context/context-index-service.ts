@@ -156,7 +156,7 @@ function readContextIndexConfig(): ContextIndexConfig {
     autoMinChars: typeof config.contextIndexAutoMinChars === "number" ? config.contextIndexAutoMinChars : DEFAULT_AUTO_MIN_CHARS,
     autoMinLines: typeof config.contextIndexAutoMinLines === "number" ? config.contextIndexAutoMinLines : DEFAULT_AUTO_MIN_LINES,
     dbPath: typeof config.contextIndexDbPath === "string" ? config.contextIndexDbPath : DEFAULT_CONTEXT_INDEX_DB_PATH,
-    enabled: typeof config.contextIndexEnabled === "boolean" ? config.contextIndexEnabled : true,
+    enabled: typeof config.contextIndexEnabled === "boolean" ? config.contextIndexEnabled : false,
     maxEntryChars: typeof config.contextIndexMaxEntryChars === "number" ? config.contextIndexMaxEntryChars : DEFAULT_MAX_ENTRY_CHARS,
   };
 }

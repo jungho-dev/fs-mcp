@@ -2,9 +2,9 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import {normalizeToolResult} from "../../../out/cores/responses/responses-tool-result.js";
 import {handleClearContexts, handleIndexContexts, handleListContexts, handleSearchContexts} from "../../../out/controllers/controllers-context.js";
 import {handleReadFiles} from "../../../out/controllers/controllers-filesystem.js";
+import {normalizeToolResult} from "../../../out/cores/responses/responses-tool-result.js";
 import {configManager} from "../../../out/features/config/config-store.js";
 import {contextIndexService} from "../../../out/features/context/context-index-service.js";
 
@@ -23,7 +23,7 @@ async function setup() {
     contextIndexAutoMinLines: 3,
     contextIndexDbPath: TEST_DB,
     contextIndexEnabled: true,
-    contextIndexMaxEntryChars: 10000,
+    contextIndexMaxEntryChars: 10_000,
   });
   return originalConfig;
 }
@@ -71,7 +71,7 @@ async function testExplicitIndexSearchListClear() {
 }
 
 async function testAutomaticReadFileCompaction() {
-  const lines = Array.from({length: 20}, (_, index) => "line " + index + " automatic sqlite context target");
+  const lines = Array.from({length: 20}, (_value, index) => `line ${index} automatic sqlite context target`);
   await fs.writeFile(LARGE_FILE, lines.join("\n"), "utf8");
 
   const rawResult = await handleReadFiles({paths: [LARGE_FILE]});
@@ -93,6 +93,7 @@ async function testDefaultDbPathConfig() {
   await configManager.resetConfig();
   const defaultConfig = await configManager.getConfig();
   assert.equal(defaultConfig.contextIndexDbPath, "~/.codex/sqlite/fs-mcp.sqlite", "default context DB path should match plan");
+  assert.equal(defaultConfig.contextIndexEnabled, false, "automatic context indexing should be disabled by default");
   await configManager.updateConfig({
     ...config,
     contextIndexDbPath: TEST_DB,

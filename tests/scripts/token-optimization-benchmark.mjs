@@ -2,6 +2,7 @@
  * Token-oriented output compaction benchmark.
  */
 
+import {configManager} from "../../src/features/config/config-store.ts";
 import {contextIndexService} from "../../src/features/context/context-index-service.ts";
 import {compactStandardToolOutput} from "../../src/features/context/context-output-compactor.ts";
 
@@ -121,6 +122,11 @@ function createBatchResultsScenario() {
   });
 }
 
+const originalConfig = await configManager.getConfig();
+await configManager.updateConfig({
+  ...originalConfig,
+  contextIndexEnabled: true,
+});
 clearBenchmarkContexts();
 
 let report;
@@ -159,6 +165,7 @@ try {
 }
 finally {
   clearBenchmarkContexts();
+  await configManager.updateConfig(originalConfig);
 }
 
 process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);
