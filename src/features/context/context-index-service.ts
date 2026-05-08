@@ -9,6 +9,7 @@ import {Database} from "bun:sqlite";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import {getDefaultContextIndexDbPath} from "@features/config/config-client";
 import {configManager} from "@features/config/config-store";
 
 export interface ContextIndexDocument extends Record<string, unknown> {
@@ -41,7 +42,6 @@ interface ContextIndexConfig {
   maxEntryChars: number;
 }
 
-const DEFAULT_CONTEXT_INDEX_DB_PATH = "~/.codex/sqlite/fs-mcp.sqlite";
 const DEFAULT_AUTO_MIN_CHARS = 5000;
 const DEFAULT_AUTO_MIN_LINES = 120;
 const DEFAULT_MAX_ENTRY_CHARS = 1_000_000;
@@ -155,7 +155,7 @@ function readContextIndexConfig(): ContextIndexConfig {
   return {
     autoMinChars: typeof config.contextIndexAutoMinChars === "number" ? config.contextIndexAutoMinChars : DEFAULT_AUTO_MIN_CHARS,
     autoMinLines: typeof config.contextIndexAutoMinLines === "number" ? config.contextIndexAutoMinLines : DEFAULT_AUTO_MIN_LINES,
-    dbPath: typeof config.contextIndexDbPath === "string" ? config.contextIndexDbPath : DEFAULT_CONTEXT_INDEX_DB_PATH,
+    dbPath: typeof config.contextIndexDbPath === "string" ? config.contextIndexDbPath : getDefaultContextIndexDbPath(),
     enabled: typeof config.contextIndexEnabled === "boolean" ? config.contextIndexEnabled : false,
     maxEntryChars: typeof config.contextIndexMaxEntryChars === "number" ? config.contextIndexMaxEntryChars : DEFAULT_MAX_ENTRY_CHARS,
   };

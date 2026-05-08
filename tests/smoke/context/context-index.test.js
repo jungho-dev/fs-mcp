@@ -5,6 +5,7 @@ import path from "node:path";
 import {handleClearContexts, handleIndexContexts, handleListContexts, handleSearchContexts} from "../../../out/controllers/controllers-context.js";
 import {handleReadFiles} from "../../../out/controllers/controllers-filesystem.js";
 import {normalizeToolResult} from "../../../out/cores/responses/responses-tool-result.js";
+import {getCurrentClient, updateCurrentClient} from "../../../out/features/config/config-client.js";
 import {configManager} from "../../../out/features/config/config-store.js";
 import {contextIndexService} from "../../../out/features/context/context-index-service.js";
 
@@ -16,6 +17,7 @@ async function setup() {
   await fs.rm(TEST_DIR, {force: true, recursive: true});
   await fs.mkdir(TEST_DIR, {recursive: true});
   const originalConfig = await configManager.getConfig();
+  const originalClient = getCurrentClient();
 
   await configManager.updateConfig({
     allowedDirectories: [TEST_DIR],
@@ -25,11 +27,12 @@ async function setup() {
     contextIndexEnabled: true,
     contextIndexMaxEntryChars: 10_000,
   });
-  return originalConfig;
+  return {originalClient, originalConfig};
 }
 
-async function teardown(originalConfig) {
-  await configManager.updateConfig(originalConfig);
+async function teardown(originalState) {
+  updateCurrentClient(originalState.originalClient);
+  await configManager.updateConfig(originalState.originalConfig);
   contextIndexService.close();
   await fs.rm(TEST_DIR, {force: true, recursive: true});
 }
@@ -91,9 +94,16 @@ async function testDefaultDbPathConfig() {
 
   assert.equal(config.contextIndexDbPath, TEST_DB, "test override should be active");
   await configManager.resetConfig();
-  const defaultConfig = await configManager.getConfig();
-  assert.equal(defaultConfig.contextIndexDbPath, "~/.codex/sqlite/fs-mcp.sqlite", "default context DB path should match plan");
+  updateCurrentClient({name: "Codex", version: "1.0.0"});
+  let defaultConfig = await configManager.getConfig();
+  assert.equal(defaultConfig.contextIndexDbPath, "~/.codex/sqlite/fs-mcp.sqlite", "codex client should use the codex default context DB path");
   assert.equal(defaultConfig.contextIndexEnabled, false, "automatic context indexing should be disabled by default");
+  updateCurrentClient({name: "Claude Desktop", version: "1.0.0"});
+  defaultConfig = await configManager.getConfig();
+  assert.equal(defaultConfig.contextIndexDbPath, "~/.claude/sqlite/fs-mcp.sqlite", "claude client should use the claude default context DB path");
+  updateCurrentClient({name: "Cline", version: "1.0.0"});
+  defaultConfig = await configManager.getConfig();
+  assert.equal(defaultConfig.contextIndexDbPath, "~/.cline/sqlite/fs-mcp.sqlite", "cline client should use the cline default context DB path");
   await configManager.updateConfig({
     ...config,
     contextIndexDbPath: TEST_DB,
@@ -101,9 +111,9 @@ async function testDefaultDbPathConfig() {
 }
 
 async function runTests() {
-  let originalConfig;
+  let originalState;
   try {
-    originalConfig = await setup();
+    originalState = await setup();
     await testExplicitIndexSearchListClear();
     await testAutomaticReadFileCompaction();
     await testDefaultDbPathConfig();
@@ -114,8 +124,8 @@ async function runTests() {
     return false;
   }
   finally {
-    if (originalConfig !== undefined) {
-      await teardown(originalConfig);
+    if (originalState !== undefined) {
+      await teardown(originalState);
     }
   }
   return true;

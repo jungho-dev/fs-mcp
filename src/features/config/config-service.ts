@@ -10,7 +10,7 @@ import {access, readFile} from "node:fs/promises";
 import path from "node:path";
 import type {ServerResult} from "@assets/type/common";
 import {getSystemInfo} from "@cores/runtime/runtime-info";
-import {currentClient} from "@cores/server/server-create-mcp-server";
+import {getCurrentClient} from "@features/config/config-client";
 import {CONFIG_FIELD_DEFINITIONS, CONFIG_FIELD_KEYS, CONFIG_QUERY_DEFINITIONS, type ConfigQueryKey, isConfigFieldKey} from "@features/config/config-metadata";
 import {configManager} from "@features/config/config-store";
 import {readFileInternal} from "@features/filesystem/filesystem-service";
@@ -197,7 +197,7 @@ export async function getConfigValue(args: unknown): Promise<ServerResult> {
       value = await configManager.getValue(key);
     }
     else if (key === "currentClient") {
-      value = currentClient;
+      value = getCurrentClient();
     }
     else if (key === "systemInfo") {
       value = createSystemInfoSnapshot();

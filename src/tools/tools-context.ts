@@ -7,6 +7,7 @@
 
 import {withArgsPathSchema} from "@schemas/schemas-args-ref";
 import {ClearContextsArgsSchema, IndexContextsArgsSchema, ListContextsArgsSchema, SearchContextsArgsSchema} from "@schemas/schemas-context";
+import {getDefaultContextIndexDbPath} from "@features/config/config-client";
 import {CMD_PREFIX_DESCRIPTION, type ToolCatalogEntry} from "@tools/tools-const";
 import {zodToJsonSchema} from "zod-to-json-schema";
 
@@ -18,7 +19,7 @@ export const CONTEXT_TOOL_CATALOG: ToolCatalogEntry[] = [
       "\n      Index one or many text payloads into fs-mcp's SQLite context index." +
       "\n      Use items: [{ source?, content?, content_path?, content_offset?, content_length? }]." +
       "\n      Inline content is capped; use content_path for large content so tool-call logs do not echo the full text." +
-      "\n      Indexed content is stored at ~/.codex/sqlite/fs-mcp.sqlite by default." +
+      `\n      Indexed content is stored at ${getDefaultContextIndexDbPath()} by default for the active client.` +
       "\n      " + CMD_PREFIX_DESCRIPTION
     ),
     inputSchema: zodToJsonSchema(withArgsPathSchema(IndexContextsArgsSchema)),

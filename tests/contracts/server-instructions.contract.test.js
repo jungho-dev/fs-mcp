@@ -11,7 +11,8 @@ import {SERVER_INSTRUCTIONS} from "../../out/cores/server/server-instructions.js
 
 // 1. Caveman guidance contract ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testCavemanGuidanceContract() {
-  assert.match(SERVER_INSTRUCTIONS, /Caveman mode supported/);
+  assert.match(SERVER_INSTRUCTIONS, /Caveman mode:/);
+  assert.match(SERVER_INSTRUCTIONS, /must use one line in this exact pattern/);
   assert.match(SERVER_INSTRUCTIONS, /terse, exact, and filler-free/);
   assert.match(SERVER_INSTRUCTIONS, /\[thing\] \[action\] \[reason\] \[next step\]/);
   assert.ok(SERVER_INSTRUCTIONS.length < 500);

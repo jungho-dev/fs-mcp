@@ -9,6 +9,7 @@ import {existsSync, readFileSync} from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import {fileURLToPath} from "node:url";
+import {getDefaultContextIndexDbPath} from "@features/config/config-client";
 
 export interface ServerConfig {
   allowedDirectories?: string[];
@@ -155,12 +156,33 @@ function getDefaultBlockedCommands(): string[] {
   ];
 }
 
-// 5. Config manager ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Get stored context index DB path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function getStoredContextIndexDbPath(config: ServerConfig): string | undefined {
+  return typeof config.contextIndexDbPath === "string" && config.contextIndexDbPath.trim().length > 0 ? config.contextIndexDbPath : undefined;
+}
+
+// 6. Normalize context index DB path override ―――――――――――――――――――――――――――――――――――――――――――――――――――――
+function normalizeContextIndexDbPathOverride(value: string | undefined): string | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  return value === getDefaultContextIndexDbPath() ? undefined : value;
+}
+
+// 7. Materialize runtime config ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function materializeRuntimeConfig(config: ServerConfig): ServerConfig {
+  return {
+    ...config,
+    contextIndexDbPath: getStoredContextIndexDbPath(config) ?? getDefaultContextIndexDbPath(),
+  };
+}
+
+// 8. Config manager ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 class ConfigManager {
   private config: ServerConfig = {};
   private initialized = false;
 
-  // 5-1. Initialize runtime configuration ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 8-1. Initialize runtime configuration ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async init(): Promise<void> {
     if (this.initialized) {
       return;
@@ -170,19 +192,18 @@ class ConfigManager {
     this.initialized = true;
   }
 
-  // 5-2. Alias for init() to maintain backward compatibility ――――――――――――――――――――――――――――――――――――――
+  // 8-2. Alias for init() to maintain backward compatibility ――――――――――――――――――――――――――――――――――――――
   async loadConfig(): Promise<void> {
     return this.init();
   }
 
-  // 6. Get default config ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 9. Get default config ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private getDefaultConfig(): ServerConfig {
     return {
       allowedDirectories: getDefaultAllowedDirectories(),
       blockedCommands: getDefaultBlockedCommands(),
       contextIndexAutoMinChars: 5000,
       contextIndexAutoMinLines: 120,
-      contextIndexDbPath: "~/.codex/sqlite/fs-mcp.sqlite",
       contextIndexEnabled: false,
       contextIndexMaxEntryChars: 1_000_000,
       defaultShell: getDefaultShell(),
@@ -191,50 +212,56 @@ class ConfigManager {
     };
   }
 
-  // 5-4. Get the entire config ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 8-4. Get the entire config ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async getConfig(): Promise<ServerConfig> {
     await this.init();
-    return {...this.config};
+    return materializeRuntimeConfig(this.config);
   }
 
-  // 5-4-1. Get the entire config synchronously ――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 8-4-1. Get the entire config synchronously ――――――――――――――――――――――――――――――――――――――――――――――――――
   getConfigSync(): ServerConfig {
     if (!this.initialized) {
       this.config = this.getDefaultConfig();
       this.config["version"] = PACKAGE_VERSION;
       this.initialized = true;
     }
-    return {...this.config};
+    return materializeRuntimeConfig(this.config);
   }
 
-  // 5-5. Get a specific configuration value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 8-5. Get a specific configuration value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async getValue(key: string): Promise<unknown> {
     await this.init();
-    return this.config[key];
+    return materializeRuntimeConfig(this.config)[key];
   }
 
-  // 5-6. Set a specific configuration value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 8-6. Set a specific configuration value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async setValue(key: string, value: unknown): Promise<void> {
     await this.init();
+    if (key === "contextIndexDbPath") {
+      this.config.contextIndexDbPath = normalizeContextIndexDbPathOverride(typeof value === "string" ? value : undefined);
+      return;
+    }
     this.config[key] = value;
   }
 
-  // 5-7. Update multiple configuration values at once ―――――――――――――――――――――――――――――――――――――――――――――
+  // 8-7. Update multiple configuration values at once ―――――――――――――――――――――――――――――――――――――――――――――
   async updateConfig(updates: Partial<ServerConfig>): Promise<ServerConfig> {
     await this.init();
-    this.config = {...this.config, ...updates};
-    return {...this.config};
+    const nextConfig = {...this.config, ...updates};
+    nextConfig.contextIndexDbPath = normalizeContextIndexDbPathOverride(getStoredContextIndexDbPath(nextConfig));
+    this.config = nextConfig;
+    return materializeRuntimeConfig(this.config);
   }
 
-  // 5-8. Reset runtime configuration to defaults ――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 8-8. Reset runtime configuration to defaults ――――――――――――――――――――――――――――――――――――――――――――――――――
   async resetConfig(): Promise<ServerConfig> {
     this.config = this.getDefaultConfig();
     this.config["version"] = PACKAGE_VERSION;
     this.initialized = true;
-    return {...this.config};
+    return materializeRuntimeConfig(this.config);
   }
 
-  // 5-9. Runtime config does not create first-run files ―――――――――――――――――――――――――――――――――――――――――――
+  // 8-9. Runtime config does not create first-run files ―――――――――――――――――――――――――――――――――――――――――――
   isFirstRun(): boolean {
     return false;
   }

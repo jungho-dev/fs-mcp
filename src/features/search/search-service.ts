@@ -23,7 +23,6 @@ const GLOB_PATTERN_SEPARATOR = "|";
 const LAST_READ_MARKER_FILE = "__LAST_READ_MARKER__";
 const RIPGREP_CONTEXT_TYPE_TOKEN = '"type":"context"';
 const RIPGREP_ERROR_PREFIX = "rg:";
-const DISPLAY_MAX_CHARS = 10;
 const ERROR_NOISE_LINE_PATTERN = /^[)(\s\d:]*$/;
 const EXACT_FILENAME_PATTERN = /\.[a-zA-Z0-9]+$/;
 const GLOB_META_CHARS = ["*", "?", "[", "{", "]", "}"];

@@ -45,7 +45,7 @@ export const CONFIG_FIELD_DEFINITIONS = {
     valueType: "number",
   },
   contextIndexDbPath: {
-    description: "SQLite database path used by the fs-mcp context index. Tilde expands to the current user's home directory.",
+    description: "SQLite database path used by the fs-mcp context index. When not overridden, the default follows the active MCP client home (for example ~/.codex or ~/.claude).",
     label: "Context Index DB Path",
     valueType: "string",
   },

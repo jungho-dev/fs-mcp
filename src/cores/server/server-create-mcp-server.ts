@@ -10,6 +10,7 @@ import {createErrorResponse} from "@cores/responses/responses-error";
 import {normalizeToolResult} from "@cores/responses/responses-tool-result";
 import {type LogLevel, logger, logToStderr} from "@cores/runtime/runtime-app-logger";
 import {SERVER_INSTRUCTIONS} from "@cores/server/server-instructions";
+import {buildCurrentClientSessionKey, currentClient, type ClientInfoUpdate, updateCurrentClient} from "@features/config/config-client";
 import {PACKAGE_VERSION} from "@features/config/config-store";
 import {runWithGitSessionScope} from "@features/git/git-session";
 import {Server} from "@modelcontextprotocol/sdk/server/index.js";
@@ -21,17 +22,6 @@ import {dispatchToolCall} from "@tools/tools-dispatcher";
 import {FILESYSTEM_TOOL_CATALOG} from "@tools/tools-filesystem";
 import {GIT_TOOL_CATALOG} from "@tools/tools-git";
 import {PROCESS_TOOL_CATALOG} from "@tools/tools-process";
-
-// Store startup messages to send after initialization
-type CurrentClient = {
-  name: string;
-  version: string;
-};
-
-type ClientInfoUpdate = {
-  name?: string;
-  version?: string;
-};
 
 type RequestMetadata = {
   clientInfo?: ClientInfoUpdate;
@@ -47,11 +37,6 @@ function deferLog(level: LogLevel, message: string): void {
 // 2. Has request metadata ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function hasRequestMetadata(value: unknown): value is RequestMetadata {
   return typeof value === "object" && value !== null;
-}
-
-// 3. Build current client session key ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function buildCurrentClientSessionKey(): string {
-  return `${currentClient.name}@${currentClient.version}`;
 }
 
 // Function to flush deferred messages after initialization
@@ -83,29 +68,16 @@ export const server = new Server(
   },
 );
 
-// Store current client info (simple variable)
-let currentClient: CurrentClient = {name: "uninitialized", version: "uninitialized"};
-
 // 5. Update current client ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function updateCurrentClient(clientInfo: ClientInfoUpdate): Promise<boolean> {
-  if (clientInfo.name !== currentClient.name || clientInfo.version !== currentClient.version) {
-    const nameChanged = clientInfo.name !== currentClient.name;
+function applyCurrentClientUpdate(clientInfo: ClientInfoUpdate): void {
+  const clientUpdate = updateCurrentClient(clientInfo);
 
-    currentClient = {
-      name: clientInfo.name ?? currentClient.name,
-      version: clientInfo.version ?? currentClient.version,
-    };
-
-    // Configure transport for client-specific behavior only if name changed
-    if (nameChanged) {
-      const transport = globalThis.mcpTransport;
-      if (transport && typeof transport.configureForClient === "function") {
-        transport.configureForClient(currentClient.name);
-      }
+  if (clientUpdate.nameChanged) {
+    const transport = globalThis.mcpTransport;
+    if (transport && typeof transport.configureForClient === "function") {
+      transport.configureForClient(currentClient.name);
     }
-    return true;
   }
-  return false;
 }
 
 // Add handler for initialization method - capture client info
@@ -114,7 +86,7 @@ server.setRequestHandler(InitializeRequestSchema, async (request: InitializeRequ
     // Extract and store current client information
     const clientInfo = request.params?.clientInfo;
     if (clientInfo) {
-      await updateCurrentClient(clientInfo);
+      applyCurrentClientUpdate(clientInfo);
     }
     // Negotiate protocol version with client
     const requestedVersion = request.params?.protocolVersion;
@@ -140,9 +112,6 @@ server.setRequestHandler(InitializeRequestSchema, async (request: InitializeRequ
     throw error;
   }
 });
-
-// Export current client info for access by other modules
-export {currentClient};
 
 deferLog("info", "Setting up request ..");
 
@@ -170,7 +139,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request: CallToolRequest)
   try {
     const metadata = request.params._meta;
     if (hasRequestMetadata(metadata) && metadata.clientInfo) {
-      await updateCurrentClient(metadata.clientInfo);
+      applyCurrentClientUpdate(metadata.clientInfo);
     }
     const result = await runWithGitSessionScope(buildCurrentClientSessionKey(), async () => await dispatchToolCall(name, args));
     return result;
