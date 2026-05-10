@@ -2,27 +2,30 @@
 
 ## Overview
 
-`@jungho-dev/fs-mcp` is a stdio-based Model Context Protocol server for filesystem work, local process
-sessions, ripgrep-backed search, runtime configuration, git workflows, and surgical file editing.
+`@jungho-dev/fs-mcp` is a stdio-based Model Context Protocol server for local filesystem work,
+process sessions, ripgrep-backed search, SQLite context indexing, runtime configuration, git workflows,
+and exact block editing.
 
-This package is not a VS Code extension bundle. It is the MCP server that VS Code MCP clients, such as Cline,
-Claude Dev, or other MCP-capable extensions, launch through stdio.
+This package is the MCP server runtime. It is not a VS Code extension bundle. VS Code MCP clients such as
+Cline, Claude Dev, Roo, or other MCP-capable extensions launch it through stdio.
 
-## VS Code Extension Usage
+## Installation
 
-Install the package globally:
+Install the package globally with npm:
 
 ```bash
 npm install -g @jungho-dev/fs-mcp
 ```
 
-Or install with Bun:
+Or install it globally with Bun:
 
 ```bash
 bun add -g @jungho-dev/fs-mcp
 ```
 
-Add the server to the MCP configuration used by your VS Code extension:
+## MCP Client Configuration
+
+Add the server to the MCP configuration used by your client:
 
 ```json
 {
@@ -35,8 +38,8 @@ Add the server to the MCP configuration used by your VS Code extension:
 }
 ```
 
-If the extension cannot resolve global binaries, set `command` to the absolute `fs-mcp` executable path.
-The server uses stdio only and does not open a network listener.
+If the client cannot resolve global binaries, set `command` to the absolute `fs-mcp` executable path.
+The server uses stdio and does not open a network listener.
 
 ## Codex Configuration
 
@@ -53,19 +56,34 @@ args = []
 
 ## Main Capabilities
 
-- Filesystem tools for reading, writing, listing, moving, renaming, and inspecting files.
-- Batch filesystem tools with compact result previews to avoid duplicating large payloads in extension output.
-- Process tools for starting commands, reading output, interacting with sessions, and killing processes.
-- Search tools backed by `@vscode/ripgrep` with pagination, session listing, and stop controls.
-- Edit tools for exact block edits, fuzzy diagnostics, and preview-oriented edit responses.
-- Git tools for repository status, history, branch, stash, tag, worktree, and remote operations.
-- Runtime configuration tools for command policy, shell selection, allowed directories, and system information.
+- Filesystem tools for batched read, write, listing, metadata, directory creation, move, rename, and removal.
+- Exact edit tools for one or many block replacements with optional path-backed large string inputs.
+- Search tools backed by bundled `@vscode/ripgrep`, active search sessions, pagination, and stop controls.
+- Process tools for starting commands, reading output, sending input, listing sessions, listing processes, and
+  killing processes.
+- Git tools for status, diff, history, branch, checkout, stash, tag, worktree, remote, fetch, pull, push,
+  merge, rebase, cherry-pick, and repository setup workflows.
+- Context index tools that store, search, list, and clear large text payloads in a client-scoped SQLite database.
+- Runtime configuration tools for command policy, shell selection, allowed directories, context-index thresholds,
+  client metadata, and system information.
+
+## Context Indexing
+
+Large tool outputs can be indexed into SQLite so clients can search or recall them without repeating the full
+payload in every transcript.
+
+- Automatic indexing is controlled by `contextIndexEnabled`, `contextIndexAutoMinChars`,
+  `contextIndexAutoMinLines`, and `contextIndexMaxEntryChars`.
+- The default database path is client-aware, such as `~/.codex/sqlite/fs-mcp.sqlite` for Codex clients.
+- Manual indexing is available through `index_contexts`, `search_contexts`, `list_contexts`, and
+  `clear_contexts`.
 
 ## Client Compatibility
 
-- VS Code-oriented clients are detected by client metadata or client name.
-- Notifications are suppressed for Cline, VS Code, and Claude Dev style clients to keep stdio JSON-RPC clean.
-- Resource and resource-template list handlers return empty lists so Visual Studio initialization succeeds.
+- Client metadata is captured during initialization and can update runtime client-aware defaults.
+- Notifications are suppressed for Cline, VS Code, Claude Dev, Roo, and similar clients when needed to keep
+  stdio JSON-RPC clean.
+- Resource and resource-template list handlers return empty lists so Visual Studio-style initialization succeeds.
 - File previews include structured metadata for text, markdown, HTML, image, and directory responses.
 
 ## Repository Structure
@@ -76,29 +94,37 @@ project root/
 |   |-- assets/       shared readers, type declarations, and cross-domain utilities
 |   |-- controllers/  MCP request handlers and batch response helpers
 |   |-- cores/        runtime, transport, server assembly, and response normalization
-|   |-- features/     config, edit, filesystem, git, process, and search behavior
+|   |-- features/     config, context, edit, filesystem, git, process, and search behavior
 |   |-- schemas/      request argument validation schemas
 |   `-- tools/        tool catalog entries and dispatcher
-`-- tests/            compiled-output contract and smoke tests
+|-- tests/            compiled-output contract and smoke tests
+`-- out/              compiled runtime published to npm
 ```
 
 ## Response Shape
 
 Every dispatched tool result is normalized by `src/cores/responses/responses-tool-result.ts`.
-The visible `content[0].text` is intentionally empty so chat and extension transcripts show only the tool call.
-The structured payload keeps machine-readable data, while batch helpers compact large nested inputs and duplicate
-text payloads before they are embedded in batch results.
+
+- Visible `content[0].text` uses the display template from
+  `src/cores/responses/responses-tool-display.ts`, showing tool name, status, item count, context-index count,
+  and text or structured payload sizes.
+- `structuredContent` keeps the normalized machine-readable envelope with original content, original structured
+  payload, status, duration, and optional context-index references.
+- `_meta.fsMcpResult` stores compact metadata for clients that only need status, duration, content types, and
+  error text.
+- Large output indexing adds `contextIndexes` references instead of replacing the original structured payload.
 
 ## Development
 
 ```bash
-bun run typecheck
+bun run verify:source
 bun run build
 bun run test
+bun run verify
 ```
 
-`bun run verify` runs type checking, build, source-boundary checks, package-shape checks, tool-surface checks,
-optimization-report checks, and the test suite.
+`bun run verify` runs source type checking, release-shape checks, tool-surface checks, and optimization-report
+checks. Run `bun run test` separately for the smoke and contract test suite.
 
 ## Documentation
 
@@ -106,8 +132,10 @@ optimization-report checks, and the test suite.
 - Korean README: `readme-ko.md`
 - English architecture: `architecture.md`
 - Korean architecture: `architecture-ko.md`
+- Changelog: `changelog.md`
 
 ## Packaging Notes
 
-The npm package exposes the `fs-mcp` binary through `out/index.mjs`. Source files, tests, fixtures, and local
-runtime artifacts remain development-only surfaces.
+The npm package exposes the `fs-mcp` binary through `out/index.mjs`. Runtime version metadata is read from the
+package root `package.json`, and source files, tests, fixtures, and local runtime artifacts remain
+development-only surfaces.

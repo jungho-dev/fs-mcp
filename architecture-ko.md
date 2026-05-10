@@ -18,12 +18,13 @@ MCP stdio client
 
 ## 계층 경계
 
-* `src/cores`는 프로세스 bootstrap, stdio transport, 전역 출력 capture, 서버 조립, 응답 정규화를 담당합니다.
-* `src/tools`, `src/schemas`, `src/controllers`, `src/cores/responses`는 MCP-facing catalog,
-  검증, routing, handler adapter, normalized tool result envelope를 담당합니다.
-* `src/features`는 기능 동작을 담당하며 `src/controllers`를 import하지 않습니다.
-* `src/assets`는 공용 reader, 타입 선언, 작은 교차 기능 유틸을 담당합니다.
-* `tests`는 source 직접 import가 아니라 컴파일된 `out` 산출물을 검증합니다.
+- `src/cores`는 process bootstrap, stdio transport, 전역 출력 capture, server assembly, runtime guidance,
+  response normalization을 담당합니다.
+- `src/tools`, `src/schemas`, `src/controllers`, `src/cores/responses`는 MCP-facing catalog, validation,
+  routing, handler adapter, normalized tool result envelope를 담당합니다.
+- `src/features`는 기능 동작을 담당하며 `src/controllers`를 import하지 않습니다.
+- `src/assets`는 공용 reader, 타입 선언, 작은 교차 기능 유틸을 담당합니다.
+- `tests`는 source 직접 import가 아니라 컴파일된 `out` 산출물을 검증합니다.
 
 ## 소스 트리
 
@@ -42,6 +43,7 @@ src/
 |   `-- transport/
 |-- features/
 |   |-- config/
+|   |-- context/
 |   |-- edit/
 |   |-- filesystem/
 |   |-- git/
@@ -62,47 +64,78 @@ controllers -> schemas
 controllers -> features
 controllers -> cores/responses
 features -> assets
+features/context -> features/config
+cores/responses -> features/context
 cores/responses -> assets
 tests -> out
 ```
 
-기능 모듈은 `features/filesystem/filesystem-path-resolver.ts`처럼 같은 기능 계층의 유틸을 통해
-동작을 공유합니다. controller는 MCP adapter이므로 재사용 가능한 기능 service로 import하지 않습니다.
+기능 모듈은 `features/filesystem/filesystem-path-resolver.ts`처럼 같은 기능 계층의 유틸을 통해 동작을
+공유합니다. controller는 MCP adapter이므로 재사용 가능한 기능 service로 import하지 않습니다.
+
+## 도구 표면
+
+Tool catalog module은 runtime domain별로 나뉩니다.
+
+- `tools-config.ts`: `get_configs`, `set_config_values`
+- `tools-context.ts`: `index_contexts`, `search_contexts`, `list_contexts`, `clear_contexts`
+- `tools-filesystem.ts`: file, directory, search-session, metadata, exact block edit 도구
+- `tools-process.ts`: command session, process output, process listing, process termination 도구
+- `tools-git.ts`: repository, history, branch, checkout, stash, tag, worktree, remote, integration 도구
+
+`server-create-mcp-server.ts`는 이 catalog들을 합쳐 `list_tools`에 제공합니다. `tools-dispatcher.ts`는
+대응되는 `call_tool` registry를 담당하며, `verify:tools`가 컴파일된 catalog와 dispatcher 이름 계약을
+확인합니다.
 
 ## 도구 응답 계약
 
-* 개별 handler는 `content`, 선택적 `structuredContent`, 선택적 `isError`, 선택적 `_meta`를 가진
+- 개별 handler는 `content`, 선택적 `structuredContent`, 선택적 `isError`, 선택적 `_meta`를 가진
   `ServerResult`를 반환합니다.
-* `dispatchToolCall`은 정규화되지 않은 handler result를 `normalizeToolResult`로 한 번 정규화합니다.
-* 표시용 `content[0].text`는 transcript에 tool call만 보이도록 빈 문자열로 둡니다.
-* `structuredContent.data`는 normalized text, content array, 원본 structured payload를 보관합니다.
-* batch helper는 `content`, `old_string`, `new_string`, `textContent`, `imageData`, `listing` 같은
-  큰 중첩 입력을 preview 중심으로 압축합니다.
+- `dispatchToolCall`은 정규화되지 않은 handler result를 `normalizeToolResult`로 한 번 정규화합니다.
+- 표시용 `content[0].text`는 `createToolDisplayText`가 만들며 compact하게 유지됩니다.
+- `structuredContent.data`는 원본 normalized content, 결합된 text, 원본 structured payload를 저장합니다.
+- `_meta.fsMcpResult`는 status, duration, content type, error text, schema version, tool name을 저장합니다.
+- 자동 context indexing은 normalized structured output에 `contextIndexes` 또는 `contextIndexError`를
+  추가할 수 있습니다.
+
+## Context Index 아키텍처
+
+`features/context/context-index-service.ts`는 Bun SQLite 기반 large text index를 담당합니다.
+
+- 기본 threshold는 5,000자 또는 120줄이고, 단일 indexed entry 최대 크기는 1,000,000자입니다.
+- 기본 DB 경로는 `getDefaultContextIndexDbPath`로 계산하며, 알려진 client family마다
+  `~/.codex/sqlite/fs-mcp.sqlite` 같은 예측 가능한 home directory를 사용합니다.
+- Text는 80줄 chunk와 20줄 overlap으로 나누고 SQLite FTS로 검색합니다.
+- `context-output-compactor.ts`는 원본 structured payload를 대체하지 않고 큰 text field와 structured
+  collection을 index합니다.
+- 수동 context 도구는 같은 service를 사용해 명시적 index, search, list, clear 작업을 수행합니다.
 
 ## VS Code 및 Visual Studio 호환성
 
-* `FilteredStdioServerTransport`는 의도치 않은 console 출력을 capture해 MCP JSON-RPC stdout을 보호합니다.
-* Cline, VS Code, Claude Dev 계열 client에는 notification을 억제합니다.
-* resource와 resource-template list handler는 빈 목록을 반환해 Visual Studio 초기화를 완료시킵니다.
-* 검색은 bundled `@vscode/ripgrep`를 우선 사용하고 필요할 때 system ripgrep로 fallback합니다.
+- `FilteredStdioServerTransport`는 의도치 않은 console 출력을 capture해 MCP JSON-RPC stdout을 보호합니다.
+- Cline, VS Code, Claude Dev, Roo 계열 client에는 필요 시 notification을 억제합니다.
+- resource와 resource-template list handler는 빈 목록을 반환해 Visual Studio 초기화를 완료시킵니다.
+- 검색은 bundled `@vscode/ripgrep`를 우선 사용하고 필요할 때 system ripgrep로 fallback합니다.
 
 ## 성능 및 안전 설계
 
-* 파일 작업은 filesystem feature layer의 명시적 timeout 경계를 사용합니다.
-* 텍스트 읽기는 offset과 length 입력을 통해 전체 파일 대신 bounded slice 요청을 지원합니다.
-* 검색 실행은 `features/search/search-ripgrep-adapter.ts`를 통해 ripgrep에 위임합니다.
-* stdio transport는 stdout/stderr 출력이 MCP JSON 출력과 섞이지 않도록 격리합니다.
-* `allowedDirectories`가 빈 배열이면 모든 경로 접근을 허용합니다. 제한이 필요하면 허용 경로를 명시합니다.
-* 테스트는 npm에 배포되는 표면과 동일한 컴파일 산출물 `out`를 검증합니다.
+- 파일 작업은 filesystem feature layer의 timeout boundary와 path resolver를 사용합니다.
+- 텍스트 읽기는 offset과 length 입력을 통해 전체 파일 대신 bounded slice 요청을 지원합니다.
+- 큰 inline tool argument는 `content_path`, `old_string_path`, `new_string_path`, `pattern_path`,
+  `input_path` 같은 path-backed field로 전달할 수 있습니다.
+- 검색 실행은 `features/search/search-ripgrep-adapter.ts`를 통해 ripgrep에 위임합니다.
+- stdio transport는 stdout/stderr 출력이 MCP JSON 출력과 섞이지 않도록 격리합니다.
+- 테스트는 npm에 배포되는 표면과 동일한 컴파일 산출물 `out`를 검증합니다.
 
 ## 검증 경계
 
-* `verify:tools`는 컴파일된 tool catalog와 dispatcher registry의 이름 계약을 비교합니다.
-* `verify:source`는 최적화된 `src`와 `tests` 루트 경계, 제거된 플랫폼 helper 문구의 재유입 여부를 확인합니다.
-* `verify:shape`는 릴리스 산출물 경계와 금지된 generated artifact를 확인합니다.
-* 최적화 보고서는 `.docs`에 누적하고 `verify:reports`로 확인합니다.
+- `verify:source`는 source type check와 source/test root boundary를 확인합니다.
+- `verify:shape`는 release artifact shape와 의도하지 않은 generated artifact를 확인합니다.
+- `verify:tools`는 컴파일된 tool catalog와 dispatcher registry의 이름 계약을 비교합니다.
+- `verify:reports`는 `.docs`에 누적된 optimization report를 확인합니다.
+- `bun run verify`는 publish 전 사용하는 package verification script를 실행하며, test는 `bun run test`로 실행합니다.
 
 ## 패키징 경계
 
-배포 패키지는 `out/index.mjs`를 통해 `fs-mcp`를 노출하고 릴리스 문서를 포함합니다. 소스 파일, 테스트,
-생성 fixture, 로컬 빌드 캐시는 런타임 패키지 입력으로 사용하지 않습니다.
+배포 패키지는 `out/index.mjs`를 통해 `fs-mcp`를 노출하고 release documentation을 포함합니다. Source file,
+test, generated fixture, local build cache는 runtime package input으로 사용하지 않습니다.

@@ -7,6 +7,7 @@
 
 import type { ServerResponseContent, ServerResult } from "@assets/type/common";
 
+// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 type ToolDisplayStatus = "success" | "error";
 type ToolDisplayValue = number | string;
 
@@ -31,18 +32,38 @@ export interface ToolDisplayTemplateValues {
   toolName: string;
 }
 
-
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Edit this template to freely change visible labels, separators, order, and surrounding text.
+const config = {
+  reset: `\u001B[0m`,
+  line: {
+    str: `―――――――――――――――――――――――――――――――――――`,
+    color: `\u001B[38;5;214m`,
+  },
+  key: {
+    str: `• `,
+    color: `\u001B[38;5;231m`,
+  },
+  value: {
+    str: ``,
+    color: `\u001B[38;5;111m`,
+  },
+};
+const renderLine = () => {
+  return `${config.line.color}${config.line.str}${config.reset}\n`
+};
+const renderRow = (key: string, value: string) => {
+  return `${config.key.color}${config.key.str}${key} = ${config.value.color}${config.value.str}${value}${config.reset}\n`;
+};
 export const TOOL_DISPLAY_TEMPLATE = [
-  `―――――――――――――――――――――――――――――――\n`,
-  `● tool = \${tool} \n`,
-  `● status = \${status} \n`,
-  `● idx = \${idx} \n`,
-  `● items = \${items} \n`,
-  `● textChars = \${textChars} \n`,
-  `● structuredChars = \${structuredChars} \n`,
-  `―――――――――――――――――――――――――――――――`,
+  renderLine(),
+  renderRow(`tool`, `\${tool}`),
+  renderRow(`status`, `\${status}`),
+  renderRow(`idx`, `\${idx}`),
+  renderRow(`items`, `\${items}`),
+  renderRow(`textChars`, `\${textChars}`),
+  renderRow(`structuredChars`, `\${structuredChars}`),
+  renderLine(),
 ].join(``);
 
 // 1. Stringify display structured content ―――――――――――――――――――――――――――――――――――――――――――――――――――――

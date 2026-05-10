@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [1.2.6] - 2026-05-10
+
+* refresh README and architecture documentation for context indexing, response display, and current tool groups
+* correct development command documentation to match the current package scripts
+* publish the documentation refresh as a patch release after 1.2.5
+
 ## [1.2.5] - 2026-05-10
 
 * sync runtime version metadata with package version
@@ -126,3 +132,15 @@
 ## \[ 1.2.5 \]
 
 - 2026-05-10 (12:27:56)
+
+## \[ 1.2.6 \]
+
+- 2026-05-10 (21:53:00)
+
+## \[ 1.2.7 \]
+
+- 2026-05-10 (22:01:00)
+
+## \[ 1.2.8 \]
+
+- 2026-05-10 (23:00:00)
