@@ -4,7 +4,7 @@
   "description": "MCP server for file system operations",
   "publisher": "JUNGHO",
   "license": "Apache-2.0",
-  "version": "1.2.8",
+  "version": "1.2.9",
   "type": "module",
   "main": "./out/index.mjs",
   "exports": {

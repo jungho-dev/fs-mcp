@@ -103,8 +103,8 @@ sync.
 `features/context/context-index-service.ts` owns a Bun SQLite-backed index for large text payloads.
 
 - Default thresholds are 5,000 characters or 120 lines, with a maximum indexed entry size of 1,000,000 characters.
-- The default database path is resolved through `getDefaultContextIndexDbPath`, so each known client family gets
-  a predictable home directory such as `~/.codex/sqlite/fs-mcp.sqlite`.
+- The default database path is resolved through `getDefaultContextIndexDbPath` to the shared home path
+  `~/.mcp/fs-mcp.sqlite`.
 - Text is chunked into overlapping 80-line chunks with 20-line overlap and searched through SQLite FTS.
 - `context-output-compactor.ts` indexes large text fields and structured collections without replacing the
   original structured payload.

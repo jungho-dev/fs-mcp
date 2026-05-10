@@ -35,7 +35,10 @@ export interface ToolDisplayTemplateValues {
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Edit this template to freely change visible labels, separators, order, and surrounding text.
 const config = {
-  reset: `\u001B[0m`,
+  reset: {
+    str: ``,
+    color: `\u001B[0m`,
+  },
   line: {
     str: `―――――――――――――――――――――――――――――――――――`,
     color: `\u001B[38;5;214m`,
@@ -46,14 +49,14 @@ const config = {
   },
   value: {
     str: ``,
-    color: `\u001B[38;5;111m`,
+    color: `\u001B[38;2;0;180;216m`,
   },
 };
 const renderLine = () => {
-  return `${config.line.color}${config.line.str}${config.reset}\n`
+  return `${config.line.color}${config.line.str}${config.reset.color}\n`
 };
 const renderRow = (key: string, value: string) => {
-  return `${config.key.color}${config.key.str}${key} = ${config.value.color}${config.value.str}${value}${config.reset}\n`;
+  return `${config.key.color}${config.key.str}${key} = ${config.value.color}${config.value.str}${value}${config.reset.color}\n`;
 };
 export const TOOL_DISPLAY_TEMPLATE = [
   renderLine(),

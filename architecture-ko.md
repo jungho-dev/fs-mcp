@@ -103,8 +103,8 @@ Tool catalog module은 runtime domain별로 나뉩니다.
 `features/context/context-index-service.ts`는 Bun SQLite 기반 large text index를 담당합니다.
 
 - 기본 threshold는 5,000자 또는 120줄이고, 단일 indexed entry 최대 크기는 1,000,000자입니다.
-- 기본 DB 경로는 `getDefaultContextIndexDbPath`로 계산하며, 알려진 client family마다
-  `~/.codex/sqlite/fs-mcp.sqlite` 같은 예측 가능한 home directory를 사용합니다.
+- 기본 DB 경로는 `getDefaultContextIndexDbPath`로 계산하며, 공용 home 경로
+  `~/.mcp/fs-mcp.sqlite`를 사용합니다.
 - Text는 80줄 chunk와 20줄 overlap으로 나누고 SQLite FTS로 검색합니다.
 - `context-output-compactor.ts`는 원본 structured payload를 대체하지 않고 큰 text field와 structured
   collection을 index합니다.

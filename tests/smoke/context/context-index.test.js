@@ -109,14 +109,14 @@ async function testDefaultDbPathConfig() {
   await configManager.resetConfig();
   updateCurrentClient({name: "Codex", version: "1.0.0"});
   let defaultConfig = await configManager.getConfig();
-  assert.equal(defaultConfig.contextIndexDbPath, "~/.codex/sqlite/fs-mcp.sqlite", "codex client should use the codex default context DB path");
+  assert.equal(defaultConfig.contextIndexDbPath, "~/.mcp/fs-mcp.sqlite", "codex client should use the shared default context DB path");
   assert.equal(defaultConfig.contextIndexEnabled, true, "automatic context indexing should be enabled by default");
   updateCurrentClient({name: "Claude Desktop", version: "1.0.0"});
   defaultConfig = await configManager.getConfig();
-  assert.equal(defaultConfig.contextIndexDbPath, "~/.claude/sqlite/fs-mcp.sqlite", "claude client should use the claude default context DB path");
+  assert.equal(defaultConfig.contextIndexDbPath, "~/.mcp/fs-mcp.sqlite", "claude client should use the shared default context DB path");
   updateCurrentClient({name: "Cline", version: "1.0.0"});
   defaultConfig = await configManager.getConfig();
-  assert.equal(defaultConfig.contextIndexDbPath, "~/.cline/sqlite/fs-mcp.sqlite", "cline client should use the cline default context DB path");
+  assert.equal(defaultConfig.contextIndexDbPath, "~/.mcp/fs-mcp.sqlite", "cline client should use the shared default context DB path");
   await configManager.updateConfig({
     ...config,
     contextIndexDbPath: TEST_DB,

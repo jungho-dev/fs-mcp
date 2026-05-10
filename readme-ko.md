@@ -55,7 +55,7 @@ args = []
 - 명령 시작, 출력 조회, 세션 입력, 세션 목록, 프로세스 목록, 프로세스 종료 도구
 - Git status, diff, history, branch, checkout, stash, tag, worktree, remote, fetch, pull, push,
   merge, rebase, cherry-pick, repository setup 도구
-- 큰 텍스트 payload를 client별 SQLite DB에 저장, 검색, 조회, 삭제하는 context index 도구
+- 큰 텍스트 payload를 공용 SQLite context DB에 저장, 검색, 조회, 삭제하는 context index 도구
 - 명령 정책, shell 선택, 허용 디렉터리, context-index threshold, client metadata, system information 설정 도구
 
 ## Context Indexing
@@ -64,7 +64,7 @@ args = []
 
 - 자동 indexing은 `contextIndexEnabled`, `contextIndexAutoMinChars`, `contextIndexAutoMinLines`,
   `contextIndexMaxEntryChars`로 제어합니다.
-- 기본 DB 경로는 client-aware 방식입니다. Codex client에서는 기본값이 `~/.codex/sqlite/fs-mcp.sqlite`입니다.
+- 기본 DB 경로는 `~/.mcp/fs-mcp.sqlite`입니다.
 - 수동 indexing 도구는 `index_contexts`, `search_contexts`, `list_contexts`, `clear_contexts`입니다.
 
 ## 권한 참고

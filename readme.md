@@ -63,7 +63,7 @@ args = []
   killing processes.
 - Git tools for status, diff, history, branch, checkout, stash, tag, worktree, remote, fetch, pull, push,
   merge, rebase, cherry-pick, and repository setup workflows.
-- Context index tools that store, search, list, and clear large text payloads in a client-scoped SQLite database.
+- Context index tools that store, search, list, and clear large text payloads in the shared SQLite context database.
 - Runtime configuration tools for command policy, shell selection, allowed directories, context-index thresholds,
   client metadata, and system information.
 
@@ -74,13 +74,13 @@ payload in every transcript.
 
 - Automatic indexing is controlled by `contextIndexEnabled`, `contextIndexAutoMinChars`,
   `contextIndexAutoMinLines`, and `contextIndexMaxEntryChars`.
-- The default database path is client-aware, such as `~/.codex/sqlite/fs-mcp.sqlite` for Codex clients.
+- The default database path is `~/.mcp/fs-mcp.sqlite`.
 - Manual indexing is available through `index_contexts`, `search_contexts`, `list_contexts`, and
   `clear_contexts`.
 
 ## Client Compatibility
 
-- Client metadata is captured during initialization and can update runtime client-aware defaults.
+- Client metadata is captured during initialization for client compatibility behavior.
 - Notifications are suppressed for Cline, VS Code, Claude Dev, Roo, and similar clients when needed to keep
   stdio JSON-RPC clean.
 - Resource and resource-template list handlers return empty lists so Visual Studio-style initialization succeeds.

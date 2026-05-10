@@ -1,6 +1,6 @@
 /**
  * @file src/features/config/config-client.ts
- * @description Current MCP client state and client-aware default paths.
+ * @description Current MCP client state and client path helpers.
  * @author JUNGHO
  * @since 2026-05-08
  */
@@ -75,8 +75,8 @@ export function getClientHomeDirectory(clientName: string = currentClient.name):
 }
 
 // 6. Get default context index DB path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export function getDefaultContextIndexDbPath(clientName: string = currentClient.name): string {
-  return `~/${getClientHomeDirectory(clientName)}/sqlite/fs-mcp.sqlite`;
+export function getDefaultContextIndexDbPath(_clientName: string = currentClient.name): string {
+  return "~/.mcp/fs-mcp.sqlite";
 }
 
 // 7. Update current client ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
