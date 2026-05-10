@@ -50,7 +50,7 @@ export const CONFIG_FIELD_DEFINITIONS = {
     valueType: "string",
   },
   contextIndexEnabled: {
-    description: "Controls whether large tool output is automatically compacted into the SQLite context index. Disabled by default so agents receive full tool output unless explicitly enabled.",
+    description: "Controls whether large tool output is automatically indexed into SQLite. Enabled by default while visible tool output remains full length.",
     label: "Context Index Enabled",
     valueType: "boolean",
   },

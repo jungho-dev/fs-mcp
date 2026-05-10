@@ -48,15 +48,6 @@ async function getMimeTypeInfo(filePath: string): Promise<{ mimeType: string; is
   return { mimeType, isImage };
 }
 
-// 2. Get file extension for diagnostics ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-// @param filePath Path to the file
-// @returns Lowercase file extension
-
-// 2. Get file extension ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function getFileExtension(filePath: string): string {
-  return path.extname(filePath).toLowerCase();
-}
-
 // 4. Permission error message builder ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // or timeout error.
 // Lists all common causes without path-based detection — the AI receiving this
@@ -353,9 +344,6 @@ export async function readFileFromDisk(filePath: string, options?: ReadOptions):
   }
   const validPath = await validatePath(filePath);
 
-  // Get file extension for diagnostics.
-  const fileExtension = getFileExtension(validPath);
-
   // Check if path is a directory — return listing instead of EISDIR error
   try {
     const stats = await fs.stat(validPath);
@@ -384,17 +372,6 @@ export async function readFileFromDisk(filePath: string, options?: ReadOptions):
       throw error;
     }
     // stat() failed (e.g. ENOENT) — fall through to the read path below
-  }
-  // Check file size before attempting to read
-  try {
-    const stats = await fs.stat(validPath);
-
-    // Report file extension without capturing the file path.
-  }
-  catch (error) {
-    console.error(`error catch ${error}`);
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    // If we can't stat the file, continue anyway and let the read operation handle errors
   }
   // Use withTimeout to handle potential hangs
   const readOperation = async () => {
@@ -505,15 +482,6 @@ export async function readFileInternal(filePath: string, offset: number = 0, len
 // 15. Write file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function writeFile(filePath: string, content: string, mode: "rewrite" | "append" = "rewrite"): Promise<void> {
   const validPath = await validatePath(filePath);
-
-  // Get file extension for diagnostics.
-  const fileExtension = getFileExtension(validPath);
-
-  // Calculate content metrics
-  const contentBytes = Buffer.from(content).length;
-  const lineCount = TextFileHandler.countLines(content);
-
-  // Report file extension and operation details without capturing the file path.
 
   // Get appropriate handler for this file type (async - includes binary detection)
   const handler = await getFileHandler(validPath);

@@ -204,7 +204,7 @@ class ConfigManager {
       blockedCommands: getDefaultBlockedCommands(),
       contextIndexAutoMinChars: 5000,
       contextIndexAutoMinLines: 120,
-      contextIndexEnabled: false,
+      contextIndexEnabled: true,
       contextIndexMaxEntryChars: 1_000_000,
       defaultShell: getDefaultShell(),
       fileReadLineLimit: 50_000,

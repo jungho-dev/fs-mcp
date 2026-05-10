@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [1.2.5] - 2026-05-10
+
 * sync runtime version metadata with package version
 * run the full verify suite before npm publish
 * refresh Korean README and architecture paths for the current source layout
@@ -120,3 +122,7 @@
 ## \[ 1.2.4 \]
 
 - 2026-05-08 (18:01:54)
+
+## \[ 1.2.5 \]
+
+- 2026-05-10 (12:27:56)

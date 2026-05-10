@@ -170,7 +170,7 @@ export class SearchManager {
             session.totalMatches++;
           }
         })
-        .catch((err) => {
+        .catch(() => {
         });
     }
     // Wait for first chunk of data or early completion instead of fixed delay

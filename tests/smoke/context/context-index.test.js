@@ -83,10 +83,23 @@ async function testAutomaticReadFileCompaction() {
 
   assert.ok(Array.isArray(output.contextIndexes), "large read_files result should include contextIndexes");
   assert.ok(output.contextIndexes.length > 0, "contextIndexes should not be empty");
-  assert.ok(output.data.structuredContent.results[0].result.structuredContent.textContent.indexed, "large textContent should be replaced with index reference");
+  assert.equal(output.data.structuredContent.results[0].result.structuredContent.textContent, lines.join("\n"), "large textContent should stay available in structuredContent");
+  assert.equal(normalized.content[0].text.includes("automatic sqlite context target"), false, "display text should not include raw file data");
+  assert.match(normalized.content[0].text, /^tool=read_files \| status=success \| textChars=\d+ \| structuredChars=\d+ \| contentItems=1 \| contextIndexes=\d+$/, "display text should show status and lengths only");
 
   const searched = await handleSearchContexts({queries: ["automatic sqlite target"], limit: 5});
   assert.match(searched.content[0].text, /automatic sqlite context target/, "auto-indexed read file should be searchable");
+}
+
+async function testDuplicateContextIndexReuse() {
+  const content = Array.from({length: 20}, (_value, index) => `duplicate line ${index} sqlite reuse target`).join("\n");
+  const first = contextIndexService.indexText("duplicate-test", content, "duplicate_tool");
+  const second = contextIndexService.indexText("duplicate-test", content, "duplicate_tool");
+  const matchingDocuments = contextIndexService.listDocuments().filter((document) => document.source === "duplicate-test");
+
+  assert.equal(second.indexId, first.indexId, "duplicate content should reuse the existing indexId");
+  assert.equal(matchingDocuments.length, 1, "duplicate content should not create extra context documents");
+  contextIndexService.clearDocuments({source: "duplicate-test"});
 }
 
 async function testDefaultDbPathConfig() {
@@ -97,7 +110,7 @@ async function testDefaultDbPathConfig() {
   updateCurrentClient({name: "Codex", version: "1.0.0"});
   let defaultConfig = await configManager.getConfig();
   assert.equal(defaultConfig.contextIndexDbPath, "~/.codex/sqlite/fs-mcp.sqlite", "codex client should use the codex default context DB path");
-  assert.equal(defaultConfig.contextIndexEnabled, false, "automatic context indexing should be disabled by default");
+  assert.equal(defaultConfig.contextIndexEnabled, true, "automatic context indexing should be enabled by default");
   updateCurrentClient({name: "Claude Desktop", version: "1.0.0"});
   defaultConfig = await configManager.getConfig();
   assert.equal(defaultConfig.contextIndexDbPath, "~/.claude/sqlite/fs-mcp.sqlite", "claude client should use the claude default context DB path");
@@ -116,6 +129,7 @@ async function runTests() {
     originalState = await setup();
     await testExplicitIndexSearchListClear();
     await testAutomaticReadFileCompaction();
+    await testDuplicateContextIndexReuse();
     await testDefaultDbPathConfig();
   }
   catch (error) {

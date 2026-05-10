@@ -52,11 +52,6 @@ export async function startProcess(args: unknown): Promise<ServerResult> {
       isError: true,
     };
   }
-  try {
-    const commands = commandManager.extractCommands(commandToRun).join(", ");
-  }
-  catch (_error) {
-  }
   const isAllowed = await commandManager.validateCommand(commandToRun);
   if (!isAllowed) {
     return {

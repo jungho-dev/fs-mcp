@@ -10,7 +10,7 @@ import {createErrorResponse} from "@cores/responses/responses-error";
 import {normalizeToolResult} from "@cores/responses/responses-tool-result";
 import {type LogLevel, logger, logToStderr} from "@cores/runtime/runtime-app-logger";
 import {SERVER_INSTRUCTIONS} from "@cores/server/server-instructions";
-import {buildCurrentClientSessionKey, currentClient, type ClientInfoUpdate, updateCurrentClient} from "@features/config/config-client";
+import {buildCurrentClientSessionKey, type ClientInfoUpdate, currentClient, updateCurrentClient} from "@features/config/config-client";
 import {PACKAGE_VERSION} from "@features/config/config-store";
 import {runWithGitSessionScope} from "@features/git/git-session";
 import {Server} from "@modelcontextprotocol/sdk/server/index.js";

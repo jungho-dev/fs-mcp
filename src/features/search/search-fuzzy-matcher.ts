@@ -29,15 +29,8 @@ export function recursiveFuzzyIndexOf(
   value: string;
   distance: number;
 } {
-  // For debugging and performance tracking purposes
   if (depth === 0) {
-    const startTime = performance.now();
-    const result = recursiveFuzzyIndexOf(text, query, start, end, parentDistance, depth + 1);
-    const executionTime = performance.now() - startTime;
-
-    // Capture detailed metrics for the recursive search for in-depth analysis
-
-    return result;
+    return recursiveFuzzyIndexOf(text, query, start, end, parentDistance, depth + 1);
   }
   if (end === null) {
     end = text.length;
@@ -89,9 +82,6 @@ function iterativeReduction(
   value: string;
   distance: number;
 } {
-  const startTime = performance.now();
-  let iterations = 0;
-
   let bestDistance = parentDistance;
   let bestStart = start;
   let bestEnd = end;
@@ -104,7 +94,6 @@ function iterativeReduction(
     bestStart++;
     const smallerString = text.slice(bestStart + 1, bestEnd);
     nextDistance = distance(smallerString, query);
-    iterations++;
   }
   // Improve end position
   nextDistance = distance(text.slice(bestStart, bestEnd - 1), query);
@@ -114,11 +103,7 @@ function iterativeReduction(
     bestEnd--;
     const smallerString = text.slice(bestStart, bestEnd - 1);
     nextDistance = distance(smallerString, query);
-    iterations++;
   }
-  const executionTime = performance.now() - startTime;
-
-  // Capture metrics for the iterative refinement phase
 
   return {
     distance: bestDistance,

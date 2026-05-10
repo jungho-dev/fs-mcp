@@ -42,7 +42,7 @@ function isProtocolJsonParseError(errorMessage: string): boolean {
 }
 
 // 4. Handle fatal process error ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function handleFatalProcessError(captureKey: string, label: string, errorMessage: string): void {
+function handleFatalProcessError(label: string, errorMessage: string): void {
   logger.error(`${label}: ${errorMessage}`);
   process.exit(1);
 }
@@ -72,12 +72,12 @@ export async function runServer () {
     }
     process.on("uncaughtException", async (error) => {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      handleFatalProcessError("run_server_uncaught_exception", isProtocolJsonParseError(errorMessage) ? "Fatal JSON parsing error" : "Uncaught exception", errorMessage);
+      handleFatalProcessError(isProtocolJsonParseError(errorMessage) ? "Fatal JSON parsing error" : "Uncaught exception", errorMessage);
     });
 
     process.on("unhandledRejection", async (reason) => {
       const errorMessage = reason instanceof Error ? reason.message : String(reason);
-      handleFatalProcessError("run_server_unhandled_rejection", isProtocolJsonParseError(errorMessage) ? "Fatal JSON parsing rejection" : "Unhandled rejection", errorMessage);
+      handleFatalProcessError(isProtocolJsonParseError(errorMessage) ? "Fatal JSON parsing rejection" : "Unhandled rejection", errorMessage);
     });
 
 

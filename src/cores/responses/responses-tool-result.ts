@@ -6,6 +6,7 @@
  */
 
 import type { ServerResponseContent, ServerResult } from "@assets/type/common";
+import {createToolDisplayText} from "@cores/responses/responses-tool-display";
 import {compactStandardToolOutput} from "@features/context/context-output-compactor";
 
 export type ToolResultStatus = "success" | "error";
@@ -71,39 +72,7 @@ function createCombinedText(content: ServerResponseContent[]): string {
   return content.map((item) => item.text ?? "").join("\n");
 }
 
-// 4. Create display text ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function stringifyDisplayStructuredContent(value: ServerResult["structuredContent"] | null): string {
-  if (value === null || value === undefined) {
-    return "";
-  }
-  try {
-    return JSON.stringify(value, null, 2) ?? String(value);
-  }
-  catch {
-    return String(value);
-  }
-}
-
-function createDisplayText(toolName: string, output: StandardToolOutput): string {
-  const text = output.data.text;
-  const structuredText = stringifyDisplayStructuredContent(output.data.structuredContent);
-
-  if (text.trim().length > 0 && structuredText.length > 0) {
-    return `${text}\n\n${structuredText}`;
-  }
-  if (text.trim().length > 0) {
-    return text;
-  }
-  if (structuredText.length > 0) {
-    return structuredText;
-  }
-  if (output.error?.message !== undefined && output.error.message.length > 0) {
-    return output.error.message;
-  }
-  return `${toolName}: ${output.status}`;
-}
-
-// 5. Create error details ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Create error details ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createErrorDetails(status: ToolResultStatus, content: ServerResponseContent[]): ToolResultError | null {
   if (status !== "error") {
     return null;
@@ -113,7 +82,7 @@ function createErrorDetails(status: ToolResultStatus, content: ServerResponseCon
   };
 }
 
-// 6. Create result metadata ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Create result metadata ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createResultMetadata(toolName: string, result: ServerResult, content: ServerResponseContent[], durationMs?: number): ToolResultMetadata {
   const status: ToolResultStatus = result.isError === true ? "error" : "success";
   const errorDetails = createErrorDetails(status, content);
@@ -130,7 +99,7 @@ function createResultMetadata(toolName: string, result: ServerResult, content: S
   return resultMetadata;
 }
 
-// 7. Create standard output ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Create standard output ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createStandardOutput(toolName: string, result: ServerResult, content: ServerResponseContent[], durationMs?: number): StandardToolOutput {
   const status: ToolResultStatus = result.isError === true ? "error" : "success";
   const structuredContent = result.structuredContent ?? null;
@@ -151,7 +120,7 @@ function createStandardOutput(toolName: string, result: ServerResult, content: S
   return standardOutput;
 }
 
-// 8. Is standard tool output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Is standard tool output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function isStandardToolOutput(value: unknown): value is StandardToolOutput {
   if (typeof value !== "object" || value === null) {
     return false;
@@ -173,12 +142,12 @@ export function isStandardToolOutput(value: unknown): value is StandardToolOutpu
   );
 }
 
-// 9. Is normalized tool result ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Is normalized tool result ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function isNormalizedToolResult(result: ServerResult): boolean {
   return isStandardToolOutput(result.structuredContent);
 }
 
-// 10. Create tool text response ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Create tool text response ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function createToolTextResponse(text: string, options: ToolResponseOptions = {}): ServerResult {
   const response: ServerResult = {
     content: [{ text, type: "text" }],
@@ -193,7 +162,7 @@ export function createToolTextResponse(text: string, options: ToolResponseOption
   return response;
 }
 
-// 11. Create tool error response ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Create tool error response ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function createToolErrorResponse(message: string, options: ToolResponseOptions = {}): ServerResult {
   const response = createToolTextResponse(`Error: ${message}`, options);
   response.isError = true;
@@ -201,14 +170,14 @@ export function createToolErrorResponse(message: string, options: ToolResponseOp
   return response;
 }
 
-// 12. Normalize tool result ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11. Normalize tool result ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function normalizeToolResult(toolName: string, result: ServerResult, durationMs?: number): ServerResult {
   if (isNormalizedToolResult(result)) {
     const output = result.structuredContent as StandardToolOutput;
 
     return {
       ...result,
-      content: [{ text: createDisplayText(toolName, output), type: "text" }],
+      content: [{ text: createToolDisplayText(output), type: "text" }],
     };
   }
   const originalContent = normalizeContent(result.content);
@@ -222,7 +191,7 @@ export function normalizeToolResult(toolName: string, result: ServerResult, dura
     },
     content: [
       {
-        text: createDisplayText(toolName, originalOutput),
+        text: createToolDisplayText(standardOutput),
         type: "text",
       },
     ],

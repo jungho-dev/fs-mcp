@@ -6,6 +6,7 @@
  */
 
 import assert from "node:assert/strict";
+import { createToolDisplayText } from "../../out/cores/responses/responses-tool-display.js";
 import { normalizeToolResult } from "../../out/cores/responses/responses-tool-result.js";
 import { dispatchToolCall, getDispatchableToolNames } from "../../out/tools/tools-dispatcher.js";
 
@@ -45,7 +46,8 @@ async function testUnknownToolResponse() {
 
   assert.match(output.error.message, UNKNOWN_TOOL_PATTERN);
   assert.match(output.data.text, UNKNOWN_TOOL_PATTERN);
-  assert.match(result.content[0].text, UNKNOWN_TOOL_PATTERN);
+  assert.equal(result.content[0].text, createToolDisplayText(output));
+  assert.doesNotMatch(result.content[0].text, UNKNOWN_TOOL_PATTERN);
 }
 
 // 3. dispatcher output contract ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -59,7 +61,8 @@ async function testDispatcherNormalizesKnownToolResponse() {
   const output = assertStandardToolResult(result, "get_configs", "success");
 
   assert.equal(output.error, null);
-  assert.match(result.content[0].text, /get_configs: 2\/2 succeeded/);
+  assert.equal(result.content[0].text, createToolDisplayText(output));
+  assert.doesNotMatch(result.content[0].text, /succeeded/);
   assert.equal(output.data.structuredContent.totalCount, 2);
   assert.equal(output.data.structuredContent.succeededCount, 2);
 }
@@ -72,7 +75,8 @@ function testDisplayPreservesStructuredData() {
   }, 1);
   const output = assertStandardToolResult(result, "synthetic_tool", "success");
 
-  assert.equal(result.content[0].text, longText);
+  assert.equal(result.content[0].text, createToolDisplayText(output));
+  assert.doesNotMatch(result.content[0].text, /synthetic output line/);
   assert.equal(output.data.text, longText);
 }
 

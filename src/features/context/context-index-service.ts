@@ -6,6 +6,7 @@
  */
 
 import {Database} from "bun:sqlite";
+import {createHash} from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -53,11 +54,16 @@ const TOKEN_PATTERN = /[\p{L}\p{N}_]+/gu;
 
 type ContextDocumentRow = {
   created_at: string;
+  content_hash: string | null;
   index_id: string;
   line_count: number;
   original_length: number;
   source: string;
   tool_name: string | null;
+};
+
+type TableInfoRow = {
+  name: string;
 };
 
 type ContextChunkRow = {
@@ -114,7 +120,12 @@ function createIndexId(): string {
   return `ctx_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
 }
 
-// 5. Normalize document row ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Create content hash ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function createContentHash(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+// 6. Normalize document row ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function normalizeDocumentRow(row: ContextDocumentRow): ContextIndexDocument {
   const document: ContextIndexDocument = {
     createdAt: row.created_at,
@@ -130,7 +141,7 @@ function normalizeDocumentRow(row: ContextDocumentRow): ContextIndexDocument {
   return document;
 }
 
-// 6. Tokenize query ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Tokenize query ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function tokenizeQuery(query: string): string[] {
   const matches = query.match(TOKEN_PATTERN) ?? [];
   const uniqueTokens = new Set(matches.map((match) => match.toLowerCase()).filter((match) => match.length > 0));
@@ -138,7 +149,7 @@ function tokenizeQuery(query: string): string[] {
   return [...uniqueTokens].slice(0, 12);
 }
 
-// 7. Create FTS query ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Create FTS query ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createFtsQuery(query: string): string | null {
   const tokens = tokenizeQuery(query);
 
@@ -148,7 +159,16 @@ function createFtsQuery(query: string): string | null {
   return tokens.map((token) => `"${token.replace(/"/g, '""')}"`).join(" AND ");
 }
 
-// 8. Read context config ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Ensure content hash column ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function ensureContentHashColumn(db: Database): void {
+  const rows = db.query<TableInfoRow, []>("PRAGMA table_info(context_documents)").all();
+
+  if (!rows.some((row) => row.name === "content_hash")) {
+    db.exec("ALTER TABLE context_documents ADD COLUMN content_hash TEXT");
+  }
+}
+
+// 10. Read context config ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function readContextIndexConfig(): ContextIndexConfig {
   const config = configManager.getConfigSync();
 
@@ -156,12 +176,12 @@ function readContextIndexConfig(): ContextIndexConfig {
     autoMinChars: typeof config.contextIndexAutoMinChars === "number" ? config.contextIndexAutoMinChars : DEFAULT_AUTO_MIN_CHARS,
     autoMinLines: typeof config.contextIndexAutoMinLines === "number" ? config.contextIndexAutoMinLines : DEFAULT_AUTO_MIN_LINES,
     dbPath: typeof config.contextIndexDbPath === "string" ? config.contextIndexDbPath : getDefaultContextIndexDbPath(),
-    enabled: typeof config.contextIndexEnabled === "boolean" ? config.contextIndexEnabled : false,
+    enabled: typeof config.contextIndexEnabled === "boolean" ? config.contextIndexEnabled : true,
     maxEntryChars: typeof config.contextIndexMaxEntryChars === "number" ? config.contextIndexMaxEntryChars : DEFAULT_MAX_ENTRY_CHARS,
   };
 }
 
-// 9. Context index service ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11. Context index service ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 class ContextIndexService {
   private db: Database | null = null;
   private dbPath: string | null = null;
@@ -210,7 +230,8 @@ class ContextIndexService {
         tool_name TEXT,
         created_at TEXT NOT NULL,
         original_length INTEGER NOT NULL,
-        line_count INTEGER NOT NULL
+        line_count INTEGER NOT NULL,
+        content_hash TEXT
       );
       CREATE TABLE IF NOT EXISTS context_chunks (
         chunk_id TEXT PRIMARY KEY,
@@ -229,6 +250,28 @@ class ContextIndexService {
         text
       );
     `);
+    ensureContentHashColumn(db);
+    db.exec("CREATE INDEX IF NOT EXISTS idx_context_documents_content_hash ON context_documents(content_hash)");
+  }
+
+  // 9-4-1. Find reusable index reference ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  private findReusableIndex(db: Database, contentHash: string, source: string, toolName: string | undefined, content: string): ContextIndexReference | null {
+    const normalizedToolName = toolName ?? null;
+    const row = db.query<ContextDocumentRow, [string, string, string | null, string | null]>(`
+      SELECT index_id, source, tool_name, created_at, original_length, line_count, content_hash
+      FROM context_documents
+      WHERE content_hash = ? AND source = ? AND (tool_name = ? OR (tool_name IS NULL AND ? IS NULL))
+      LIMIT 1
+    `).get(contentHash, source, normalizedToolName, normalizedToolName);
+
+    if (row === null || row === undefined) {
+      return null;
+    }
+    return {
+      ...normalizeDocumentRow(row),
+      indexed: true,
+      preview: createPreview(content),
+    };
   }
 
   // 9-5. Index text ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -239,13 +282,19 @@ class ContextIndexService {
     const createdAt = new Date().toISOString();
     const originalLength = content.length;
     const indexedText = content.slice(0, config.maxEntryChars);
+    const contentHash = createContentHash(indexedText);
     const lines = indexedText.split(LINE_SPLIT_PATTERN);
     const lineCount = content.length === 0 ? 0 : indexedText.length === content.length ? lines.length : countLines(content);
-    const insertDocument = db.prepare("INSERT INTO context_documents (index_id, source, tool_name, created_at, original_length, line_count) VALUES (?, ?, ?, ?, ?, ?)");
+    const reusableIndex = this.findReusableIndex(db, contentHash, source, toolName, content);
+
+    if (reusableIndex !== null) {
+      return reusableIndex;
+    }
+    const insertDocument = db.prepare("INSERT INTO context_documents (index_id, source, tool_name, created_at, original_length, line_count, content_hash) VALUES (?, ?, ?, ?, ?, ?, ?)");
     const insertChunk = db.prepare("INSERT INTO context_chunks (chunk_id, index_id, chunk_index, source, text, line_start, line_end) VALUES (?, ?, ?, ?, ?, ?, ?)");
     const insertFts = db.prepare("INSERT INTO context_chunks_fts (chunk_id, index_id, source, text) VALUES (?, ?, ?, ?)");
     const insertAll = db.transaction(() => {
-      insertDocument.run(indexId, source, toolName ?? null, createdAt, originalLength, lineCount);
+      insertDocument.run(indexId, source, toolName ?? null, createdAt, originalLength, lineCount, contentHash);
 
       for (let start = 0, chunkIndex = 0; start < lines.length; start += CONTEXT_CHUNK_LINE_COUNT - CONTEXT_CHUNK_LINE_OVERLAP, chunkIndex++) {
         const selectedLines = lines.slice(start, start + CONTEXT_CHUNK_LINE_COUNT);
@@ -321,7 +370,7 @@ class ContextIndexService {
   listDocuments(): ContextIndexDocument[] {
     const db = this.getDatabase();
     const rows = db.query<ContextDocumentRow, []>(`
-      SELECT index_id, source, tool_name, created_at, original_length, line_count
+      SELECT index_id, source, tool_name, created_at, original_length, line_count, content_hash
       FROM context_documents
       ORDER BY created_at DESC
     `).all();

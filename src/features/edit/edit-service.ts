@@ -11,7 +11,6 @@ import path from "node:path";
 import {resolvePreviewFileType} from "@assets/readers/readers-filetypes";
 import type {ServerResult} from "@assets/type/common";
 import {createErrorResponse} from "@cores/responses/responses-error";
-import {configManager} from "@features/config/config-store";
 import {detectLineEnding, normalizeLineEndings} from "@features/edit/edit-line-ending-policy";
 import {resolveAbsolutePath} from "@features/filesystem/filesystem-path-resolver";
 import {readFileInternal, validatePath, writeFile} from "@features/filesystem/filesystem-service";
@@ -116,9 +115,6 @@ export async function performSearchReplace(filePath: string, block: SearchReplac
   if (typeof content !== "string") {
     throw new Error(`Wrong content for file ${filePath}`);
   }
-  // Get the large-edit warning threshold from configuration
-  const config = await configManager.getConfig();
-  const warningLineLimit = config.fileWriteLineLimit ?? 50;
 
   // Detect file's line ending style
   const fileLineEnding = detectLineEnding(content);
@@ -148,18 +144,6 @@ export async function performSearchReplace(filePath: string, block: SearchReplac
     else {
       // Replace all occurrences using split and join for multiple replacements
       newContent = newContent.split(normalizedSearch).join(normalizeLineEndings(block.replace, fileLineEnding));
-    }
-    // Check if search or replace text has too many lines
-    const searchLines = block.search.split("\n").length;
-    const replaceLines = block.replace.split("\n").length;
-    const maxLines = Math.max(searchLines, replaceLines);
-    let warningMessage = "";
-
-    if (maxLines > warningLineLimit) {
-      const problemText = searchLines > replaceLines ? "search text" : "replacement text";
-      warningMessage = `\n\nWARNING: The ${problemText} has ${maxLines} lines (warning threshold: ${warningLineLimit}).
-
-RECOMMENDATION: For large search/replace operations, consider breaking them into smaller chunks with fewer lines.`;
     }
     await writeFile(filePath, newContent);
     const resolvedEditPath = resolveAbsolutePath(filePath);
@@ -243,19 +227,6 @@ RECOMMENDATION: For large search/replace operations, consider breaking them into
 
     // Log to file
     await fuzzySearchLogger.log(logEntry);
-
-    // Combine all fuzzy search data for single capture
-    const fuzzySearchData = {
-      character_codes: characterCodeData.report,
-      execution_time_ms: executionTime,
-      file_size: content.length,
-      found_text_length: fuzzyResult.value.length,
-      search_length: block.search.length,
-      similarity: similarity,
-      threshold: FUZZY_THRESHOLD,
-      total_diff_length: characterCodeData.diffLength,
-      unique_character_count: characterCodeData.uniqueCount,
-    };
 
     // Check if the fuzzy match is "close enough"
     if (similarity >= FUZZY_THRESHOLD) {

@@ -6,6 +6,7 @@
  */
 
 import { CONFIG_TOOL_CATALOG } from "../../out/tools/tools-config.js";
+import { CONTEXT_TOOL_CATALOG } from "../../out/tools/tools-context.js";
 import { getDispatchableToolNames } from "../../out/tools/tools-dispatcher.js";
 import { FILESYSTEM_TOOL_CATALOG } from "../../out/tools/tools-filesystem.js";
 import { GIT_TOOL_CATALOG } from "../../out/tools/tools-git.js";
@@ -36,7 +37,7 @@ function difference(left, right) {
 
 // 2. tool surface check ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function verifyToolSurface() {
-  const catalogNames = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...GIT_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG]
+  const catalogNames = [...CONFIG_TOOL_CATALOG, ...CONTEXT_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...GIT_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG]
     .map((tool) => tool.name)
     .sort();
   const dispatchableNames = getDispatchableToolNames().sort();
@@ -57,7 +58,7 @@ function verifyToolSurface() {
     failures.push(`Dispatchers missing from catalog: ${staleDispatchers.join(", ")}`);
   }
 
-  const toolsMissingArgsPath = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...GIT_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG]
+  const toolsMissingArgsPath = [...CONFIG_TOOL_CATALOG, ...CONTEXT_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...GIT_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG]
     .filter((tool) => !JSON.stringify(tool.inputSchema).includes("args_path"))
     .map((tool) => tool.name)
     .sort();
