@@ -12,6 +12,7 @@ import type { GitArgsMap, GitToolOutput } from "@features/git/git-types";
 
 const GPG_SIGN_PATTERN = /gpg|sign/i;
 const HANGUL_PATTERN = /[ㄱ-ㅎㅏ-ㅣ가-힣]/u;
+const CONVENTIONAL_COMMIT_PATTERN = /^(?:feat|fix|chore|docs|refactor|test|style|perf|build|ci)(?:\([^)]+\))?:\s+\S/im;
 const MULTILINE_BULLET_PATTERN = /\n\s*\n[\s\S]*^\s*-\s+\S/m;
 const COMMIT_SUMMARY_FORMAT = "%H%x1f%an <%ae>%x1f%ct%x1f%s%x1f%G?";
 const GIT_LOG_FORMAT = "%H%x1f%h%x1f%an%x1f%ae%x1f%ct%x1f%P%x1f%d%x1f%s%x1f%b%x1e";
@@ -50,6 +51,9 @@ export async function runGitCommit(input: GitArgsMap["git_commit"]): Promise<Git
 
   if (HANGUL_PATTERN.test(normalizedCommitMessage)) {
     throw new Error("Commit messages must be written in English. Korean text is not allowed.");
+  }
+  if (!CONVENTIONAL_COMMIT_PATTERN.test(normalizedCommitMessage)) {
+    throw new Error("Commit messages must start with an English Conventional Commit subject, for example: fix: update git commit handling.");
   }
   if (!MULTILINE_BULLET_PATTERN.test(normalizedCommitMessage)) {
     throw new Error("Commit messages must use a subject line, a blank line, and at least one bullet point.");

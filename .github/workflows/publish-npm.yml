@@ -3,7 +3,7 @@ name: Publish npm Package
 on:
   push:
     branches:
-      - private/main
+      - public/main
   workflow_dispatch:
 
 concurrency:
@@ -15,12 +15,21 @@ permissions:
 
 jobs:
   publish:
-    if: github.repository == 'jungho-dev/fs-mcp-private'
+    if: github.repository == 'jungho-dev/fs-mcp' && github.ref == 'refs/heads/public/main'
     runs-on: ubuntu-latest
 
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
+
+      - name: Validate public remote
+        shell: bash
+        run: |
+          remote_url="$(git remote get-url origin)"
+          if [ "$remote_url" != "https://github.com/jungho-dev/fs-mcp" ] && [ "$remote_url" != "https://github.com/jungho-dev/fs-mcp.git" ]; then
+            echo "Unexpected origin remote: $remote_url" >&2
+            exit 1
+          fi
 
       - name: Set up Bun
         uses: oven-sh/setup-bun@v2

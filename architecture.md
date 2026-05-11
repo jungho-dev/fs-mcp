@@ -4,6 +4,7 @@
 
 ```text
 MCP stdio client
+  -> fs-mcp binary
   -> out/index.mjs
   -> src/index.mts
   -> src/cores/server/server-run-mcp-server.ts
@@ -76,17 +77,20 @@ are MCP adapters and not reusable domain services.
 
 ## Tool Surface
 
-Tool catalog modules are grouped by runtime domain.
+Tool catalog modules are grouped by runtime domain. The current catalog has 53 tools.
 
-- `tools-config.ts`: `get_configs`, `set_config_values`
-- `tools-context.ts`: `index_contexts`, `search_contexts`, `list_contexts`, `clear_contexts`
-- `tools-filesystem.ts`: file, directory, search-session, metadata, and exact block edit tools
-- `tools-process.ts`: command sessions, process output, process listing, and process termination tools
-- `tools-git.ts`: repository, history, branch, checkout, stash, tag, worktree, remote, and integration tools
+- `tools-config.ts`: `get_configs`, `set_config_values`.
+- `tools-context.ts`: `index_contexts`, `search_contexts`, `list_contexts`, `clear_contexts`.
+- `tools-filesystem.ts`: file operations, directory operations, metadata, active search sessions, and
+  exact block editing.
+- `tools-process.ts`: command sessions, process output, interactive input, process listing, session listing,
+  and process termination.
+- `tools-git.ts`: repository setup, working tree, history, branch, checkout, stash, tag, worktree, remote,
+  changelog analysis, and integration operations.
 
 `server-create-mcp-server.ts` concatenates those catalogs for `list_tools`. `tools-dispatcher.ts` owns the
-matching `call_tool` registry, and `verify:tools` checks that the compiled catalog and dispatcher names stay in
-sync.
+matching `call_tool` registry, and `tests/scripts/scripts-verify-tool-surface.mjs` checks that compiled catalog
+and dispatcher names stay in sync.
 
 ## Tool Response Contract
 
@@ -103,20 +107,24 @@ sync.
 `features/context/context-index-service.ts` owns a Bun SQLite-backed index for large text payloads.
 
 - Default thresholds are 5,000 characters or 120 lines, with a maximum indexed entry size of 1,000,000 characters.
-- The default database path is resolved through `getDefaultContextIndexDbPath` to the shared home path
-  `~/.mcp/fs-mcp.sqlite`.
+- The default database path is `~/.mcp/fs-mcp.sqlite`.
 - Text is chunked into overlapping 80-line chunks with 20-line overlap and searched through SQLite FTS.
 - `context-output-compactor.ts` indexes large text fields and structured collections without replacing the
   original structured payload.
 - Manual context tools call the same service for explicit index, search, list, and clear operations.
 
-## VS Code and Visual Studio Compatibility
+## MCP Client Compatibility
 
+- `SERVER_INSTRUCTIONS` presents one client-neutral instruction: use fs-mcp for local filesystem, process, git,
+  config, and context-index work.
+- Client metadata is captured during initialization and exposed as `currentClient` through configuration tools.
+- Known client home mappings cover Codex, Claude, Cline, Cursor, Windsurf, Roo, and VS Code, with a slug-based
+  fallback for other clients.
 - `FilteredStdioServerTransport` captures accidental console output so MCP JSON-RPC stays isolated on stdio.
-- Client-specific configuration suppresses notifications for Cline, VS Code, Claude Dev, Roo, and related clients.
-- The server registers no-op resource and resource-template handlers so Visual Studio initialization can complete
-  even when the package has no MCP resources to expose.
-- Search uses bundled `@vscode/ripgrep` first and falls back to system ripgrep when needed.
+- Notifications are disabled for clients with known notification sensitivity, currently Cline, VS Code, and
+  Claude Dev.
+- The server registers no-op resource and resource-template handlers so clients that probe resources during
+  initialization can complete even when the package has no MCP resources to expose.
 
 ## Performance and Safety Design
 
@@ -124,20 +132,22 @@ sync.
 - Text reading uses offset and length inputs so clients can request bounded slices instead of whole files.
 - Large inline tool arguments can be passed through path-backed fields such as `content_path`,
   `old_string_path`, `new_string_path`, `pattern_path`, and `input_path`.
-- Search execution is delegated to ripgrep through `features/search/search-ripgrep-adapter.ts`.
+- Search execution is delegated to bundled `@vscode/ripgrep`, with system ripgrep as a fallback.
+- Process execution uses a command policy blocklist, configured shell selection, and explicit session tracking.
 - Stdio transport captures accidental stdout and stderr writes before they can corrupt MCP JSON output.
-- Tests exercise the compiled `out` tree, which is the same surface published to npm.
+- Tests exercise the compiled `out` tree, which is the same runtime surface published to npm.
 
 ## Verification Boundary
 
-- `verify:source` type-checks source and protects source/test root boundaries.
-- `verify:shape` checks the release artifact shape and rejects generated artifacts outside the intended package
-  boundary.
-- `verify:tools` compares the compiled tool catalog and dispatcher registry.
-- `verify:reports` checks optimization reports accumulated under `.docs`.
-- `bun run verify` runs the package verification scripts used before publish; tests run through `bun run test`.
+- `package.json` currently exposes `bun run verify`, which runs `tsc --noEmit`.
+- `tests/run-all-tests.js` runs the contract and smoke test suite when invoked directly with Bun.
+- `tests/scripts/scripts-verify-release-shape.mjs` checks release artifact shape and generated artifact drift.
+- `tests/scripts/scripts-verify-source-boundaries.mjs` protects source and test root boundaries.
+- `tests/scripts/scripts-verify-tool-surface.mjs` compares the compiled tool catalog and dispatcher registry.
+- `tests/scripts/scripts-verify-optimization-reports.mjs` checks optimization reports accumulated under `.docs`.
 
 ## Packaging Boundary
 
-The published package exposes `fs-mcp` through `out/index.mjs` and includes release documentation. Source files,
-tests, generated fixtures, and local build caches are not runtime package inputs.
+The published package exposes `fs-mcp` through `out/index.mjs`. The `package.json` file allowlist includes
+`out`, release documentation, and changelog files. Source files, tests, generated fixtures, local build caches,
+and private runtime artifacts are not runtime package inputs.

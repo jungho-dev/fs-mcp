@@ -21,7 +21,7 @@ type GitToolDescription = {
 
 const LONG_MESSAGE_GUIDANCE = "Use messagePath/messageOffset/messageLength for long messages so the tool-call argument preview stays small.";
 const COMMIT_MESSAGE_GUIDANCE = [
-  "Write commit messages in English as multi-line Conventional Commit text.",
+  "Write commit messages in English as multi-line Conventional Commit text. Korean/Hangul text is rejected.",
   "Use this format instead of a terse one-line message:",
   "<type>: <summary>",
   "",
