@@ -11,8 +11,7 @@ import { detectAutoExcludedFiles, getStatusSummary, parseRefs, sumNumstat, toSna
 import type { GitArgsMap, GitToolOutput } from "@features/git/git-types";
 
 const GPG_SIGN_PATTERN = /gpg|sign/i;
-const COMMIT_SUMMARY_FORMAT = "%H%x1f%an <%ae>%x1f%ct%x1f%s";
-const SIGNATURE_STATUS_FORMAT = "%G?";
+const COMMIT_SUMMARY_FORMAT = "%H%x1f%an <%ae>%x1f%ct%x1f%s%x1f%G?";
 const GIT_LOG_FORMAT = "%H%x1f%h%x1f%an%x1f%ae%x1f%ct%x1f%P%x1f%d%x1f%s%x1f%b%x1e";
 
 // 1. Run git add ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -69,15 +68,13 @@ export async function runGitCommit(input: GitArgsMap["git_commit"]): Promise<Git
   if (!headCommit) {
     throw new Error("Commit completed but HEAD is unavailable.");
   }
-  const summaryResult = await runGitCommand(["show", "--stat", `--format=${COMMIT_SUMMARY_FORMAT}`, "-1", headCommit], { cwd });
-  const headerLine = splitLines(summaryResult.stdout)[0];
-  const headerParts = headerLine.split("\x1f");
-  const numstatResult = await runGitCommand(["show", "--numstat", "--format=", "-1", headCommit], { cwd, allowFailure: true });
-  const changedFilesResult = await runGitCommand(["diff-tree", "--no-commit-id", "--name-only", "-r", headCommit], { cwd, allowFailure: true });
-  const signatureResult = await runGitCommand(["log", "-1", `--pretty=format:${SIGNATURE_STATUS_FORMAT}`], { cwd, allowFailure: true });
+  const summaryResult = await runGitCommand(["show", "--numstat", `--format=${COMMIT_SUMMARY_FORMAT}`, "-1", headCommit], { cwd });
+  const summaryLines = splitLines(summaryResult.stdout);
+  const headerParts = summaryLines[0].split("\x1f");
+  const numstatText = summaryLines.slice(1).join("\n");
   const status = await getStatusSummary(cwd, true);
-  const diffStats = sumNumstat(numstatResult.stdout);
-  const committedFiles = splitLines(changedFilesResult.stdout);
+  const diffStats = sumNumstat(numstatText);
+  const committedFiles = summaryLines.slice(1).map((line) => line.split("\t").slice(2).join("\t").trim()).filter((value) => value.length > 0);
 
   return {
     success: true,
@@ -89,7 +86,7 @@ export async function runGitCommit(input: GitArgsMap["git_commit"]): Promise<Git
     committedFiles,
     ...(diffStats.insertions !== undefined ? { insertions: diffStats.insertions } : {}),
     ...(diffStats.deletions !== undefined ? { deletions: diffStats.deletions } : {}),
-    signed: signatureResult.stdout.trim().length > 0 && signatureResult.stdout.trim() !== "N",
+    signed: (headerParts[4] ?? "").trim().length > 0 && (headerParts[4] ?? "").trim() !== "N",
     ...(signingWarning ? { signingWarning } : {}),
     status: toSnakeStatus(status),
   };

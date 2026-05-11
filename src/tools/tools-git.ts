@@ -20,6 +20,14 @@ type GitToolDescription = {
 };
 
 const LONG_MESSAGE_GUIDANCE = "Use messagePath/messageOffset/messageLength for long messages so the tool-call argument preview stays small.";
+const COMMIT_MESSAGE_GUIDANCE = [
+  "Write commit messages in English as multi-line Conventional Commit text.",
+  "Use this format instead of a terse one-line message:",
+  "<type>: <summary>",
+  "",
+  "- <change detail>",
+  "- <verification or behavior detail>",
+].join("\n");
 
 const GIT_TOOL_DESCRIPTIONS: GitToolDescription[] = [
   { name: "git_add", title: "Git Add", description: ["Stage files for commit.", CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false },
@@ -31,7 +39,7 @@ const GIT_TOOL_DESCRIPTIONS: GitToolDescription[] = [
   { name: "git_clean", title: "Git Clean", description: ["Remove untracked files or preview cleanup.", CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false, destructiveHint: true },
   { name: "git_clear_working_dir", title: "Git Clear Working Directory", description: ["Clear the session git working directory.", CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false, destructiveHint: true },
   { name: "git_clone", title: "Git Clone", description: ["Clone a repository from a remote or local source.", PATH_GUIDANCE, CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false, destructiveHint: true, openWorldHint: true },
-  { name: "git_commit", title: "Git Commit", description: ["Create a commit from staged changes.", LONG_MESSAGE_GUIDANCE, CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false, destructiveHint: true },
+  { name: "git_commit", title: "Git Commit", description: ["Create a commit from staged changes.", COMMIT_MESSAGE_GUIDANCE, LONG_MESSAGE_GUIDANCE, CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false, destructiveHint: true },
   { name: "git_diff", title: "Git Diff", description: ["Show differences between commits, branches, or working tree state.", CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: true },
   { name: "git_fetch", title: "Git Fetch", description: ["Fetch updates from a remote repository.", CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false, openWorldHint: true },
   { name: "git_init", title: "Git Init", description: ["Initialize a new git repository.", PATH_GUIDANCE, CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false, destructiveHint: true },
