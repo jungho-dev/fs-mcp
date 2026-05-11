@@ -11,6 +11,8 @@ import { detectAutoExcludedFiles, getStatusSummary, parseRefs, sumNumstat, toSna
 import type { GitArgsMap, GitToolOutput } from "@features/git/git-types";
 
 const GPG_SIGN_PATTERN = /gpg|sign/i;
+const HANGUL_PATTERN = /[ㄱ-ㅎㅏ-ㅣ가-힣]/u;
+const MULTILINE_BULLET_PATTERN = /\n\s*\n[\s\S]*^\s*-\s+\S/m;
 const COMMIT_SUMMARY_FORMAT = "%H%x1f%an <%ae>%x1f%ct%x1f%s%x1f%G?";
 const GIT_LOG_FORMAT = "%H%x1f%h%x1f%an%x1f%ae%x1f%ct%x1f%P%x1f%d%x1f%s%x1f%b%x1e";
 
@@ -44,11 +46,19 @@ export async function runGitAdd(input: GitArgsMap["git_add"]): Promise<GitToolOu
 export async function runGitCommit(input: GitArgsMap["git_commit"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);
   const commitMessage = await requireGitTextArgument(input.message, input.messagePath, input.messageOffset, input.messageLength, "message");
+  const normalizedCommitMessage = normalizeCommitMessage(commitMessage);
+
+  if (HANGUL_PATTERN.test(normalizedCommitMessage)) {
+    throw new Error("Commit messages must be written in English. Korean text is not allowed.");
+  }
+  if (!MULTILINE_BULLET_PATTERN.test(normalizedCommitMessage)) {
+    throw new Error("Commit messages must use a subject line, a blank line, and at least one bullet point.");
+  }
 
   if (input.filesToStage && input.filesToStage.length > 0) {
     await runGitCommand(["add", ...input.filesToStage], { cwd });
   }
-  const commitArgs = ["commit", "-m", normalizeCommitMessage(commitMessage), ...(input.amend ? ["--amend"] : []), ...(input.allowEmpty ? ["--allow-empty"] : []), ...(input.noVerify ? ["--no-verify"] : []), ...(input.author ? ["--author", `${input.author.name} <${input.author.email}>`] : [])];
+  const commitArgs = ["commit", "-m", normalizedCommitMessage, ...(input.amend ? ["--amend"] : []), ...(input.allowEmpty ? ["--allow-empty"] : []), ...(input.noVerify ? ["--no-verify"] : []), ...(input.author ? ["--author", `${input.author.name} <${input.author.email}>`] : [])];
   let signingWarning: string | undefined;
   let commitResult = await runGitCommand(commitArgs, { cwd, allowFailure: true });
 
