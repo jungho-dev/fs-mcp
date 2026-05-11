@@ -17,13 +17,11 @@ export interface ToolDisplayOutput {
     structuredContent: ServerResult["structuredContent"] | null;
     text: string;
   };
-  idx?: unknown[];
   status: ToolDisplayStatus;
   toolName: string;
 }
 
 export interface ToolDisplayTemplateValues {
-  idx: number;
   items: number;
   status: ToolDisplayStatus;
   structuredChars: number;
@@ -52,18 +50,13 @@ const config = {
     color: `\u001B[38;2;0;180;216m`,
   },
 };
-const renderLine = () => {
-  return `${config.line.color}${config.line.str}${config.reset.color}\n`
-};
-const renderRow = (key: string, value: string) => {
-  return `${config.key.color}${config.key.str}${key} = ${config.value.color}${config.value.str}${value}${config.reset.color}\n`;
-};
+const renderLine = () => `${config.line.color}${config.line.str}${config.reset.color}\n`;
+const renderRow = (key: string, value: string) => `${config.key.color}${config.key.str}${key} = ${config.value.color}${config.value.str}${value}${config.reset.color}\n`;
 export const TOOL_DISPLAY_TEMPLATE = [
   renderLine(),
+  renderRow(`items`, `\${items}`),
   renderRow(`tool`, `\${tool}`),
   renderRow(`status`, `\${status}`),
-  renderRow(`idx`, `\${idx}`),
-  renderRow(`items`, `\${items}`),
   renderRow(`textChars`, `\${textChars}`),
   renderRow(`structuredChars`, `\${structuredChars}`),
   renderLine(),
@@ -82,9 +75,22 @@ function stringifyDisplayStructuredContent(value: ServerResult["structuredConten
   }
 }
 
-// 2. Count context indexes ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function countContextIndexes(output: ToolDisplayOutput): number {
-  return Array.isArray(output.idx) ? output.idx.length : 0;
+// 2. Count display items ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function countDisplayItems(output: ToolDisplayOutput): number {
+  const structuredContent = output.data.structuredContent;
+
+  if (typeof structuredContent === "object" && structuredContent !== null) {
+    const totalCount = (structuredContent as Record<string, unknown>).totalCount;
+    const results = (structuredContent as Record<string, unknown>).results;
+
+    if (typeof totalCount === "number" && Number.isFinite(totalCount)) {
+      return totalCount;
+    }
+    if (Array.isArray(results)) {
+      return results.length;
+    }
+  }
+  return output.data.content.length;
 }
 
 // 3. Create tool display values ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -92,8 +98,7 @@ function createToolDisplayValues(output: ToolDisplayOutput): ToolDisplayTemplate
   const structuredText = stringifyDisplayStructuredContent(output.data.structuredContent);
 
   return {
-    items: output.data.content.length,
-    idx: countContextIndexes(output),
+    items: countDisplayItems(output),
     status: output.status,
     structuredChars: structuredText.length,
     textChars: output.data.text.length,

@@ -45,6 +45,7 @@ function normalizeContextIndexConfigValue(key: string, value: unknown): unknown 
   if (key === "contextIndexDbPath" && (typeof value !== "string" || value.trim().length === 0)) {
     throw new Error("contextIndexDbPath must be a non-empty string");
   }
+  // biome-ignore lint/security/noSecrets: Context-index config key names are public option identifiers.
   if ((key === "contextIndexAutoMinChars" || key === "contextIndexAutoMinLines" || key === "contextIndexMaxEntryChars") && (typeof value !== "number" || !Number.isFinite(value) || value < 0)) {
     throw new Error(`${key} must be a non-negative finite number`);
   }

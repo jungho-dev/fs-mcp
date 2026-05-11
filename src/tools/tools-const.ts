@@ -8,6 +8,8 @@
 import {getOSSpecificGuidance, getPathGuidance} from "@cores/runtime/runtime-guidance";
 import {getSystemInfo} from "@cores/runtime/runtime-info";
 
+const systemInfo = getSystemInfo();
+
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export type ToolCatalogEntry = {
   name: string;
@@ -22,11 +24,11 @@ export type ToolCatalogEntry = {
 };
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export const OS_GUIDANCE = getOSSpecificGuidance(getSystemInfo());
+export const OS_GUIDANCE = getOSSpecificGuidance(systemInfo);
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export const PATH_GUIDANCE = (`
-  IMPORTANT: ${getPathGuidance(getSystemInfo())} Relative paths may fail as they depend on the current working directory. Tilde paths (~/...) might not work in all contexts. Unless the user explicitly asks for relative paths, use absolute paths.
+  IMPORTANT: ${getPathGuidance(systemInfo)} Relative paths may fail as they depend on the current working directory. Tilde paths (~/...) might not work in all contexts. Unless the user explicitly asks for relative paths, use absolute paths.
 `);
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――

@@ -100,15 +100,18 @@ project root/
 
 ## 개발
 
+현재 package script는 의도적으로 작게 유지합니다.
+
 ```bash
-bun run verify:source
-bun run build
-bun run test
 bun run verify
 ```
 
-`bun run verify`는 source type check, release-shape check, tool-surface check, optimization-report check를
-실행합니다. Smoke 및 contract test suite는 `bun run test`로 별도 실행합니다.
+`bun run verify`는 `tsc --noEmit`으로 TypeScript를 검사합니다. Contract 및 smoke test suite는 필요할 때
+Bun으로 직접 실행합니다.
+
+```bash
+bun tests/run-all-tests.js
+```
 
 ## 문서
 

@@ -124,8 +124,6 @@ exercises the same batch surfaces through the dispatcher.
 - `SERVER_INSTRUCTIONS` presents client-neutral guidance: use fs-mcp for local filesystem, process, git, config,
   and context-index work, and prefer one batch call for multiple same-kind operations.
 - Client metadata is captured during initialization and exposed as `currentClient` through configuration tools.
-- Known client home mappings cover Codex, Claude, Cline, Cursor, Windsurf, Roo, and VS Code, with a slug-based
-  fallback for other clients.
 - `FilteredStdioServerTransport` captures accidental console output so MCP JSON-RPC stays isolated on stdio.
 - Notifications are disabled for clients with known notification sensitivity, currently Cline, VS Code, and
   Claude Dev.

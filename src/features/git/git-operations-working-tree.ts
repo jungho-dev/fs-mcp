@@ -14,6 +14,7 @@ const GPG_SIGN_PATTERN = /gpg|sign/i;
 const HANGUL_PATTERN = /[ㄱ-ㅎㅏ-ㅣ가-힣]/u;
 const CONVENTIONAL_COMMIT_PATTERN = /^(?:feat|fix|chore|docs|refactor|test|style|perf|build|ci)(?:\([^)]+\))?:\s+\S/im;
 const MULTILINE_BULLET_PATTERN = /\n\s*\n[\s\S]*^\s*-\s+\S/m;
+// biome-ignore lint/security/noSecrets: Git pretty-format token string, not credential material.
 const COMMIT_SUMMARY_FORMAT = "%H%x1f%an <%ae>%x1f%ct%x1f%s%x1f%G?";
 const GIT_LOG_FORMAT = "%H%x1f%h%x1f%an%x1f%ae%x1f%ct%x1f%P%x1f%d%x1f%s%x1f%b%x1e";
 

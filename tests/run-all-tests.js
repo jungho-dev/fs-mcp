@@ -4,6 +4,7 @@
  */
 
 import { spawn } from "node:child_process";
+import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -90,10 +91,10 @@ async function runTestFile(testFile) {
   });
 }
 
-// 4. Build project ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function buildProject() {
+// 4. Run build command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function runBuildCommand(args) {
   await new Promise((resolve, reject) => {
-    const proc = spawn("bun", ["run", "build"], {
+    const proc = spawn("bun", args, {
       cwd: projectRoot,
       stdio: "inherit",
       shell: false,
@@ -114,7 +115,14 @@ async function buildProject() {
   });
 }
 
-// 5. Run smoke tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Build project ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function buildProject() {
+  await runBuildCommand(["x", "swc", "./src", "-d", "./out", "--config-file", "./.server.swcrc", "--strip-leading-paths", "--out-file-extension", "js", "--delete-dir-on-start"]);
+  await runBuildCommand(["x", "tsc-alias", "-p", "tsconfig.json", "--outDir", "./out", "-f", "-fe", ".js"]);
+  await fs.rename(path.join(projectRoot, "out", "index.js"), path.join(projectRoot, "out", "index.mjs"));
+}
+
+// 6. Run smoke tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runSmokeTests() {
   if (RUNNABLE_TESTS.length === 0) {
     writeStderr(`${colors.yellow}Warning: No runnable tests configured${colors.reset}`);
@@ -154,7 +162,7 @@ async function runSmokeTests() {
   };
 }
 
-// 6. Main ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Main ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function main() {
   try {
     if (shouldSkipBuild) {

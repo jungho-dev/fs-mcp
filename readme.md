@@ -114,7 +114,6 @@ payload in every transcript.
 ## Client Compatibility
 
 - Client metadata is captured during initialization and exposed through `get_configs` as `currentClient`.
-- Known client home names include Codex, Claude, Cline, Cursor, Windsurf, Roo, and VS Code.
 - Console and stdout filtering protect MCP JSON-RPC stdio from accidental process output.
 - Notifications are suppressed for clients known to be sensitive to server-side JSON-RPC notifications, including
   Cline, VS Code, and Claude Dev.

@@ -15,9 +15,8 @@ function parseStandardOutput(result) {
   return result.structuredContent;
 }
 
-function createExpectedDisplaySummary(toolName, status, text, structuredContent, contentItems = 1, contextIndexes = 0) {
+function createExpectedDisplaySummary(toolName, status, text, structuredContent, contentItems = 1) {
   return createToolDisplayText({
-    contextIndexes: Array.from({ length: contextIndexes }, () => ({})),
     data: {
       content: Array.from({ length: contentItems }, () => ({ text: "", type: "text" })),
       structuredContent,
@@ -35,6 +34,27 @@ function testTemplateLiteralDisplayFormat() {
 
   assert.equal(createToolDisplayText(output, `name=\${toolName}; result=\${status}; bytes=\${textChars}`), "name=template_tool; result=success; bytes=2");
   assert.equal(createToolDisplayText(output, `unknown=${missingPlaceholder}`), `unknown=${missingPlaceholder}`);
+}
+
+function testDisplayCountsBatchStructuredItems() {
+  assert.equal(createToolDisplayText({
+    data: {
+      content: [{ text: "", type: "text" }],
+      structuredContent: { results: [{}, {}], totalCount: 2 },
+      text: "",
+    },
+    status: "success",
+    toolName: "batch_tool",
+  }, `items=\${items}`), "items=2");
+  assert.equal(createToolDisplayText({
+    data: {
+      content: [{ text: "", type: "text" }],
+      structuredContent: { results: [{}, {}, {}] },
+      text: "",
+    },
+    status: "success",
+    toolName: "batch_tool",
+  }, `items=\${items}`), "items=3");
 }
 
 // 2. success envelope contract ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -161,7 +181,7 @@ function testDisplayKeepsOriginalOutput() {
   assert.equal(output.data.text.includes(fullText), true);
   assert.equal(output.data.structuredContent.textContent, fullText);
   assert.equal(Array.isArray(output.contextIndexes), true);
-  assert.equal(normalized.content[0].text, createExpectedDisplaySummary("display_compaction_tool", "success", fullText, { textContent: fullText }, 1, output.contextIndexes.length));
+  assert.equal(normalized.content[0].text, createExpectedDisplaySummary("display_compaction_tool", "success", fullText, { textContent: fullText }));
 }
 
 // 12. Clear display compaction contexts ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -191,6 +211,7 @@ async function main() {
     testDurationShapeWithoutTiming();
     testNormalizedResultRestoresDisplay();
     testTemplateLiteralDisplayFormat();
+    testDisplayCountsBatchStructuredItems();
     testDisplayPreservesStructuredText();
     testLongTextStructuredDataPreserved();
     testExistingSummaryPreserved();

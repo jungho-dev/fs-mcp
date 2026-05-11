@@ -33,7 +33,7 @@ export async function handleIndexContext(args: unknown): Promise<ServerResult> {
     return {
       content: [
         {
-          text: "Indexed context " + reference.indexId + "\nSource: " + reference.source + "\nOriginal: " + reference.lineCount + " lines, " + reference.originalLength + " chars",
+          text: `Indexed context ${reference.indexId}\nSource: ${reference.source}\nOriginal: ${reference.lineCount} lines, ${reference.originalLength} chars`,
           type: "text",
         },
       ],
@@ -63,10 +63,10 @@ export async function handleSearchContexts(args: unknown): Promise<ServerResult>
       results: contextIndexService.search(query, parsed.limit, parsed.source),
     }));
     const text = queryResults.map((queryResult) => {
-      const lines = ["Query: " + queryResult.query, "Results: " + queryResult.results.length];
+      const lines = [`Query: ${queryResult.query}`, `Results: ${queryResult.results.length}`];
 
       for (const result of queryResult.results) {
-        lines.push("- " + result.indexId + " " + result.source + ":" + result.lineStart + "-" + result.lineEnd);
+        lines.push(`- ${result.indexId} ${result.source}:${result.lineStart}-${result.lineEnd}`);
         lines.push(result.text);
       }
       return lines.join("\n");
@@ -92,7 +92,7 @@ export async function handleListContexts(args: unknown): Promise<ServerResult> {
     const documents = contextIndexService.listDocuments();
     const text = documents.length === 0
       ? "No indexed contexts."
-      : documents.map((document) => document.indexId + " | " + document.source + " | " + document.lineCount + " lines | " + document.createdAt).join("\n");
+      : documents.map((document) => `${document.indexId} | ${document.source} | ${document.lineCount} lines | ${document.createdAt}`).join("\n");
 
     return {
       content: [{text, type: "text"}],
@@ -117,7 +117,7 @@ export async function handleClearContexts(args: unknown): Promise<ServerResult> 
     });
 
     return {
-      content: [{text: "Cleared " + clearedCount + " indexed context(s).", type: "text"}],
+      content: [{text: `Cleared ${clearedCount} indexed context(s).`, type: "text"}],
       structuredContent: {
         clearedCount,
       },

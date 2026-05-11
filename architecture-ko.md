@@ -129,11 +129,12 @@ Tool catalog module은 runtime domain별로 나뉩니다.
 
 ## 검증 경계
 
-- `verify:source`는 source type check와 source/test root boundary를 확인합니다.
-- `verify:shape`는 release artifact shape와 의도하지 않은 generated artifact를 확인합니다.
-- `verify:tools`는 컴파일된 tool catalog와 dispatcher registry의 이름 계약을 비교합니다.
-- `verify:reports`는 `.docs`에 누적된 optimization report를 확인합니다.
-- `bun run verify`는 publish 전 사용하는 package verification script를 실행하며, test는 `bun run test`로 실행합니다.
+- `package.json`의 `bun run verify`는 `tsc --noEmit`으로 source type check를 실행합니다.
+- `tests/run-all-tests.js`는 실행 시 `bun run swc`로 `out`를 갱신한 뒤 contract 및 smoke test suite를 실행합니다.
+- `tests/scripts/scripts-verify-release-shape.mjs`는 release artifact shape와 generated artifact drift를 확인합니다.
+- `tests/scripts/scripts-verify-source-boundaries.mjs`는 source 및 test root boundary를 보호합니다.
+- `tests/scripts/scripts-verify-tool-surface.mjs`는 컴파일된 tool catalog와 dispatcher registry 이름 계약을 비교합니다.
+- `tests/scripts/scripts-verify-optimization-reports.mjs`는 `.docs`에 누적된 optimization report를 확인합니다.
 
 ## 패키징 경계
 

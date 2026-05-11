@@ -5,9 +5,9 @@
  * @since 2026-05-07
  */
 
+import {getDefaultContextIndexDbPath} from "@features/config/config-client";
 import {withArgsPathSchema} from "@schemas/schemas-args-ref";
 import {ClearContextsArgsSchema, IndexContextsArgsSchema, ListContextsArgsSchema, SearchContextsArgsSchema} from "@schemas/schemas-context";
-import {getDefaultContextIndexDbPath} from "@features/config/config-client";
 import {BATCH_GUIDANCE, CMD_PREFIX_DESCRIPTION, type ToolCatalogEntry} from "@tools/tools-const";
 import {zodToJsonSchema} from "zod-to-json-schema";
 

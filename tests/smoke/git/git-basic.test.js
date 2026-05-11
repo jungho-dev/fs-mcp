@@ -34,6 +34,10 @@ async function setupRepository(repoPath) {
 // 3. smoke flow ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testGitBasicFlow() {
   const repoPath = await fs.mkdtemp(path.join(os.tmpdir(), "fs-mcp-git-basic-"));
+  const commitMessage = `feat: add demo file
+
+- Add demo file fixture.
+- Verify git smoke flow.`;
 
   try {
     const initOutput = parseStandardOutput(await dispatchToolCall("git_init", {path: repoPath, initialBranch: "main"}));
@@ -56,7 +60,7 @@ async function testGitBasicFlow() {
     assert.equal(addOutput.success, true);
     assert.equal(addOutput.stagedFiles.includes("demo.txt"), true);
 
-    const commitOutput = parseStandardOutput(await dispatchToolCall("git_commit", {message: "feat: add demo file"}));
+    const commitOutput = parseStandardOutput(await dispatchToolCall("git_commit", {message: commitMessage}));
     assert.equal(commitOutput.success, true);
     assert.equal(commitOutput.message, "feat: add demo file");
     assert.equal(commitOutput.status.is_clean, true);
