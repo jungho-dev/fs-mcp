@@ -7,7 +7,7 @@
 
 import { withArgsPathSchema } from "@schemas/schemas-args-ref";
 import { GetConfigsArgsSchema, SetConfigValuesArgsSchema } from "@schemas/schemas-config";
-import { CMD_PREFIX_DESCRIPTION, type ToolCatalogEntry } from "@tools/tools-const";
+import { BATCH_GUIDANCE, CMD_PREFIX_DESCRIPTION, type ToolCatalogEntry } from "@tools/tools-const";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -33,6 +33,7 @@ export const CONFIG_TOOL_CATALOG: ToolCatalogEntry[] = [
       - systemInfo (operating system and runtime details)
       - availableShells (detected shells for new process sessions)
       When items is omitted, all supported keys are returned.
+      ${BATCH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
     `),
     inputSchema: zodToJsonSchema(withArgsPathSchema(GetConfigsArgsSchema)),
@@ -46,6 +47,7 @@ export const CONFIG_TOOL_CATALOG: ToolCatalogEntry[] = [
     description: (`
       Set one or many configuration values in parallel.
       Inline string values are capped; use value_path for large values so tool-call logs do not echo the full value.
+      ${BATCH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
     `),
     inputSchema: zodToJsonSchema(withArgsPathSchema(SetConfigValuesArgsSchema)),

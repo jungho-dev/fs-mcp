@@ -30,6 +30,11 @@ export const PATH_GUIDANCE = (`
 `);
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export const BATCH_GUIDANCE = (`
+  BATCH-FIRST: When multiple same-kind operations are needed, include every item in this single tool call instead of calling this tool repeatedly.
+`);
+
+// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export const CMD_PREFIX_DESCRIPTION = (`
   This command can be referenced as "FS-MCP: ..." or "use fs-mcp to ..." in your instructions.
   To prevent verbose tool-call parameter logs, put large or multi-item arguments in a UTF-8 JSON file and call with {"args_path":"ABSOLUTE_PATH_TO_ARGS_JSON"}.

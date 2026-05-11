@@ -77,7 +77,9 @@ are MCP adapters and not reusable domain services.
 
 ## Tool Surface
 
-Tool catalog modules are grouped by runtime domain. The current catalog has 53 tools.
+Tool catalog modules are grouped by runtime domain. The current catalog has 53 tools. Batch-capable catalog
+entries include shared `BATCH_GUIDANCE`, which tells clients to put multiple same-kind operations into one tool
+call instead of repeatedly calling the same tool.
 
 - `tools-config.ts`: `get_configs`, `set_config_values`.
 - `tools-context.ts`: `index_contexts`, `search_contexts`, `list_contexts`, `clear_contexts`.
@@ -91,6 +93,10 @@ Tool catalog modules are grouped by runtime domain. The current catalog has 53 t
 `server-create-mcp-server.ts` concatenates those catalogs for `list_tools`. `tools-dispatcher.ts` owns the
 matching `call_tool` registry, and `tests/scripts/scripts-verify-tool-surface.mjs` checks that compiled catalog
 and dispatcher names stay in sync.
+
+`tests/contracts/tool-catalog.contract.test.js` also checks that batch-capable config, context, filesystem,
+search, edit, and process tools keep the batch-first description. `tests/contracts/batch-tool.contract.test.js`
+exercises the same batch surfaces through the dispatcher.
 
 ## Tool Response Contract
 
@@ -115,8 +121,8 @@ and dispatcher names stay in sync.
 
 ## MCP Client Compatibility
 
-- `SERVER_INSTRUCTIONS` presents one client-neutral instruction: use fs-mcp for local filesystem, process, git,
-  config, and context-index work.
+- `SERVER_INSTRUCTIONS` presents client-neutral guidance: use fs-mcp for local filesystem, process, git, config,
+  and context-index work, and prefer one batch call for multiple same-kind operations.
 - Client metadata is captured during initialization and exposed as `currentClient` through configuration tools.
 - Known client home mappings cover Codex, Claude, Cline, Cursor, Windsurf, Roo, and VS Code, with a slug-based
   fallback for other clients.
@@ -130,6 +136,8 @@ and dispatcher names stay in sync.
 
 - File operations use configured timeout boundaries and path resolution through the filesystem feature layer.
 - Text reading uses offset and length inputs so clients can request bounded slices instead of whole files.
+- Batch-capable tools accept arrays such as `paths`, `items`, `queries`, `sessionIds`, or `pids` so clients can
+  collapse repeated same-tool work into one request.
 - Large inline tool arguments can be passed through path-backed fields such as `content_path`,
   `old_string_path`, `new_string_path`, `pattern_path`, and `input_path`.
 - Search execution is delegated to bundled `@vscode/ripgrep`, with system ripgrep as a fallback.

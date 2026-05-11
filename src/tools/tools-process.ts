@@ -7,7 +7,7 @@
 
 import { withArgsPathSchema } from "@schemas/schemas-args-ref";
 import { InteractWithProcessesArgsSchema, KillProcessesArgsSchema, ListProcessesArgsSchema, ListSessionsArgsSchema, ReadProcessOutputsArgsSchema, StartProcessesArgsSchema } from "@schemas/schemas-process";
-import { CMD_PREFIX_DESCRIPTION, OS_GUIDANCE, PATH_GUIDANCE, type ToolCatalogEntry } from "@tools/tools-const";
+import { BATCH_GUIDANCE, CMD_PREFIX_DESCRIPTION, OS_GUIDANCE, PATH_GUIDANCE, type ToolCatalogEntry } from "@tools/tools-const";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -19,6 +19,7 @@ export const PROCESS_TOOL_CATALOG: ToolCatalogEntry[] = [
       Use items: [{ command?, command_path?, timeout_ms, shell?, verbose_timing? }].
       Inline command is capped; use command_path for long commands so tool-call logs do not echo the full command.
       ALWAYS USE FOR: Local file analysis, CSV processing, data exploration, system commands
+      ${BATCH_GUIDANCE}
       ${PATH_GUIDANCE}
       ${OS_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
@@ -35,6 +36,7 @@ export const PROCESS_TOOL_CATALOG: ToolCatalogEntry[] = [
     name: "read_process_outputs",
     description: (`
       Read one or many process outputs in parallel.
+      ${BATCH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
     `),
     inputSchema: zodToJsonSchema(withArgsPathSchema(ReadProcessOutputsArgsSchema)),
@@ -49,6 +51,7 @@ export const PROCESS_TOOL_CATALOG: ToolCatalogEntry[] = [
       Interact with one or many running processes in parallel.
       Inline input is capped; use input_path for large stdin payloads so tool-call logs do not echo the full input.
       ALWAYS USE FOR: CSV analysis, JSON processing, file statistics, data visualization prep, ANY local file work
+      ${BATCH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
     `),
     inputSchema: zodToJsonSchema(withArgsPathSchema(InteractWithProcessesArgsSchema)),
@@ -96,6 +99,7 @@ export const PROCESS_TOOL_CATALOG: ToolCatalogEntry[] = [
     name: "kill_processes",
     description: (`
       Kill one or many processes in parallel.
+      ${BATCH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
     `),
     inputSchema: zodToJsonSchema(withArgsPathSchema(KillProcessesArgsSchema)),

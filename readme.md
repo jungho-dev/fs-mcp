@@ -69,7 +69,9 @@ uses stdio and does not open a network listener.
 
 ## Tool Surface
 
-The current tool catalog exposes 53 tools.
+The current tool catalog exposes 53 tools. Batch-capable tools are documented as batch-first surfaces: when a
+task needs multiple same-kind filesystem, search, process, config, or context operations, clients should put all
+items into one tool call instead of repeatedly calling the same tool.
 
 - Config: `get_configs`, `set_config_values`.
 - Context: `index_contexts`, `search_contexts`, `list_contexts`, `clear_contexts`.
@@ -83,6 +85,19 @@ The current tool catalog exposes 53 tools.
   `git_fetch`, `git_init`, `git_log`, `git_merge`, `git_pull`, `git_push`, `git_rebase`,
   `git_reflog`, `git_remote`, `git_reset`, `git_set_working_dir`, `git_show`, `git_stash`,
   `git_status`, `git_tag`, `git_worktree`, `git_wrapup_instructions`.
+
+## Batch-First Tool Use
+
+`SERVER_INSTRUCTIONS` and batch-capable tool descriptions both tell clients to prefer one multi-item call over
+repeated same-tool calls. This applies to:
+
+- File and directory operations through `paths` or `items` arrays.
+- Search session operations through `items` or `sessionIds`.
+- Process operations through `items` or `pids`.
+- Configuration and context-index operations through `items` or `queries`.
+
+Large multi-item arguments can be moved into a UTF-8 JSON file and passed with `args_path`, keeping the tool-call
+preview compact while preserving one batch request.
 
 ## Context Indexing
 

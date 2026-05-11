@@ -7,6 +7,7 @@
 
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
+import {SERVER_INSTRUCTIONS} from "../../out/cores/server/server-instructions.js";
 
 // 1. Server initialize instructions wiring ―――――――――――――――――――――――――――――――――――――――――――――――――――
 function testServerInitializeInstructionsWiring() {
@@ -16,9 +17,16 @@ function testServerInitializeInstructionsWiring() {
   assert.ok((serverCreateSource.match(/instructions:/g) ?? []).length >= 2);
 }
 
-// 2. Test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Test batch first guidance ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function testBatchFirstGuidance() {
+  assert.match(SERVER_INSTRUCTIONS, /Batch-first rule:/);
+  assert.match(SERVER_INSTRUCTIONS, /instead of calling the same tool repeatedly/);
+}
+
+// 3. Test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function main() {
   testServerInitializeInstructionsWiring();
+  testBatchFirstGuidance();
 }
 
 main();
