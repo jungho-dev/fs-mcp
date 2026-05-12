@@ -166,7 +166,7 @@ bun tests/run-all-tests.js
 
 ## 문서
 
-- 영문 README: `readme.md`
+- 영문 README: `README.md`
 - 한글 README: `readme-ko.md`
 - 영문 아키텍처: `architecture.md`
 - 한글 아키텍처: `architecture-ko.md`

@@ -173,7 +173,7 @@ directly.
 
 ## Documentation
 
-- English README: `readme.md`
+- English README: `README.md`
 - Korean README: `readme-ko.md`
 - English architecture: `architecture.md`
 - Korean architecture: `architecture-ko.md`

@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [1.4.2] - 2026-05-12
+
+* publish the npm README under the conventional `README.md` filename
+* include `README.md` explicitly in the npm package file list
+
 ## [1.3.6] - 2026-05-12
 
 * fix npm binary startup by running the published entrypoint with Bun
@@ -201,3 +206,12 @@
 ## \[ 1.4.1 \]
 
 - 2026-05-12 (22:01:58)
+
+
+## \[ 1.4.2 \]
+
+- 2026-05-12 (22:07:00)
+
+## \[ 1.4.3 \]
+
+- 2026-05-12 (22:13:24)
