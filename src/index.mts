@@ -1,3 +1,4 @@
+#!/usr/bin/env bun
 /**
  * @file src/index.mts
  * @description MCP server bootstrap entrypoint.

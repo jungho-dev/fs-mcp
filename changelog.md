@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [1.3.6] - 2026-05-12
+
+* fix npm binary startup by running the published entrypoint with Bun
+* validate the published binary entrypoint shebang during release checks
+
 ## [1.2.6] - 2026-05-10
 
 * refresh README and architecture documentation for context indexing, response display, and current tool groups
@@ -172,3 +177,7 @@
 ## \[ 1.3.5 \]
 
 - 2026-05-11 (23:48:10)
+
+## \[ 1.3.6 \]
+
+- 2026-05-12 (09:33:08)

@@ -1,11 +1,13 @@
-import { readdir, stat } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const scriptPath = fileURLToPath(import.meta.url);
 const projectRoot = path.resolve(path.dirname(scriptPath), "..", "..");
+const packageJsonPath = path.join(projectRoot, "package.json");
 const ignoredDirectories = new Set([".git", "node_modules"]);
 const forbiddenSuffixes = [".map", ".d.ts"];
+const expectedBinShebang = "#!/usr/bin/env bun";
 
 // 1. filesystem helpers ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function pathExists(targetPath) {
@@ -21,7 +23,31 @@ async function pathExists(targetPath) {
   }
 }
 
-// 2. forbidden artifact scan ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. bin entrypoint check ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function verifyBinEntrypoint() {
+  const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
+  const binTarget = packageJson.bin?.["fs-mcp"];
+  const failures = [];
+
+  if (typeof binTarget !== "string") {
+    return ["Missing package bin entry: fs-mcp"];
+  }
+
+  const binPath = path.join(projectRoot, binTarget);
+  if (!(await pathExists(binPath))) {
+    return [`Missing package bin target: ${binTarget}`];
+  }
+
+  const binContent = await readFile(binPath, "utf8");
+  const firstLine = binContent.split(/\r?\n/, 1)[0];
+  if (firstLine !== expectedBinShebang) {
+    failures.push(`Invalid fs-mcp bin shebang in ${binTarget}: expected "${expectedBinShebang}"`);
+  }
+
+  return failures;
+}
+
+// 3. forbidden artifact scan ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function collectForbiddenArtifacts(directoryPath, results = []) {
   const entries = await readdir(directoryPath, { withFileTypes: true });
 
@@ -44,7 +70,7 @@ async function collectForbiddenArtifacts(directoryPath, results = []) {
   return results;
 }
 
-// 3. release shape check ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. release shape check ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function main() {
   const requiredDirectories = ["src", "out", "tests", path.join("tests", "scripts")];
   const missingDirectories = [];
@@ -58,7 +84,7 @@ async function main() {
 
   const forbiddenArtifacts = await collectForbiddenArtifacts(projectRoot);
   const distExists = await pathExists(path.join(projectRoot, "dist"));
-  const failures = [];
+  const failures = await verifyBinEntrypoint();
 
   if (missingDirectories.length > 0) {
     failures.push(`Missing required directories: ${missingDirectories.join(", ")}`);
