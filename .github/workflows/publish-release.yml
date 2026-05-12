@@ -33,6 +33,15 @@ jobs:
             exit 1
           fi
 
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build package
+        run: bun run build
+
+      - name: Verify package
+        run: bun run verify
+
       - name: Publish to npm
         shell: bash
         env:
