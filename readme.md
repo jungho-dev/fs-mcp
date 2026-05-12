@@ -3,7 +3,7 @@
 ## Overview
 
 `@jungho-dev/fs-mcp` is a stdio-based Model Context Protocol server for local filesystem work,
-process sessions, ripgrep-backed search, SQLite context indexing, runtime configuration, git workflows,
+process sessions, ripgrep-backed search, SQLite context indexing, runtime configuration, git session workflows,
 and exact block editing.
 
 This package is the MCP server runtime. It is not a VS Code extension bundle and does not depend on one
@@ -61,17 +61,16 @@ uses stdio and does not open a network listener.
 - Search tools backed by bundled `@vscode/ripgrep`, active search sessions, pagination, and stop controls.
 - Process tools for command sessions, process output, interactive input, session listing, process listing, and
   process termination.
-- Git tools for repository setup, status, diff, history, branch, checkout, stash, tag, worktree, remotes,
-  changelog analysis, fetch, pull, push, merge, rebase, and cherry-pick workflows.
+- Git session tools for pinned repository state, status, diff, log, show, staging, commit, and wrap-up guidance.
 - Context index tools that store, search, list, and clear large text payloads in the shared SQLite context database.
 - Runtime configuration tools for command policy, shell selection, allowed directories, context-index thresholds,
   client metadata, version data, and system information.
 
 ## Tool Surface
 
-The current tool catalog exposes 53 tools. Batch-capable tools are documented as batch-first surfaces: when a
-task needs multiple same-kind filesystem, search, process, config, or context operations, clients should put all
-items into one tool call instead of repeatedly calling the same tool.
+The current source and compiled runtime expose 34 tools. Batch-capable tools are documented as batch-first
+surfaces: when a task needs multiple same-kind filesystem, search, process, config, or context operations,
+clients should put all items into one tool call instead of repeatedly calling the same tool.
 
 - Config: `get_configs`, `set_config_values`.
 - Context: `index_contexts`, `search_contexts`, `list_contexts`, `clear_contexts`.
@@ -80,11 +79,11 @@ items into one tool call instead of repeatedly calling the same tool.
   `stop_searches`, `list_searches`, `get_file_infos`, `edit_blocks`.
 - Process: `start_processes`, `read_process_outputs`, `interact_with_processes`, `list_sessions`,
   `list_processes`, `kill_processes`.
-- Git: `git_add`, `git_blame`, `git_branch`, `git_changelog_analyze`, `git_checkout`,
-  `git_cherry_pick`, `git_clean`, `git_clear_working_dir`, `git_clone`, `git_commit`, `git_diff`,
-  `git_fetch`, `git_init`, `git_log`, `git_merge`, `git_pull`, `git_push`, `git_rebase`,
-  `git_reflog`, `git_remote`, `git_reset`, `git_set_working_dir`, `git_show`, `git_stash`,
-  `git_status`, `git_tag`, `git_worktree`, `git_wrapup_instructions`.
+- Git: `git_set_working_dir`, `git_clear_working_dir`, `git_status`, `git_diff`, `git_log`,
+  `git_show`, `git_add`, `git_commit`, `git_wrapup_instructions`.
+
+`src/schemas/schemas-git.ts` defines schemas for additional git operations, but `src/tools/tools-git.ts`
+exports only `ESSENTIAL_GIT_TOOL_NAMES` in this version.
 
 ## Batch-First Tool Use
 
@@ -97,7 +96,7 @@ repeated same-tool calls. This applies to:
 - Configuration and context-index operations through `items` or `queries`.
 
 Large multi-item arguments can be moved into a UTF-8 JSON file and passed with `args_path`, keeping the tool-call
-preview compact while preserving one batch request.
+preview compact while preserving one batch request. Inline overrides are merged on top of the JSON object.
 
 ## Context Indexing
 
@@ -105,11 +104,13 @@ Large tool outputs can be indexed into SQLite so clients can search or recall th
 payload in every transcript.
 
 - Automatic indexing is controlled by `contextIndexEnabled`, `contextIndexAutoMinChars`,
-  `contextIndexAutoMinLines`, and `contextIndexMaxEntryChars`.
+  `contextIndexAutoMinLines`, `contextIndexMaxEntryChars`, and `contextIndexReplaceLargeOutputs`.
 - The default database path is `~/.mcp/fs-mcp.sqlite`.
+- Text is chunked into 80-line chunks with 20-line overlap and searched through SQLite FTS.
 - Manual indexing is available through `index_contexts`, `search_contexts`, `list_contexts`, and
   `clear_contexts`.
-- Output compaction stores index references without replacing the original structured payload.
+- Output compaction stores index references without replacing the original structured payload unless
+  `contextIndexReplaceLargeOutputs` is enabled.
 
 ## Client Compatibility
 
@@ -140,31 +141,35 @@ project root/
 Every dispatched tool result is normalized by `src/cores/responses/responses-tool-result.ts`.
 
 - Visible `content[0].text` uses the display template from
-  `src/cores/responses/responses-tool-display.ts`, showing tool name, status, item count, context-index count,
-  and text or structured payload sizes.
-- `structuredContent` keeps the normalized machine-readable envelope with original content, original structured
-  payload, status, duration, and optional context-index references.
+  `src/cores/responses/responses-tool-display.ts`, with `tool`, `count`, `status`, `contents`, and
+  `structuredText` labels.
+- `structuredContent` stores the standard machine-readable envelope: original content, combined text, original
+  structured payload, status, duration, error details, schema version, tool name, and optional context-index
+  references.
 - `_meta.fsMcpResult` stores compact metadata for clients that only need status, duration, content types, and
   error text.
-- Large output indexing adds `contextIndexes` references instead of replacing the original structured payload.
+- Already normalized results are not wrapped again; only the visible display text is regenerated.
 
 ## Development
 
 Current package scripts are intentionally small:
 
 ```bash
-bun run verify
+bun run swc
 ```
 
-`bun run verify` runs TypeScript checking with `tsc --noEmit`. Contract and smoke tests live under `tests/`
-and can be run directly with Bun when needed:
+`bun run swc` builds `src` into `out`, rewrites aliases with `tsc-alias`, and renames `out/index.js` to
+`out/index.mjs`. There is no top-level `verify` script in `package.json` in this version.
+
+Contract and smoke tests live under `tests/` and can be run directly with Bun:
 
 ```bash
 bun tests/run-all-tests.js
 ```
 
-Verification helper scripts under `tests/scripts/` check release shape, source boundaries, tool surface, and
-optimization reports when invoked directly.
+`tests/run-all-tests.js` rebuilds `out` unless `FS_MCP_SKIP_BUILD=1` is set. Verification helper scripts under
+`tests/scripts/` check release shape, source boundaries, tool surface, and optimization reports when invoked
+directly.
 
 ## Documentation
 

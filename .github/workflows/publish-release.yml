@@ -1,0 +1,42 @@
+name: Publish Release
+
+on:
+  workflow_call:
+    inputs:
+      package-version:
+        required: true
+        type: string
+    secrets:
+      NPM_TOKEN:
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Validate npm token
+        shell: bash
+        env:
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          if [ -z "$NPM_CONFIG_TOKEN" ]; then
+            echo "Missing GitHub Actions secret: NPM_TOKEN" >&2
+            exit 1
+          fi
+
+      - name: Publish to npm
+        shell: bash
+        env:
+          NPM_CONFIG_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          echo "Publishing version ${{ inputs.package-version }}."
+          bun publish --access public

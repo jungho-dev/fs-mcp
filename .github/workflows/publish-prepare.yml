@@ -1,0 +1,64 @@
+name: Publish Prepare
+
+on:
+  workflow_call:
+    outputs:
+      should_publish:
+        description: Whether npm publish is required
+        value: ${{ jobs.prepare.outputs.should_publish }}
+      package_version:
+        description: Package version from package.json
+        value: ${{ jobs.prepare.outputs.package_version }}
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    runs-on: ubuntu-latest
+    outputs:
+      should_publish: ${{ steps.state.outputs.should_publish }}
+      package_version: ${{ steps.state.outputs.package_version }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Validate repository
+        shell: bash
+        run: |
+          remote_url="$(git remote get-url origin)"
+          case "$remote_url" in
+            "https://github.com/jungho-dev/fs-mcp" | "https://github.com/jungho-dev/fs-mcp.git")
+              ;;
+            *)
+              echo "Unexpected origin remote: $remote_url" >&2
+              exit 1
+              ;;
+          esac
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Verify package
+        run: bun run verify
+
+      - name: Resolve publish state
+        id: state
+        shell: bash
+        run: |
+          package_name="$(bun -e 'const pkg = await Bun.file("package.json").json(); console.log(pkg.name);')"
+          package_version="$(bun -e 'const pkg = await Bun.file("package.json").json(); console.log(pkg.version);')"
+          remote_version="$(bun x npm view "$package_name" version 2>/dev/null || true)"
+
+          echo "package_version=$package_version" >> "$GITHUB_OUTPUT"
+
+          if [ "$remote_version" = "$package_version" ]; then
+            echo "should_publish=false" >> "$GITHUB_OUTPUT"
+            echo "npm already has $package_name@$package_version. Skipping publish."
+          else
+            echo "should_publish=true" >> "$GITHUB_OUTPUT"
+            echo "Publishing $package_name@$package_version."
+          fi

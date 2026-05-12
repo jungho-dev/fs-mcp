@@ -9,8 +9,19 @@ const reportPattern = /^fs-mcp-optimization-(v\d+)-\d{4}-\d{2}-\d{2}\.md$/;
 
 // 1. report discovery ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function collectOptimizationReports() {
-  const entries = await readdir(docsPath, { withFileTypes: true });
   const reports = new Map();
+  let entries;
+
+  try {
+    entries = await readdir(docsPath, { withFileTypes: true });
+  }
+  catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "ENOENT") {
+      return reports;
+    }
+
+    throw error;
+  }
 
   for (const entry of entries) {
     if (!entry.isFile()) {

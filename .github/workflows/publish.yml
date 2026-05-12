@@ -1,0 +1,35 @@
+name: Publish npm Package
+
+on:
+  push:
+    branches:
+      - public/main
+  workflow_dispatch:
+
+concurrency:
+  group: npm-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  prepare:
+    if: github.repository == 'jungho-dev/fs-mcp' && github.ref == 'refs/heads/public/main'
+    uses: ./.github/workflows/publish-prepare.yml
+
+  publish:
+    needs: prepare
+    if: needs.prepare.outputs.should_publish == 'true'
+    uses: ./.github/workflows/publish-release.yml
+    with:
+      package-version: ${{ needs.prepare.outputs.package_version }}
+    secrets: inherit
+
+  skipped:
+    needs: prepare
+    if: needs.prepare.outputs.should_publish != 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Report skipped publish
+        run: echo "No npm publish needed for version ${{ needs.prepare.outputs.package_version }}."
