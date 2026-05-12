@@ -6,7 +6,7 @@
  */
 
 import { withArgsPathSchema } from "@schemas/schemas-args-ref";
-import { GIT_INPUT_SCHEMAS, type GitToolName } from "@schemas/schemas-git";
+import { ESSENTIAL_GIT_TOOL_NAMES, GIT_INPUT_SCHEMAS, type GitToolName } from "@schemas/schemas-git";
 import { CMD_PREFIX_DESCRIPTION, PATH_GUIDANCE, type ToolCatalogEntry } from "@tools/tools-const";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
@@ -28,6 +28,8 @@ const COMMIT_MESSAGE_GUIDANCE = [
   "- <change detail>",
   "- <verification or behavior detail>",
 ].join("\n");
+
+const ESSENTIAL_GIT_TOOL_NAME_SET = new Set<GitToolName>(ESSENTIAL_GIT_TOOL_NAMES);
 
 const GIT_TOOL_DESCRIPTIONS: GitToolDescription[] = [
   { name: "git_add", title: "Git Add", description: ["Stage files for commit.", CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false },
@@ -61,7 +63,7 @@ const GIT_TOOL_DESCRIPTIONS: GitToolDescription[] = [
 ];
 
 // 1. git tool catalog build ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export const GIT_TOOL_CATALOG: ToolCatalogEntry[] = GIT_TOOL_DESCRIPTIONS.map((tool) => ({
+export const GIT_TOOL_CATALOG: ToolCatalogEntry[] = GIT_TOOL_DESCRIPTIONS.filter((tool) => ESSENTIAL_GIT_TOOL_NAME_SET.has(tool.name)).map((tool) => ({
   name: tool.name,
   description: tool.description,
   inputSchema: zodToJsonSchema(withArgsPathSchema(GIT_INPUT_SCHEMAS[tool.name])),

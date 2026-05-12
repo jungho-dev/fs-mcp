@@ -1,18 +1,22 @@
 name: Publish npm Package
 
+# ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 on:
   push:
     branches:
       - public/main
   workflow_dispatch:
 
+# ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 concurrency:
   group: npm-publish-${{ github.ref }}
   cancel-in-progress: false
 
+# ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 permissions:
   contents: read
 
+# ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 jobs:
   publish:
     if: github.repository == 'jungho-dev/fs-mcp' && github.ref == 'refs/heads/public/main'

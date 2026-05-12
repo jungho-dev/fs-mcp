@@ -59,6 +59,11 @@ export const CONFIG_FIELD_DEFINITIONS = {
     label: "Context Index Max Entry Chars",
     valueType: "number",
   },
+  contextIndexReplaceLargeOutputs: {
+    description: "When enabled, large auto-indexed tool output is replaced in responses with context index references. Disabled by default for compatibility.",
+    label: "Context Index Replace Large Outputs",
+    valueType: "boolean",
+  },
   defaultShell: {
     description: "This is the shell used for new command sessions (for example /bin/bash or /bin/zsh). Only change this if you know your environment requires a specific shell.",
     label: "Default Shell",
@@ -119,6 +124,10 @@ export const CONFIG_QUERY_DEFINITIONS = {
   },
   contextIndexMaxEntryChars: {
     ...CONFIG_FIELD_DEFINITIONS.contextIndexMaxEntryChars,
+    editable: true,
+  },
+  contextIndexReplaceLargeOutputs: {
+    ...CONFIG_FIELD_DEFINITIONS.contextIndexReplaceLargeOutputs,
     editable: true,
   },
   defaultShell: {

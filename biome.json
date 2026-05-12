@@ -612,7 +612,7 @@
         "noDuplicateClasses": "on",
         "organizeImports": "on",
         "useSortedAttributes": "on",
-        "useSortedInterfaceMembers": "on",
+        "useSortedInterfaceMembers": "off",
         "useSortedKeys": "off",
         "useSortedProperties": "on"
       }

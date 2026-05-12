@@ -22,10 +22,10 @@ export interface ToolDisplayOutput {
 }
 
 export interface ToolDisplayTemplateValues {
-  items: number;
+  count: number;
+  contents: number;
   status: ToolDisplayStatus;
-  structuredChars: number;
-  textChars: number;
+  structuredText: number;
   tool: string;
   toolName: string;
 }
@@ -50,15 +50,17 @@ const config = {
     color: `\u001B[38;2;0;180;216m`,
   },
 };
+
 const renderLine = () => `${config.line.color}${config.line.str}${config.reset.color}\n`;
 const renderRow = (key: string, value: string) => `${config.key.color}${config.key.str}${key} = ${config.value.color}${config.value.str}${value}${config.reset.color}\n`;
+
 export const TOOL_DISPLAY_TEMPLATE = [
   renderLine(),
-  renderRow(`items`, `\${items}`),
   renderRow(`tool`, `\${tool}`),
+  renderRow(`count`, `\${count}`),
   renderRow(`status`, `\${status}`),
-  renderRow(`textChars`, `\${textChars}`),
-  renderRow(`structuredChars`, `\${structuredChars}`),
+  renderRow(`contents`, `\${contents}`),
+  renderRow(`structuredText`, `\${structuredText}`),
   renderLine(),
 ].join(``);
 
@@ -98,10 +100,10 @@ function createToolDisplayValues(output: ToolDisplayOutput): ToolDisplayTemplate
   const structuredText = stringifyDisplayStructuredContent(output.data.structuredContent);
 
   return {
-    items: countDisplayItems(output),
+    count: countDisplayItems(output),
+    contents: output.data.text.length,
     status: output.status,
-    structuredChars: structuredText.length,
-    textChars: output.data.text.length,
+    structuredText: structuredText.length,
     tool: output.toolName,
     toolName: output.toolName,
   };

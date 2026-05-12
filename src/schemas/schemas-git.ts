@@ -320,3 +320,15 @@ export const GIT_INPUT_SCHEMAS = {
 } as const;
 
 export type GitToolName = keyof typeof GIT_INPUT_SCHEMAS;
+
+export const ESSENTIAL_GIT_TOOL_NAMES = [
+  "git_set_working_dir",
+  "git_clear_working_dir",
+  "git_status",
+  "git_diff",
+  "git_log",
+  "git_show",
+  "git_add",
+  "git_commit",
+  "git_wrapup_instructions",
+] as const satisfies readonly GitToolName[];

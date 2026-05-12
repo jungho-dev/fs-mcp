@@ -40,14 +40,14 @@ async function testGitBasicFlow() {
 - Verify git smoke flow.`;
 
   try {
-    const initOutput = parseStandardOutput(await dispatchToolCall("git_init", {path: repoPath, initialBranch: "main"}));
-    assert.equal(initOutput.success, true);
+    const workingDirOutput = parseStandardOutput(await dispatchToolCall("git_set_working_dir", {path: repoPath, initializeIfNotPresent: true}));
+    assert.equal(workingDirOutput.success, true);
 
     await setupRepository(repoPath);
 
-    const workingDirOutput = parseStandardOutput(await dispatchToolCall("git_set_working_dir", {path: repoPath}));
-    assert.equal(workingDirOutput.success, true);
-    assert.equal(workingDirOutput.repository.status.branch, "main");
+    const refreshedWorkingDirOutput = parseStandardOutput(await dispatchToolCall("git_set_working_dir", {path: repoPath}));
+    assert.equal(refreshedWorkingDirOutput.success, true);
+    assert.equal(refreshedWorkingDirOutput.repository.status.branch, "main");
 
     const cleanStatusOutput = parseStandardOutput(await dispatchToolCall("git_status", {}));
     assert.equal(cleanStatusOutput.success, true);

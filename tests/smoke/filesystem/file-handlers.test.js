@@ -17,7 +17,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { getFileHandler } from "../../../out/assets/readers/readers-factory.js";
 import { handleEditBlock } from "../../../out/controllers/controllers-edit.js";
-import { handleReadFile } from "../../../out/controllers/controllers-filesystem.js";
+import { handleListDirectory, handleReadFile } from "../../../out/controllers/controllers-filesystem.js";
 import { configManager } from "../../../out/features/config/config-store.js";
 import { getFileInfo, readFile, writeFile } from "../../../out/features/filesystem/filesystem-service.js";
 
@@ -33,6 +33,7 @@ const MD_FILE = path.join(TEST_DIR, "test.md");
 const HTML_FILE = path.join(TEST_DIR, "test.html");
 const IMAGE_FILE = path.join(TEST_DIR, "test.png");
 const SVG_FILE = path.join(TEST_DIR, "test.svg");
+const LIST_DIR = path.join(TEST_DIR, "listing");
 const TINY_PNG_BYTES = [
   137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 4, 0, 0, 0, 181, 28, 12,
   2, 0, 0, 0, 11, 73, 68, 65, 84, 120, 218, 99, 252, 255, 31, 0, 3, 3, 2, 0, 238, 169, 235, 25, 0, 0, 0, 0, 73, 69,
@@ -308,7 +309,26 @@ async function testMarkdownExactMatchSave () {
   assert.strictEqual(readBack, updatedContent, "Markdown file should be rewritten with the updated content");
 }
 
-// 14. Run all tests ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 14. Test 11: Directory listing controls output volume ―――――――――――――――――――――――――――――――――――――――――――
+async function testListDirectoryControls () {
+  const nestedDir = path.join(LIST_DIR, "nested");
+  await fs.mkdir(nestedDir, { recursive: true });
+  await fs.writeFile(path.join(LIST_DIR, "root.txt"), "root");
+  await fs.writeFile(path.join(LIST_DIR, "skip.txt"), "skip");
+  await fs.writeFile(path.join(nestedDir, "child.txt"), "child");
+
+  const dirsOnly = await handleListDirectory({ path: LIST_DIR, depth: 2, includeFiles: false });
+  assert.ok(dirsOnly.content[0].text.includes("nested"), "Directory-only listing should keep directories");
+  assert.ok(!dirsOnly.content[0].text.includes("root.txt"), "Directory-only listing should hide files");
+
+  const excluded = await handleListDirectory({ path: LIST_DIR, depth: 1, excludePatterns: ["skip*"] });
+  assert.ok(!excluded.content[0].text.includes("skip.txt"), "Excluded glob pattern should hide matching files");
+
+  const limited = await handleListDirectory({ path: LIST_DIR, depth: 1, maxEntries: 1 });
+  assert.ok(limited.content[0].text.includes("items hidden"), "maxEntries should report hidden visible entries");
+}
+
+// 15. Run all tests ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runAllTests () {
   await testHandlerFactory();
   await testFileResultInterface();
@@ -320,9 +340,10 @@ async function runAllTests () {
   await testWriteModes();
   await testReadFilePreviewMetadata();
   await testMarkdownExactMatchSave();
+  await testListDirectoryControls();
 }
 
-// 15. Run tests ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 16. Run tests ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export default async function runTests () {
   let originalConfig;
   try {

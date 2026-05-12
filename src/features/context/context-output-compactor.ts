@@ -12,6 +12,7 @@ import {type ContextIndexReference, contextIndexService} from "@features/context
 interface CompactionState {
   indexedPayloads: number;
   references: ContextIndexReference[];
+  replaceLargeOutputs: boolean;
   seen: Map<string, ContextIndexReference>;
   toolName: string;
 }
@@ -49,72 +50,91 @@ function indexOnce(value: string, source: string, state: CompactionState): Conte
   return reference;
 }
 
+// 4. Create reference payload ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function createReferencePayload(reference: ContextIndexReference): Record<string, unknown> {
+  return {
+    contextIndex: reference,
+    omitted: true,
+    reason: "large output indexed into context store",
+  };
+}
+
+// 4. Create reference text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function createReferenceText(reference: ContextIndexReference): string {
+  return `[context-index:${reference.indexId}] ${reference.preview}`;
+}
+
 // 4. Index content item ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function indexContentItem(item: ServerResponseContent, index: number, state: CompactionState): void {
+function indexContentItem(item: ServerResponseContent, index: number, state: CompactionState): ServerResponseContent {
   if (item.type !== "text" || typeof item.text !== "string" || !contextIndexService.shouldAutoIndex(item.text)) {
-    return;
+    return item;
   }
-  indexOnce(item.text, `${state.toolName}:content[${index}]`, state);
+  const reference = indexOnce(item.text, `${state.toolName}:content[${index}]`, state);
+
+  return state.replaceLargeOutputs ? {...item, text: createReferenceText(reference)} : item;
 }
 
 // 5. Index structured collection ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function indexStructuredCollection(value: unknown, fieldName: string | null, sourcePath: string, state: CompactionState): boolean {
+function indexStructuredCollection(value: unknown, fieldName: string | null, sourcePath: string, state: CompactionState): ContextIndexReference | null {
   if (fieldName === null || !STRUCTURED_COLLECTION_FIELDS.has(fieldName) || (!Array.isArray(value) && !isRecord(value))) {
-    return false;
+    return null;
   }
   const serialized = safeStringify(value);
 
   if (serialized === null || !contextIndexService.shouldAutoIndex(serialized)) {
-    return false;
+    return null;
   }
-  indexOnce(serialized, `${state.toolName}:${sourcePath}`, state);
-  return true;
+  return indexOnce(serialized, `${state.toolName}:${sourcePath}`, state);
 }
 
 // 6. Index structured value ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function indexStructuredValue(value: unknown, fieldName: string | null, sourcePath: string, state: CompactionState): void {
+function indexStructuredValue(value: unknown, fieldName: string | null, sourcePath: string, state: CompactionState): unknown {
   if (typeof value === "string") {
     if (fieldName !== null && STRUCTURED_CONTEXT_FIELDS.has(fieldName) && contextIndexService.shouldAutoIndex(value)) {
-      indexOnce(value, `${state.toolName}:${sourcePath}`, state);
+      const reference = indexOnce(value, `${state.toolName}:${sourcePath}`, state);
+      return state.replaceLargeOutputs ? createReferencePayload(reference) : value;
     }
-    return;
+    return value;
   }
 
-  if (indexStructuredCollection(value, fieldName, sourcePath, state)) {
-    return;
+  const collectionReference = indexStructuredCollection(value, fieldName, sourcePath, state);
+  if (collectionReference !== null) {
+    return state.replaceLargeOutputs ? createReferencePayload(collectionReference) : value;
   }
   if (Array.isArray(value)) {
-    value.forEach((item, index) => {
-      indexStructuredValue(item, null, `${sourcePath}[${index}]`, state);
-    });
-    return;
+    const nextValue = value.map((item, index) => indexStructuredValue(item, null, `${sourcePath}[${index}]`, state));
+    return state.replaceLargeOutputs ? nextValue : value;
   }
   if (!isRecord(value)) {
-    return;
+    return value;
   }
-  Object.entries(value).forEach(([key, item]) => {
-    indexStructuredValue(item, key, sourcePath.length > 0 ? `${sourcePath}.${key}` : key, state);
-  });
+  const nextValue = Object.fromEntries(Object.entries(value).map(([key, item]) => [key, indexStructuredValue(item, key, sourcePath.length > 0 ? `${sourcePath}.${key}` : key, state)]));
+
+  return state.replaceLargeOutputs ? nextValue : value;
 }
 
 // 7. Compact standard output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function compactStandardToolOutput(toolName: string, output: StandardToolOutput): StandardToolOutput {
-  if (!contextIndexService.getRuntimeConfig().enabled) {
+  const config = contextIndexService.getRuntimeConfig();
+
+  if (!config.enabled) {
     return output;
   }
   const state: CompactionState = {
     indexedPayloads: 0,
     references: [],
+    replaceLargeOutputs: config.replaceLargeOutputs,
     seen: new Map(),
     toolName,
   };
 
   try {
-    output.data.content.forEach((item, index) => {
-      indexContentItem(item, index, state);
-    });
-    indexStructuredValue(output.data.structuredContent, "structuredContent", "structuredContent", state);
-    return state.references.length > 0 ? {...output, contextIndexes: state.references} : output;
+    const content = output.data.content.map((item, index) => indexContentItem(item, index, state));
+    const structuredContent = indexStructuredValue(output.data.structuredContent, "structuredContent", "structuredContent", state) as StandardToolOutput["data"]["structuredContent"];
+    const text = content.map((item) => item.text ?? "").join("\n");
+    const compactedOutput = state.replaceLargeOutputs ? {...output, data: {...output.data, content, structuredContent, text}} : output;
+
+    return state.references.length > 0 ? {...compactedOutput, contextIndexes: state.references} : compactedOutput;
   }
   catch (error) {
     return {

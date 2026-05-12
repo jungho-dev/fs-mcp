@@ -17,6 +17,8 @@ import { configManager } from "@features/config/config-store";
 import { FILE_OPERATION_TIMEOUTS } from "@features/filesystem/filesystem-limits";
 
 const DIRECTORY_WILDCARD_SUFFIX = `${path.sep}*`;
+const GLOB_REGEX_ESCAPE_PATTERN = /[.+^\${}()|[\]\\]/g;
+const GLOB_ASTERISK_PATTERN = /\*/g;
 
 type LegacyFileInfo = {
   size: number;
@@ -33,6 +35,18 @@ type LegacyFileInfo = {
   isImage?: boolean;
   isBinary?: boolean;
 };
+
+export interface ListDirectoryOptions {
+  excludePatterns?: string[];
+  includeFiles?: boolean;
+  maxEntries?: number;
+}
+
+// 1. Build glob pattern reg exp ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function buildGlobPatternRegExp(pattern: string): RegExp {
+  const regexPattern = pattern.replace(GLOB_REGEX_ESCAPE_PATTERN, "\\$&").replace(GLOB_ASTERISK_PATTERN, ".*");
+  return new RegExp(`^${regexPattern}$`, "i");
+}
 
 // UTILITY FUNCTIONS - Eliminate duplication
 
@@ -497,11 +511,22 @@ export async function createDirectory(dirPath: string): Promise<void> {
 }
 
 // 18. List directory ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function listDirectory(dirPath: string, depth: number = 2): Promise<string[]> {
+export async function listDirectory(dirPath: string, depth: number = 2, options: ListDirectoryOptions = {}): Promise<string[]> {
   const validPath = await validatePath(dirPath);
   const results: string[] = [];
 
   const MAX_NESTED_ITEMS = 100; // Maximum items to show per nested directory
+  const maxEntries = options.maxEntries;
+  const excludePatterns = options.excludePatterns?.map((pattern) => buildGlobPatternRegExp(pattern)) ?? [];
+  const includeFiles = options.includeFiles !== false;
+
+  // 19. Should skip directory entry ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  function shouldSkipEntry(entry: Dirent, displayPath: string): boolean {
+    if (!includeFiles && !entry.isDirectory()) {
+      return true;
+    }
+    return excludePatterns.some((pattern) => pattern.test(entry.name) || pattern.test(displayPath));
+  }
 
   // 19. List recursive ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async function listRecursive(currentPath: string, currentDepth: number, relativePath: string = "", isTopLevel: boolean = true): Promise<void> {
@@ -527,12 +552,17 @@ export async function listDirectory(dirPath: string, depth: number = 2): Promise
     }
     // Apply filtering for nested directories (not top level)
     const totalEntries = entries.length;
-    let entriesToShow = entries;
+    const visibleEntries = entries.filter((entry) => {
+      const displayPath = relativePath ? path.join(relativePath, entry.name) : entry.name;
+      return !shouldSkipEntry(entry, displayPath);
+    });
+    let entriesToShow = visibleEntries;
     let filteredCount = 0;
+    const itemLimit = isTopLevel ? maxEntries : maxEntries ?? MAX_NESTED_ITEMS;
 
-    if (!isTopLevel && totalEntries > MAX_NESTED_ITEMS) {
-      entriesToShow = entries.slice(0, MAX_NESTED_ITEMS);
-      filteredCount = totalEntries - MAX_NESTED_ITEMS;
+    if (itemLimit !== undefined && visibleEntries.length > itemLimit) {
+      entriesToShow = visibleEntries.slice(0, itemLimit);
+      filteredCount = visibleEntries.length - itemLimit;
     }
     for (const entry of entriesToShow) {
       const fullPath = path.join(currentPath, entry.name);
@@ -557,7 +587,7 @@ export async function listDirectory(dirPath: string, depth: number = 2): Promise
     // Add warning message if items were filtered
     if (filteredCount > 0) {
       const displayPath = relativePath || path.basename(currentPath);
-      results.push(`${displayPath}: ${filteredCount} items hidden (showing first ${MAX_NESTED_ITEMS} of ${totalEntries} total)`);
+      results.push(`${displayPath}: ${filteredCount} items hidden (showing first ${itemLimit} of ${visibleEntries.length} visible, ${totalEntries} total)`);
     }
   }
   await listRecursive(validPath, depth, "", true);

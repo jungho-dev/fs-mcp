@@ -12,6 +12,18 @@ import { FILESYSTEM_TOOL_CATALOG } from "../../out/tools/tools-filesystem.js";
 import { GIT_TOOL_CATALOG } from "../../out/tools/tools-git.js";
 import { PROCESS_TOOL_CATALOG } from "../../out/tools/tools-process.js";
 
+const EXPECTED_GIT_TOOL_NAMES = [
+  "git_add",
+  "git_clear_working_dir",
+  "git_commit",
+  "git_diff",
+  "git_log",
+  "git_set_working_dir",
+  "git_show",
+  "git_status",
+  "git_wrapup_instructions",
+];
+
 // 1. collection helpers ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function findDuplicates(values) {
   const seen = new Set();
@@ -56,6 +68,13 @@ function verifyToolSurface() {
   const staleDispatchers = difference(dispatchableNames, catalogNames);
   if (staleDispatchers.length > 0) {
     failures.push(`Dispatchers missing from catalog: ${staleDispatchers.join(", ")}`);
+  }
+
+  const gitToolNames = GIT_TOOL_CATALOG.map((tool) => tool.name).sort();
+  const missingGitTools = difference(EXPECTED_GIT_TOOL_NAMES, gitToolNames);
+  const extraGitTools = difference(gitToolNames, EXPECTED_GIT_TOOL_NAMES);
+  if (missingGitTools.length > 0 || extraGitTools.length > 0) {
+    failures.push(`Git tool surface mismatch. Missing: ${missingGitTools.join(", ") || "none"}; Extra: ${extraGitTools.join(", ") || "none"}`);
   }
 
   const toolsMissingArgsPath = [...CONFIG_TOOL_CATALOG, ...CONTEXT_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...GIT_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG]

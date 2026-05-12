@@ -32,7 +32,7 @@ function testTemplateLiteralDisplayFormat() {
   const output = parseStandardOutput(normalized);
   const missingPlaceholder = `${"$"}{missing}`;
 
-  assert.equal(createToolDisplayText(output, `name=\${toolName}; result=\${status}; bytes=\${textChars}`), "name=template_tool; result=success; bytes=2");
+  assert.equal(createToolDisplayText(output, `name=\${toolName}; result=\${status}; bytes=\${contents}`), "name=template_tool; result=success; bytes=2");
   assert.equal(createToolDisplayText(output, `unknown=${missingPlaceholder}`), `unknown=${missingPlaceholder}`);
 }
 
@@ -45,7 +45,7 @@ function testDisplayCountsBatchStructuredItems() {
     },
     status: "success",
     toolName: "batch_tool",
-  }, `items=\${items}`), "items=2");
+  }, `items=\${count}`), "items=2");
   assert.equal(createToolDisplayText({
     data: {
       content: [{ text: "", type: "text" }],
@@ -54,7 +54,7 @@ function testDisplayCountsBatchStructuredItems() {
     },
     status: "success",
     toolName: "batch_tool",
-  }, `items=\${items}`), "items=3");
+  }, `items=\${count}`), "items=3");
 }
 
 // 2. success envelope contract ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -184,7 +184,22 @@ function testDisplayKeepsOriginalOutput() {
   assert.equal(normalized.content[0].text, createExpectedDisplaySummary("display_compaction_tool", "success", fullText, { textContent: fullText }));
 }
 
-// 12. Clear display compaction contexts ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 12. Display replaces large output when explicitly enabled ―――――――――――――――――――――――――――――――――――
+function testDisplayReplacesLargeOutputWhenEnabled() {
+  const fullText = Array.from({ length: 180 }, (_value, index) => `line${index + 1} ${"x".repeat(640)}`).join("\n");
+  const normalized = normalizeToolResult("display_compaction_tool", createToolTextResponse(fullText, {
+    structuredContent: { textContent: fullText },
+  }), 9);
+  const output = parseStandardOutput(normalized);
+
+  assert.equal(output.data.text.includes(fullText), false);
+  assert.equal(output.data.content[0].text.includes("[context-index:"), true);
+  assert.equal(output.data.structuredContent.textContent.omitted, true);
+  assert.equal(Array.isArray(output.contextIndexes), true);
+  assert.equal(output.contextIndexes.length > 0, true);
+}
+
+// 13. Clear display compaction contexts ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function clearDisplayCompactionContexts() {
   const indexIds = contextIndexService
     .listDocuments()
@@ -219,9 +234,18 @@ async function main() {
     await configManager.updateConfig({
       ...originalConfig,
       contextIndexEnabled: true,
+      contextIndexReplaceLargeOutputs: false,
     });
     clearDisplayCompactionContexts();
     testDisplayKeepsOriginalOutput();
+
+    await configManager.updateConfig({
+      ...originalConfig,
+      contextIndexEnabled: true,
+      contextIndexReplaceLargeOutputs: true,
+    });
+    clearDisplayCompactionContexts();
+    testDisplayReplacesLargeOutputWhenEnabled();
   }
   finally {
     clearDisplayCompactionContexts();

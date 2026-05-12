@@ -41,6 +41,7 @@ interface ContextIndexConfig {
   dbPath: string;
   enabled: boolean;
   maxEntryChars: number;
+  replaceLargeOutputs: boolean;
 }
 
 const DEFAULT_AUTO_MIN_CHARS = 5000;
@@ -178,6 +179,7 @@ function readContextIndexConfig(): ContextIndexConfig {
     dbPath: typeof config.contextIndexDbPath === "string" ? config.contextIndexDbPath : getDefaultContextIndexDbPath(),
     enabled: typeof config.contextIndexEnabled === "boolean" ? config.contextIndexEnabled : true,
     maxEntryChars: typeof config.contextIndexMaxEntryChars === "number" ? config.contextIndexMaxEntryChars : DEFAULT_MAX_ENTRY_CHARS,
+    replaceLargeOutputs: config.contextIndexReplaceLargeOutputs === true,
   };
 }
 

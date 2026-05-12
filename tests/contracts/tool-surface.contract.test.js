@@ -13,6 +13,18 @@ import { FILESYSTEM_TOOL_CATALOG } from "../../out/tools/tools-filesystem.js";
 import { GIT_TOOL_CATALOG } from "../../out/tools/tools-git.js";
 import { PROCESS_TOOL_CATALOG } from "../../out/tools/tools-process.js";
 
+const EXPECTED_GIT_TOOL_NAMES = [
+  "git_add",
+  "git_clear_working_dir",
+  "git_commit",
+  "git_diff",
+  "git_log",
+  "git_set_working_dir",
+  "git_show",
+  "git_status",
+  "git_wrapup_instructions",
+];
+
 // 1. Sorted difference ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function sortedDifference(left, right) {
   const rightSet = new Set(right);
@@ -40,10 +52,18 @@ function testArgsPathSchemaExposure() {
   }
 }
 
-// 3. test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. essential git surface ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function testEssentialGitSurface() {
+  const gitToolNames = GIT_TOOL_CATALOG.map((tool) => tool.name).sort();
+
+  assert.deepEqual(gitToolNames, EXPECTED_GIT_TOOL_NAMES.toSorted());
+}
+
+// 4. test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function main() {
   testCatalogAndDispatcherAlignment();
   testArgsPathSchemaExposure();
+  testEssentialGitSurface();
 }
 
 main();

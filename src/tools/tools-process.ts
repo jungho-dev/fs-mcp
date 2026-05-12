@@ -18,7 +18,7 @@ export const PROCESS_TOOL_CATALOG: ToolCatalogEntry[] = [
       Start one or many terminal processes in parallel.
       Use items: [{ command?, command_path?, timeout_ms, shell?, verbose_timing? }].
       Inline command is capped; use command_path for long commands so tool-call logs do not echo the full command.
-      ALWAYS USE FOR: Local file analysis, CSV processing, data exploration, system commands
+      Use for build, test, runtime, package, and system commands. Prefer fs-mcp file/search tools for direct local file work.
       ${BATCH_GUIDANCE}
       ${PATH_GUIDANCE}
       ${OS_GUIDANCE}
@@ -50,7 +50,7 @@ export const PROCESS_TOOL_CATALOG: ToolCatalogEntry[] = [
     description: (`
       Interact with one or many running processes in parallel.
       Inline input is capped; use input_path for large stdin payloads so tool-call logs do not echo the full input.
-      ALWAYS USE FOR: CSV analysis, JSON processing, file statistics, data visualization prep, ANY local file work
+      Use for REPLs, long-running sessions, stdin-driven commands, and analysis that cannot be handled by fs-mcp file/search tools.
       ${BATCH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
     `),

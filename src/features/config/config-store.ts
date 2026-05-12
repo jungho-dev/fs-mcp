@@ -19,6 +19,7 @@ export interface ServerConfig {
   contextIndexDbPath?: string;
   contextIndexEnabled?: boolean;
   contextIndexMaxEntryChars?: number;
+  contextIndexReplaceLargeOutputs?: boolean;
   currentClient?: ClientInfo; // Current connected client information
   defaultShell?: string;
   fileReadLineLimit?: number; // Legacy read hint; read operations are uncapped unless length is provided
@@ -206,6 +207,7 @@ class ConfigManager {
       contextIndexAutoMinLines: 120,
       contextIndexEnabled: true,
       contextIndexMaxEntryChars: 1_000_000,
+      contextIndexReplaceLargeOutputs: false,
       defaultShell: getDefaultShell(),
       fileReadLineLimit: 50_000,
       fileWriteLineLimit: 50_000,

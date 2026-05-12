@@ -50,6 +50,9 @@ export const CreateDirectoriesArgsSchema = z.object({
 export const ListDirectoryArgsSchema = z.object({
   path: z.string(),
   depth: z.number().optional().default(2),
+  maxEntries: z.number().int().positive().optional(),
+  excludePatterns: z.array(z.string()).optional().default([]),
+  includeFiles: z.boolean().optional().default(true),
 });
 
 export const ListDirectoriesArgsSchema = z.object({

@@ -37,6 +37,8 @@ export async function handleStartSearch(args: unknown): Promise<ServerResult> {
     });
 
     const searchTypeText = parsed.data.searchType === "content" ? "content search" : "file search";
+    const displayedInitialResults = Math.min(result.results.length, 10);
+    const nextOffset = result.isComplete && result.results.length <= displayedInitialResults ? null : displayedInitialResults;
 
     let output = `Started ${searchTypeText} session: ${result.sessionId}\n`;
     output += `Pattern: "${pattern}"\n`;
@@ -64,10 +66,21 @@ export async function handleStartSearch(args: unknown): Promise<ServerResult> {
       output += `\nSearch completed.`;
     }
     else {
-      output += `\nSearch in progress. Use get_more_search_results to get more results.`;
+      output += `\nSearch in progress. Use get_search_results with sessionId: ${result.sessionId} and offset: ${nextOffset ?? 0}.`;
+    }
+    if (nextOffset !== null) {
+      output += `\nNext offset: ${nextOffset}. Use get_search_results with sessionId: ${result.sessionId}.`;
     }
     return {
       content: [{ type: "text", text: output }],
+      structuredContent: {
+        displayedInitialResults,
+        hasMoreResults: nextOffset !== null,
+        nextOffset,
+        sessionId: result.sessionId,
+        status: result.isComplete ? "COMPLETED" : "RUNNING",
+        totalResults: result.totalResults,
+      },
     };
   }
   catch (error) {
@@ -84,7 +97,7 @@ export async function handleGetMoreSearchResults(args: unknown): Promise<ServerR
   const parsed = GetMoreSearchResultsArgsSchema.safeParse(args);
   if (!parsed.success) {
     return {
-      content: [{ type: "text", text: `Invalid arguments for get_more_search_results: ${parsed.error}` }],
+      content: [{ type: "text", text: `Invalid arguments for get_search_results: ${parsed.error}` }],
       isError: true,
     };
   }
@@ -143,9 +156,9 @@ export async function handleGetMoreSearchResults(args: unknown): Promise<ServerR
       }
     }
     // Add pagination hints
-    if (offset >= 0 && results.hasMoreResults) {
-      const nextOffset = offset + results.returnedCount;
-      output += `\nMore results available. Use get_more_search_results with offset: ${nextOffset}`;
+    const nextOffset = offset >= 0 && results.hasMoreResults ? offset + results.returnedCount : null;
+    if (nextOffset !== null) {
+      output += `\nMore results available. Use get_search_results with offset: ${nextOffset}`;
     }
     if (results.isComplete) {
       output += `\nSearch completed.`;
@@ -157,6 +170,15 @@ export async function handleGetMoreSearchResults(args: unknown): Promise<ServerR
     }
     return {
       content: [{ type: "text", text: output }],
+      structuredContent: {
+        hasMoreResults: results.hasMoreResults,
+        isComplete: results.isComplete,
+        nextOffset,
+        returnedCount: results.returnedCount,
+        sessionId: parsed.data.sessionId,
+        totalMatches: results.totalMatches,
+        totalResults: results.totalResults,
+      },
     };
   }
   catch (error) {

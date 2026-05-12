@@ -17,7 +17,7 @@ import {handleInteractWithProcesses, handleListSessions, handleReadProcessOutput
 import {createErrorResponse} from "@cores/responses/responses-error";
 import {normalizeToolResult} from "@cores/responses/responses-tool-result";
 import {readFileInternal} from "@features/filesystem/filesystem-service";
-import type {GitToolName} from "@schemas/schemas-git";
+import {ESSENTIAL_GIT_TOOL_NAMES} from "@schemas/schemas-git";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export type ToolDispatchHandler = (args: unknown) => Promise<ServerResult> | ServerResult;
@@ -83,40 +83,9 @@ async function resolveToolArgsReference(args: unknown): Promise<unknown> {
   };
 }
 
-const GIT_TOOL_NAMES: GitToolName[] = [
-  "git_add",
-  "git_blame",
-  "git_branch",
-  "git_changelog_analyze",
-  "git_checkout",
-  "git_cherry_pick",
-  "git_clean",
-  "git_clear_working_dir",
-  "git_clone",
-  "git_commit",
-  "git_diff",
-  "git_fetch",
-  "git_init",
-  "git_log",
-  "git_merge",
-  "git_pull",
-  "git_push",
-  "git_rebase",
-  "git_reflog",
-  "git_remote",
-  "git_reset",
-  "git_set_working_dir",
-  "git_show",
-  "git_stash",
-  "git_status",
-  "git_tag",
-  "git_worktree",
-  "git_wrapup_instructions",
-];
-
 const GIT_TOOL_DISPATCHERS = Object.fromEntries(
-  GIT_TOOL_NAMES.map((toolName) => [toolName, (args: unknown) => handleGitTool(toolName, args)]),
-) as Record<GitToolName, ToolDispatchHandler>;
+  ESSENTIAL_GIT_TOOL_NAMES.map((toolName) => [toolName, (args: unknown) => handleGitTool(toolName, args)]),
+) as Record<(typeof ESSENTIAL_GIT_TOOL_NAMES)[number], ToolDispatchHandler>;
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export const TOOL_DISPATCHERS: Readonly<Record<string, ToolDispatchHandler>> = {

@@ -190,7 +190,11 @@ export async function handleCreateDirectory(args: unknown): Promise<ServerResult
 export async function handleListDirectory(args: unknown): Promise<ServerResult> {
   try {
     const parsed = ListDirectoryArgsSchema.parse(args);
-    const entries = await listDirectory(parsed.path, parsed.depth);
+    const entries = await listDirectory(parsed.path, parsed.depth, {
+      excludePatterns: parsed.excludePatterns,
+      includeFiles: parsed.includeFiles,
+      maxEntries: parsed.maxEntries,
+    });
 
     const resultText = entries.join("\n");
     const resolvedPath = resolveAbsolutePath(parsed.path);

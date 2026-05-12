@@ -70,6 +70,9 @@ export const FILESYSTEM_TOOL_CATALOG: ToolCatalogEntry[] = [
     name: "list_directories",
     description: (`
       List one or many directories in parallel.
+      Use items: [{ path, depth?, maxEntries?, excludePatterns?, includeFiles? }].
+      maxEntries limits visible entries per directory. excludePatterns supports simple glob patterns.
+      Set includeFiles=false when you only need directory structure.
       ${BATCH_GUIDANCE}
       ${PATH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
@@ -137,6 +140,8 @@ export const FILESYSTEM_TOOL_CATALOG: ToolCatalogEntry[] = [
     description: (`
       Start one or many searches in parallel.
       Inline pattern is capped; use pattern_path for large patterns so tool-call logs do not echo the full pattern.
+      Use filePattern to narrow content search and literalSearch=true for plain strings.
+      The response includes the sessionId, initial result count, and next get_search_results offset hint when more results are available.
       ${BATCH_GUIDANCE}
       ${PATH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
@@ -151,6 +156,8 @@ export const FILESYSTEM_TOOL_CATALOG: ToolCatalogEntry[] = [
     name: "get_search_results",
     description: (`
       Read one or many active search sessions in parallel.
+      Use offset/length for pagination. Negative offset reads from the tail of the current result set.
+      Follow nextOffset from start_searches or previous get_search_results when hasMoreResults is true.
       ${BATCH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
     `),
