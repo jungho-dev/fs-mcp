@@ -28,6 +28,9 @@ const COPIED_DIR = path.join(TEST_DIR, "copied-dir");
 const LARGE_FILE = path.join(TEST_DIR, "large.txt");
 const LARGE_WRITTEN_FILE = path.join(TEST_DIR, "large-written.txt");
 const LARGE_WRITE_REF_FILE = path.join(TEST_DIR, "large-write-ref.txt");
+const ARGS_PATH_WRITTEN_FILE = path.join(TEST_DIR, "args-path-written.txt");
+const ARGS_PATH_WRITE_ARGS_FILE = path.join(TEST_DIR, "args-path-write-args.json");
+const OVERSIZED_INLINE_WRITTEN_FILE = path.join(TEST_DIR, "oversized-inline-written.txt");
 const PARTIAL_WRITTEN_FILE = path.join(TEST_DIR, "partial-written.txt");
 const PARTIAL_WRITE_REF_FILE = path.join(TEST_DIR, "partial-write-ref.txt");
 const LARGE_EDIT_OLD_REF_FILE = path.join(TEST_DIR, "large-edit-old-ref.txt");
@@ -51,6 +54,8 @@ const UNSTRUCTURED_LINE_PATTERN = /unstructured line 79/;
 const READING_TWO_LINES_PATTERN = /Reading 2 lines/;
 const THREE_HUNDRED_X_PATTERN = /x{300}/;
 const THREE_HUNDRED_Y_PATTERN = /y{300}/;
+const LARGE_INLINE_CONTENT_PATTERN = /Large inline content can stall MCP hosts/;
+const CONTENT_PATH_OR_ARGS_PATH_PATTERN = /content_path or args_path/;
 const LARGE_TEXT = `${"x".repeat(300)}\n${"y".repeat(300)}\n`;
 const TEN_THOUSAND_A = "a".repeat(10_000);
 const TEN_THOUSAND_B = "b".repeat(10_000);
@@ -277,6 +282,44 @@ async function testWriteMoveInfoAndEditSurface() {
   assert.equal(largeWriteBatchResults[0].input.content_path, LARGE_WRITE_REF_FILE);
   assert.equal(await fs.readFile(LARGE_WRITTEN_FILE, "utf8"), TEN_THOUSAND_A);
 
+  const argsPathWritePayload = {
+    items: [
+      {
+        content: TEN_THOUSAND_B,
+        mode: "rewrite",
+        path: ARGS_PATH_WRITTEN_FILE,
+      },
+    ],
+  };
+  const argsPathWritePayloadText = JSON.stringify(argsPathWritePayload);
+  const argsPathWriteCall = { args_length: argsPathWritePayloadText.length, args_path: ARGS_PATH_WRITE_ARGS_FILE };
+
+  await fs.writeFile(ARGS_PATH_WRITE_ARGS_FILE, `${argsPathWritePayloadText}\0\0`, "utf8");
+  assert.ok(JSON.stringify(argsPathWriteCall).length < JSON.stringify(argsPathWritePayload).length);
+  const argsPathWriteResult = await dispatchToolCall("write_files", argsPathWriteCall);
+  const argsPathWriteBatchResults = extractBatchResults(argsPathWriteResult);
+  assert.equal(argsPathWriteBatchResults.length, 1);
+  assert.equal(argsPathWriteBatchResults[0].ok, true);
+  assert.equal(argsPathWriteBatchResults[0].input.contentLength, TEN_THOUSAND_B.length);
+  assert.equal(await fs.readFile(ARGS_PATH_WRITTEN_FILE, "utf8"), TEN_THOUSAND_B);
+
+  const oversizedInlineWriteResult = await dispatchToolCall("write_files", {
+    items: [
+      {
+        content: "z".repeat(20_000),
+        mode: "rewrite",
+        path: OVERSIZED_INLINE_WRITTEN_FILE,
+      },
+    ],
+  });
+  const oversizedInlineWriteOutput = parseToolOutput(oversizedInlineWriteResult);
+
+  assert.equal(oversizedInlineWriteResult.isError, true);
+  assert.equal(oversizedInlineWriteOutput.status, "error");
+  assert.match(oversizedInlineWriteOutput.error.message, LARGE_INLINE_CONTENT_PATTERN);
+  assert.match(oversizedInlineWriteOutput.error.message, CONTENT_PATH_OR_ARGS_PATH_PATTERN);
+  assert.equal(await pathExists(OVERSIZED_INLINE_WRITTEN_FILE), false);
+
   const partialWriteResult = await dispatchToolCall("write_files", {
     items: [
       {
@@ -373,11 +416,11 @@ async function testWriteMoveInfoAndEditSurface() {
   assert.ok(largeReadBatchResults[0].result.content[0].text.length <= BATCH_RESULT_PREVIEW_MAX_CHARS);
   assert.ok(largeReadBatchResults[0].result.structuredContent.textContent.includes(TEN_THOUSAND_B));
 
-  const renameResult = await dispatchToolCall("rename_files", {
+  const renameResult = await dispatchToolCall("move_files", {
     items: [
       {
-        newName: path.basename(RENAMED_FILE),
-        path: WRITTEN_FILE,
+        destination: RENAMED_FILE,
+        source: WRITTEN_FILE,
       },
     ],
   });

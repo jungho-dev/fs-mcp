@@ -13,11 +13,17 @@ import {configManager} from "@features/config/config-store";
 import {analyzeProcessState} from "@features/process/process-repl-detector";
 
 const DEFAULT_COMMAND_TIMEOUT = 1000;
+const MAX_ACTIVE_OUTPUT_LINES = 4000;
+const MAX_COMPLETED_OUTPUT_LINES = 6000;
+const MAX_COMPLETED_SESSIONS = 25;
+const MAX_PROCESS_STATE_CHARS = 12_000;
+const MAX_TIMING_EVENTS = 200;
 const SSH_COMMAND_PREFIX_PATTERN = /^ssh /;
 const QUICK_PROMPT_PATTERN = />>>\s*$|>\s*$|\$\s*$|#\s*$/;
 const OUTPUT_SNIPPET_NEWLINE_PATTERN = /\n/g;
 
 interface CompletedSession {
+  discardedLineCount: number;
   endTime: Date;
   exitCode: number | null;
   outputLines: string[]; // Line-based buffer (consistent with active sessions)
@@ -27,6 +33,7 @@ interface CompletedSession {
 
 // Result type for paginated output reading
 export interface PaginatedOutputResult {
+  discardedLineCount: number;
   exitCode?: number | null; // Exit code if completed
   isComplete: boolean; // Whether process has finished
   lines: string[];
@@ -122,6 +129,11 @@ function getShellSpawnArgs(shellPath: string, command: string): ShellSpawnConfig
     executable: command,
     useShellOption: shellPath,
   };
+}
+
+// 5. Get process state text window ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function getProcessStateTextWindow(output: string): string {
+  return output.length <= MAX_PROCESS_STATE_CHARS ? output : output.slice(-MAX_PROCESS_STATE_CHARS);
 }
 
 // 5. Terminal manager ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -232,6 +244,7 @@ export class TerminalManager {
     }
     const childPid = childProcess.pid;
     const session: TerminalSession = {
+      discardedLineCount: 0,
       isBlocked: false,
       lastReadIndex: 0, // Track where "new" output starts
       outputLines: [], // Line-based buffer
@@ -299,6 +312,9 @@ export class TerminalManager {
 
         // Record output event if collecting timing
         if (collectTiming) {
+          if (outputEvents.length >= MAX_TIMING_EVENTS) {
+            return;
+          }
           outputEvents.push({
             deltaMs: now - startTime,
             length: text.length,
@@ -341,6 +357,9 @@ export class TerminalManager {
 
         // Record output event if collecting timing
         if (collectTiming) {
+          if (outputEvents.length >= MAX_TIMING_EVENTS) {
+            return;
+          }
           outputEvents.push({
             deltaMs: now - startTime,
             length: text.length,
@@ -354,7 +373,7 @@ export class TerminalManager {
       // Periodic comprehensive check every 100ms
       periodicCheck = setInterval(() => {
         if (output.trim()) {
-          const processState = analyzeProcessState(output, childPid);
+          const processState = analyzeProcessState(getProcessStateTextWindow(output), childPid);
           if (processState.isWaitingForInput) {
             session.isBlocked = true;
             exitReason = "early_exit_periodic_check";
@@ -380,17 +399,21 @@ export class TerminalManager {
 
       childProcess.on("exit", (code: number | null) => {
         if (childPid) {
+          const removedCompletedLineCount = Math.max(0, session.outputLines.length - MAX_COMPLETED_OUTPUT_LINES);
+          const completedOutputLines = removedCompletedLineCount > 0 ? session.outputLines.slice(-MAX_COMPLETED_OUTPUT_LINES) : [...session.outputLines];
+
           // Store completed session before removing active session
           this.completedSessions.set(childPid, {
+            discardedLineCount: session.discardedLineCount + removedCompletedLineCount,
             endTime: new Date(),
             exitCode: code,
-            outputLines: [...session.outputLines], // Copy line buffer
+            outputLines: completedOutputLines,
             pid: childPid,
             startTime: session.startTime,
           });
 
-          // Keep only last 100 completed sessions
-          if (this.completedSessions.size > 100) {
+          // Keep only the most recent completed sessions
+          if (this.completedSessions.size > MAX_COMPLETED_SESSIONS) {
             const oldestKey = Array.from(this.completedSessions.keys())[0];
             this.completedSessions.delete(oldestKey);
           }
@@ -430,6 +453,12 @@ export class TerminalManager {
         session.outputLines.push(line);
       }
     });
+    if (session.outputLines.length > MAX_ACTIVE_OUTPUT_LINES) {
+      const removedCount = session.outputLines.length - MAX_ACTIVE_OUTPUT_LINES;
+      session.outputLines.splice(0, removedCount);
+      session.discardedLineCount += removedCount;
+      session.lastReadIndex = Math.max(0, session.lastReadIndex - removedCount);
+    }
   }
 
   // 5. Read process output with pagination (like file reading) ――――――――――――――――――――――――――――――――――――
@@ -452,6 +481,7 @@ export class TerminalManager {
           session.lastReadIndex = newIndex;
         },
         false,
+        session.discardedLineCount,
         undefined,
       );
     }
@@ -466,6 +496,7 @@ export class TerminalManager {
         0, // Completed sessions don't track read position
         () => {}, // No-op for completed sessions
         true,
+        completedSession.discardedLineCount,
         completedSession.exitCode,
         runtimeMs,
       );
@@ -474,7 +505,7 @@ export class TerminalManager {
   }
 
   // 7. Read from line buffer ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  private readFromLineBuffer(lines: string[], offset: number, length: number | undefined, lastReadIndex: number, updateLastRead: (index: number) => void, isComplete: boolean, exitCode?: number | null, runtimeMs?: number): PaginatedOutputResult {
+  private readFromLineBuffer(lines: string[], offset: number, length: number | undefined, lastReadIndex: number, updateLastRead: (index: number) => void, isComplete: boolean, discardedLineCount: number, exitCode?: number | null, runtimeMs?: number): PaginatedOutputResult {
     const totalLines = lines.length;
     let startIndex: number;
     let linesToRead: string[];
@@ -505,6 +536,7 @@ export class TerminalManager {
     const remaining = Math.max(0, totalLines - endIndex);
 
     return {
+      discardedLineCount,
       exitCode,
       isComplete,
       lines: linesToRead,
@@ -563,11 +595,12 @@ export class TerminalManager {
   // Used by interactWithProcess to know what output existed before sending input.
 
   // 13. Capture output snapshot ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  captureOutputSnapshot(pid: number): {totalChars: number; lineCount: number} | null {
+  captureOutputSnapshot(pid: number): {discardedLineCount: number; totalChars: number; lineCount: number} | null {
     const session = this.sessions.get(pid);
     if (session) {
       const fullOutput = session.outputLines.join("\n");
       return {
+        discardedLineCount: session.discardedLineCount,
         lineCount: session.outputLines.length,
         totalChars: fullOutput.length,
       };
@@ -579,11 +612,14 @@ export class TerminalManager {
   // Also checks completed sessions in case process finished between snapshot and poll.
 
   // 14. Get output since snapshot ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  getOutputSinceSnapshot(pid: number, snapshot: {totalChars: number; lineCount: number}): string | null {
+  getOutputSinceSnapshot(pid: number, snapshot: {discardedLineCount: number; totalChars: number; lineCount: number}): string | null {
     // Check active session first
     const session = this.sessions.get(pid);
     if (session) {
       const fullOutput = session.outputLines.join("\n");
+      if (session.discardedLineCount !== snapshot.discardedLineCount) {
+        return fullOutput;
+      }
       if (fullOutput.length <= snapshot.totalChars) {
         return ""; // No new output
       }
@@ -593,6 +629,9 @@ export class TerminalManager {
     const completedSession = this.completedSessions.get(pid);
     if (completedSession) {
       const fullOutput = completedSession.outputLines.join("\n");
+      if (completedSession.discardedLineCount !== snapshot.discardedLineCount) {
+        return fullOutput;
+      }
       if (fullOutput.length <= snapshot.totalChars) {
         return ""; // No new output
       }

@@ -38,11 +38,9 @@ export const GetMoreSearchResultsArgsSchema = z.object({
   length: z.number().optional(),
 });
 
-export const GetCompressedSearchResultsArgsSchema = z.object({
+export const GetFullSearchResultsArgsSchema = z.object({
   items: z.array(GetMoreSearchResultsArgsSchema).min(1),
 });
-
-export const GetFullSearchResultsArgsSchema = GetCompressedSearchResultsArgsSchema;
 
 export const StopSearchArgsSchema = z.object({
   sessionId: z.string(),
@@ -51,5 +49,3 @@ export const StopSearchArgsSchema = z.object({
 export const StopSearchesArgsSchema = z.object({
   sessionIds: z.array(z.string()).min(1),
 });
-
-export const ListSearchesArgsSchema = z.object({});

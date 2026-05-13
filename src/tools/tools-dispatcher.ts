@@ -7,12 +7,11 @@
 
 import type {ServerResult} from "@assets/type/common";
 import {handleGetConfigs, handleSetConfigValues} from "@controllers/controllers-config";
-import {handleClearContexts, handleIndexContexts, handleListContexts, handleSearchContexts} from "@controllers/controllers-context";
 import {handleEditBlocks} from "@controllers/controllers-edit";
-import {handleCopyFiles, handleCreateDirectories, handleGetFileInfos, handleListDirectories, handleMoveFiles, handleReadFiles, handleRemoveFiles, handleRenameFiles, handleWriteFiles} from "@controllers/controllers-filesystem";
+import {handleCopyFiles, handleCreateDirectories, handleGetFileInfos, handleListDirectories, handleMoveFiles, handleReadFiles, handleRemoveFiles, handleWriteFiles} from "@controllers/controllers-filesystem";
 import {handleGitTool} from "@controllers/controllers-git";
-import {handleKillProcesses, handleListProcesses} from "@controllers/controllers-process";
-import {handleGetCompressedSearchResults, handleGetFullSearchResults, handleListSearches, handleStartSearches, handleStopSearches} from "@controllers/controllers-search";
+import {handleKillProcesses} from "@controllers/controllers-process";
+import {handleGetFullSearchResults, handleStartSearches, handleStopSearches} from "@controllers/controllers-search";
 import {handleInteractWithProcesses, handleListSessions, handleReadProcessOutputs, handleStartProcesses} from "@controllers/controllers-terminal";
 import {createErrorResponse} from "@cores/responses/responses-error";
 import {normalizeToolResult} from "@cores/responses/responses-tool-result";
@@ -28,7 +27,15 @@ type ToolArgsReference = {
   args_length?: unknown;
 };
 
+type ResolvedToolArgs = {
+  source: "args_path" | "inline";
+  usedInlineOverrides: boolean;
+  value: unknown;
+};
+
 const ARGS_PATH_FIELD_NAMES = new Set(["args_path", "args_offset", "args_length"]);
+const ARGS_SOURCE_METADATA_FIELD = "__fs_mcp_args_source";
+const ARGS_PATH_INLINE_PAYLOAD_TOOL_NAMES = new Set(["write_files"]);
 
 // 1. Is record ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -47,13 +54,21 @@ function resolveArgsPathNumber(value: unknown, fieldName: string): number | unde
 }
 
 // 2. Resolve tool args reference ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function resolveToolArgsReference(args: unknown): Promise<unknown> {
+async function resolveToolArgsReference(args: unknown): Promise<ResolvedToolArgs> {
   if (!isRecord(args)) {
-    return args;
+    return {
+      source: "inline",
+      usedInlineOverrides: false,
+      value: args,
+    };
   }
   const reference = args as ToolArgsReference;
   if (reference.args_path === undefined) {
-    return args;
+    return {
+      source: "inline",
+      usedInlineOverrides: false,
+      value: args,
+    };
   }
   if (typeof reference.args_path !== "string") {
     throw new Error("args_path must be a string");
@@ -71,15 +86,41 @@ async function resolveToolArgsReference(args: unknown): Promise<unknown> {
     throw new Error(`args_path must contain valid JSON: ${message}`);
   }
   const inlineOverrides = Object.fromEntries(Object.entries(args).filter(([key]) => !ARGS_PATH_FIELD_NAMES.has(key)));
-  if (Object.keys(inlineOverrides).length === 0) {
-    return parsedArgs;
+  const usedInlineOverrides = Object.keys(inlineOverrides).length > 0;
+
+  if (!usedInlineOverrides) {
+    return {
+      source: "args_path",
+      usedInlineOverrides: false,
+      value: parsedArgs,
+    };
   }
   if (!isRecord(parsedArgs)) {
     throw new Error("args_path JSON must be an object when inline overrides are provided");
   }
   return {
-    ...parsedArgs,
-    ...inlineOverrides,
+    source: "args_path",
+    usedInlineOverrides: true,
+    value: {
+      ...parsedArgs,
+      ...inlineOverrides,
+    },
+  };
+}
+
+// 3. Decorate resolved args for dispatch ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function decorateResolvedArgsForDispatch(name: string, resolvedArgs: ResolvedToolArgs): unknown {
+  if (
+    resolvedArgs.source !== "args_path"
+    || resolvedArgs.usedInlineOverrides
+    || !ARGS_PATH_INLINE_PAYLOAD_TOOL_NAMES.has(name)
+    || !isRecord(resolvedArgs.value)
+  ) {
+    return resolvedArgs.value;
+  }
+  return {
+    ...resolvedArgs.value,
+    [ARGS_SOURCE_METADATA_FIELD]: "args_path",
   };
 }
 
@@ -91,15 +132,10 @@ const GIT_TOOL_DISPATCHERS = Object.fromEntries(
 export const TOOL_DISPATCHERS: Readonly<Record<string, ToolDispatchHandler>> = {
   get_configs: (args: unknown) => handleGetConfigs(args),
   set_config_values: (args: unknown) => handleSetConfigValues(args),
-  index_contexts: (args: unknown) => handleIndexContexts(args),
-  search_contexts: (args: unknown) => handleSearchContexts(args),
-  list_contexts: (args: unknown) => handleListContexts(args),
-  clear_contexts: (args: unknown) => handleClearContexts(args),
   start_processes: (args: unknown) => handleStartProcesses(args),
   read_process_outputs: (args: unknown) => handleReadProcessOutputs(args),
   interact_with_processes: (args: unknown) => handleInteractWithProcesses(args),
   list_sessions: () => handleListSessions(),
-  list_processes: () => handleListProcesses(),
   kill_processes: (args: unknown) => handleKillProcesses(args),
   read_files: (args: unknown) => handleReadFiles(args),
   write_files: (args: unknown) => handleWriteFiles(args),
@@ -107,15 +143,12 @@ export const TOOL_DISPATCHERS: Readonly<Record<string, ToolDispatchHandler>> = {
   list_directories: (args: unknown) => handleListDirectories(args),
   copy_files: (args: unknown) => handleCopyFiles(args),
   move_files: (args: unknown) => handleMoveFiles(args),
-  rename_files: (args: unknown) => handleRenameFiles(args),
   remove_files: (args: unknown) => handleRemoveFiles(args),
   get_file_infos: (args: unknown) => handleGetFileInfos(args),
   edit_blocks: (args: unknown) => handleEditBlocks(args),
   start_searches: (args: unknown) => handleStartSearches(args),
-  get_compressed_search: (args: unknown) => handleGetCompressedSearchResults(args),
   get_full_search: (args: unknown) => handleGetFullSearchResults(args),
   stop_searches: (args: unknown) => handleStopSearches(args),
-  list_searches: () => handleListSearches(),
   ...GIT_TOOL_DISPATCHERS,
 };
 
@@ -135,7 +168,8 @@ export async function dispatchToolCall(name: string, args: unknown): Promise<Ser
   }
   try {
     const resolvedArgs = await resolveToolArgsReference(args);
-    const result = await dispatcher(resolvedArgs);
+    const dispatchArgs = decorateResolvedArgsForDispatch(name, resolvedArgs);
+    const result = await dispatcher(dispatchArgs);
 
     return normalizeDispatchResult(result);
   }

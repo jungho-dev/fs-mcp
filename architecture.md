@@ -80,13 +80,12 @@ are MCP adapters and not reusable domain services.
 
 ## Tool Surface
 
-Tool catalog modules are grouped by runtime domain. The current catalog has 34 exported tools.
+Tool catalog modules are grouped by runtime domain. The current catalog has 25 exported tools.
 
 - `tools-config.ts`: 2 configuration tools.
-- `tools-context.ts`: 4 context index tools.
-- `tools-filesystem.ts`: 13 filesystem, search-session, metadata, and exact block edit tools.
-- `tools-process.ts`: 6 process and terminal-session tools.
-- `tools-git.ts`: 9 essential git session tools.
+- `tools-filesystem.ts`: 12 filesystem, search-session, metadata, and exact block edit tools.
+- `tools-process.ts`: 5 process and terminal-session tools.
+- `tools-git.ts`: 6 essential git session tools.
 
 `server-create-mcp-server.ts` concatenates those catalogs for `list_tools`. `tools-dispatcher.ts` owns the
 matching `call_tool` registry. Git schemas define a wider set of operation contracts, but `tools-git.ts` filters
@@ -100,7 +99,7 @@ support.
 
 - `InitializeRequestSchema` captures client metadata, configures notification behavior, and negotiates protocol
   version.
-- `ListToolsRequestSchema` returns the concatenated catalog from config, context, filesystem, process, and git
+- `ListToolsRequestSchema` returns the concatenated catalog from config, filesystem, process, and git
   modules.
 - `CallToolRequestSchema` wraps each call in the current client git-session scope before dispatch.
 - `tools-dispatcher.ts` resolves optional `args_path`, `args_offset`, and `args_length` before schema-specific
@@ -125,9 +124,10 @@ support.
 - The default database path is `~/.mcp/fs-mcp.sqlite` and `~` is expanded at runtime.
 - Text is chunked into overlapping 80-line chunks with 20-line overlap and searched through SQLite FTS.
 - Content hashes allow equivalent source/tool payloads to reuse an existing context-index reference.
-- `context-output-compactor.ts` indexes large text fields and structured collections without replacing the
-  original structured payload unless replacement is enabled.
-- Manual context tools call the same service for explicit index, search, list, and clear operations.
+- `context-output-compactor.ts` indexes large text fields and structured collections and replaces large
+  auto-indexed payloads with context-index references by default.
+- Manual context-index tool surface is not exposed in this version; automatic indexing remains available through
+  response normalization.
 
 ## Runtime Configuration
 
@@ -151,14 +151,20 @@ support.
 
 ## Performance And Safety Design
 
+- `list_tools` payload was reduced from `48,129` to `28,002` characters, a `41.8%` reduction.
+- Tool descriptions were reduced from `23,121` to `6,173` characters, a `73.3%` reduction.
+- Tool schemas were reduced from `20,334` to `18,128` characters, a `10.9%` reduction.
+- Tool catalogs are assembled once and input schema JSON is generated through lazy cache.
 - File operations use configured timeout boundaries and path resolution through the filesystem feature layer.
 - Text reading uses offset and length inputs so clients can request bounded slices instead of whole files.
-- Batch-capable tools accept arrays such as `paths`, `items`, `queries`, `sessionIds`, or `pids` so clients can
+- Batch-capable tools accept arrays such as `paths`, `items`, `sessionIds`, or `pids` so clients can
   collapse repeated same-tool work into one request.
 - Large inline tool arguments can be passed through path-backed fields such as `content_path`,
   `old_string_path`, `new_string_path`, `pattern_path`, `input_path`, and the shared `args_path` fields.
-- Search execution is delegated to bundled `@vscode/ripgrep`, with system ripgrep as a fallback.
-- Process execution uses a command policy blocklist, configured shell selection, and explicit session tracking.
+- Search execution is delegated to bundled `@vscode/ripgrep`, with system ripgrep as a fallback. Search sessions
+  default to `maxResults=5000` and start responses return previews instead of full result arrays.
+- Process execution uses a command policy blocklist, configured shell selection, explicit session tracking,
+  bounded active output windows, and completed-session retention limits.
 - Stdio transport captures accidental stdout and stderr writes before they can corrupt MCP JSON output.
 - Tests exercise the compiled `out` tree, which is the same runtime surface published to npm.
 

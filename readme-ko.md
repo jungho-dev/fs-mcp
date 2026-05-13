@@ -54,34 +54,48 @@ stdio를 사용하며 network listener를 열지 않습니다.
 
 ## 주요 기능
 
-- Batched read, write, listing, metadata, directory create, move, rename, remove 파일시스템 도구.
+- Batched read, write, listing, metadata, directory create, move, remove 파일시스템 도구.
 - Path-backed large string input을 지원하는 one-or-many exact block edit 도구.
 - Bundled `@vscode/ripgrep` 기반 검색, active search session, pagination, stop control.
-- Command session, process output, interactive input, session/process listing, process termination 도구.
-- Pinned repository state, status, diff, log, show, staging, commit, wrap-up guidance 중심의 git session 도구.
-- 큰 text payload를 SQLite context DB에 저장, 검색, 조회, 삭제하는 context index 도구.
+- Command session, process output, interactive input, session listing, process termination 도구.
+- Pinned repository state, status, diff, show, staging, commit 중심의 git session 도구.
+- 큰 tool output을 공유 SQLite context DB에 자동 index하는 기능.
 - Command policy, shell, allowed directory, context-index threshold, client metadata, version, system 정보를
   다루는 runtime configuration 도구.
 
 ## 도구 표면
 
-현재 source와 compiled runtime은 34개 도구를 노출합니다. Batch-capable 도구는 batch-first surface로
-문서화됩니다. 같은 종류의 filesystem, search, process, config, context 작업이 여러 개 필요하면 client는
+현재 source와 compiled runtime은 25개 도구를 노출합니다. Batch-capable 도구는 batch-first surface로
+문서화됩니다. 같은 종류의 filesystem, search, process, config 작업이 여러 개 필요하면 client는
 같은 도구를 반복 호출하지 않고 하나의 multi-item call로 묶어야 합니다.
 
 - Config: `get_configs`, `set_config_values`.
-- Context: `index_contexts`, `search_contexts`, `list_contexts`, `clear_contexts`.
 - Filesystem/search/edit: `read_files`, `write_files`, `create_directories`, `list_directories`,
-  `move_files`, `rename_files`, `remove_files`, `start_searches`, `get_compressed_search`,
-  `get_full_search`,
-  `stop_searches`, `list_searches`, `get_file_infos`, `edit_blocks`.
+  `copy_files`, `move_files`, `remove_files`, `start_searches`, `get_full_search`, `stop_searches`,
+  `get_file_infos`, `edit_blocks`.
 - Process: `start_processes`, `read_process_outputs`, `interact_with_processes`, `list_sessions`,
-  `list_processes`, `kill_processes`.
-- Git: `git_set_working_dir`, `git_clear_working_dir`, `git_status`, `git_diff`, `git_log`,
-  `git_show`, `git_add`, `git_commit`, `git_wrapup_instructions`.
+  `kill_processes`.
+- Git: `git_set_working_dir`, `git_status`, `git_diff`, `git_show`, `git_add`, `git_commit`.
 
 `src/schemas/schemas-git.ts`에는 추가 git operation schema가 정의되어 있지만, 이번 버전의
 `src/tools/tools-git.ts`는 `ESSENTIAL_GIT_TOOL_NAMES`만 catalog로 export합니다.
+
+## 성능 개선
+
+현재 측정된 tool definition payload 개선 수치입니다.
+
+- Tool count: `29 -> 25`, surface 축소 전 baseline 대비 `13.8%` 감소.
+- `list_tools` payload: `48,129 -> 28,002 chars`, `41.8%` 감소.
+- Tool description: `23,121 -> 6,173 chars`, `73.3%` 감소.
+- Tool schema: `20,334 -> 18,128 chars`, `10.9%` 감소.
+- 1차 compact 이후 추가 감소: `31,775 -> 28,002 chars`, `11.9%` 감소.
+
+Runtime default도 large-output 부담을 줄입니다.
+
+- Tool catalog는 한 번만 구성하고 schema conversion은 lazy cache합니다.
+- 큰 auto-indexed output은 기본적으로 context-index reference로 대체합니다.
+- Search session은 기본 `maxResults=5000`이며 start response는 preview만 반환합니다.
+- Process session은 active output `4000`줄, completed session `25개` budget을 적용합니다.
 
 ## Batch-First 사용
 
@@ -91,7 +105,7 @@ stdio를 사용하며 network listener를 열지 않습니다.
 - `paths` 또는 `items` 배열을 쓰는 file/directory 작업.
 - `items` 또는 `sessionIds`를 쓰는 search session 작업.
 - `items` 또는 `pids`를 쓰는 process 작업.
-- `items` 또는 `queries`를 쓰는 config/context-index 작업.
+- `items`를 쓰는 config 작업.
 
 큰 multi-item argument는 UTF-8 JSON 파일로 옮긴 뒤 `args_path`로 전달할 수 있습니다. 이렇게 하면 tool-call
 preview가 작게 유지되며 batch request는 그대로 보존됩니다. Inline override는 JSON object 위에 merge됩니다.
@@ -105,9 +119,9 @@ preview가 작게 유지되며 batch request는 그대로 보존됩니다. Inlin
   `contextIndexMaxEntryChars`, `contextIndexReplaceLargeOutputs`로 제어합니다.
 - 기본 DB 경로는 `~/.mcp/fs-mcp.sqlite`입니다.
 - Text는 80줄 chunk와 20줄 overlap으로 나뉘며 SQLite FTS로 검색합니다.
-- 수동 indexing은 `index_contexts`, `search_contexts`, `list_contexts`, `clear_contexts`로 수행합니다.
-- `contextIndexReplaceLargeOutputs`가 켜져 있지 않으면 output compaction은 원본 structured payload를
-  대체하지 않고 context-index reference만 추가합니다.
+- 이번 버전에는 수동 context-index tool surface가 없습니다.
+- Output compaction은 기본값 `contextIndexReplaceLargeOutputs=true`를 통해 큰 auto-indexed payload를
+  context-index reference로 대체합니다.
 
 ## Client 호환성
 

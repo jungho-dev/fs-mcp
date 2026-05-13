@@ -65,10 +65,6 @@ async function testGitBasicFlow() {
     assert.equal(commitOutput.message, "feat: add demo file");
     assert.equal(commitOutput.status.is_clean, true);
 
-    const logOutput = parseStandardOutput(await dispatchToolCall("git_log", {maxCount: 1}));
-    assert.equal(logOutput.success, true);
-    assert.equal(logOutput.totalCount, 1);
-    assert.equal(logOutput.commits[0].subject, "feat: add demo file");
   }
   finally {
     await fs.rm(repoPath, {recursive: true, force: true});

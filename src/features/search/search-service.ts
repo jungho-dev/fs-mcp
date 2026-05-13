@@ -13,10 +13,12 @@ import {getRipgrepPath} from "@features/search/search-ripgrep-adapter";
 import PizZip from "pizzip";
 
 const FIRST_CHUNK_WAIT_MS = 40;
+const DEFAULT_MAX_SEARCH_RESULTS = 5000;
 const EXACT_FILENAME_TIMEOUT_MS = 1500;
-const SEARCH_CLEANUP_INTERVAL_MS = 5 * 60 * 1000;
+const SEARCH_CLEANUP_INTERVAL_MS = 60 * 1000;
 const SEARCH_CLEANUP_INITIAL_DELAY_MS = 1000;
 const EARLY_TERMINATION_DELAY_MS = 100;
+const SEARCH_PREVIEW_RESULT_COUNT = 10;
 const MATCH_CONTEXT_CHARS = 1000;
 const SEARCH_LINE_SEPARATOR = "\n";
 const GLOB_PATTERN_SEPARATOR = "|";
@@ -47,10 +49,12 @@ export interface SearchSession {
   lastReadTime: number;
   options: SearchSessionOptions;
   process: ChildProcess;
+  resultLimit: number;
   results: SearchResult[];
   startTime: number;
   totalContextLines: number; // Track context lines separately
   totalMatches: number;
+  wasLimited?: boolean;
   wasIncomplete?: boolean; // NEW: Track if search was incomplete due to permissions/access issues
 }
 export interface SearchSessionOptions {
@@ -85,14 +89,21 @@ export class SearchManager {
     results: SearchResult[];
     totalResults: number;
     runtime: number;
+    wasLimited?: boolean;
   }> {
     const sessionId = `search_${++this.sessionCounter}_${Date.now()}`;
+    const effectiveMaxResults = options.maxResults ?? DEFAULT_MAX_SEARCH_RESULTS;
 
     // Validate path first
     const validPath = await validatePath(options.rootPath);
+    const normalizedOptions: SearchSessionOptions = {
+      ...options,
+      maxResults: effectiveMaxResults,
+      rootPath: validPath,
+    };
 
     // Build ripgrep arguments
-    const args = this.buildRipgrepArgs({...options, rootPath: validPath});
+    const args = this.buildRipgrepArgs(normalizedOptions);
 
     // Get ripgrep path with fallback resolution
     let rgPath: string;
@@ -115,8 +126,9 @@ export class SearchManager {
       isComplete: false,
       isError: false,
       lastReadTime: Date.now(),
-      options,
+      options: normalizedOptions,
       process: rgProcess,
+      resultLimit: effectiveMaxResults,
       results: [],
       startTime: Date.now(),
       totalContextLines: 0,
@@ -133,7 +145,7 @@ export class SearchManager {
 
     // Set up timeout if specified and auto-terminate
     // For exact filename searches, use a shorter default timeout
-    const timeoutMs = options.timeout ?? (this.isExactFilename(options.pattern) ? EXACT_FILENAME_TIMEOUT_MS : undefined);
+    const timeoutMs = normalizedOptions.timeout ?? (this.isExactFilename(normalizedOptions.pattern) ? EXACT_FILENAME_TIMEOUT_MS : undefined);
 
     let killTimer: NodeJS.Timeout | null = null;
     if (timeoutMs) {
@@ -160,12 +172,16 @@ export class SearchManager {
 
 
     // For content searches, also search DOCX files
-    const shouldSearchDocx = options.searchType === "content" && this.shouldIncludeDocxSearch(options.filePattern, validPath);
+    const shouldSearchDocx = normalizedOptions.searchType === "content" && this.shouldIncludeDocxSearch(normalizedOptions.filePattern, validPath);
 
     if (shouldSearchDocx) {
-      this.searchDocxFiles(validPath, options.pattern, options.ignoreCase !== false, options.maxResults, options.filePattern, options.literalSearch)
+      this.searchDocxFiles(validPath, normalizedOptions.pattern, normalizedOptions.ignoreCase !== false, normalizedOptions.maxResults, normalizedOptions.filePattern, normalizedOptions.literalSearch)
         .then((docxResults) => {
           for (const result of docxResults) {
+            if (session.totalMatches >= session.resultLimit) {
+              session.wasLimited = true;
+              break;
+            }
             session.results.push(result);
             session.totalMatches++;
           }
@@ -189,10 +205,11 @@ export class SearchManager {
     return {
       isComplete: session.isComplete,
       isError: session.isError,
-      results: [...session.results],
+      results: session.results.slice(0, SEARCH_PREVIEW_RESULT_COUNT),
       runtime: Date.now() - session.startTime,
       sessionId,
       totalResults: session.totalMatches,
+      wasLimited: session.wasLimited,
     };
   }
   // Read search results with offset-based pagination (like read_file)
@@ -213,6 +230,7 @@ export class SearchManager {
     error?: string;
     hasMoreResults: boolean; // New field
     runtime: number;
+    wasLimited?: boolean;
     wasIncomplete?: boolean; // NEW: Indicates if search was incomplete due to permissions
   } {
     const session = this.sessions.get(sessionId);
@@ -237,6 +255,7 @@ export class SearchManager {
         runtime: Date.now() - session.startTime,
         totalMatches: session.totalMatches, // Actual matches only
         totalResults: session.totalMatches + session.totalContextLines,
+        wasLimited: session.wasLimited,
         wasIncomplete: session.wasIncomplete,
       };
     }
@@ -256,6 +275,7 @@ export class SearchManager {
       runtime: Date.now() - session.startTime,
       totalMatches: session.totalMatches, // Actual matches only
       totalResults: session.totalMatches + session.totalContextLines,
+      wasLimited: session.wasLimited,
       wasIncomplete: session.wasIncomplete,
     };
   }
@@ -663,6 +683,9 @@ export class SearchManager {
         }
         else {
           session.totalMatches++;
+          if (session.totalMatches >= session.resultLimit) {
+            session.wasLimited = true;
+          }
         }
         // Early termination for exact filename matches (if enabled)
         if (

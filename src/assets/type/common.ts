@@ -19,6 +19,7 @@ export interface ProcessInfo {
   pid: number;
 }
 export interface TerminalSession {
+  discardedLineCount: number;
   isBlocked: boolean;
   lastReadIndex: number;
   outputLines: string[];

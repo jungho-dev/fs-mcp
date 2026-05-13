@@ -9,8 +9,6 @@ import {z} from "zod";
 
 const INLINE_TEXT_ARGUMENT_MAX_LENGTH = 50_000;
 
-export const ListProcessesArgsSchema = z.object({});
-
 export const StartProcessArgsSchema = z.object({
   command: z.string().max(INLINE_TEXT_ARGUMENT_MAX_LENGTH, "Use command_path for long commands").optional(),
   command_path: z.string().optional(),

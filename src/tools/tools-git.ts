@@ -7,8 +7,7 @@
 
 import { withArgsPathSchema } from "@schemas/schemas-args-ref";
 import { ESSENTIAL_GIT_TOOL_NAMES, GIT_INPUT_SCHEMAS, type GitToolName } from "@schemas/schemas-git";
-import { CMD_PREFIX_DESCRIPTION, PATH_GUIDANCE, type ToolCatalogEntry } from "@tools/tools-const";
-import { zodToJsonSchema } from "zod-to-json-schema";
+import { CMD_PREFIX_DESCRIPTION, PATH_GUIDANCE, createToolCatalogEntry, type ToolCatalogEntry } from "@tools/tools-const";
 
 type GitToolDescription = {
   name: GitToolName;
@@ -19,12 +18,10 @@ type GitToolDescription = {
   openWorldHint?: boolean;
 };
 
-const LONG_MESSAGE_GUIDANCE = "Use messagePath/messageOffset/messageLength for long messages so the tool-call argument preview stays small.";
+const LONG_MESSAGE_GUIDANCE = "Use messagePath for long messages.";
 const COMMIT_MESSAGE_GUIDANCE = [
-  "Write commit messages in English as multi-line Conventional Commit text. Korean/Hangul text is rejected.",
-  "Use this format instead of a terse one-line message:",
+  "Use an English multi-line Conventional Commit message.",
   "<type>: <summary>",
-  "",
   "- <change detail>",
   "- <verification or behavior detail>",
 ].join("\n");
@@ -39,13 +36,11 @@ const GIT_TOOL_DESCRIPTIONS: GitToolDescription[] = [
   { name: "git_checkout", title: "Git Checkout", description: ["Switch branches or restore tracked files.", CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false, destructiveHint: true },
   { name: "git_cherry_pick", title: "Git Cherry Pick", description: ["Apply commits from another branch.", CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false, destructiveHint: true },
   { name: "git_clean", title: "Git Clean", description: ["Remove untracked files or preview cleanup.", CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false, destructiveHint: true },
-  { name: "git_clear_working_dir", title: "Git Clear Working Directory", description: ["Clear the session git working directory.", CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false, destructiveHint: true },
   { name: "git_clone", title: "Git Clone", description: ["Clone a repository from a remote or local source.", PATH_GUIDANCE, CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false, destructiveHint: true, openWorldHint: true },
   { name: "git_commit", title: "Git Commit", description: ["Create a commit from staged changes.", COMMIT_MESSAGE_GUIDANCE, LONG_MESSAGE_GUIDANCE, CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false, destructiveHint: true },
   { name: "git_diff", title: "Git Diff", description: ["Show differences between commits, branches, or working tree state.", CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: true },
   { name: "git_fetch", title: "Git Fetch", description: ["Fetch updates from a remote repository.", CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false, openWorldHint: true },
   { name: "git_init", title: "Git Init", description: ["Initialize a new git repository.", PATH_GUIDANCE, CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false, destructiveHint: true },
-  { name: "git_log", title: "Git Log", description: ["Read commit history with optional filters.", CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: true },
   { name: "git_merge", title: "Git Merge", description: ["Merge a branch into the current branch.", LONG_MESSAGE_GUIDANCE, CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false, destructiveHint: true },
   { name: "git_pull", title: "Git Pull", description: ["Fetch and integrate remote changes.", CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false, destructiveHint: true, openWorldHint: true },
   { name: "git_push", title: "Git Push", description: ["Push local commits or tags to a remote.", CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false, destructiveHint: true, openWorldHint: true },
@@ -59,18 +54,19 @@ const GIT_TOOL_DESCRIPTIONS: GitToolDescription[] = [
   { name: "git_status", title: "Git Status", description: ["Show working tree status, staging, and conflicts.", CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: true },
   { name: "git_tag", title: "Git Tag", description: ["List, create, delete, or verify tags.", LONG_MESSAGE_GUIDANCE, CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false, destructiveHint: true },
   { name: "git_worktree", title: "Git Worktree", description: ["Manage additional git worktrees.", PATH_GUIDANCE, CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: false, destructiveHint: true },
-  { name: "git_wrapup_instructions", title: "Git Wrapup Instructions", description: ["Return a git session wrap-up checklist with repository snapshot.", CMD_PREFIX_DESCRIPTION].join("\n"), readOnlyHint: true },
 ];
 
 // 1. git tool catalog build ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export const GIT_TOOL_CATALOG: ToolCatalogEntry[] = GIT_TOOL_DESCRIPTIONS.filter((tool) => ESSENTIAL_GIT_TOOL_NAME_SET.has(tool.name)).map((tool) => ({
-  name: tool.name,
-  description: tool.description,
-  inputSchema: zodToJsonSchema(withArgsPathSchema(GIT_INPUT_SCHEMAS[tool.name])),
-  annotations: {
-    title: tool.title,
-    readOnlyHint: tool.readOnlyHint,
-    destructiveHint: tool.destructiveHint,
-    openWorldHint: tool.openWorldHint,
-  },
-}));
+export const GIT_TOOL_CATALOG: ToolCatalogEntry[] = GIT_TOOL_DESCRIPTIONS
+  .filter((tool) => ESSENTIAL_GIT_TOOL_NAME_SET.has(tool.name))
+  .map((tool) => createToolCatalogEntry({
+    name: tool.name,
+    description: tool.description,
+    inputSchema: withArgsPathSchema(GIT_INPUT_SCHEMAS[tool.name]),
+    annotations: {
+      title: tool.title,
+      readOnlyHint: tool.readOnlyHint,
+      destructiveHint: tool.destructiveHint,
+      openWorldHint: tool.openWorldHint,
+    },
+  }));

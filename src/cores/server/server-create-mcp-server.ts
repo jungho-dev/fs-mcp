@@ -17,7 +17,6 @@ import {Server} from "@modelcontextprotocol/sdk/server/index.js";
 import {type CallToolRequest, CallToolRequestSchema, type InitializeRequest, InitializeRequestSchema, LATEST_PROTOCOL_VERSION, ListResourcesRequestSchema, ListResourceTemplatesRequestSchema, ListToolsRequestSchema, SUPPORTED_PROTOCOL_VERSIONS} from "@modelcontextprotocol/sdk/types.js";
 import {CONFIG_TOOL_CATALOG} from "@tools/tools-config";
 import type {ToolCatalogEntry} from "@tools/tools-const";
-import {CONTEXT_TOOL_CATALOG} from "@tools/tools-context";
 import {dispatchToolCall} from "@tools/tools-dispatcher";
 import {FILESYSTEM_TOOL_CATALOG} from "@tools/tools-filesystem";
 import {GIT_TOOL_CATALOG} from "@tools/tools-git";
@@ -38,6 +37,13 @@ function deferLog(level: LogLevel, message: string): void {
 function hasRequestMetadata(value: unknown): value is RequestMetadata {
   return typeof value === "object" && value !== null;
 }
+
+// 3. Create tool catalog ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function createToolCatalog(): ToolCatalogEntry[] {
+  return [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG, ...GIT_TOOL_CATALOG];
+}
+
+const TOOL_CATALOG = createToolCatalog();
 
 // Function to flush deferred messages after initialization
 
@@ -116,14 +122,9 @@ server.setRequestHandler(InitializeRequestSchema, async (request: InitializeRequ
 deferLog("info", "Setting up request ..");
 
 server.setRequestHandler(ListToolsRequestSchema, async () => {
-
-  // 6. Create tool catalog ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  function createToolCatalog(): ToolCatalogEntry[] {
-    return [...CONFIG_TOOL_CATALOG, ...CONTEXT_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG, ...GIT_TOOL_CATALOG];
-  }
   try {
     return {
-      tools: createToolCatalog(),
+      tools: TOOL_CATALOG,
     };
   }
   catch (error) {

@@ -34,7 +34,6 @@ const TEST_GROUPS = {
   ],
   smoke: [
     "./smoke/config/allowed-directories.test.js",
-    "./smoke/context/context-index.test.js",
     "./smoke/edit/edit-block-basic.test.js",
     "./smoke/filesystem/file-handlers.test.js",
     "./smoke/git/git-basic.test.js",

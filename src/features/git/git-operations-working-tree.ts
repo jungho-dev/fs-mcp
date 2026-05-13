@@ -7,7 +7,7 @@
 
 import { AUTO_EXCLUDE_PATTERNS, normalizeCommitMessage, requireGitTextArgument, runGitCommand, splitLines } from "@features/git/git-runtime";
 import { getHeadCommit, resolveRepositoryPath } from "@features/git/git-session";
-import { detectAutoExcludedFiles, getStatusSummary, parseRefs, sumNumstat, toSnakeStatus } from "@features/git/git-status-support";
+import { detectAutoExcludedFiles, getStatusSummary, sumNumstat, toSnakeStatus } from "@features/git/git-status-support";
 import type { GitArgsMap, GitToolOutput } from "@features/git/git-types";
 
 const GPG_SIGN_PATTERN = /gpg|sign/i;
@@ -16,7 +16,6 @@ const CONVENTIONAL_COMMIT_PATTERN = /^(?:feat|fix|chore|docs|refactor|test|style
 const MULTILINE_BULLET_PATTERN = /\n\s*\n[\s\S]*^\s*-\s+\S/m;
 // biome-ignore lint/security/noSecrets: Git pretty-format token string, not credential material.
 const COMMIT_SUMMARY_FORMAT = "%H%x1f%an <%ae>%x1f%ct%x1f%s%x1f%G?";
-const GIT_LOG_FORMAT = "%H%x1f%h%x1f%an%x1f%ae%x1f%ct%x1f%P%x1f%d%x1f%s%x1f%b%x1e";
 
 // 1. Run git add ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitAdd(input: GitArgsMap["git_add"]): Promise<GitToolOutput> {
@@ -139,64 +138,6 @@ export async function runGitDiff(input: GitArgsMap["git_diff"]): Promise<GitTool
     ...(diffStats.insertions !== undefined ? { insertions: diffStats.insertions } : {}),
     ...(diffStats.deletions !== undefined ? { deletions: diffStats.deletions } : {}),
     ...(excludedFiles.length > 0 ? { excludedFiles } : {}),
-  };
-}
-
-// 4. Run git log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function runGitLog(input: GitArgsMap["git_log"]): Promise<GitToolOutput> {
-  const cwd = await resolveRepositoryPath(input.path);
-  const maxCount = input.maxCount ?? 20;
-  const logArgs = ["log", `--max-count=${String(maxCount)}`, ...(input.skip !== undefined ? [`--skip=${String(input.skip)}`] : []), ...(input.author ? [`--author=${input.author}`] : []), ...(input.grep ? [`--grep=${input.grep}`] : []), ...(input.since ? [`--since=${input.since}`] : []), ...(input.until ? [`--until=${input.until}`] : []), ...(input.showSignature ? ["--show-signature"] : []), `--pretty=format:${GIT_LOG_FORMAT}`, ...(input.branch ? [input.branch] : []), ...(input.filePath ? ["--", input.filePath] : [])];
-  const commandResult = await runGitCommand(logArgs, { cwd, allowFailure: true });
-
-  if (commandResult.exitCode !== 0) {
-    return {
-      success: true,
-      commits: [],
-      totalCount: 0,
-      ...(input.branch || input.author || input.grep || input.filePath || input.since || input.until ? { note: "No commits matched the provided filters." } : {}),
-    };
-  }
-  const commits = [];
-  const entries = commandResult.stdout
-    .split("\x1e")
-    .map((entry) => entry.trim())
-    .filter((entry) => entry.length > 0);
-
-  for (const entry of entries) {
-    const parts = entry.split("\x1f");
-    const commitRecord: Record<string, unknown> = {
-      hash: parts[0],
-      shortHash: parts[1],
-      subject: parts[7],
-    };
-
-    if (!input.oneline) {
-      Object.assign(commitRecord, {
-        author: parts[2],
-        authorEmail: parts[3],
-        timestamp: Number.parseInt(parts[4], 10),
-        ...(parts[5] ? { parents: parts[5].split(" ").filter((value) => value.length > 0) } : {}),
-        ...(parseRefs(parts[6]) ? { refs: parseRefs(parts[6]) } : {}),
-        ...(parts[8] ? { body: parts[8] } : {}),
-      });
-
-      if (input.stat) {
-        // biome-ignore lint/performance/noAwaitInLoops: Per-commit stat lookup preserves log output order.
-        const statResult = await runGitCommand(["show", "--stat", "--format=", parts[0]], { cwd, allowFailure: true });
-        commitRecord.stat = statResult.stdout.trim();
-      }
-      if (input.patch) {
-        const patchResult = await runGitCommand(["show", "--format=", "--patch", parts[0]], { cwd, allowFailure: true });
-        commitRecord.patch = patchResult.stdout;
-      }
-    }
-    commits.push(commitRecord);
-  }
-  return {
-    success: true,
-    commits,
-    totalCount: commits.length,
   };
 }
 

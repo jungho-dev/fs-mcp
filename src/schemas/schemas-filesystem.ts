@@ -7,7 +7,10 @@
 
 import {z} from "zod";
 
-const INLINE_TEXT_ARGUMENT_MAX_LENGTH = 50_000;
+const INLINE_TEXT_ARGUMENT_MAX_LENGTH = 8_000;
+const LARGE_INLINE_CONTENT_ERROR = "Large inline content can stall MCP hosts. Use content_path or args_path instead";
+const INLINE_WRITE_CONTENT_DESCRIPTION = "Small inline text only. For large generated or pasted payloads, prefer top-level args_path or item-level content_path.";
+const WRITE_CONTENT_PATH_DESCRIPTION = "Read UTF-8 content from this file. Preferred for large generated or pasted text.";
 
 export const ReadFileArgsSchema = z.object({
   path: z.string(),
@@ -26,8 +29,19 @@ export const ReadFilesArgsSchema = z.object({
 
 export const WriteFileArgsSchema = z.object({
   path: z.string(),
-  content: z.string().max(INLINE_TEXT_ARGUMENT_MAX_LENGTH, "Use content_path for large content").optional(),
-  content_path: z.string().optional(),
+  content_path: z.string().optional().describe(WRITE_CONTENT_PATH_DESCRIPTION),
+  content: z.string().max(INLINE_TEXT_ARGUMENT_MAX_LENGTH, LARGE_INLINE_CONTENT_ERROR).optional().describe(INLINE_WRITE_CONTENT_DESCRIPTION),
+  content_offset: z.number().optional().default(0),
+  content_length: z.number().optional(),
+  mode: z.enum(["rewrite", "append"]).default("rewrite"),
+}).refine((args) => args.content !== undefined || args.content_path !== undefined, {
+  message: "Either content or content_path is required",
+});
+
+export const WriteFileArgsFromArgsPathSchema = z.object({
+  path: z.string(),
+  content_path: z.string().optional().describe(WRITE_CONTENT_PATH_DESCRIPTION),
+  content: z.string().optional().describe(INLINE_WRITE_CONTENT_DESCRIPTION),
   content_offset: z.number().optional().default(0),
   content_length: z.number().optional(),
   mode: z.enum(["rewrite", "append"]).default("rewrite"),
@@ -37,6 +51,10 @@ export const WriteFileArgsSchema = z.object({
 
 export const WriteFilesArgsSchema = z.object({
   items: z.array(WriteFileArgsSchema).min(1),
+});
+
+export const WriteFilesArgsFromArgsPathSchema = z.object({
+  items: z.array(WriteFileArgsFromArgsPathSchema).min(1),
 });
 
 export const CreateDirectoryArgsSchema = z.object({
@@ -77,15 +95,6 @@ export const MoveFileArgsSchema = z.object({
 
 export const MoveFilesArgsSchema = z.object({
   items: z.array(MoveFileArgsSchema).min(1),
-});
-
-export const RenameFileArgsSchema = z.object({
-  path: z.string(),
-  newName: z.string(),
-});
-
-export const RenameFilesArgsSchema = z.object({
-  items: z.array(RenameFileArgsSchema).min(1),
 });
 
 export const RemovePathArgsSchema = z.object({

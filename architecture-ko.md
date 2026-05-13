@@ -79,13 +79,12 @@ tests -> out
 
 ## 도구 표면
 
-Tool catalog module은 runtime domain별로 나뉩니다. 현재 catalog는 34개 도구를 export합니다.
+Tool catalog module은 runtime domain별로 나뉩니다. 현재 catalog는 25개 도구를 export합니다.
 
 - `tools-config.ts`: configuration 도구 2개.
-- `tools-context.ts`: context index 도구 4개.
-- `tools-filesystem.ts`: filesystem, search-session, metadata, exact block edit 도구 13개.
-- `tools-process.ts`: process 및 terminal-session 도구 6개.
-- `tools-git.ts`: essential git session 도구 9개.
+- `tools-filesystem.ts`: filesystem, search-session, metadata, exact block edit 도구 12개.
+- `tools-process.ts`: process 및 terminal-session 도구 5개.
+- `tools-git.ts`: essential git session 도구 6개.
 
 `server-create-mcp-server.ts`는 이 catalog들을 합쳐 `list_tools`에 제공합니다. `tools-dispatcher.ts`는
 대응되는 `call_tool` registry를 담당합니다. Git schema는 더 넓은 operation contract를 정의하지만,
@@ -98,7 +97,7 @@ Tool catalog module은 runtime domain별로 나뉩니다. 현재 catalog는 34�
 
 - `InitializeRequestSchema`는 client metadata를 수집하고 notification 동작을 설정하며 protocol version을
   협상합니다.
-- `ListToolsRequestSchema`는 config, context, filesystem, process, git module의 catalog를 합쳐 반환합니다.
+- `ListToolsRequestSchema`는 config, filesystem, process, git module의 catalog를 합쳐 반환합니다.
 - `CallToolRequestSchema`는 각 call을 current client git-session scope 안에서 dispatch합니다.
 - `tools-dispatcher.ts`는 schema별 controller validation 전에 선택적 `args_path`, `args_offset`,
   `args_length`를 해석합니다.
@@ -123,9 +122,10 @@ Tool catalog module은 runtime domain별로 나뉩니다. 현재 catalog는 34�
 - 기본 DB 경로는 `~/.mcp/fs-mcp.sqlite`이고 런타임에서 `~`가 home directory로 확장됩니다.
 - Text는 80줄 chunk와 20줄 overlap으로 나뉘며 SQLite FTS로 검색됩니다.
 - Content hash는 같은 source/tool payload가 기존 context-index reference를 재사용하게 합니다.
-- `context-output-compactor.ts`는 replacement가 활성화되지 않은 한 원본 structured payload를 대체하지 않고
-  큰 text field와 structured collection을 index합니다.
-- 수동 context 도구는 같은 service를 사용해 명시적 index, search, list, clear 작업을 수행합니다.
+- `context-output-compactor.ts`는 큰 text field와 structured collection을 index하고, 큰 auto-indexed
+  payload를 기본적으로 context-index reference로 대체합니다.
+- 이번 버전에는 수동 context-index tool surface를 노출하지 않습니다. 자동 indexing은 response normalization
+  경로에서 계속 동작합니다.
 
 ## Runtime Configuration
 
@@ -150,14 +150,20 @@ Tool catalog module은 runtime domain별로 나뉩니다. 현재 catalog는 34�
 
 ## 성능 및 안전 설계
 
+- `list_tools` payload는 `48,129`자에서 `28,002`자로 줄어 `41.8%` 감소했습니다.
+- Tool description은 `23,121`자에서 `6,173`자로 줄어 `73.3%` 감소했습니다.
+- Tool schema는 `20,334`자에서 `18,128`자로 줄어 `10.9%` 감소했습니다.
+- Tool catalog는 한 번만 조립하고 input schema JSON은 lazy cache로 생성합니다.
 - 파일 작업은 filesystem feature layer의 timeout boundary와 path resolver를 사용합니다.
 - Text read는 offset/length 입력을 사용해 전체 파일 대신 bounded slice 요청을 지원합니다.
-- Batch-capable 도구는 `paths`, `items`, `queries`, `sessionIds`, `pids` 같은 array를 받아 반복 호출을
+- Batch-capable 도구는 `paths`, `items`, `sessionIds`, `pids` 같은 array를 받아 반복 호출을
   하나의 request로 줄입니다.
 - 큰 inline tool argument는 `content_path`, `old_string_path`, `new_string_path`, `pattern_path`,
   `input_path`, 공통 `args_path` field로 전달할 수 있습니다.
-- 검색 실행은 bundled `@vscode/ripgrep`에 위임하고 필요 시 system ripgrep로 fallback합니다.
-- Process 실행은 command policy blocklist, configured shell selection, explicit session tracking을 사용합니다.
+- 검색 실행은 bundled `@vscode/ripgrep`에 위임하고 필요 시 system ripgrep로 fallback합니다. Search session은
+  기본 `maxResults=5000`을 사용하고 start response는 전체 결과 배열 대신 preview를 반환합니다.
+- Process 실행은 command policy blocklist, configured shell selection, explicit session tracking, bounded
+  active output window, completed-session retention limit을 사용합니다.
 - Stdio transport는 stdout/stderr write가 MCP JSON output을 손상하기 전에 capture합니다.
 - 테스트는 npm에 배포되는 표면과 같은 compiled `out` tree를 검증합니다.
 

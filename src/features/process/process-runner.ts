@@ -19,6 +19,8 @@ type DiagnosticExitReason = TimingInfo["exitReason"] | "process_finished" | "no_
 type DiagnosticTimingInfo = Omit<TimingInfo, "exitReason"> & {
   exitReason: DiagnosticExitReason;
 };
+const PROCESS_STATE_ANALYSIS_WINDOW_CHARS = 12_000;
+const PROCESS_STATE_ANALYSIS_WINDOW_LINES = 200;
 
 // 1. Resolve process text argument ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function resolveProcessTextArgument(value: string | undefined, filePath: string | undefined, offset: number, length: number | undefined, label: string): Promise<string> {
@@ -93,7 +95,7 @@ export async function startProcess(args: unknown): Promise<ServerResult> {
     };
   }
   // Analyze the process state to detect if it's waiting for input
-  const processState = analyzeProcessState(result.output, result.pid);
+  const processState = analyzeProcessState(result.output.slice(-PROCESS_STATE_ANALYSIS_WINDOW_CHARS), result.pid);
 
   let statusMessage = "";
   if (processState.isWaitingForInput) {
@@ -230,7 +232,7 @@ export async function readProcessOutput(args: unknown): Promise<ServerResult> {
           if (newLineCount > session.lastReadIndex) {
             resolveOnce();
           }
-        }, 50);
+        }, 100);
 
         // Timeout
         timeout = setTimeout(() => {
@@ -280,11 +282,14 @@ export async function readProcessOutput(args: unknown): Promise<ServerResult> {
   }
   else if (session) {
     // Analyze state for running processes
-    const fullOutput = session.outputLines.join("\n");
+    const fullOutput = session.outputLines.slice(-PROCESS_STATE_ANALYSIS_WINDOW_LINES).join("\n");
     const processState = analyzeProcessState(fullOutput, pid);
     if (processState.isWaitingForInput) {
       processStateMessage = `\n${formatProcessStateMessage(processState, pid)}`;
     }
+  }
+  if (result.discardedLineCount > 0) {
+    processStateMessage += "\nOlder output was truncated by the session line budget.";
   }
   // Add timing information if requested
   let timingMessage = "";
@@ -393,7 +398,7 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
       return new Promise((resolve) => {
         let resolved = false;
         let attempts = 0;
-        const pollIntervalMs = 50; // Poll every 50ms for faster response
+        const pollIntervalMs = 100; // Poll every 100ms to reduce idle CPU usage
         const maxAttempts = Math.ceil(timeout_ms / pollIntervalMs);
         let interval: NodeJS.Timeout | null = null;
         let lastOutputLength = 0; // Track output length to detect new output
@@ -437,7 +442,7 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
             lastOutputLength = newOutput.length;
 
             // Analyze current state
-            processState = analyzeProcessState(output, pid);
+            processState = analyzeProcessState(output.slice(-PROCESS_STATE_ANALYSIS_WINDOW_CHARS), pid);
 
             // Exit early if we detect the process is waiting for input
             if (processState.isWaitingForInput) {
@@ -477,7 +482,7 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
 
     // Determine final state
     if (!processState) {
-      processState = analyzeProcessState(output, pid);
+      processState = analyzeProcessState(output.slice(-PROCESS_STATE_ANALYSIS_WINDOW_CHARS), pid);
     }
     let statusMessage = "";
     if (processState.isWaitingForInput) {

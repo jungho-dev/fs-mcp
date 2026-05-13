@@ -207,7 +207,7 @@ class ConfigManager {
       contextIndexAutoMinLines: 120,
       contextIndexEnabled: true,
       contextIndexMaxEntryChars: 1_000_000,
-      contextIndexReplaceLargeOutputs: false,
+      contextIndexReplaceLargeOutputs: true,
       defaultShell: getDefaultShell(),
       fileReadLineLimit: 50_000,
       fileWriteLineLimit: 50_000,

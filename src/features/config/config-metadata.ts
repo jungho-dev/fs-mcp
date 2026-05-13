@@ -50,7 +50,7 @@ export const CONFIG_FIELD_DEFINITIONS = {
     valueType: "string",
   },
   contextIndexEnabled: {
-    description: "Controls whether large tool output is automatically indexed into SQLite. Enabled by default while visible tool output remains full length.",
+    description: "Controls whether large tool output is automatically indexed into SQLite. Enabled by default.",
     label: "Context Index Enabled",
     valueType: "boolean",
   },
@@ -60,7 +60,7 @@ export const CONFIG_FIELD_DEFINITIONS = {
     valueType: "number",
   },
   contextIndexReplaceLargeOutputs: {
-    description: "When enabled, large auto-indexed tool output is replaced in responses with context index references. Disabled by default for compatibility.",
+    description: "When enabled, large auto-indexed tool output is replaced in responses with context index references. Enabled by default to reduce payload size.",
     label: "Context Index Replace Large Outputs",
     valueType: "boolean",
   },

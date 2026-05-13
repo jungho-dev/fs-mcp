@@ -56,35 +56,48 @@ uses stdio and does not open a network listener.
 
 ## Main Capabilities
 
-- Filesystem tools for batched read, write, listing, metadata, directory creation, move, rename, and removal.
+- Filesystem tools for batched read, write, listing, metadata, directory creation, move, and removal.
 - Exact edit tools for one or many block replacements with optional path-backed large string inputs.
 - Search tools backed by bundled `@vscode/ripgrep`, active search sessions, pagination, and stop controls.
-- Process tools for command sessions, process output, interactive input, session listing, process listing, and
-  process termination.
-- Git session tools for pinned repository state, status, diff, log, show, staging, commit, and wrap-up guidance.
-- Context index tools that store, search, list, and clear large text payloads in the shared SQLite context database.
+- Process tools for command sessions, process output, interactive input, session listing, and process termination.
+- Git session tools for pinned repository state, status, diff, show, staging, and commit.
+- Automatic context indexing for large tool outputs in the shared SQLite context database.
 - Runtime configuration tools for command policy, shell selection, allowed directories, context-index thresholds,
   client metadata, version data, and system information.
 
 ## Tool Surface
 
-The current source and compiled runtime expose 34 tools. Batch-capable tools are documented as batch-first
-surfaces: when a task needs multiple same-kind filesystem, search, process, config, or context operations,
+The current source and compiled runtime expose 25 tools. Batch-capable tools are documented as batch-first
+surfaces: when a task needs multiple same-kind filesystem, search, process, or config operations,
 clients should put all items into one tool call instead of repeatedly calling the same tool.
 
 - Config: `get_configs`, `set_config_values`.
-- Context: `index_contexts`, `search_contexts`, `list_contexts`, `clear_contexts`.
 - Filesystem/search/edit: `read_files`, `write_files`, `create_directories`, `list_directories`,
-  `move_files`, `rename_files`, `remove_files`, `start_searches`, `get_compressed_search`,
-  `get_full_search`,
-  `stop_searches`, `list_searches`, `get_file_infos`, `edit_blocks`.
+  `copy_files`, `move_files`, `remove_files`, `start_searches`, `get_full_search`, `stop_searches`,
+  `get_file_infos`, `edit_blocks`.
 - Process: `start_processes`, `read_process_outputs`, `interact_with_processes`, `list_sessions`,
-  `list_processes`, `kill_processes`.
-- Git: `git_set_working_dir`, `git_clear_working_dir`, `git_status`, `git_diff`, `git_log`,
-  `git_show`, `git_add`, `git_commit`, `git_wrapup_instructions`.
+  `kill_processes`.
+- Git: `git_set_working_dir`, `git_status`, `git_diff`, `git_show`, `git_add`, `git_commit`.
 
 `src/schemas/schemas-git.ts` defines schemas for additional git operations, but `src/tools/tools-git.ts`
 exports only `ESSENTIAL_GIT_TOOL_NAMES` in this version.
+
+## Performance Improvements
+
+Current measured tool-definition payload improvements:
+
+- Tool count: `29 -> 25`, down `13.8%` from the pre-surface-reduction baseline.
+- `list_tools` payload: `48,129 -> 28,002 chars`, down `41.8%`.
+- Tool descriptions: `23,121 -> 6,173 chars`, down `73.3%`.
+- Tool schemas: `20,334 -> 18,128 chars`, down `10.9%`.
+- Additional reduction after the first compact pass: `31,775 -> 28,002 chars`, down `11.9%`.
+
+Runtime defaults also reduce large-output pressure:
+
+- Tool catalogs are built once and schema conversion is lazy-cached.
+- Large auto-indexed outputs are replaced with context-index references by default.
+- Search sessions default to `maxResults=5000` and return preview-only start responses.
+- Process sessions keep bounded output windows: active output `4000` lines and completed session budget `25`.
 
 ## Batch-First Tool Use
 
@@ -94,7 +107,7 @@ repeated same-tool calls. This applies to:
 - File and directory operations through `paths` or `items` arrays.
 - Search session operations through `items` or `sessionIds`.
 - Process operations through `items` or `pids`.
-- Configuration and context-index operations through `items` or `queries`.
+- Configuration operations through `items`.
 
 Large multi-item arguments can be moved into a UTF-8 JSON file and passed with `args_path`, keeping the tool-call
 preview compact while preserving one batch request. Inline overrides are merged on top of the JSON object.
@@ -108,10 +121,9 @@ payload in every transcript.
   `contextIndexAutoMinLines`, `contextIndexMaxEntryChars`, and `contextIndexReplaceLargeOutputs`.
 - The default database path is `~/.mcp/fs-mcp.sqlite`.
 - Text is chunked into 80-line chunks with 20-line overlap and searched through SQLite FTS.
-- Manual indexing is available through `index_contexts`, `search_contexts`, `list_contexts`, and
-  `clear_contexts`.
-- Output compaction stores index references without replacing the original structured payload unless
-  `contextIndexReplaceLargeOutputs` is enabled.
+- There is no public manual context-index tool surface in this version.
+- Output compaction replaces large auto-indexed payloads with context-index references by default through
+  `contextIndexReplaceLargeOutputs=true`.
 
 ## Client Compatibility
 

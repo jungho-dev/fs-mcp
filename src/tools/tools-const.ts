@@ -5,44 +5,94 @@
  * @since 2026-05-03
  */
 
-import {getOSSpecificGuidance, getPathGuidance} from "@cores/runtime/runtime-guidance";
 import {getSystemInfo} from "@cores/runtime/runtime-info";
+import type {ZodTypeAny} from "zod";
+import {zodToJsonSchema} from "zod-to-json-schema";
 
 const systemInfo = getSystemInfo();
+
+// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export type ToolCatalogAnnotations = {
+  title: string;
+  readOnlyHint: boolean;
+  destructiveHint?: boolean;
+  openWorldHint?: boolean;
+};
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export type ToolCatalogEntry = {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
-  annotations: {
-    title: string;
-    readOnlyHint: boolean;
-    destructiveHint?: boolean;
-    openWorldHint?: boolean;
-  };
+  annotations: ToolCatalogAnnotations;
 };
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export const OS_GUIDANCE = getOSSpecificGuidance(systemInfo);
+export type ToolCatalogEntryConfig = {
+  name: string;
+  description: string;
+  inputSchema: ZodTypeAny;
+  annotations: ToolCatalogAnnotations;
+};
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export const PATH_GUIDANCE = (`
-  IMPORTANT: ${getPathGuidance(systemInfo)} Relative paths may fail as they depend on the current working directory. Tilde paths (~/...) might not work in all contexts. Unless the user explicitly asks for relative paths, use absolute paths.
-`);
+function createCompactOsGuidance(): string {
+  const baseGuidance = `Runtime: ${systemInfo.platformName}. Default shell: ${systemInfo.defaultShell}.`;
+
+  if (systemInfo.isWindows) {
+    return `${baseGuidance} On Windows, try cmd or pwsh.exe if commands fail.`;
+  }
+  if (systemInfo.isMacOS) {
+    return `${baseGuidance} On macOS, Homebrew and python3 are common defaults.`;
+  }
+  return `${baseGuidance} On Linux, distro package managers and python3 are common defaults.`;
+}
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export const BATCH_GUIDANCE = (`
-  BATCH-FIRST: When multiple same-kind operations are needed, include every item in this single tool call instead of calling this tool repeatedly.
-`);
+function createCompactPathGuidance(): string {
+  const mountedPaths = systemInfo.docker.mountPoints.map((mount) => mount.containerPath);
+  if (mountedPaths.length > 0) {
+    return `Use absolute paths. Prefer mounted paths in this container: ${mountedPaths.join(", ")}.`;
+  }
+  return "Use absolute paths. Relative paths depend on the current working directory.";
+}
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export const APPLY_PATCH_PERFORMANCE_GUIDANCE = (`
-  APPLY_PATCH PERFORMANCE: For generated text, reports, multi-file rewrites, or two or more same-kind writes/edits, prefer fs-mcp batch tools over apply_patch. Put every item in one tool call and use *_path or args_path for large payloads.
-`);
+function compactToolDescription(description: string): string {
+  const compactedLines = description
+    .split("\n")
+    .map((line) => line.trim())
+    .filter((line, index, lines) => line.length > 0 || (index > 0 && index < lines.length - 1 && lines[index - 1]?.length > 0));
+
+  return compactedLines.join("\n");
+}
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export const CMD_PREFIX_DESCRIPTION = (`
-  This command can be referenced as "FS-MCP: ..." or "use fs-mcp to ..." in your instructions.
-  To prevent verbose tool-call parameter logs, put large or multi-item arguments in a UTF-8 JSON file and call with {"args_path":"ABSOLUTE_PATH_TO_ARGS_JSON"}.
-`);
+export function createToolCatalogEntry(config: ToolCatalogEntryConfig): ToolCatalogEntry {
+  let cachedInputSchema: Record<string, unknown> | undefined;
+
+  return {
+    annotations: config.annotations,
+    description: compactToolDescription(config.description),
+    get inputSchema() {
+      cachedInputSchema ??= zodToJsonSchema(config.inputSchema);
+      return cachedInputSchema;
+    },
+    name: config.name,
+  };
+}
+
+// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export const OS_GUIDANCE = createCompactOsGuidance();
+
+// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export const PATH_GUIDANCE = createCompactPathGuidance();
+
+// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export const BATCH_GUIDANCE = "Batch same-kind operations into one call.";
+
+// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export const APPLY_PATCH_PERFORMANCE_GUIDANCE = "For large or multi-file writes/edits, prefer fs-mcp batch tools with *_path or args_path.";
+
+// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export const CMD_PREFIX_DESCRIPTION = "For large arguments, pass a UTF-8 JSON file via {\"args_path\":\"ABSOLUTE_PATH_TO_ARGS_JSON\"}.";

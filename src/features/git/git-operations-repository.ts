@@ -58,19 +58,6 @@ export async function runGitSetWorkingDir(input: GitArgsMap["git_set_working_dir
   };
 }
 
-// 2. Run git clear working dir ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function runGitClearWorkingDir(): Promise<GitToolOutput> {
-  const previousPath = getCurrentGitWorkingDirectory();
-
-  setCurrentGitWorkingDirectory(null);
-
-  return {
-    success: true,
-    message: "Cleared git working directory.",
-    ...(previousPath ? { previousPath } : {}),
-  };
-}
-
 // 3. Run git status ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runGitStatus(input: GitArgsMap["git_status"]): Promise<GitToolOutput> {
   const cwd = await resolveRepositoryPath(input.path);

@@ -6,8 +6,8 @@
  */
 
 import { runGitCommand, splitLines } from "@features/git/git-runtime";
-import { getCurrentGitWorkingDirectory, resolveRepositoryPath } from "@features/git/git-session";
-import { gatherRepositorySnapshot, getRecentTags, parseRefs } from "@features/git/git-status-support";
+import { resolveRepositoryPath } from "@features/git/git-session";
+import { getRecentTags, parseRefs } from "@features/git/git-status-support";
 import type { GitArgsMap, GitToolOutput } from "@features/git/git-types";
 
 const BLAME_HEADER_PATTERN = /^[0-9a-f]{40}\\s+\\d+\\s+\\d+/;
@@ -115,18 +115,5 @@ export async function runGitChangelogAnalyze(input: GitArgsMap["git_changelog_an
       tags,
       totalCommitsFetched: commits.length,
     },
-  };
-}
-
-// 4. Run git wrapup instructions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function runGitWrapupInstructions(input: GitArgsMap["git_wrapup_instructions"]): Promise<GitToolOutput> {
-  const createTag = input.createTag ?? true;
-  const instructions = ["Acceptance criteria:", "1. Inspect git diff and understand each change before grouping commits.", "2. Update changelog or release metadata when this repository requires it.", "3. Run the smallest real verification set for the changed surface.", "4. Create atomic Conventional Commit messages only after verification passes.", "5. Confirm the working tree is clean after commits.", ...(createTag ? ["6. Create an annotated semantic-version tag only when release tagging is in scope."] : []), "Stop and report if conflicts, unexplained changes, or failing checks remain."].join("\n");
-  const workingDirectory = getCurrentGitWorkingDirectory();
-  const repository = workingDirectory ? await gatherRepositorySnapshot(await resolveRepositoryPath(workingDirectory)) : undefined;
-
-  return {
-    instructions,
-    ...(repository ? { repository } : {}),
   };
 }

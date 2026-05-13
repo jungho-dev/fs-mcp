@@ -30,15 +30,16 @@ import {
   ReadFilesArgsSchema,
   RemoveFilesArgsSchema,
   RemovePathArgsSchema,
-  RenameFileArgsSchema,
-  RenameFilesArgsSchema,
   WriteFileArgsSchema,
+  WriteFileArgsFromArgsPathSchema,
   WriteFilesArgsSchema,
+  WriteFilesArgsFromArgsPathSchema,
 } from "@schemas/schemas-filesystem";
 
 const DIRECTORY_LISTING_ENTRY_PATTERN = /^(?:\[(F|D|W|X)\]|(□|■))\s*(.*)$/;
 const READ_FILE_HANDLER_TIMEOUT_MS = 60_000;
 const MOVE_FILE_BATCH_CONCURRENCY = process.platform === "win32" ? 1 : 4;
+const ARGS_SOURCE_METADATA_FIELD = "__fs_mcp_args_source";
 
 type ParsedReadFileArgs = {
   isUrl: boolean;
@@ -74,10 +75,6 @@ type ParsedMoveFileArgs = {
   destination: string;
   source: string;
 };
-type ParsedRenameFileArgs = {
-  newName: string;
-  path: string;
-};
 type ParsedRemovePathArgs = {
   force: boolean;
   path: string;
@@ -86,6 +83,8 @@ type ParsedRemovePathArgs = {
 type ParsedGetFileInfoArgs = {
   path: string;
 };
+
+type ToolArgsSource = "args_path" | "inline";
 
 // 1. Resolve directory listing entry type ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function resolveDirectoryListingEntryType(match: RegExpMatchArray | null): DirectoryListingEntryType {
@@ -181,6 +180,29 @@ export async function handleReadFile(args: unknown): Promise<ServerResult> {
   return await handleParsedReadFileWithTimeout(parsed);
 }
 
+// 5. Is tool args record ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function isToolArgsRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+// 6. Resolve tool args source ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function resolveToolArgsSource(args: unknown): ToolArgsSource {
+  if (!isToolArgsRecord(args) || args[ARGS_SOURCE_METADATA_FIELD] !== "args_path") {
+    return "inline";
+  }
+  return "args_path";
+}
+
+// 7. Strip tool args metadata ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function stripToolArgsMetadata(args: unknown): unknown {
+  if (!isToolArgsRecord(args) || !Object.hasOwn(args, ARGS_SOURCE_METADATA_FIELD)) {
+    return args;
+  }
+  const { [ARGS_SOURCE_METADATA_FIELD]: _argsSource, ...rest } = args;
+
+  return rest;
+}
+
 // 3. Resolve write content ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function resolveWriteContent(parsed: ParsedWriteFileArgs): Promise<string> {
   if (parsed.content !== undefined) {
@@ -233,7 +255,9 @@ async function handleParsedWriteFile(parsed: ParsedWriteFileArgs, warningLineLim
 // 7. Handle write file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleWriteFile(args: unknown): Promise<ServerResult> {
   try {
-    const parsed = WriteFileArgsSchema.parse(args);
+    const argsSource = resolveToolArgsSource(args);
+    const rawArgs = stripToolArgsMetadata(args);
+    const parsed = argsSource === "args_path" ? WriteFileArgsFromArgsPathSchema.parse(rawArgs) : WriteFileArgsSchema.parse(rawArgs);
     const config = await configManager.getConfig();
     const warningLineLimit = config.fileWriteLineLimit ?? 50;
 
@@ -346,45 +370,6 @@ export async function handleMoveFile(args: unknown): Promise<ServerResult> {
     const parsed = MoveFileArgsSchema.parse(args);
 
     return await handleParsedMoveFile(parsed);
-  }
-  catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    return createErrorResponse(errorMessage);
-  }
-}
-
-// 9. Build rename destination path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function buildRenameDestinationPath(sourcePath: string, newName: string): string {
-  const normalizedName = newName.trim();
-  const hasPathSeparator = normalizedName.includes("/") || normalizedName.includes("\\");
-
-  if (normalizedName.length === 0) {
-    throw new Error("newName must not be empty");
-  }
-  if (normalizedName === "." || normalizedName === "..") {
-    throw new Error("newName must not be . or ..");
-  }
-  if (hasPathSeparator || path.win32.isAbsolute(normalizedName) || path.posix.isAbsolute(normalizedName) || path.basename(normalizedName) !== normalizedName) {
-    throw new Error("newName must be a single path segment");
-  }
-  return path.join(path.dirname(sourcePath), normalizedName);
-}
-
-// 17. Handle parsed rename file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function handleParsedRenameFile(parsed: ParsedRenameFileArgs): Promise<ServerResult> {
-  const destinationPath = buildRenameDestinationPath(parsed.path, parsed.newName);
-  await moveFile(parsed.path, destinationPath);
-  return {
-    content: [{ type: "text", text: `Successfully renamed ${parsed.path} to ${destinationPath}` }],
-  };
-}
-
-// 18. Handle rename file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function handleRenameFile(args: unknown): Promise<ServerResult> {
-  try {
-    const parsed = RenameFileArgsSchema.parse(args);
-
-    return await handleParsedRenameFile(parsed);
   }
   catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -569,7 +554,9 @@ function createWriteFilesBatchResponse(items: BatchToolItemResult<ParsedWriteFil
 
 // 19. Handle write files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleWriteFiles(args: unknown): Promise<ServerResult> {
-  const parsed = WriteFilesArgsSchema.parse(args);
+  const argsSource = resolveToolArgsSource(args);
+  const rawArgs = stripToolArgsMetadata(args);
+  const parsed = argsSource === "args_path" ? WriteFilesArgsFromArgsPathSchema.parse(rawArgs) : WriteFilesArgsSchema.parse(rawArgs);
   const config = await configManager.getConfig();
   const warningLineLimit = config.fileWriteLineLimit ?? 50;
   const results = await runParallelBatch(parsed.items, (item) => handleParsedWriteFile(item, warningLineLimit));
@@ -609,15 +596,6 @@ export async function handleMoveFiles(args: unknown): Promise<ServerResult> {
   const parsed = MoveFilesArgsSchema.parse(args);
   const results = await runLimitedParallelBatch(parsed.items, MOVE_FILE_BATCH_CONCURRENCY, (item) => handleParsedMoveFile(item));
   const response = createBatchToolResponse("move_files", results);
-
-  return response;
-}
-
-// 20. Handle rename files ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function handleRenameFiles(args: unknown): Promise<ServerResult> {
-  const parsed = RenameFilesArgsSchema.parse(args);
-  const results = await runParallelBatch(parsed.items, (item) => handleParsedRenameFile(item));
-  const response = createBatchToolResponse("rename_files", results);
 
   return response;
 }

@@ -5,7 +5,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { handleGetCompressedSearchResults, handleGetFullSearchResults, handleGetMoreSearchResults, handleStartSearch, handleStopSearch } from "../../../out/controllers/controllers-search.js";
+import { handleGetFullSearchResults, handleGetMoreSearchResults, handleStartSearch, handleStopSearch } from "../../../out/controllers/controllers-search.js";
 import { configManager } from "../../../out/features/config/config-store.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -157,27 +157,10 @@ class TestClass:
 async function teardown(originalConfig) {
   // Clean up any remaining search sessions
   try {
-    const { handleListSearches, handleStopSearch } = await import("../../../out/controllers/controllers-search.js");
-    const sessionsResult = await handleListSearches();
-    if (sessionsResult.content?.[0]?.text) {
-      const sessionsText = sessionsResult.content[0].text;
-      if (!sessionsText.includes("No active searches")) {
-        // Extract session IDs and stop them
-        const sessionMatches = sessionsText.match(/Session: (\S+)/g);
-        if (sessionMatches) {
-          await Promise.all(
-            sessionMatches.map(async (match) => {
-              const sessionId = match.replace("Session: ", "");
-              try {
-                await handleStopSearch({ sessionId });
-              }
-              catch (_e) {
-                // Ignore errors - session might already be stopped
-              }
-            }),
-          );
-        }
-      }
+    const { searchManager } = await import("../../../out/features/search/search-service.js");
+    const sessions = searchManager.listSearchSessions();
+    for (const session of sessions) {
+      await handleStopSearch({ sessionId: session.id });
     }
   }
   catch (_e) {
@@ -226,17 +209,15 @@ async function testSearchPaginationHints() {
 
   try {
     assert(typeof sessionId === "string", "Start search should expose sessionId in structuredContent");
-    assert(result.content[0].text.includes("get_compressed_search"), "Start search should recommend compressed result tool");
     assert(result.content[0].text.includes("get_full_search"), "Start search should recommend full result tool");
+    assert(!result.content[0].text.includes("get_compressed_search"), "Start search should not recommend removed compact result tool");
     assert(!result.content[0].text.includes("get_more_search_results"), "Start search should not recommend legacy result tool");
 
     const moreResults = await handleGetMoreSearchResults({ sessionId, offset: 0, length: 1 });
     assert(moreResults.structuredContent, "Search result read should expose pagination structuredContent");
     assert(Object.hasOwn(moreResults.structuredContent, "nextOffset"), "Search result read should expose nextOffset");
 
-    const compactResults = await handleGetCompressedSearchResults({ items: [{ sessionId, offset: 0, length: 20 }] });
     const fullResults = await handleGetFullSearchResults({ items: [{ sessionId, offset: 0, length: 20 }] });
-    assert(compactResults.content[0].text.includes("... (omitted)") || compactResults.content[0].text.length < fullResults.content[0].text.length, "Compact search result tool should return previews");
     assert(fullResults.content[0].text.includes("Search session:"), "Full search result tool should include item result details");
     assert(!fullResults.content[0].text.includes("... (omitted)"), "Full search result tool should not omit item result details");
   }

@@ -9,7 +9,7 @@ import type { ServerResult } from "@assets/type/common";
 import { createBatchToolResponse, runParallelBatch } from "@controllers/controllers-batch";
 import { readFileInternal } from "@features/filesystem/filesystem-service";
 import { searchManager } from "@features/search/search-service";
-import { GetCompressedSearchResultsArgsSchema, GetFullSearchResultsArgsSchema, GetMoreSearchResultsArgsSchema, StartSearchArgsSchema, StartSearchesArgsSchema, StopSearchArgsSchema, StopSearchesArgsSchema } from "@schemas/schemas-search";
+import { GetFullSearchResultsArgsSchema, GetMoreSearchResultsArgsSchema, StartSearchArgsSchema, StartSearchesArgsSchema, StopSearchArgsSchema, StopSearchesArgsSchema } from "@schemas/schemas-search";
 
 // 1. Handle start search ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStartSearch(args: unknown): Promise<ServerResult> {
@@ -66,10 +66,13 @@ export async function handleStartSearch(args: unknown): Promise<ServerResult> {
       output += `\nSearch completed.`;
     }
     else {
-      output += `\nSearch in progress. Use get_compressed_search for compressed results or get_full_search for full results with sessionId: ${result.sessionId} and offset: ${nextOffset ?? 0}.`;
+      output += `\nSearch in progress. Use get_full_search with sessionId: ${result.sessionId} and offset: ${nextOffset ?? 0}.`;
+    }
+    if (result.wasLimited) {
+      output += `\nResult limit reached. Narrow the query or set maxResults explicitly for broader scans.`;
     }
     if (nextOffset !== null) {
-      output += `\nNext offset: ${nextOffset}. Use get_compressed_search for compressed results or get_full_search for full results with sessionId: ${result.sessionId}.`;
+      output += `\nNext offset: ${nextOffset}. Use get_full_search with sessionId: ${result.sessionId}.`;
     }
     return {
       content: [{ type: "text", text: output }],
@@ -80,6 +83,7 @@ export async function handleStartSearch(args: unknown): Promise<ServerResult> {
         sessionId: result.sessionId,
         status: result.isComplete ? "COMPLETED" : "RUNNING",
         totalResults: result.totalResults,
+        wasLimited: result.wasLimited === true,
       },
     };
   }
@@ -158,7 +162,7 @@ export async function handleGetMoreSearchResults(args: unknown): Promise<ServerR
     // Add pagination hints
     const nextOffset = offset >= 0 && results.hasMoreResults ? offset + results.returnedCount : null;
     if (nextOffset !== null) {
-      output += `\nMore results available. Use get_compressed_search for compressed results or get_full_search for full results with offset: ${nextOffset}`;
+      output += `\nMore results available. Use get_full_search with offset: ${nextOffset}`;
     }
     if (results.isComplete) {
       output += `\nSearch completed.`;
@@ -167,6 +171,9 @@ export async function handleGetMoreSearchResults(args: unknown): Promise<ServerR
       if (results.wasIncomplete) {
         output += `\nWarning: Some files were inaccessible due to permissions. Results may be incomplete.`;
       }
+    }
+    if (results.wasLimited) {
+      output += `\nResult limit reached. Narrow the query or set maxResults explicitly for broader scans.`;
     }
     return {
       content: [{ type: "text", text: output }],
@@ -178,6 +185,7 @@ export async function handleGetMoreSearchResults(args: unknown): Promise<ServerR
         sessionId: parsed.data.sessionId,
         totalMatches: results.totalMatches,
         totalResults: results.totalResults,
+        wasLimited: results.wasLimited === true,
       },
     };
   }
@@ -234,56 +242,11 @@ export async function handleStopSearch(args: unknown): Promise<ServerResult> {
   }
 }
 
-// 4. Handle list searches ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function handleListSearches(): Promise<ServerResult> {
-  try {
-    const sessions = searchManager.listSearchSessions();
-
-    if (sessions.length === 0) {
-      return {
-        content: [{ type: "text", text: "No active searches." }],
-      };
-    }
-    let output = `Active Searches (${sessions.length}):\n\n`;
-
-    for (const session of sessions) {
-      const status = session.isComplete ? (session.isError ? "ERROR" : "COMPLETED") : "RUNNING";
-
-      output += `Session: ${session.id}\n`;
-      output += `  Type: ${session.searchType}\n`;
-      output += `  Pattern: "${session.pattern}"\n`;
-      output += `  Status: ${status}\n`;
-      output += `  Runtime: ${Math.round(session.runtime / 1000)}s\n`;
-      output += `  Results: ${session.totalResults}\n\n`;
-    }
-    return {
-      content: [{ type: "text", text: output }],
-    };
-  }
-  catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-
-    return {
-      content: [{ type: "text", text: `Error listing search sessions: ${errorMessage}` }],
-      isError: true,
-    };
-  }
-}
-
 // 5. Handle start searches ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStartSearches(args: unknown): Promise<ServerResult> {
   const parsed = StartSearchesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleStartSearch(item));
   const response = createBatchToolResponse("start_searches", results);
-
-  return response;
-}
-
-// 6. Handle get compressed search results ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function handleGetCompressedSearchResults(args: unknown): Promise<ServerResult> {
-  const parsed = GetCompressedSearchResultsArgsSchema.parse(args);
-  const results = await runParallelBatch(parsed.items, (item) => handleGetMoreSearchResults(item));
-  const response = createBatchToolResponse("get_compressed_search", results);
 
   return response;
 }

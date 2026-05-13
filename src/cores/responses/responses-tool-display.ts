@@ -24,6 +24,7 @@ export interface ToolDisplayOutput {
 
 export interface ToolDisplayTemplateValues {
   count: number;
+  items: number;
   contents: string;
   durationMs: string;
   status: ToolDisplayStatus;
@@ -59,7 +60,7 @@ const renderRow = (key: string, value: string) => `${config.key.color}${config.k
 export const TOOL_DISPLAY_TEMPLATE = [
   renderLine(),
   renderRow(`tool`, `\${tool}`),
-  renderRow(`count`, `\${count}`),
+  renderRow(`items`, `\${items}`),
   renderRow(`status`, `\${status}`),
   renderRow(`duration`, `\${durationMs}`),
   renderRow(`contents`, `\${contents}`),
@@ -87,7 +88,7 @@ function stringifyDisplayStructuredContent(value: ServerResult["structuredConten
 }
 
 // 2. Count display items ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function countDisplayItems(output: ToolDisplayOutput): number {
+function itemsDisplayItems(output: ToolDisplayOutput): number {
   const structuredContent = output.data.structuredContent;
 
   if (typeof structuredContent === "object" && structuredContent !== null) {
@@ -122,7 +123,8 @@ function createToolDisplayValues(output: ToolDisplayOutput): ToolDisplayTemplate
   const structuredText = stringifyDisplayStructuredContent(output.data.structuredContent);
 
   return {
-    count: countDisplayItems(output),
+    count: itemsDisplayItems(output),
+    items: itemsDisplayItems(output),
     contents: formatDisplayNumber(output.data.text.length, `chars`),
     durationMs: formatDisplayDuration(output.durationMs),
     status: output.status,

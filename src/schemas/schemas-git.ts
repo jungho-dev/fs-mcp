@@ -88,11 +88,6 @@ export const GIT_INPUT_SCHEMAS = {
       ignored: z.boolean().optional(),
     })
     .strict(),
-  git_clear_working_dir: z
-    .object({
-      confirm: ConfirmSchema,
-    })
-    .strict(),
   git_clone: z
     .object({
       url: z.string(),
@@ -153,23 +148,6 @@ export const GIT_INPUT_SCHEMAS = {
       path: OptionalRepoPathSchema,
       initialBranch: z.string().optional(),
       bare: z.boolean().optional(),
-    })
-    .strict(),
-  git_log: z
-    .object({
-      path: OptionalRepoPathSchema,
-      branch: z.string().optional(),
-      author: z.string().optional(),
-      filePath: z.string().optional(),
-      grep: z.string().optional(),
-      maxCount: z.number().int().positive().max(1000).optional(),
-      oneline: z.boolean().optional(),
-      patch: z.boolean().optional(),
-      stat: z.boolean().optional(),
-      showSignature: z.boolean().optional(),
-      since: z.string().optional(),
-      until: z.string().optional(),
-      skip: z.number().int().min(0).optional(),
     })
     .strict(),
   git_merge: z
@@ -311,24 +289,15 @@ export const GIT_INPUT_SCHEMAS = {
       verbose: z.boolean().optional(),
     })
     .strict(),
-  git_wrapup_instructions: z
-    .object({
-      acknowledgement: ConfirmSchema,
-      createTag: z.boolean().optional(),
-    })
-    .strict(),
 } as const;
 
 export type GitToolName = keyof typeof GIT_INPUT_SCHEMAS;
 
 export const ESSENTIAL_GIT_TOOL_NAMES = [
   "git_set_working_dir",
-  "git_clear_working_dir",
   "git_status",
   "git_diff",
-  "git_log",
   "git_show",
   "git_add",
   "git_commit",
-  "git_wrapup_instructions",
 ] as const satisfies readonly GitToolName[];
