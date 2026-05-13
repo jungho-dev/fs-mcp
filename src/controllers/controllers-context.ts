@@ -9,7 +9,7 @@ import type {ServerResult} from "@assets/type/common";
 import {createBatchToolResponse, runParallelBatch} from "@controllers/controllers-batch";
 import {createErrorResponse} from "@cores/responses/responses-error";
 import {contextIndexService} from "@features/context/context-index-service";
-import {readFileInternal} from "@features/filesystem/filesystem-service";
+import {readTextSliceInternal} from "@features/filesystem/filesystem-service";
 import {ClearContextsArgsSchema, IndexContextArgsSchema, IndexContextsArgsSchema, ListContextsArgsSchema, SearchContextsArgsSchema} from "@schemas/schemas-context";
 
 // 1. Create source label ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -27,7 +27,7 @@ function createSourceLabel(source: string | undefined, contentPath: string | und
 export async function handleIndexContext(args: unknown): Promise<ServerResult> {
   try {
     const parsed = IndexContextArgsSchema.parse(args);
-    const content = parsed.content ?? await readFileInternal(parsed.content_path ?? "", parsed.content_offset, parsed.content_length);
+    const content = parsed.content ?? await readTextSliceInternal(parsed.content_path ?? "", parsed.content_offset, parsed.content_length);
     const reference = contextIndexService.indexText(createSourceLabel(parsed.source, parsed.content_path), content, "index_contexts");
 
     return {

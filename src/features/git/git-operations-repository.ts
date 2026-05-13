@@ -16,6 +16,7 @@ export async function runGitSetWorkingDir(input: GitArgsMap["git_set_working_dir
   const resolvedPath = await resolveCreationPath(input.path);
   const shouldValidateRepository = input.validateGitRepo ?? true;
   const shouldInitializeRepository = input.initializeIfNotPresent ?? false;
+  let repositoryRoot = resolvedPath;
 
   await ensureDirectoryExists(resolvedPath);
 
@@ -30,7 +31,8 @@ export async function runGitSetWorkingDir(input: GitArgsMap["git_set_working_dir
         throw new Error(`Path is not a git repository: ${resolvedPath}. Pass initializeIfNotPresent: true to run git init here.`);
       }
     }
-    setCurrentGitWorkingDirectory(await getRepositoryRoot(resolvedPath));
+    repositoryRoot = repoCheck.exitCode === 0 ? repoCheck.stdout.trim() : await getRepositoryRoot(resolvedPath);
+    setCurrentGitWorkingDirectory(repositoryRoot);
   }
   else {
     setCurrentGitWorkingDirectory(resolvedPath);

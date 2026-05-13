@@ -19,11 +19,13 @@ const EXPECTED_TOOL_NAMES = [
   "write_files",
   "create_directories",
   "list_directories",
+  "copy_files",
   "move_files",
   "rename_files",
   "remove_files",
   "start_searches",
-  "get_search_results",
+  "get_compressed_search",
+  "get_full_search",
   "stop_searches",
   "list_searches",
   "get_file_infos",
@@ -45,11 +47,13 @@ const BATCH_FIRST_TOOL_NAMES = [
   "write_files",
   "create_directories",
   "list_directories",
+  "copy_files",
   "move_files",
   "rename_files",
   "remove_files",
   "start_searches",
-  "get_search_results",
+  "get_compressed_search",
+  "get_full_search",
   "stop_searches",
   "get_file_infos",
   "edit_blocks",
@@ -57,6 +61,11 @@ const BATCH_FIRST_TOOL_NAMES = [
   "read_process_outputs",
   "interact_with_processes",
   "kill_processes",
+];
+
+const APPLY_PATCH_PERFORMANCE_TOOL_NAMES = [
+  "write_files",
+  "edit_blocks",
 ];
 
 // 1. Test tool catalog shape ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -84,10 +93,26 @@ function testBatchFirstDescriptions() {
   }
 }
 
-// 3. Run all tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Test apply patch performance guidance ――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function testApplyPatchPerformanceGuidance() {
+  const tools = [...CONFIG_TOOL_CATALOG, ...CONTEXT_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG];
+  const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
+
+  for (const toolName of APPLY_PATCH_PERFORMANCE_TOOL_NAMES) {
+    const tool = toolsByName.get(toolName);
+
+    assert.ok(tool, `Missing tool: ${toolName}`);
+    assert.match(tool.description, /APPLY_PATCH PERFORMANCE:/, `Missing apply_patch performance guidance: ${toolName}`);
+    assert.match(tool.description, /one tool call/, `Missing single-call batching guidance: ${toolName}`);
+    assert.match(tool.description, /args_path/, `Missing args_path guidance: ${toolName}`);
+  }
+}
+
+// 4. Run all tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runAllTests() {
   testToolCatalogShape();
   testBatchFirstDescriptions();
+  testApplyPatchPerformanceGuidance();
   return true;
 }
 

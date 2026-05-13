@@ -13,7 +13,7 @@ import type {ServerResult} from "@assets/type/common";
 import {createErrorResponse} from "@cores/responses/responses-error";
 import {detectLineEnding, normalizeLineEndings} from "@features/edit/edit-line-ending-policy";
 import {resolveAbsolutePath} from "@features/filesystem/filesystem-path-resolver";
-import {readFileInternal, validatePath, writeFile} from "@features/filesystem/filesystem-service";
+import {readFileInternal, readTextSliceInternal, validatePath, writeFile} from "@features/filesystem/filesystem-service";
 import {getSimilarityRatio, recursiveFuzzyIndexOf} from "@features/search/search-fuzzy-matcher";
 import {type FuzzySearchLogEntry, fuzzySearchLogger} from "@features/search/search-log";
 import {EditBlockArgsSchema} from "@schemas/schemas-edit";
@@ -301,7 +301,7 @@ async function resolveEditTextArgument(value: string | undefined, filePath: stri
   if (filePath === undefined) {
     throw new Error(`${label} or ${label}_path is required`);
   }
-  return readFileInternal(filePath, offset, length);
+  return readTextSliceInternal(filePath, offset, length);
 }
 
 // 3. Handle edit_block command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――

@@ -276,10 +276,12 @@ export async function getRecentTags(cwd: string, limit: number): Promise<Record<
 
 // 13. Gather repository snapshot ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function gatherRepositorySnapshot(cwd: string): Promise<Record<string, unknown>> {
-  const status = await getStatusSummary(cwd, true);
-  const recentCommits = await getRecentCommits(cwd, 2);
-  const recentTags = await getRecentTags(cwd, 2);
-  const remotes = await getRemotes(cwd);
+  const [status, recentCommits, recentTags, remotes] = await Promise.all([
+    getStatusSummary(cwd, true),
+    getRecentCommits(cwd, 2),
+    getRecentTags(cwd, 2),
+    getRemotes(cwd),
+  ]);
 
   return {
     status: toSnapshotStatus(status),

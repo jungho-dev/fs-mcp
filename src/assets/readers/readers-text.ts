@@ -23,6 +23,8 @@ import {createInterface} from "node:readline";
 import type {FileHandler, FileInfo, FileMetadata, FileResult, ReadOptions} from "@assets/readers/readers-base";
 import {FILE_SIZE_LIMITS, READ_PERFORMANCE_THRESHOLDS} from "@features/filesystem/filesystem-limits";
 
+const READLINE_SPLIT_PATTERN = /\r\n|\r|\n/;
+
 // 1. Text file handler implementation ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Binary detection is done at the factory level - this handler assumes file is text
 // 1. Text file handler ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -187,10 +189,39 @@ export class TextFileHandler implements FileHandler {
     return lines;
   }
 
+  // 10. Split content for readline-compatible output ―――――――――――――――――――――――――――――――――――――――――――
+  private splitContentForReadline(content: string): string[] {
+    const lines = content.split(READLINE_SPLIT_PATTERN);
+
+    if (lines.at(-1) === "") {
+      lines.pop();
+    }
+    return lines;
+  }
+
+  // 11. Read small file from start ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  private async readSmallFileFromStart(filePath: string, offset: number, length: number | undefined, mimeType: string, includeStatusMessage: boolean): Promise<FileResult> {
+    const fileContent = await fs.readFile(filePath, "utf8");
+    const lines = this.splitContentForReadline(fileContent);
+    const selectedLines = length === undefined ? lines.slice(offset) : lines.slice(offset, offset + length);
+    const content = selectedLines.join("\n");
+
+    if (!includeStatusMessage) {
+      return {content, mimeType, metadata: {}};
+    }
+    const statusMessage = this.generateEnhancedStatusMessage(selectedLines.length, offset, lines.length, false);
+
+    return {content: `${statusMessage}\n\n${content}`, mimeType, metadata: {}};
+  }
+
   // 4. Read file with smart positioning ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private async readFileWithSmartPositioning(filePath: string, offset: number, length: number | undefined, mimeType: string, includeStatusMessage: boolean = true): Promise<FileResult> {
     const stats = await fs.stat(filePath);
     const fileSize = stats.size;
+
+    if (offset >= 0 && fileSize < FILE_SIZE_LIMITS.LARGE_FILE_THRESHOLD) {
+      return await this.readSmallFileFromStart(filePath, offset, length, mimeType, includeStatusMessage);
+    }
 
     const totalLines = await this.getFileLineCount(filePath);
 

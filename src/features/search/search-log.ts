@@ -36,7 +36,7 @@ class FuzzySearchLogger {
   // 2. Constructor ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   constructor() {
     // Create log file in a dedicated directory
-    const logDir = path.join(os.homedir(), ".fs-mcp-logs");
+    const logDir = path.join(os.homedir(), ".mcp/");
     this.logPath = path.join(logDir, "fuzzy-search.log");
   }
 

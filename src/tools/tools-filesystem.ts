@@ -7,9 +7,9 @@
 
 import { withArgsPathSchema } from "@schemas/schemas-args-ref";
 import { EditBlocksArgsSchema } from "@schemas/schemas-edit";
-import { CreateDirectoriesArgsSchema, GetFileInfosArgsSchema, ListDirectoriesArgsSchema, MoveFilesArgsSchema, ReadFilesArgsSchema, RemoveFilesArgsSchema, RenameFilesArgsSchema, WriteFilesArgsSchema } from "@schemas/schemas-filesystem";
-import { GetSearchResultsArgsSchema, ListSearchesArgsSchema, StartSearchesArgsSchema, StopSearchesArgsSchema } from "@schemas/schemas-search";
-import { BATCH_GUIDANCE, CMD_PREFIX_DESCRIPTION, PATH_GUIDANCE, type ToolCatalogEntry } from "@tools/tools-const";
+import { CopyFilesArgsSchema, CreateDirectoriesArgsSchema, GetFileInfosArgsSchema, ListDirectoriesArgsSchema, MoveFilesArgsSchema, ReadFilesArgsSchema, RemoveFilesArgsSchema, RenameFilesArgsSchema, WriteFilesArgsSchema } from "@schemas/schemas-filesystem";
+import { GetCompressedSearchResultsArgsSchema, GetFullSearchResultsArgsSchema, ListSearchesArgsSchema, StartSearchesArgsSchema, StopSearchesArgsSchema } from "@schemas/schemas-search";
+import { APPLY_PATCH_PERFORMANCE_GUIDANCE, BATCH_GUIDANCE, CMD_PREFIX_DESCRIPTION, PATH_GUIDANCE, type ToolCatalogEntry } from "@tools/tools-const";
 import { zodToJsonSchema } from "zod-to-json-schema";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -84,6 +84,25 @@ export const FILESYSTEM_TOOL_CATALOG: ToolCatalogEntry[] = [
     },
   },
   {
+    name: "copy_files",
+    description: (`
+      Copy one or many files or directories in parallel.
+      Use items: [{ source, destination, recursive?, force? }].
+      recursive defaults to false so directories fail unless explicitly requested.
+      force defaults to false so existing destinations fail unless explicitly requested.
+      ${BATCH_GUIDANCE}
+      ${PATH_GUIDANCE}
+      ${CMD_PREFIX_DESCRIPTION}
+    `),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(CopyFilesArgsSchema)),
+    annotations: {
+      title: "Copy Files",
+      readOnlyHint: false,
+      destructiveHint: false,
+      openWorldHint: false,
+    },
+  },
+  {
     name: "move_files",
     description: (`
       Move or rename one or many files in parallel.
@@ -141,7 +160,7 @@ export const FILESYSTEM_TOOL_CATALOG: ToolCatalogEntry[] = [
       Start one or many searches in parallel.
       Inline pattern is capped; use pattern_path for large patterns so tool-call logs do not echo the full pattern.
       Use filePattern to narrow content search and literalSearch=true for plain strings.
-      The response includes the sessionId, initial result count, and next get_search_results offset hint when more results are available.
+      The response includes the sessionId, initial result count, and next get_compressed_search/get_full_search offset hint when more results are available.
       ${BATCH_GUIDANCE}
       ${PATH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
@@ -153,17 +172,33 @@ export const FILESYSTEM_TOOL_CATALOG: ToolCatalogEntry[] = [
     },
   },
   {
-    name: "get_search_results",
+    name: "get_compressed_search",
     description: (`
       Read one or many active search sessions in parallel.
+      Returns compressed per-item previews in batch output and structuredContent.
       Use offset/length for pagination. Negative offset reads from the tail of the current result set.
-      Follow nextOffset from start_searches or previous get_search_results when hasMoreResults is true.
+      Follow nextOffset from start_searches or previous get_compressed_search when hasMoreResults is true.
       ${BATCH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
     `),
-    inputSchema: zodToJsonSchema(withArgsPathSchema(GetSearchResultsArgsSchema)),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(GetCompressedSearchResultsArgsSchema)),
     annotations: {
-      title: "Get Search Results",
+      title: "Get Compressed Search Results",
+      readOnlyHint: true,
+    },
+  },
+  {
+    name: "get_full_search",
+    description: (`
+      Read one or many active search sessions in parallel with full per-item result text.
+      Use offset/length for pagination. Negative offset reads from the tail of the current result set.
+      Use this when get_compressed_search previews omit details that must be inspected.
+      ${BATCH_GUIDANCE}
+      ${CMD_PREFIX_DESCRIPTION}
+    `),
+    inputSchema: zodToJsonSchema(withArgsPathSchema(GetFullSearchResultsArgsSchema)),
+    annotations: {
+      title: "Get Full Search Results",
       readOnlyHint: true,
     },
   },
@@ -216,6 +251,7 @@ export const FILESYSTEM_TOOL_CATALOG: ToolCatalogEntry[] = [
       Apply one or many exact edit operations in parallel.
       Use items: [{ file_path, old_string?, old_string_path?, new_string?, new_string_path?, expected_replacements? }].
       Inline old_string/new_string are capped; use old_string_path/new_string_path for large text so tool-call logs do not echo full blocks.
+      ${APPLY_PATCH_PERFORMANCE_GUIDANCE}
       ${BATCH_GUIDANCE}
       ${PATH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}

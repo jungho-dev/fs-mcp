@@ -49,6 +49,7 @@ const DEFAULT_AUTO_MIN_LINES = 120;
 const DEFAULT_MAX_ENTRY_CHARS = 1_000_000;
 const CONTEXT_CHUNK_LINE_COUNT = 80;
 const CONTEXT_CHUNK_LINE_OVERLAP = 20;
+const CONTEXT_DELETE_BATCH_SIZE = 500;
 const CONTEXT_PREVIEW_LENGTH = 160;
 const LINE_SPLIT_PATTERN = /\r\n|\r|\n/;
 const TOKEN_PATTERN = /[\p{L}\p{N}_]+/gu;
@@ -253,7 +254,9 @@ class ContextIndexService {
       );
     `);
     ensureContentHashColumn(db);
+    db.exec("CREATE INDEX IF NOT EXISTS idx_context_documents_created_at ON context_documents(created_at DESC)");
     db.exec("CREATE INDEX IF NOT EXISTS idx_context_documents_content_hash ON context_documents(content_hash)");
+    db.exec("CREATE INDEX IF NOT EXISTS idx_context_chunks_index_id ON context_chunks(index_id)");
   }
 
   // 9-4-1. Find reusable index reference ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -383,7 +386,7 @@ class ContextIndexService {
   // 9-8. Clear documents ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   clearDocuments(options: {indexIds?: string[]; source?: string}): number {
     const db = this.getDatabase();
-    let ids = options.indexIds ?? [];
+    let ids = [...new Set(options.indexIds ?? [])];
 
     if (options.source !== undefined) {
       const sourceRows = db.query<{index_id: string}, [string]>("SELECT index_id FROM context_documents WHERE source LIKE ?").all(`%${options.source}%`);
@@ -403,19 +406,13 @@ class ContextIndexService {
       return 0;
     }
     const deleteAll = db.transaction(() => {
-      const selectChunks = db.prepare("SELECT chunk_id FROM context_chunks WHERE index_id = ?");
-      const deleteFts = db.prepare("DELETE FROM context_chunks_fts WHERE chunk_id = ?");
-      const deleteChunks = db.prepare("DELETE FROM context_chunks WHERE index_id = ?");
-      const deleteDocument = db.prepare("DELETE FROM context_documents WHERE index_id = ?");
+      for (let start = 0; start < ids.length; start += CONTEXT_DELETE_BATCH_SIZE) {
+        const batchIds = ids.slice(start, start + CONTEXT_DELETE_BATCH_SIZE);
+        const placeholders = batchIds.map(() => "?").join(", ");
 
-      for (const id of ids) {
-        const chunkRows = selectChunks.all(id) as Array<{chunk_id: string}>;
-
-        for (const chunk of chunkRows) {
-          deleteFts.run(chunk.chunk_id);
-        }
-        deleteChunks.run(id);
-        deleteDocument.run(id);
+        db.query(`DELETE FROM context_chunks_fts WHERE index_id IN (${placeholders})`).run(...batchIds);
+        db.query(`DELETE FROM context_chunks WHERE index_id IN (${placeholders})`).run(...batchIds);
+        db.query(`DELETE FROM context_documents WHERE index_id IN (${placeholders})`).run(...batchIds);
       }
     });
 

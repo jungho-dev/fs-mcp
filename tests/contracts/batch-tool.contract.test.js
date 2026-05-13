@@ -20,11 +20,21 @@ const TEST_DIR = path.join(os.tmpdir(), "fs-mcp-batch-tool-contract");
 const CREATED_DIR = path.join(TEST_DIR, "created-dir");
 const SOURCE_FILE = path.join(TEST_DIR, "source.txt");
 const EXTRA_FILE = path.join(TEST_DIR, "extra.txt");
+const COPY_SOURCE_FILE = path.join(TEST_DIR, "copy-source.txt");
+const COPIED_FILE = path.join(TEST_DIR, "copied.txt");
+const COPIED_FORCE_FILE = path.join(TEST_DIR, "copied-force.txt");
+const COPY_SOURCE_DIR = path.join(TEST_DIR, "copy-source-dir");
+const COPIED_DIR = path.join(TEST_DIR, "copied-dir");
 const LARGE_FILE = path.join(TEST_DIR, "large.txt");
 const LARGE_WRITTEN_FILE = path.join(TEST_DIR, "large-written.txt");
 const LARGE_WRITE_REF_FILE = path.join(TEST_DIR, "large-write-ref.txt");
+const PARTIAL_WRITTEN_FILE = path.join(TEST_DIR, "partial-written.txt");
+const PARTIAL_WRITE_REF_FILE = path.join(TEST_DIR, "partial-write-ref.txt");
 const LARGE_EDIT_OLD_REF_FILE = path.join(TEST_DIR, "large-edit-old-ref.txt");
 const LARGE_EDIT_NEW_REF_FILE = path.join(TEST_DIR, "large-edit-new-ref.txt");
+const PARTIAL_EDIT_FILE = path.join(TEST_DIR, "partial-edit.txt");
+const PARTIAL_EDIT_OLD_REF_FILE = path.join(TEST_DIR, "partial-edit-old-ref.txt");
+const PARTIAL_EDIT_NEW_REF_FILE = path.join(TEST_DIR, "partial-edit-new-ref.txt");
 const ARGS_PATH_EDIT_FILE = path.join(TEST_DIR, "args-path-edit.txt");
 const ARGS_PATH_EDIT_SECOND_FILE = path.join(TEST_DIR, "args-path-edit-second.txt");
 const ARGS_PATH_EDIT_ARGS_FILE = path.join(TEST_DIR, "args-path-edit-args.json");
@@ -91,10 +101,18 @@ async function setup() {
   await fs.mkdir(TEST_DIR, { recursive: true });
   await fs.writeFile(SOURCE_FILE, "old value\n", "utf8");
   await fs.writeFile(EXTRA_FILE, "extra value\n", "utf8");
+  await fs.writeFile(COPY_SOURCE_FILE, "copy value\n", "utf8");
+  await fs.writeFile(COPIED_FORCE_FILE, "old copy\n", "utf8");
+  await fs.mkdir(COPY_SOURCE_DIR, { recursive: true });
+  await fs.writeFile(path.join(COPY_SOURCE_DIR, "nested.txt"), "nested copy\n", "utf8");
   await fs.writeFile(LARGE_FILE, LARGE_TEXT, "utf8");
   await fs.writeFile(LARGE_WRITE_REF_FILE, TEN_THOUSAND_A, "utf8");
+  await fs.writeFile(PARTIAL_WRITE_REF_FILE, "abc\0\0", "utf8");
   await fs.writeFile(LARGE_EDIT_OLD_REF_FILE, TEN_THOUSAND_A, "utf8");
   await fs.writeFile(LARGE_EDIT_NEW_REF_FILE, TEN_THOUSAND_B, "utf8");
+  await fs.writeFile(PARTIAL_EDIT_FILE, "alpha\n", "utf8");
+  await fs.writeFile(PARTIAL_EDIT_OLD_REF_FILE, "alpha\0\0", "utf8");
+  await fs.writeFile(PARTIAL_EDIT_NEW_REF_FILE, "omega\0\0", "utf8");
   await fs.writeFile(ARGS_PATH_EDIT_FILE, "alpha\nbeta\n", "utf8");
   await fs.writeFile(ARGS_PATH_EDIT_SECOND_FILE, "one\ntwo\n", "utf8");
   await fs.writeFile(MANY_LINE_SOURCE_FILE, MANY_LINE_TEXT, "utf8");
@@ -187,7 +205,50 @@ async function testCreateAndListDirectorySurface() {
   assert.match(listBatchResults[0].result.structuredContent.listing, CREATED_DIR_PATTERN);
 }
 
-// 9. Test write move info and edit surface ――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Test copy files surface ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function testCopyFilesSurface() {
+  const copyResult = await dispatchToolCall("copy_files", {
+    items: [
+      {
+        destination: COPIED_FILE,
+        source: COPY_SOURCE_FILE,
+      },
+      {
+        destination: COPIED_FORCE_FILE,
+        force: true,
+        source: COPY_SOURCE_FILE,
+      },
+      {
+        destination: COPIED_DIR,
+        recursive: true,
+        source: COPY_SOURCE_DIR,
+      },
+    ],
+  });
+  const copyBatchResults = extractBatchResults(copyResult);
+
+  assert.equal(copyBatchResults.length, 3);
+  assert.equal(copyBatchResults[0].ok, true);
+  assert.equal(copyBatchResults[1].ok, true);
+  assert.equal(copyBatchResults[2].ok, true);
+  assert.equal(await fs.readFile(COPIED_FILE, "utf8"), "copy value\n");
+  assert.equal(await fs.readFile(COPIED_FORCE_FILE, "utf8"), "copy value\n");
+  assert.equal(await fs.readFile(path.join(COPIED_DIR, "nested.txt"), "utf8"), "nested copy\n");
+  assert.equal(await fs.readFile(COPY_SOURCE_FILE, "utf8"), "copy value\n");
+
+  const overwriteResult = await dispatchToolCall("copy_files", {
+    items: [
+      {
+        destination: COPIED_FILE,
+        source: COPY_SOURCE_FILE,
+      },
+    ],
+  });
+  const overwriteBatchResults = extractBatchResults(overwriteResult);
+  assert.equal(overwriteBatchResults[0].ok, false);
+}
+
+// 10. Test write move info and edit surface ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testWriteMoveInfoAndEditSurface() {
   const writeResult = await dispatchToolCall("write_files", {
     items: [
@@ -215,6 +276,20 @@ async function testWriteMoveInfoAndEditSurface() {
   assert.equal(largeWriteBatchResults[0].ok, true);
   assert.equal(largeWriteBatchResults[0].input.content_path, LARGE_WRITE_REF_FILE);
   assert.equal(await fs.readFile(LARGE_WRITTEN_FILE, "utf8"), TEN_THOUSAND_A);
+
+  const partialWriteResult = await dispatchToolCall("write_files", {
+    items: [
+      {
+        content_length: 3,
+        content_path: PARTIAL_WRITE_REF_FILE,
+        mode: "rewrite",
+        path: PARTIAL_WRITTEN_FILE,
+      },
+    ],
+  });
+  const partialWriteBatchResults = extractBatchResults(partialWriteResult);
+  assert.equal(partialWriteBatchResults[0].ok, true);
+  assert.equal(await fs.readFile(PARTIAL_WRITTEN_FILE, "utf8"), "abc");
 
   const editResult = await dispatchToolCall("edit_blocks", {
     items: [
@@ -244,6 +319,22 @@ async function testWriteMoveInfoAndEditSurface() {
   assert.equal(largeEditBatchResults[0].input.old_string_path, LARGE_EDIT_OLD_REF_FILE);
   assert.equal(largeEditBatchResults[0].input.new_string_path, LARGE_EDIT_NEW_REF_FILE);
 
+  const partialEditResult = await dispatchToolCall("edit_blocks", {
+    items: [
+      {
+        expected_replacements: 1,
+        file_path: PARTIAL_EDIT_FILE,
+        new_string_length: 5,
+        new_string_path: PARTIAL_EDIT_NEW_REF_FILE,
+        old_string_length: 5,
+        old_string_path: PARTIAL_EDIT_OLD_REF_FILE,
+      },
+    ],
+  });
+  const partialEditBatchResults = extractBatchResults(partialEditResult);
+  assert.equal(partialEditBatchResults[0].ok, true);
+  assert.equal(await fs.readFile(PARTIAL_EDIT_FILE, "utf8"), "omega\n");
+
   const argsPathEditPayload = {
     items: [
       {
@@ -260,9 +351,10 @@ async function testWriteMoveInfoAndEditSurface() {
       },
     ],
   };
-  const argsPathCall = { args_path: ARGS_PATH_EDIT_ARGS_FILE };
+  const argsPathPayloadText = JSON.stringify(argsPathEditPayload);
+  const argsPathCall = { args_length: argsPathPayloadText.length, args_path: ARGS_PATH_EDIT_ARGS_FILE };
 
-  await fs.writeFile(ARGS_PATH_EDIT_ARGS_FILE, JSON.stringify(argsPathEditPayload), "utf8");
+  await fs.writeFile(ARGS_PATH_EDIT_ARGS_FILE, `${argsPathPayloadText}\0\0`, "utf8");
   assert.ok(JSON.stringify(argsPathCall).length < JSON.stringify(argsPathEditPayload).length);
   const argsPathEditResult = await dispatchToolCall("edit_blocks", argsPathCall);
   const argsPathEditBatchResults = extractBatchResults(argsPathEditResult);
@@ -341,6 +433,7 @@ async function main() {
     await testReadFilesSurface();
     testLargeUnstructuredResultPreview();
     await testCreateAndListDirectorySurface();
+    await testCopyFilesSurface();
     await testWriteMoveInfoAndEditSurface();
   }
   finally {

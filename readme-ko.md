@@ -72,7 +72,8 @@ stdio를 사용하며 network listener를 열지 않습니다.
 - Config: `get_configs`, `set_config_values`.
 - Context: `index_contexts`, `search_contexts`, `list_contexts`, `clear_contexts`.
 - Filesystem/search/edit: `read_files`, `write_files`, `create_directories`, `list_directories`,
-  `move_files`, `rename_files`, `remove_files`, `start_searches`, `get_search_results`,
+  `move_files`, `rename_files`, `remove_files`, `start_searches`, `get_compressed_search`,
+  `get_full_search`,
   `stop_searches`, `list_searches`, `get_file_infos`, `edit_blocks`.
 - Process: `start_processes`, `read_process_outputs`, `interact_with_processes`, `list_sessions`,
   `list_processes`, `kill_processes`.
@@ -137,7 +138,7 @@ project root/
 모든 dispatched tool result는 `src/cores/responses/responses-tool-result.ts`에서 정규화됩니다.
 
 - 표시용 `content[0].text`는 `src/cores/responses/responses-tool-display.ts`의 template을 사용하며
-  `tool`, `count`, `status`, `contents`, `structuredText` label을 출력합니다.
+  `tool`, `count`, `status`, `duration`, `contents`, `structuredText` label을 출력합니다.
 - `structuredContent`는 원본 content, combined text, 원본 structured payload, status, duration, error detail,
   schema version, tool name, optional context-index reference를 포함하는 machine-readable envelope입니다.
 - `_meta.fsMcpResult`는 status, duration, content type, error text 중심의 compact metadata를 보관합니다.

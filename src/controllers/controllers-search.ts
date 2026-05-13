@@ -9,7 +9,7 @@ import type { ServerResult } from "@assets/type/common";
 import { createBatchToolResponse, runParallelBatch } from "@controllers/controllers-batch";
 import { readFileInternal } from "@features/filesystem/filesystem-service";
 import { searchManager } from "@features/search/search-service";
-import { GetMoreSearchResultsArgsSchema, GetSearchResultsArgsSchema, StartSearchArgsSchema, StartSearchesArgsSchema, StopSearchArgsSchema, StopSearchesArgsSchema } from "@schemas/schemas-search";
+import { GetCompressedSearchResultsArgsSchema, GetFullSearchResultsArgsSchema, GetMoreSearchResultsArgsSchema, StartSearchArgsSchema, StartSearchesArgsSchema, StopSearchArgsSchema, StopSearchesArgsSchema } from "@schemas/schemas-search";
 
 // 1. Handle start search ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStartSearch(args: unknown): Promise<ServerResult> {
@@ -66,10 +66,10 @@ export async function handleStartSearch(args: unknown): Promise<ServerResult> {
       output += `\nSearch completed.`;
     }
     else {
-      output += `\nSearch in progress. Use get_search_results with sessionId: ${result.sessionId} and offset: ${nextOffset ?? 0}.`;
+      output += `\nSearch in progress. Use get_compressed_search for compressed results or get_full_search for full results with sessionId: ${result.sessionId} and offset: ${nextOffset ?? 0}.`;
     }
     if (nextOffset !== null) {
-      output += `\nNext offset: ${nextOffset}. Use get_search_results with sessionId: ${result.sessionId}.`;
+      output += `\nNext offset: ${nextOffset}. Use get_compressed_search for compressed results or get_full_search for full results with sessionId: ${result.sessionId}.`;
     }
     return {
       content: [{ type: "text", text: output }],
@@ -97,7 +97,7 @@ export async function handleGetMoreSearchResults(args: unknown): Promise<ServerR
   const parsed = GetMoreSearchResultsArgsSchema.safeParse(args);
   if (!parsed.success) {
     return {
-      content: [{ type: "text", text: `Invalid arguments for get_search_results: ${parsed.error}` }],
+      content: [{ type: "text", text: `Invalid arguments for search result read: ${parsed.error}` }],
       isError: true,
     };
   }
@@ -158,7 +158,7 @@ export async function handleGetMoreSearchResults(args: unknown): Promise<ServerR
     // Add pagination hints
     const nextOffset = offset >= 0 && results.hasMoreResults ? offset + results.returnedCount : null;
     if (nextOffset !== null) {
-      output += `\nMore results available. Use get_search_results with offset: ${nextOffset}`;
+      output += `\nMore results available. Use get_compressed_search for compressed results or get_full_search for full results with offset: ${nextOffset}`;
     }
     if (results.isComplete) {
       output += `\nSearch completed.`;
@@ -279,16 +279,25 @@ export async function handleStartSearches(args: unknown): Promise<ServerResult> 
   return response;
 }
 
-// 6. Handle get search results ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function handleGetSearchResults(args: unknown): Promise<ServerResult> {
-  const parsed = GetSearchResultsArgsSchema.parse(args);
+// 6. Handle get compressed search results ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export async function handleGetCompressedSearchResults(args: unknown): Promise<ServerResult> {
+  const parsed = GetCompressedSearchResultsArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleGetMoreSearchResults(item));
-  const response = createBatchToolResponse("get_search_results", results);
+  const response = createBatchToolResponse("get_compressed_search", results);
 
   return response;
 }
 
-// 7. Handle stop searches ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Handle get full search results ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export async function handleGetFullSearchResults(args: unknown): Promise<ServerResult> {
+  const parsed = GetFullSearchResultsArgsSchema.parse(args);
+  const results = await runParallelBatch(parsed.items, (item) => handleGetMoreSearchResults(item));
+  const response = createBatchToolResponse("get_full_search", results, { resultMode: "full" });
+
+  return response;
+}
+
+// 8. Handle stop searches ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStopSearches(args: unknown): Promise<ServerResult> {
   const parsed = StopSearchesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.sessionIds, (sessionId) => handleStopSearch({ sessionId: sessionId }));

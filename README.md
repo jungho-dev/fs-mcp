@@ -75,7 +75,8 @@ clients should put all items into one tool call instead of repeatedly calling th
 - Config: `get_configs`, `set_config_values`.
 - Context: `index_contexts`, `search_contexts`, `list_contexts`, `clear_contexts`.
 - Filesystem/search/edit: `read_files`, `write_files`, `create_directories`, `list_directories`,
-  `move_files`, `rename_files`, `remove_files`, `start_searches`, `get_search_results`,
+  `move_files`, `rename_files`, `remove_files`, `start_searches`, `get_compressed_search`,
+  `get_full_search`,
   `stop_searches`, `list_searches`, `get_file_infos`, `edit_blocks`.
 - Process: `start_processes`, `read_process_outputs`, `interact_with_processes`, `list_sessions`,
   `list_processes`, `kill_processes`.
@@ -141,8 +142,8 @@ project root/
 Every dispatched tool result is normalized by `src/cores/responses/responses-tool-result.ts`.
 
 - Visible `content[0].text` uses the display template from
-  `src/cores/responses/responses-tool-display.ts`, with `tool`, `count`, `status`, `contents`, and
-  `structuredText` labels.
+  `src/cores/responses/responses-tool-display.ts`, with `tool`, `count`, `status`, `duration`,
+  `contents`, and `structuredText` labels.
 - `structuredContent` stores the standard machine-readable envelope: original content, combined text, original
   structured payload, status, duration, error details, schema version, tool name, and optional context-index
   references.

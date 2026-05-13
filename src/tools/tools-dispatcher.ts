@@ -9,14 +9,14 @@ import type {ServerResult} from "@assets/type/common";
 import {handleGetConfigs, handleSetConfigValues} from "@controllers/controllers-config";
 import {handleClearContexts, handleIndexContexts, handleListContexts, handleSearchContexts} from "@controllers/controllers-context";
 import {handleEditBlocks} from "@controllers/controllers-edit";
-import {handleCreateDirectories, handleGetFileInfos, handleListDirectories, handleMoveFiles, handleReadFiles, handleRemoveFiles, handleRenameFiles, handleWriteFiles} from "@controllers/controllers-filesystem";
+import {handleCopyFiles, handleCreateDirectories, handleGetFileInfos, handleListDirectories, handleMoveFiles, handleReadFiles, handleRemoveFiles, handleRenameFiles, handleWriteFiles} from "@controllers/controllers-filesystem";
 import {handleGitTool} from "@controllers/controllers-git";
 import {handleKillProcesses, handleListProcesses} from "@controllers/controllers-process";
-import {handleGetSearchResults, handleListSearches, handleStartSearches, handleStopSearches} from "@controllers/controllers-search";
+import {handleGetCompressedSearchResults, handleGetFullSearchResults, handleListSearches, handleStartSearches, handleStopSearches} from "@controllers/controllers-search";
 import {handleInteractWithProcesses, handleListSessions, handleReadProcessOutputs, handleStartProcesses} from "@controllers/controllers-terminal";
 import {createErrorResponse} from "@cores/responses/responses-error";
 import {normalizeToolResult} from "@cores/responses/responses-tool-result";
-import {readFileInternal} from "@features/filesystem/filesystem-service";
+import {readTextSliceInternal} from "@features/filesystem/filesystem-service";
 import {ESSENTIAL_GIT_TOOL_NAMES} from "@schemas/schemas-git";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -60,7 +60,7 @@ async function resolveToolArgsReference(args: unknown): Promise<unknown> {
   }
   const offset = resolveArgsPathNumber(reference.args_offset, "args_offset") ?? 0;
   const length = resolveArgsPathNumber(reference.args_length, "args_length");
-  const argsText = await readFileInternal(reference.args_path, offset, length);
+  const argsText = await readTextSliceInternal(reference.args_path, offset, length);
   let parsedArgs: unknown;
 
   try {
@@ -105,13 +105,15 @@ export const TOOL_DISPATCHERS: Readonly<Record<string, ToolDispatchHandler>> = {
   write_files: (args: unknown) => handleWriteFiles(args),
   create_directories: (args: unknown) => handleCreateDirectories(args),
   list_directories: (args: unknown) => handleListDirectories(args),
+  copy_files: (args: unknown) => handleCopyFiles(args),
   move_files: (args: unknown) => handleMoveFiles(args),
   rename_files: (args: unknown) => handleRenameFiles(args),
   remove_files: (args: unknown) => handleRemoveFiles(args),
   get_file_infos: (args: unknown) => handleGetFileInfos(args),
   edit_blocks: (args: unknown) => handleEditBlocks(args),
   start_searches: (args: unknown) => handleStartSearches(args),
-  get_search_results: (args: unknown) => handleGetSearchResults(args),
+  get_compressed_search: (args: unknown) => handleGetCompressedSearchResults(args),
+  get_full_search: (args: unknown) => handleGetFullSearchResults(args),
   stop_searches: (args: unknown) => handleStopSearches(args),
   list_searches: () => handleListSearches(),
   ...GIT_TOOL_DISPATCHERS,

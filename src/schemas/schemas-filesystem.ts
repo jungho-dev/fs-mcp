@@ -59,6 +59,17 @@ export const ListDirectoriesArgsSchema = z.object({
   items: z.array(ListDirectoryArgsSchema).min(1),
 });
 
+export const CopyFileArgsSchema = z.object({
+  source: z.string(),
+  destination: z.string(),
+  recursive: z.boolean().optional().default(false),
+  force: z.boolean().optional().default(false),
+});
+
+export const CopyFilesArgsSchema = z.object({
+  items: z.array(CopyFileArgsSchema).min(1),
+});
+
 export const MoveFileArgsSchema = z.object({
   source: z.string(),
   destination: z.string(),

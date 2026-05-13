@@ -10,6 +10,7 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import type { FileInfo, FileResult, ReadOptions } from "@assets/readers/readers-base";
+import { resolvePreviewFileType } from "@assets/readers/readers-filetypes";
 import { getFileHandler } from "@assets/readers/readers-factory";
 import { TextFileHandler } from "@assets/readers/readers-text";
 import { withTimeout } from "@assets/utils/utils-timeout";
@@ -19,6 +20,10 @@ import { FILE_OPERATION_TIMEOUTS } from "@features/filesystem/filesystem-limits"
 const DIRECTORY_WILDCARD_SUFFIX = `${path.sep}*`;
 const GLOB_REGEX_ESCAPE_PATTERN = /[.+^\${}()|[\]\\]/g;
 const GLOB_ASTERISK_PATTERN = /\*/g;
+const VALIDATED_PARENT_DIRECTORY_CACHE_MAX_SIZE = 4096;
+const TEXT_FILE_TYPES = new Set(["html", "markdown", "text"]);
+const TEXT_FILE_HANDLER = new TextFileHandler();
+const validatedParentDirectoryCache = new Set<string>();
 
 type LegacyFileInfo = {
   size: number;
@@ -135,6 +140,13 @@ function expandHome(filepath: string): string {
   return filepath;
 }
 
+// 7-1. Resolve requested path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function resolveRequestedPath(requestedPath: string): string {
+  const expandedPath = expandHome(requestedPath);
+
+  return path.isAbsolute(expandedPath) ? path.resolve(expandedPath) : path.resolve(process.cwd(), expandedPath);
+}
+
 // 5. Recursively validates parent directories until it finds a valid one ――――――――――――――――――――――――――
 // This function handles the case where we need to create nested directories
 // and we need to check if any of the parent directories exist
@@ -149,9 +161,17 @@ async function validateParentDirectories(directoryPath: string): Promise<boolean
   if (parentDir === directoryPath || parentDir === path.dirname(parentDir)) {
     return false;
   }
+  if (validatedParentDirectoryCache.has(parentDir)) {
+    return true;
+  }
   try {
     // Check if the parent directory exists
-    await fs.realpath(parentDir);
+    const realParentDir = await fs.realpath(parentDir);
+    validatedParentDirectoryCache.add(parentDir);
+    validatedParentDirectoryCache.add(realParentDir);
+    if (validatedParentDirectoryCache.size > VALIDATED_PARENT_DIRECTORY_CACHE_MAX_SIZE) {
+      validatedParentDirectoryCache.clear();
+    }
     return true;
   }
   catch {
@@ -205,6 +225,13 @@ async function isPathAllowed(pathToCheck: string): Promise<boolean> {
   return isAllowed;
 }
 
+// 9-1. Assert allowed path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function assertAllowedPath(pathToCheck: string, requestedPath: string): Promise<void> {
+  if (!(await isPathAllowed(pathToCheck))) {
+    throw new Error(`Path not allowed: ${requestedPath}. Must be within one of these directories: ${(await getAllowedDirs()).join(", ")}`);
+  }
+}
+
 // 7. Validates a path to ensure it can be accessed or created ―――――――――――――――――――――――――――――――――――――
 // For existing paths, returns the real path (resolving symlinks).
 // For non-existent paths, validates parent directories to ensure they exist.
@@ -215,11 +242,7 @@ async function isPathAllowed(pathToCheck: string): Promise<boolean> {
 // 10. Validate path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function validatePath(requestedPath: string): Promise<string> {
   const validationOperation = async (): Promise<string> => {
-    // Expand home directory if present
-    const expandedPath = expandHome(requestedPath);
-
-    // Convert to absolute path
-    const absoluteOriginal = path.isAbsolute(expandedPath) ? path.resolve(expandedPath) : path.resolve(process.cwd(), expandedPath);
+    const absoluteOriginal = resolveRequestedPath(requestedPath);
 
     // Attempt to resolve symlinks to get the real path
     // This will succeed if the path exists and all symlinks in the chain are valid
@@ -240,10 +263,7 @@ export async function validatePath(requestedPath: string): Promise<string> {
     const pathForNextCheck = resolvedRealPath ?? absoluteOriginal;
 
     // Check if path is allowed
-    if (!(await isPathAllowed(pathForNextCheck))) {
-
-      throw new Error(`Path not allowed: ${requestedPath}. Must be within one of these directories: ${(await getAllowedDirs()).join(", ")}`);
-    }
+    await assertAllowedPath(pathForNextCheck, requestedPath);
     // Check if path exists
     try {
       // fs.stat() will automatically follow symlinks, so we get existence info
@@ -273,6 +293,35 @@ export async function validatePath(requestedPath: string): Promise<string> {
     // Keep original path in error for AI while using a generic operation name.
 
     throw new Error(`Path validation failed for path: ${requestedPath}`);
+  }
+  return result;
+}
+
+// 10-1. Validate target path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function validateTargetPath(requestedPath: string): Promise<string> {
+  const validationOperation = async (): Promise<string> => {
+    const absoluteOriginal = resolveRequestedPath(requestedPath);
+
+    try {
+      await fs.lstat(absoluteOriginal);
+      return validatePath(requestedPath);
+    }
+    catch (error) {
+      const err = error as NodeJS.ErrnoException;
+      if (!err.code || err.code !== "ENOENT") {
+        throw new Error(`Failed to inspect target path: ${absoluteOriginal}. Error: ${err.message}`);
+      }
+    }
+
+    await assertAllowedPath(absoluteOriginal, requestedPath);
+    await validateParentDirectories(absoluteOriginal);
+    return absoluteOriginal;
+  };
+
+  const result = await withTimeout(validationOperation(), FILE_OPERATION_TIMEOUTS.PATH_VALIDATION, `Target path validation operation`, null);
+
+  if (result === null) {
+    throw new Error(`Target path validation failed for path: ${requestedPath}`);
   }
   return result;
 }
@@ -390,7 +439,7 @@ export async function readFileFromDisk(filePath: string, options?: ReadOptions):
   // Use withTimeout to handle potential hangs
   const readOperation = async () => {
     // Get appropriate handler for this file type (async - includes binary detection)
-    const handler = await getFileHandler(validPath);
+    const handler = shouldUseTextFileFastPath(validPath) ? TEXT_FILE_HANDLER : await getFileHandler(validPath);
 
     // Use handler to read the file
     const result = await handler.read(validPath, {
@@ -493,20 +542,51 @@ export async function readFileInternal(filePath: string, offset: number = 0, len
   return selectedLines.join("");
 }
 
-// 15. Write file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function writeFile(filePath: string, content: string, mode: "rewrite" | "append" = "rewrite"): Promise<void> {
+// 15. Read text slice internal ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export async function readTextSliceInternal(filePath: string, offset: number = 0, length?: number): Promise<string> {
+  if (!Number.isInteger(offset) || offset < 0) {
+    throw new Error("Text slice offset must be a non-negative integer");
+  }
+  if (length !== undefined && (!Number.isInteger(length) || length < 0)) {
+    throw new Error("Text slice length must be a non-negative integer");
+  }
   const validPath = await validatePath(filePath);
 
-  // Get appropriate handler for this file type (async - includes binary detection)
+  const { isImage } = await getMimeTypeInfo(validPath);
+
+  if (isImage) {
+    throw new Error("Cannot read image files as text for internal operations");
+  }
+  const content = await fs.readFile(validPath, "utf8");
+  if (length === undefined) {
+    return content.slice(offset);
+  }
+  return content.slice(offset, offset + length);
+}
+
+// 16. Should use text file fast path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function shouldUseTextFileFastPath(filePath: string): boolean {
+  return TEXT_FILE_TYPES.has(resolvePreviewFileType(filePath));
+}
+
+// 17. Write file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export async function writeFile(filePath: string, content: string, mode: "rewrite" | "append" = "rewrite"): Promise<void> {
+  const validPath = await validateTargetPath(filePath);
+
+  if (shouldUseTextFileFastPath(validPath)) {
+    await TEXT_FILE_HANDLER.write(validPath, content, mode);
+    return;
+  }
+
+  // Get appropriate handler for binary and format-specific writes.
   const handler = await getFileHandler(validPath);
 
-  // Use handler to write the file
   await handler.write(validPath, content, mode);
 }
 
-// 16. Create directory ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 18. Create directory ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function createDirectory(dirPath: string): Promise<void> {
-  const validPath = await validatePath(dirPath);
+  const validPath = await validateTargetPath(dirPath);
   await fs.mkdir(validPath, { recursive: true });
 }
 
@@ -594,14 +674,25 @@ export async function listDirectory(dirPath: string, depth: number = 2, options:
   return results;
 }
 
-// 20. Move file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 20. Copy file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export async function copyFile(sourcePath: string, destinationPath: string, recursive: boolean = false, force: boolean = false): Promise<void> {
+  const validSourcePath = await validatePath(sourcePath);
+  const validDestPath = await validateTargetPath(destinationPath);
+  await fs.cp(validSourcePath, validDestPath, {
+    errorOnExist: !force,
+    force,
+    recursive,
+  });
+}
+
+// 21. Move file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function moveFile(sourcePath: string, destinationPath: string): Promise<void> {
   const validSourcePath = await validatePath(sourcePath);
-  const validDestPath = await validatePath(destinationPath);
+  const validDestPath = await validateTargetPath(destinationPath);
   await fs.rename(validSourcePath, validDestPath);
 }
 
-// 21. Remove path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 22. Remove path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function removePath(filePath: string, recursive: boolean = false, force: boolean = false): Promise<void> {
   const validPath = await validatePath(filePath);
   let stats: Stats;
@@ -626,26 +717,12 @@ export async function removePath(filePath: string, recursive: boolean = false, f
   await fs.rm(validPath, { force, recursive });
 }
 
-// 22. Get file info ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 23. Get file info ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getFileInfo(filePath: string): Promise<LegacyFileInfo> {
   const validPath = await validatePath(filePath);
 
-  // Get fs.stat as a fallback for any missing fields
-  const stats = await fs.stat(validPath);
-  const fallbackInfo: FileInfo = {
-    size: stats.size,
-    created: stats.birthtime,
-    modified: stats.mtime,
-    accessed: stats.atime,
-    isDirectory: stats.isDirectory(),
-    isFile: stats.isFile(),
-    permissions: stats.mode.toString(8).slice(-3),
-    fileType: "text" as const,
-    metadata: undefined,
-  };
-
   // Get appropriate handler for this file type (async - includes binary detection)
-  const handler = await getFileHandler(validPath);
+  const handler = shouldUseTextFileFastPath(validPath) ? TEXT_FILE_HANDLER : await getFileHandler(validPath);
 
   // Use handler to get file info, with fallback
   let fileInfo: FileInfo;
@@ -654,19 +731,29 @@ export async function getFileInfo(filePath: string): Promise<LegacyFileInfo> {
   }
   catch (_error) {
     // If handler fails, use fallback stats
-    fileInfo = fallbackInfo;
+    const stats = await fs.stat(validPath);
+    fileInfo = {
+      size: stats.size,
+      created: stats.birthtime,
+      modified: stats.mtime,
+      accessed: stats.atime,
+      isDirectory: stats.isDirectory(),
+      isFile: stats.isFile(),
+      permissions: stats.mode.toString(8).slice(-3),
+      fileType: "text" as const,
+      metadata: undefined,
+    };
   }
   // Convert to legacy format (for backward compatibility)
-  // Use handler values with fallback to fs.stat values for any missing fields
   const info: LegacyFileInfo = {
-    size: fileInfo.size ?? fallbackInfo.size,
-    created: fileInfo.created ?? fallbackInfo.created,
-    modified: fileInfo.modified ?? fallbackInfo.modified,
-    accessed: fileInfo.accessed ?? fallbackInfo.accessed,
-    isDirectory: fileInfo.isDirectory ?? fallbackInfo.isDirectory,
-    isFile: fileInfo.isFile ?? fallbackInfo.isFile,
-    permissions: fileInfo.permissions ?? fallbackInfo.permissions,
-    fileType: fileInfo.fileType ?? fallbackInfo.fileType,
+    size: fileInfo.size,
+    created: fileInfo.created,
+    modified: fileInfo.modified,
+    accessed: fileInfo.accessed,
+    isDirectory: fileInfo.isDirectory,
+    isFile: fileInfo.isFile,
+    permissions: fileInfo.permissions,
+    fileType: fileInfo.fileType,
   };
 
   // Add type-specific metadata from file handler

@@ -37,6 +37,11 @@ export const BATCH_GUIDANCE = (`
 `);
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export const APPLY_PATCH_PERFORMANCE_GUIDANCE = (`
+  APPLY_PATCH PERFORMANCE: For generated text, reports, multi-file rewrites, or two or more same-kind writes/edits, prefer fs-mcp batch tools over apply_patch. Put every item in one tool call and use *_path or args_path for large payloads.
+`);
+
+// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export const CMD_PREFIX_DESCRIPTION = (`
   This command can be referenced as "FS-MCP: ..." or "use fs-mcp to ..." in your instructions.
   To prevent verbose tool-call parameter logs, put large or multi-item arguments in a UTF-8 JSON file and call with {"args_path":"ABSOLUTE_PATH_TO_ARGS_JSON"}.

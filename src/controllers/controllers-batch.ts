@@ -14,6 +14,9 @@ export interface BatchToolItemResult<T> {
   ok: boolean;
   result: ServerResult;
 }
+interface BatchToolResponseOptions {
+  resultMode?: "compact" | "full";
+}
 
 interface CompactedStringPayload {
   lineCount: number;
@@ -216,6 +219,16 @@ function createBatchSummaryLine<T>(item: BatchToolItemResult<T>): string {
   return `- [${item.index}] ${statusText}${detailText}`;
 }
 
+// 11-2. Create full batch detail block ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function createFullBatchDetailBlock<T>(item: BatchToolItemResult<T>): string {
+  const statusText = item.ok ? "OK" : "ERROR";
+  const inputPreview = createSummaryInputPreview(item.input);
+  const text = extractTextContent(item.result).trim();
+  const header = `- [${item.index}] ${statusText}${inputPreview.length > 0 ? ` ${inputPreview}` : ""}`;
+
+  return text.length > 0 ? `${header}\n${text}` : header;
+}
+
 // 12. Run parallel batch ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runParallelBatch<T>(items: T[], runItem: (item: T) => Promise<ServerResult>): Promise<BatchToolItemResult<T>[]> {
   const results = await Promise.all(
@@ -241,18 +254,59 @@ export async function runParallelBatch<T>(items: T[], runItem: (item: T) => Prom
   return results;
 }
 
+// 12-1. Run limited parallel batch ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export async function runLimitedParallelBatch<T>(items: T[], concurrency: number, runItem: (item: T) => Promise<ServerResult>): Promise<BatchToolItemResult<T>[]> {
+  const results: BatchToolItemResult<T>[] = new Array(items.length);
+  const normalizedConcurrency = Number.isFinite(concurrency) ? Math.floor(concurrency) : 1;
+  const workerCount = Math.max(1, Math.min(items.length, normalizedConcurrency));
+  let nextIndex = 0;
+
+  async function runItemAtIndex(index: number): Promise<void> {
+    const item = items[index];
+    let itemResult: ServerResult;
+
+    try {
+      itemResult = await runItem(item);
+    }
+    catch (error) {
+      itemResult = createErrorResponse(error instanceof Error ? error.message : String(error));
+    }
+
+    results[index] = {
+      index: index + 1,
+      input: item,
+      ok: itemResult.isError !== true,
+      result: itemResult,
+    };
+  }
+
+  async function worker(): Promise<void> {
+    while (nextIndex < items.length) {
+      const index = nextIndex;
+      nextIndex += 1;
+      await runItemAtIndex(index);
+    }
+  }
+
+  await Promise.all(Array.from({ length: workerCount }, () => worker()));
+
+  return results;
+}
+
 // 13. Create batch tool response ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export function createBatchToolResponse<T>(toolName: string, items: BatchToolItemResult<T>[]): ServerResult {
+export function createBatchToolResponse<T>(toolName: string, items: BatchToolItemResult<T>[], options: BatchToolResponseOptions = {}): ServerResult {
   const totalCount = items.length;
   const failedCount = items.filter((item) => !item.ok).length;
   const succeededCount = totalCount - failedCount;
   const summaryLines = items.map((item) => createBatchSummaryLine(item));
   const summaryHeader = `${toolName}: ${succeededCount}/${totalCount} succeeded${failedCount > 0 ? `, ${failedCount} failed` : ""}`;
+  const resultMode = options.resultMode ?? "compact";
+  const resultText = resultMode === "full" ? `${summaryHeader}\n\n${items.map((item) => createFullBatchDetailBlock(item)).join("\n\n")}` : `${summaryHeader}\n\n${summaryLines.join("\n")}`;
   const response: ServerResult = {
     content: [
       {
         type: "text",
-        text: `${summaryHeader}\n\n${summaryLines.join("\n")}`,
+        text: resultText,
       },
     ],
     structuredContent: {
@@ -261,7 +315,7 @@ export function createBatchToolResponse<T>(toolName: string, items: BatchToolIte
         index: item.index,
         input: compactBatchInput(item.input),
         ok: item.ok,
-        result: compactBatchResult(item.result),
+        result: resultMode === "full" ? item.result : compactBatchResult(item.result),
       })),
       succeededCount: succeededCount,
       toolName: toolName,
