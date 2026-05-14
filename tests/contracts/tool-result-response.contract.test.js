@@ -216,6 +216,27 @@ function testDisplayReplacesLargeOutputWhenEnabled() {
   assert.equal(output.contextIndexes.length > 0, true);
 }
 
+// 12-1. Tracked tools use inline preview without context index markers ―――――――――――――――――――――――――――――
+function testTrackedToolUsesInlinePreview() {
+  const fullText = Array.from({ length: 180 }, (_value, index) => "line" + (index + 1) + " " + "x".repeat(640)).join("\n");
+  const trackedTools = ["read_files", "list_directories", "get_full_search"];
+
+  for (const toolName of trackedTools) {
+    const normalized = normalizeToolResult(toolName, createToolTextResponse(fullText, {
+      structuredContent: { textContent: fullText },
+    }), 9);
+    const output = parseStandardOutput(normalized);
+    const serializedOutput = JSON.stringify(output);
+
+    assert.equal(output.contextIndexes, undefined);
+    assert.equal(output.data.text.includes("[context-index:"), false);
+    assert.equal(output.data.text.includes("(preview)"), true);
+    assert.equal(output.data.structuredContent.textContent.previewOnly, true);
+    assert.equal(serializedOutput.includes("contextIndex"), false);
+    assert.equal(serializedOutput.includes("omitted"), false);
+  }
+}
+
 // 13. Clear display compaction contexts ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function clearDisplayCompactionContexts() {
   const indexIds = contextIndexService
@@ -264,6 +285,7 @@ async function main() {
     });
     clearDisplayCompactionContexts();
     testDisplayReplacesLargeOutputWhenEnabled();
+    testTrackedToolUsesInlinePreview();
   }
   finally {
     clearDisplayCompactionContexts();

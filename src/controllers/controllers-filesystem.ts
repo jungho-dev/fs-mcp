@@ -86,6 +86,42 @@ type ParsedGetFileInfoArgs = {
 
 type ToolArgsSource = "args_path" | "inline";
 
+// 1. Missing path error check ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function isMissingPathError(error: unknown): boolean {
+  return typeof error === "object" && error !== null && (error as NodeJS.ErrnoException).code === "ENOENT";
+}
+
+// 1-1. Create missing path response ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function createMissingPathResponse(requestedPath: string): ServerResult {
+  const resolvedPath = resolveAbsolutePath(requestedPath);
+
+  return {
+    content: [{ type: "text", text: `Missing path: ${requestedPath}` }],
+    structuredContent: {
+      fileName: path.basename(resolvedPath),
+      filePath: resolvedPath,
+      fileType: "missing",
+      missing: true,
+      path: requestedPath,
+      reason: "not_found",
+    },
+  };
+}
+
+// 1-2. Missing local path check ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function isMissingLocalPath(requestedPath: string): Promise<boolean> {
+  try {
+    await getFileInfo(requestedPath);
+    return false;
+  }
+  catch (error) {
+    if (isMissingPathError(error)) {
+      return true;
+    }
+    throw error;
+  }
+}
+
 // 1. Resolve directory listing entry type ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function resolveDirectoryListingEntryType(match: RegExpMatchArray | null): DirectoryListingEntryType {
   if (!match) {
@@ -167,6 +203,19 @@ async function handleParsedReadFileWithTimeout(parsed: ParsedReadFileArgs): Prom
     throw new Error("Failed to read the file");
   }
   return result;
+}
+
+// 3-1. Handle parsed read file with missing path option ――――――――――――――――――――――――――――――――――――――――――――――
+async function handleParsedReadFileWithMissing(parsed: ParsedReadFileArgs, allowMissing: boolean): Promise<ServerResult> {
+  try {
+    return await handleParsedReadFileWithTimeout(parsed);
+  }
+  catch (error) {
+    if (allowMissing && !parsed.isUrl && isMissingPathError(error)) {
+      return createMissingPathResponse(parsed.path);
+    }
+    throw error;
+  }
 }
 
 // 4. Handle read file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -322,6 +371,14 @@ async function handleParsedListDirectory(parsed: ParsedListDirectoryArgs): Promi
   };
 }
 
+// 10-1. Handle parsed list directory with missing path option ―――――――――――――――――――――――――――――――――――――――――
+async function handleParsedListDirectoryWithMissing(parsed: ParsedListDirectoryArgs, allowMissing: boolean): Promise<ServerResult> {
+  if (allowMissing && await isMissingLocalPath(parsed.path)) {
+    return createMissingPathResponse(parsed.path);
+  }
+  return await handleParsedListDirectory(parsed);
+}
+
 // 11. Handle list directory ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleListDirectory(args: unknown): Promise<ServerResult> {
   try {
@@ -453,6 +510,19 @@ async function handleParsedGetFileInfo(parsed: ParsedGetFileInfoArgs): Promise<S
   };
 }
 
+// 22-1. Handle parsed get file info with missing path option ――――――――――――――――――――――――――――――――――――――――――
+async function handleParsedGetFileInfoWithMissing(parsed: ParsedGetFileInfoArgs, allowMissing: boolean): Promise<ServerResult> {
+  try {
+    return await handleParsedGetFileInfo(parsed);
+  }
+  catch (error) {
+    if (allowMissing && isMissingPathError(error)) {
+      return createMissingPathResponse(parsed.path);
+    }
+    throw error;
+  }
+}
+
 // 23. Handle get file info ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleGetFileInfo(args: unknown): Promise<ServerResult> {
   try {
@@ -470,7 +540,7 @@ export async function handleGetFileInfo(args: unknown): Promise<ServerResult> {
 export async function handleReadFiles(args: unknown): Promise<ServerResult> {
   const parsed = ReadFilesArgsSchema.parse(args);
   const items = parsed.items ?? parsed.paths?.map((filePath) => ({ isUrl: false, offset: 0, path: filePath })) ?? [];
-  const results = await runParallelBatch(items, (item) => handleParsedReadFileWithTimeout(item));
+  const results = await runParallelBatch(items, (item) => handleParsedReadFileWithMissing(item, parsed.allowMissing));
   const response = createBatchToolResponse("read_files", results);
 
   return response;
@@ -576,7 +646,7 @@ export async function handleCreateDirectories(args: unknown): Promise<ServerResu
 // 17. Handle list directories ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleListDirectories(args: unknown): Promise<ServerResult> {
   const parsed = ListDirectoriesArgsSchema.parse(args);
-  const results = await runParallelBatch(parsed.items, (item) => handleParsedListDirectory(item));
+  const results = await runParallelBatch(parsed.items, (item) => handleParsedListDirectoryWithMissing(item, parsed.allowMissing));
   const response = createBatchToolResponse("list_directories", results);
 
   return response;
@@ -612,7 +682,7 @@ export async function handleRemoveFiles(args: unknown): Promise<ServerResult> {
 // 22. Handle get file infos ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleGetFileInfos(args: unknown): Promise<ServerResult> {
   const parsed = GetFileInfosArgsSchema.parse(args);
-  const results = await runParallelBatch(parsed.paths, (filePath) => handleParsedGetFileInfo({ path: filePath }));
+  const results = await runParallelBatch(parsed.paths, (filePath) => handleParsedGetFileInfoWithMissing({ path: filePath }, parsed.allowMissing));
   const response = createBatchToolResponse("get_file_infos", results);
 
   return response;

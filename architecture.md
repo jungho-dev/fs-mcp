@@ -115,6 +115,7 @@ support.
 - `structuredContent.data` stores original normalized content, combined text, and original structured payload.
 - `_meta.fsMcpResult` stores status, duration, content types, error text, schema version, and tool name.
 - Automatic context indexing can add `contextIndexes` or `contextIndexError` to normalized structured output.
+- High-volume exploratory tools can use inline preview payloads instead of context-index markers for oversized output.
 
 ## Context Index Architecture
 
@@ -126,6 +127,8 @@ support.
 - Content hashes allow equivalent source/tool payloads to reuse an existing context-index reference.
 - `context-output-compactor.ts` indexes large text fields and structured collections and replaces large
   auto-indexed payloads with context-index references by default.
+- `read_files`, `list_directories`, and `get_full_search` bypass response marker replacement and keep bounded inline
+  preview payloads for oversized results.
 - Manual context-index tool surface is not exposed in this version; automatic indexing remains available through
   response normalization.
 

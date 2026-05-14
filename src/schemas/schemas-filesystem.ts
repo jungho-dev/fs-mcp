@@ -21,6 +21,7 @@ export const ReadFileArgsSchema = z.object({
 });
 
 export const ReadFilesArgsSchema = z.object({
+  allowMissing: z.boolean().optional().default(false).describe("When true, missing local paths are returned as non-error missing results."),
   paths: z.array(z.string()).min(1).optional(),
   items: z.array(ReadFileArgsSchema).min(1).optional(),
 }).refine((args) => args.paths !== undefined || args.items !== undefined, {
@@ -74,6 +75,7 @@ export const ListDirectoryArgsSchema = z.object({
 });
 
 export const ListDirectoriesArgsSchema = z.object({
+  allowMissing: z.boolean().optional().default(false).describe("When true, missing local paths are returned as non-error missing results."),
   items: z.array(ListDirectoryArgsSchema).min(1),
 });
 
@@ -112,5 +114,6 @@ export const GetFileInfoArgsSchema = z.object({
 });
 
 export const GetFileInfosArgsSchema = z.object({
+  allowMissing: z.boolean().optional().default(false).describe("When true, missing local paths are returned as non-error missing results."),
   paths: z.array(z.string()).min(1),
 });

@@ -113,6 +113,7 @@ Tool catalog module은 runtime domain별로 나뉩니다. 현재 catalog는 25�
 - `_meta.fsMcpResult`는 status, duration, content type, error text, schema version, tool name을 저장합니다.
 - 자동 context indexing은 normalized structured output에 `contextIndexes` 또는 `contextIndexError`를 추가할 수
   있습니다.
+- 대용량 탐색 도구는 oversized output에 context-index marker 대신 inline preview payload를 사용할 수 있습니다.
 
 ## Context Index 아키텍처
 
@@ -124,6 +125,8 @@ Tool catalog module은 runtime domain별로 나뉩니다. 현재 catalog는 25�
 - Content hash는 같은 source/tool payload가 기존 context-index reference를 재사용하게 합니다.
 - `context-output-compactor.ts`는 큰 text field와 structured collection을 index하고, 큰 auto-indexed
   payload를 기본적으로 context-index reference로 대체합니다.
+- `read_files`, `list_directories`, `get_full_search`는 response marker replacement를 우회하고 oversized result를
+  bounded inline preview payload로 유지합니다.
 - 이번 버전에는 수동 context-index tool surface를 노출하지 않습니다. 자동 indexing은 response normalization
   경로에서 계속 동작합니다.
 

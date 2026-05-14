@@ -20,9 +20,9 @@ interface BatchToolResponseOptions {
 
 interface CompactedStringPayload {
   lineCount: number;
-  omitted: true;
   originalLength: number;
   preview: string;
+  previewOnly: true;
 }
 interface PreservedTextPayload extends Record<string, unknown> {
   lineCount: number;
@@ -55,9 +55,9 @@ function createCompactedStringPayload(value: string, previewLength: number): Com
 
   return {
     lineCount: countLines(value),
-    omitted: true,
     originalLength: value.length,
     preview: preview,
+    previewOnly: true,
   };
 }
 
@@ -175,7 +175,7 @@ function hasLargeStructuredPayload(result: ServerResult): boolean {
 // 10. Create result text preview ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createResultTextPreview(text: string): string {
   const compactedText = text.replace(WHITESPACE_PATTERN, " ").trim();
-  const suffix = " ... (omitted)";
+  const suffix = " ... (preview)";
   let preview = compactedText;
 
   if (compactedText.length > BATCH_RESULT_PREVIEW_LENGTH) {

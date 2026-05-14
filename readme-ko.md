@@ -110,6 +110,9 @@ Runtime default도 large-output 부담을 줄입니다.
 큰 multi-item argument는 UTF-8 JSON 파일로 옮긴 뒤 `args_path`로 전달할 수 있습니다. 이렇게 하면 tool-call
 preview가 작게 유지되며 batch request는 그대로 보존됩니다. Inline override는 JSON object 위에 merge됩니다.
 
+`read_files`, `list_directories`, `get_file_infos`는 `allowMissing=true`도 받아 탐색용 후보 경로 중 누락된
+local path를 실패가 아닌 missing 결과로 반환할 수 있습니다.
+
 ## Context Indexing
 
 큰 tool output은 SQLite에 index할 수 있어 전체 payload를 transcript에 반복 노출하지 않고 검색하거나 회수할
@@ -122,6 +125,8 @@ preview가 작게 유지되며 batch request는 그대로 보존됩니다. Inlin
 - 이번 버전에는 수동 context-index tool surface가 없습니다.
 - Output compaction은 기본값 `contextIndexReplaceLargeOutputs=true`를 통해 큰 auto-indexed payload를
   context-index reference로 대체합니다.
+- `read_files`, `list_directories`, `get_full_search`는 oversized response에 context-index reference marker를
+  노출하지 않고 inline preview payload를 유지합니다.
 
 ## Client 호환성
 
@@ -155,6 +160,7 @@ project root/
   `tool`, `count`, `status`, `duration`, `contents`, `structuredText` label을 출력합니다.
 - `structuredContent`는 원본 content, combined text, 원본 structured payload, status, duration, error detail,
   schema version, tool name, optional context-index reference를 포함하는 machine-readable envelope입니다.
+  일부 대용량 조회 도구는 context-index reference 대신 inline preview payload를 포함합니다.
 - `_meta.fsMcpResult`는 status, duration, content type, error text 중심의 compact metadata를 보관합니다.
 - 이미 정규화된 result는 다시 감싸지 않고 표시 text만 재생성합니다.
 

@@ -49,7 +49,7 @@ const BATCH_RESULT_PREVIEW_MAX_CHARS = 160;
 const OLD_VALUE_PATTERN = /old value/;
 const EXTRA_VALUE_PATTERN = /extra value/;
 const CREATED_DIR_PATTERN = /created-dir/;
-const OMITTED_PATTERN = /omitted/;
+const PREVIEW_PATTERN = /preview/;
 const UNSTRUCTURED_LINE_PATTERN = /unstructured line 79/;
 const READING_TWO_LINES_PATTERN = /Reading 2 lines/;
 const THREE_HUNDRED_X_PATTERN = /x{300}/;
@@ -157,11 +157,43 @@ async function testReadFilesSurface() {
   const largeBatchResults = extractBatchResults(largeResult);
 
   assert.equal(largeBatchResults[0].ok, true);
-  assert.match(largeBatchResults[0].result.content[0].text, OMITTED_PATTERN);
+  assert.match(largeBatchResults[0].result.content[0].text, PREVIEW_PATTERN);
   assert.ok(largeBatchResults[0].result.content[0].text.length <= BATCH_RESULT_PREVIEW_MAX_CHARS);
   assert.match(largeBatchResults[0].result.structuredContent.textContent, READING_TWO_LINES_PATTERN);
   assert.match(largeBatchResults[0].result.structuredContent.textContent, THREE_HUNDRED_X_PATTERN);
   assert.match(largeBatchResults[0].result.structuredContent.textContent, THREE_HUNDRED_Y_PATTERN);
+
+  const missingFile = path.join(TEST_DIR, "missing.txt");
+  const defaultMissingResult = await dispatchToolCall("read_files", {
+    paths: [missingFile],
+  });
+  const defaultMissingPayload = parseToolOutput(defaultMissingResult).data.structuredContent;
+  assert.equal(defaultMissingPayload.failedCount, 1);
+
+  const allowedMissingResult = await dispatchToolCall("read_files", {
+    allowMissing: true,
+    paths: [SOURCE_FILE, missingFile],
+  });
+  const allowedMissingPayload = parseToolOutput(allowedMissingResult).data.structuredContent;
+  assert.equal(allowedMissingPayload.failedCount, 0);
+  assert.equal(allowedMissingPayload.results[1].ok, true);
+  assert.equal(allowedMissingPayload.results[1].result.structuredContent.missing, true);
+
+  const missingInfoResult = await dispatchToolCall("get_file_infos", {
+    allowMissing: true,
+    paths: [missingFile],
+  });
+  const missingInfoPayload = parseToolOutput(missingInfoResult).data.structuredContent;
+  assert.equal(missingInfoPayload.failedCount, 0);
+  assert.equal(missingInfoPayload.results[0].result.structuredContent.missing, true);
+
+  const missingDirectoryResult = await dispatchToolCall("list_directories", {
+    allowMissing: true,
+    items: [{ path: path.join(TEST_DIR, "missing-dir") }],
+  });
+  const missingDirectoryPayload = parseToolOutput(missingDirectoryResult).data.structuredContent;
+  assert.equal(missingDirectoryPayload.failedCount, 0);
+  assert.equal(missingDirectoryPayload.results[0].result.structuredContent.missing, true);
 }
 
 // 7. Test large unstructured result preview ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -180,7 +212,7 @@ function testLargeUnstructuredResultPreview() {
   ]);
   const batchResult = result.structuredContent.results[0].result;
 
-  assert.match(batchResult.content[0].text, OMITTED_PATTERN);
+  assert.match(batchResult.content[0].text, PREVIEW_PATTERN);
   assert.ok(batchResult.content[0].text.length <= BATCH_RESULT_PREVIEW_MAX_CHARS);
   assert.match(batchResult.content[0].text, unstructuredLineZeroPattern);
   assert.doesNotMatch(batchResult.content[0].text, UNSTRUCTURED_LINE_PATTERN);
@@ -412,7 +444,7 @@ async function testWriteMoveInfoAndEditSurface() {
   });
   const largeReadBatchResults = extractBatchResults(largeReadResult);
   assert.equal(largeReadBatchResults[0].ok, true);
-  assert.match(largeReadBatchResults[0].result.content[0].text, OMITTED_PATTERN);
+  assert.match(largeReadBatchResults[0].result.content[0].text, PREVIEW_PATTERN);
   assert.ok(largeReadBatchResults[0].result.content[0].text.length <= BATCH_RESULT_PREVIEW_MAX_CHARS);
   assert.ok(largeReadBatchResults[0].result.structuredContent.textContent.includes(TEN_THOUSAND_B));
 

@@ -18,6 +18,7 @@ const FILESYSTEM_TOOL_DEFINITIONS = [
     description: `
       Read files in parallel.
       Use paths for simple reads or items for offset, length, headers, or URL reads.
+      Set allowMissing true to return missing local paths as non-error missing results.
       ${BATCH_GUIDANCE}
       ${PATH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
@@ -66,6 +67,7 @@ const FILESYSTEM_TOOL_DEFINITIONS = [
     description: (`
       List one or many directories in parallel.
       Use items: [{ path, depth?, maxEntries?, excludePatterns?, includeFiles? }].
+      Set allowMissing true to return missing local paths as non-error missing results.
       ${BATCH_GUIDANCE}
       ${PATH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}
@@ -173,6 +175,7 @@ const FILESYSTEM_TOOL_DEFINITIONS = [
     name: "get_file_infos",
     description: (`
       Retrieve metadata for one or many files in parallel.
+      Set allowMissing true to return missing local paths as non-error missing results.
       ${BATCH_GUIDANCE}
       ${PATH_GUIDANCE}
       ${CMD_PREFIX_DESCRIPTION}

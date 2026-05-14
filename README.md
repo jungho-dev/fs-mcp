@@ -112,6 +112,9 @@ repeated same-tool calls. This applies to:
 Large multi-item arguments can be moved into a UTF-8 JSON file and passed with `args_path`, keeping the tool-call
 preview compact while preserving one batch request. Inline overrides are merged on top of the JSON object.
 
+`read_files`, `list_directories`, and `get_file_infos` also accept `allowMissing=true` to return missing local paths
+as non-error missing results during exploratory candidate reads.
+
 ## Context Indexing
 
 Large tool outputs can be indexed into SQLite so clients can search or recall them without repeating the full
@@ -124,6 +127,8 @@ payload in every transcript.
 - There is no public manual context-index tool surface in this version.
 - Output compaction replaces large auto-indexed payloads with context-index references by default through
   `contextIndexReplaceLargeOutputs=true`.
+- `read_files`, `list_directories`, and `get_full_search` keep oversized responses inline as preview payloads instead
+  of exposing context-index reference markers.
 
 ## Client Compatibility
 
@@ -158,7 +163,7 @@ Every dispatched tool result is normalized by `src/cores/responses/responses-too
   `contents`, and `structuredText` labels.
 - `structuredContent` stores the standard machine-readable envelope: original content, combined text, original
   structured payload, status, duration, error details, schema version, tool name, and optional context-index
-  references.
+  references or inline preview payloads.
 - `_meta.fsMcpResult` stores compact metadata for clients that only need status, duration, content types, and
   error text.
 - Already normalized results are not wrapped again; only the visible display text is regenerated.
