@@ -8,8 +8,6 @@
 // 1. Line ending types ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export type LineEndingStyle = "\r\n" | "\n" | "\r";
 
-// 2. Detect the line ending style used in a file - Optimized version ――――――――――――――――――――――――――――――
-// This algorithm uses early termination for maximum performance
 // 1. Detect line ending ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function detectLineEnding(content: string): LineEndingStyle {
   let index = 0;

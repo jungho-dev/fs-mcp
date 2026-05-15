@@ -1,6 +1,6 @@
 /**
  * @file src/features/context/context-output-compactor.ts
- * @description Tool output indexing without data replacement.
+ * @description Tool output indexing with optional data replacement.
  * @author JUNGHO
  * @since 2026-05-07
  */
@@ -19,10 +19,7 @@ interface CompactionState {
 
 const STRUCTURED_CONTEXT_FIELDS = new Set(["diff", "listing", "output", "stderr", "stdout", "textContent"]);
 const STRUCTURED_COLLECTION_FIELDS = new Set(["batchResults", "branches", "commits", "contexts", "documents", "entries", "files", "items", "matches", "processes", "resources", "results", "sessions", "stashes", "tags", "tools"]);
-const INLINE_PREVIEW_TOOL_NAMES = new Set(["get_full_search", "list_directories", "read_files"]);
-const INLINE_PREVIEW_LENGTH = 240;
-const LINE_SPLIT_PATTERN = /\r\n|\r|\n/;
-const WHITESPACE_PATTERN = /\s+/g;
+const COMPACTION_BYPASS_TOOL_NAMES = new Set(["get_full_search", "list_directories", "read_files"]);
 
 // 1. Is record ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -39,38 +36,12 @@ function safeStringify(value: unknown): string | null {
   }
 }
 
-// 3. Count lines ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function countLines(value: string): number {
-  return value.length === 0 ? 0 : value.split(LINE_SPLIT_PATTERN).length;
+// 3. Bypass output compaction check ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function shouldBypassOutputCompaction(toolName: string): boolean {
+  return COMPACTION_BYPASS_TOOL_NAMES.has(toolName) || [...COMPACTION_BYPASS_TOOL_NAMES].some((name) => toolName.endsWith(`__${name}`));
 }
 
-// 4. Create inline preview text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function createInlinePreviewText(value: string): string {
-  const compactedValue = value.replace(WHITESPACE_PATTERN, " ").trim();
-
-  if (compactedValue.length <= INLINE_PREVIEW_LENGTH) {
-    return compactedValue;
-  }
-  return compactedValue.slice(0, INLINE_PREVIEW_LENGTH) + " ... (preview)";
-}
-
-// 5. Create inline preview payload ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function createInlinePreviewPayload(value: string, valueType: string): Record<string, unknown> {
-  return {
-    lineCount: countLines(value),
-    originalLength: value.length,
-    preview: createInlinePreviewText(value),
-    previewOnly: true,
-    valueType,
-  };
-}
-
-// 6. Use inline preview check ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function shouldUseInlinePreview(toolName: string): boolean {
-  return INLINE_PREVIEW_TOOL_NAMES.has(toolName) || [...INLINE_PREVIEW_TOOL_NAMES].some((name) => toolName.endsWith("__" + name));
-}
-
-// 7. Index once ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Index once ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function indexOnce(value: string, source: string, state: CompactionState): ContextIndexReference {
   const cached = state.seen.get(value);
 
@@ -85,7 +56,7 @@ function indexOnce(value: string, source: string, state: CompactionState): Conte
   return reference;
 }
 
-// 8. Create reference payload ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Create reference payload ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createReferencePayload(reference: ContextIndexReference): Record<string, unknown> {
   return {
     contextIndex: reference,
@@ -94,66 +65,12 @@ function createReferencePayload(reference: ContextIndexReference): Record<string
   };
 }
 
-// 9. Create reference text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Create reference text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createReferenceText(reference: ContextIndexReference): string {
   return `[context-index:${reference.indexId}] ${reference.preview}`;
 }
 
-// 10. Preview content item ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function previewContentItem(item: ServerResponseContent): ServerResponseContent {
-  if (item.type !== "text" || typeof item.text !== "string" || !contextIndexService.shouldAutoIndex(item.text)) {
-    return item;
-  }
-  return {...item, text: createInlinePreviewText(item.text)};
-}
-
-// 11. Preview structured value ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function previewStructuredValue(value: unknown, fieldName: string | null, sourcePath: string): unknown {
-  if (typeof value === "string") {
-    if (!contextIndexService.shouldAutoIndex(value)) {
-      return value;
-    }
-    return fieldName === "text" ? createInlinePreviewText(value) : createInlinePreviewPayload(value, "text");
-  }
-  if (Array.isArray(value)) {
-    const nextValue = value.map((item, index) => previewStructuredValue(item, null, sourcePath + "[" + index + "]"));
-    const serialized = safeStringify(nextValue);
-
-    if (fieldName !== null && STRUCTURED_COLLECTION_FIELDS.has(fieldName) && serialized !== null && contextIndexService.shouldAutoIndex(serialized)) {
-      return createInlinePreviewPayload(serialized, "collection");
-    }
-    return nextValue;
-  }
-  if (!isRecord(value)) {
-    return value;
-  }
-  const nextValue = Object.fromEntries(Object.entries(value).map(([key, item]) => [key, previewStructuredValue(item, key, sourcePath.length > 0 ? sourcePath + "." + key : key)]));
-  const serialized = safeStringify(nextValue);
-
-  if (fieldName !== null && STRUCTURED_COLLECTION_FIELDS.has(fieldName) && serialized !== null && contextIndexService.shouldAutoIndex(serialized)) {
-    return createInlinePreviewPayload(serialized, "collection");
-  }
-  return nextValue;
-}
-
-// 12. Compact with inline previews ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function compactWithInlinePreviews(output: StandardToolOutput): StandardToolOutput {
-  const content = output.data.content.map((item) => previewContentItem(item));
-  const structuredContent = previewStructuredValue(output.data.structuredContent, "structuredContent", "structuredContent") as StandardToolOutput["data"]["structuredContent"];
-  const text = content.map((item) => item.text ?? "").join("\n");
-
-  return {
-    ...output,
-    data: {
-      ...output.data,
-      content,
-      structuredContent,
-      text,
-    },
-  };
-}
-
-// 13. Index content item ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Index content item ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function indexContentItem(item: ServerResponseContent, index: number, state: CompactionState): ServerResponseContent {
   if (item.type !== "text" || typeof item.text !== "string" || !contextIndexService.shouldAutoIndex(item.text)) {
     return item;
@@ -163,7 +80,7 @@ function indexContentItem(item: ServerResponseContent, index: number, state: Com
   return state.replaceLargeOutputs ? {...item, text: createReferenceText(reference)} : item;
 }
 
-// 14. Index structured collection ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Index structured collection ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function indexStructuredCollection(value: unknown, fieldName: string | null, sourcePath: string, state: CompactionState): ContextIndexReference | null {
   if (fieldName === null || !STRUCTURED_COLLECTION_FIELDS.has(fieldName) || (!Array.isArray(value) && !isRecord(value))) {
     return null;
@@ -176,7 +93,7 @@ function indexStructuredCollection(value: unknown, fieldName: string | null, sou
   return indexOnce(serialized, `${state.toolName}:${sourcePath}`, state);
 }
 
-// 15. Index structured value ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Index structured value ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function indexStructuredValue(value: unknown, fieldName: string | null, sourcePath: string, state: CompactionState): unknown {
   if (typeof value === "string") {
     if (fieldName !== null && STRUCTURED_CONTEXT_FIELDS.has(fieldName) && contextIndexService.shouldAutoIndex(value)) {
@@ -202,15 +119,15 @@ function indexStructuredValue(value: unknown, fieldName: string | null, sourcePa
   return state.replaceLargeOutputs ? nextValue : value;
 }
 
-// 16. Compact standard output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Compact standard output ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function compactStandardToolOutput(toolName: string, output: StandardToolOutput): StandardToolOutput {
   const config = contextIndexService.getRuntimeConfig();
 
   if (!config.enabled) {
     return output;
   }
-  if (shouldUseInlinePreview(toolName)) {
-    return compactWithInlinePreviews(output);
+  if (shouldBypassOutputCompaction(toolName)) {
+    return output;
   }
   const state: CompactionState = {
     indexedPayloads: 0,

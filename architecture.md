@@ -125,10 +125,10 @@ support.
 - The default database path is `~/.mcp/fs-mcp.sqlite` and `~` is expanded at runtime.
 - Text is chunked into overlapping 80-line chunks with 20-line overlap and searched through SQLite FTS.
 - Content hashes allow equivalent source/tool payloads to reuse an existing context-index reference.
-- `context-output-compactor.ts` indexes large text fields and structured collections and replaces large
-  auto-indexed payloads with context-index references by default.
-- `read_files`, `list_directories`, and `get_full_search` bypass response marker replacement and keep bounded inline
-  preview payloads for oversized results.
+- `context-output-compactor.ts` indexes large text fields and structured collections while preserving original
+  response payloads by default. Reference replacement is opt-in through `contextIndexReplaceLargeOutputs=true`.
+- `read_files`, `list_directories`, and `get_full_search` bypass response marker replacement and keep inline
+  payloads for oversized results.
 - Manual context-index tool surface is not exposed in this version; automatic indexing remains available through
   response normalization.
 

@@ -157,8 +157,9 @@ async function testReadFilesSurface() {
   const largeBatchResults = extractBatchResults(largeResult);
 
   assert.equal(largeBatchResults[0].ok, true);
-  assert.match(largeBatchResults[0].result.content[0].text, PREVIEW_PATTERN);
-  assert.ok(largeBatchResults[0].result.content[0].text.length <= BATCH_RESULT_PREVIEW_MAX_CHARS);
+  assert.doesNotMatch(largeBatchResults[0].result.content[0].text, PREVIEW_PATTERN);
+  assert.match(largeBatchResults[0].result.content[0].text, THREE_HUNDRED_X_PATTERN);
+  assert.match(largeBatchResults[0].result.content[0].text, THREE_HUNDRED_Y_PATTERN);
   assert.match(largeBatchResults[0].result.structuredContent.textContent, READING_TWO_LINES_PATTERN);
   assert.match(largeBatchResults[0].result.structuredContent.textContent, THREE_HUNDRED_X_PATTERN);
   assert.match(largeBatchResults[0].result.structuredContent.textContent, THREE_HUNDRED_Y_PATTERN);
@@ -444,8 +445,8 @@ async function testWriteMoveInfoAndEditSurface() {
   });
   const largeReadBatchResults = extractBatchResults(largeReadResult);
   assert.equal(largeReadBatchResults[0].ok, true);
-  assert.match(largeReadBatchResults[0].result.content[0].text, PREVIEW_PATTERN);
-  assert.ok(largeReadBatchResults[0].result.content[0].text.length <= BATCH_RESULT_PREVIEW_MAX_CHARS);
+  assert.doesNotMatch(largeReadBatchResults[0].result.content[0].text, PREVIEW_PATTERN);
+  assert.ok(largeReadBatchResults[0].result.content[0].text.includes(TEN_THOUSAND_B));
   assert.ok(largeReadBatchResults[0].result.structuredContent.textContent.includes(TEN_THOUSAND_B));
 
   const renameResult = await dispatchToolCall("move_files", {

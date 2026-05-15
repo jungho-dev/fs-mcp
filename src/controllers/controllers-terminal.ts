@@ -34,8 +34,8 @@ export async function handleInteractWithProcess(args: unknown): Promise<ServerRe
 }
 
 // 4. Handle list sessions ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function handleListSessions(): Promise<ServerResult> {
-  return listSessions();
+export async function handleListSessions(args: unknown): Promise<ServerResult> {
+  return listSessions(args);
 }
 
 // 5. Handle start processes ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――

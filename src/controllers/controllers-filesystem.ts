@@ -10,7 +10,7 @@ import type { ReadOptions } from "@assets/readers/readers-base";
 import { resolvePreviewFileType } from "@assets/readers/readers-filetypes";
 import type { DirectoryListingEntryType, ServerResult } from "@assets/type/common";
 import { withTimeout } from "@assets/utils/utils-timeout";
-import { createBatchToolResponse, type BatchToolItemResult, runLimitedParallelBatch, runParallelBatch } from "@controllers/controllers-batch";
+import { type BatchToolItemResult, createBatchToolResponse, runLimitedParallelBatch, runParallelBatch } from "@controllers/controllers-batch";
 import { createErrorResponse } from "@cores/responses/responses-error";
 import { configManager } from "@features/config/config-store";
 import { resolveAbsolutePath } from "@features/filesystem/filesystem-path-resolver";
@@ -30,10 +30,10 @@ import {
   ReadFilesArgsSchema,
   RemoveFilesArgsSchema,
   RemovePathArgsSchema,
-  WriteFileArgsSchema,
   WriteFileArgsFromArgsPathSchema,
-  WriteFilesArgsSchema,
+  WriteFileArgsSchema,
   WriteFilesArgsFromArgsPathSchema,
+  WriteFilesArgsSchema,
 } from "@schemas/schemas-filesystem";
 
 const DIRECTORY_LISTING_ENTRY_PATTERN = /^(?:\[(F|D|W|X)\]|(□|■))\s*(.*)$/;
@@ -541,7 +541,7 @@ export async function handleReadFiles(args: unknown): Promise<ServerResult> {
   const parsed = ReadFilesArgsSchema.parse(args);
   const items = parsed.items ?? parsed.paths?.map((filePath) => ({ isUrl: false, offset: 0, path: filePath })) ?? [];
   const results = await runParallelBatch(items, (item) => handleParsedReadFileWithMissing(item, parsed.allowMissing));
-  const response = createBatchToolResponse("read_files", results);
+  const response = createBatchToolResponse("read_files", results, { resultMode: "full" });
 
   return response;
 }
@@ -647,7 +647,7 @@ export async function handleCreateDirectories(args: unknown): Promise<ServerResu
 export async function handleListDirectories(args: unknown): Promise<ServerResult> {
   const parsed = ListDirectoriesArgsSchema.parse(args);
   const results = await runParallelBatch(parsed.items, (item) => handleParsedListDirectoryWithMissing(item, parsed.allowMissing));
-  const response = createBatchToolResponse("list_directories", results);
+  const response = createBatchToolResponse("list_directories", results, { resultMode: "full" });
 
   return response;
 }

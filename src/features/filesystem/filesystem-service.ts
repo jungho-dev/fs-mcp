@@ -10,15 +10,15 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import type { FileInfo, FileResult, ReadOptions } from "@assets/readers/readers-base";
-import { resolvePreviewFileType } from "@assets/readers/readers-filetypes";
 import { getFileHandler } from "@assets/readers/readers-factory";
+import { resolvePreviewFileType } from "@assets/readers/readers-filetypes";
 import { TextFileHandler } from "@assets/readers/readers-text";
 import { withTimeout } from "@assets/utils/utils-timeout";
 import { configManager } from "@features/config/config-store";
 import { FILE_OPERATION_TIMEOUTS } from "@features/filesystem/filesystem-limits";
 
 const DIRECTORY_WILDCARD_SUFFIX = `${path.sep}*`;
-const GLOB_REGEX_ESCAPE_PATTERN = /[.+^\${}()|[\]\\]/g;
+const GLOB_REGEX_ESCAPE_PATTERN = /[.+^${}()|[\]\\]/g;
 const GLOB_ASTERISK_PATTERN = /\*/g;
 const VALIDATED_PARENT_DIRECTORY_CACHE_MAX_SIZE = 4096;
 const TEXT_FILE_TYPES = new Set(["html", "markdown", "text"]);
@@ -97,13 +97,13 @@ function buildPermissionError(filePath: string, errCode: string | undefined): Er
   ];
 
   if (isMac) {
-    lines.push(`       → Go to System Settings → Privacy & Security → Full Disk Access and enable Claude.`);
+  	lines.push(`       → Go to System Settings → Privacy & Security → Full Disk Access and enable Claude.`);
     lines.push(`       → To open that pane directly, run in terminal:`);
     lines.push(`           open "x-apple.systempreferences:com.apple.preference.security?Privacy_AllFiles"`);
     lines.push(`         Then find "Claude" in the list and enable the toggle next to it.`);
   }
   else {
-    lines.push(`       → Check that the app has permission to access this file location.`);
+  	lines.push(`       → Check that the app has permission to access this file location.`);
   }
   return new Error(lines.join("\n"));
 }
@@ -115,7 +115,7 @@ async function getAllowedDirs(): Promise<string[]> {
   try {
     const config = await configManager.getConfig();
     if (config.allowedDirectories && Array.isArray(config.allowedDirectories)) {
-      return config.allowedDirectories;
+    	return config.allowedDirectories;
     }
   }
   catch (error) {
@@ -135,7 +135,7 @@ function normalizePath(p: string): string {
 // 7. Expand home ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function expandHome(filepath: string): string {
   if (filepath.startsWith("~/") || filepath === "~") {
-    return path.join(os.homedir(), filepath.slice(1));
+  	return path.join(os.homedir(), filepath.slice(1));
   }
   return filepath;
 }
@@ -159,10 +159,10 @@ async function validateParentDirectories(directoryPath: string): Promise<boolean
 
   // Base case: we've reached the root or the same directory (shouldn't happen normally)
   if (parentDir === directoryPath || parentDir === path.dirname(parentDir)) {
-    return false;
+  	return false;
   }
   if (validatedParentDirectoryCache.has(parentDir)) {
-    return true;
+  	return true;
   }
   try {
     // Check if the parent directory exists
@@ -170,7 +170,7 @@ async function validateParentDirectories(directoryPath: string): Promise<boolean
     validatedParentDirectoryCache.add(parentDir);
     validatedParentDirectoryCache.add(realParentDir);
     if (validatedParentDirectoryCache.size > VALIDATED_PARENT_DIRECTORY_CACHE_MAX_SIZE) {
-      validatedParentDirectoryCache.clear();
+    	validatedParentDirectoryCache.clear();
     }
     return true;
   }
@@ -189,35 +189,35 @@ async function isPathAllowed(pathToCheck: string): Promise<boolean> {
   // If root directory is allowed, all paths are allowed
   const allowedDirectories = await getAllowedDirs();
   if (allowedDirectories.includes("/") || allowedDirectories.length === 0) {
-    return true;
+  	return true;
   }
   let normalizedPathToCheck = normalizePath(pathToCheck);
   if (normalizedPathToCheck.slice(-1) === path.sep) {
-    normalizedPathToCheck = normalizedPathToCheck.slice(0, -1);
+  	normalizedPathToCheck = normalizedPathToCheck.slice(0, -1);
   }
   // Check if the path is within any allowed directory
   const isAllowed = allowedDirectories.some((allowedDir) => {
     let normalizedAllowedDir = normalizePath(allowedDir);
     if (normalizedAllowedDir.endsWith(DIRECTORY_WILDCARD_SUFFIX)) {
-      normalizedAllowedDir = normalizedAllowedDir.slice(0, -1);
+    	normalizedAllowedDir = normalizedAllowedDir.slice(0, -1);
     }
     if (normalizedAllowedDir.slice(-1) === path.sep) {
-      normalizedAllowedDir = normalizedAllowedDir.slice(0, -1);
+    	normalizedAllowedDir = normalizedAllowedDir.slice(0, -1);
     }
     // Check if path is exactly the allowed directory
     if (normalizedPathToCheck === normalizedAllowedDir) {
-      return true;
+    	return true;
     }
     // Check if path is a subdirectory of the allowed directory
     // Make sure to add a separator to prevent partial directory name matches
     // e.g. /home/user vs /home/username
     const subdirCheck = normalizedPathToCheck.startsWith(normalizedAllowedDir + path.sep);
     if (subdirCheck) {
-      return true;
+    	return true;
     }
     // If allowed directory is the drive root on Windows, allow access to the entire drive
     if (normalizedAllowedDir === "c:" && process.platform === "win32") {
-      return normalizedPathToCheck.startsWith("c:");
+    	return normalizedPathToCheck.startsWith("c:");
     }
     return false;
   });
@@ -270,14 +270,14 @@ export async function validatePath(requestedPath: string): Promise<string> {
       await fs.stat(absoluteOriginal);
       // If path exists, resolve any symlinks
       if (resolvedRealPath) {
-        return resolvedRealPath;
+      	return resolvedRealPath;
       }
       return absoluteOriginal;
     }
     catch (_error) {
       // Path doesn't exist - validate parent directories
       if (await validateParentDirectories(absoluteOriginal)) {
-        // Return the path if a valid parent exists
+      	// Return the path if a valid parent exists
         // This will be used for folder creation and many other file operations
         return absoluteOriginal;
       }
@@ -312,7 +312,6 @@ async function validateTargetPath(requestedPath: string): Promise<string> {
         throw new Error(`Failed to inspect target path: ${absoluteOriginal}. Error: ${err.message}`);
       }
     }
-
     await assertAllowedPath(absoluteOriginal, requestedPath);
     await validateParentDirectories(absoluteOriginal);
     return absoluteOriginal;
@@ -382,10 +381,7 @@ export async function readFileFromUrl(url: string): Promise<FileResult> {
     clearTimeout(timeoutId);
 
     // Return error information instead of throwing
-    const errorMessage =
-      error instanceof DOMException && error.name === "AbortError"
-        ? `URL fetch timed out after ${FILE_OPERATION_TIMEOUTS.URL_FETCH}ms: ${url}`
-        : `Failed to fetch URL: ${error instanceof Error ? error.message : String(error)}`;
+    const errorMessage = error instanceof DOMException && error.name === "AbortError" ? `URL fetch timed out after ${FILE_OPERATION_TIMEOUTS.URL_FETCH}ms: ${url}` : `Failed to fetch URL: ${error instanceof Error ? error.message : String(error)}`;
 
     throw new Error(errorMessage);
   }
@@ -403,7 +399,7 @@ export async function readFileFromDisk(filePath: string, options?: ReadOptions):
 
   // Add validation for required parameters
   if (!filePath || typeof filePath !== "string") {
-    throw new Error("Invalid file path provided");
+  	throw new Error("Invalid file path provided");
   }
   const validPath = await validatePath(filePath);
 
@@ -432,7 +428,7 @@ export async function readFileFromDisk(filePath: string, options?: ReadOptions):
     // But if this was a directory-listing error, re-throw — don't let it fall into the file-read path.
     const err = error as NodeJS.ErrnoException;
     if (err.message?.includes("Directory listing") || err.message?.includes("list_directory")) {
-      throw error;
+    	throw error;
     }
     // stat() failed (e.g. ENOENT) — fall through to the read path below
   }
@@ -453,14 +449,14 @@ export async function readFileFromDisk(filePath: string, options?: ReadOptions):
     // For text: content may be string or Buffer, convert to UTF-8 string
     let content: string;
     if (typeof result.content === "string") {
-      content = result.content;
+    	content = result.content;
     }
     else if (result.metadata?.isImage) {
-      // Image buffer should be base64 encoded, not UTF-8 converted
+    	// Image buffer should be base64 encoded, not UTF-8 converted
       content = result.content.toString("base64");
     }
     else {
-      content = result.content.toString("utf8");
+    	content = result.content.toString("utf8");
     }
     return {
       content,
@@ -480,12 +476,12 @@ export async function readFileFromDisk(filePath: string, options?: ReadOptions):
     // when defaultValue is null — it has no .code property, so check for that too.
     const isWithTimeoutString = typeof error === "string" && (error as string).startsWith("__ERROR__:");
     if (isWithTimeoutString || err.code === "EPERM" || err.code === "EACCES" || err.code === "ETIMEDOUT") {
-      throw buildPermissionError(filePath, isWithTimeoutString ? "ETIMEDOUT" : err.code);
+    	throw buildPermissionError(filePath, isWithTimeoutString ? "ETIMEDOUT" : err.code);
     }
     throw error;
   }
   if (result == null) {
-    // Handles the impossible case where withTimeout resolves to null instead of throwing
+  	// Handles the impossible case where withTimeout resolves to null instead of throwing
     throw new Error("Failed to read the file");
   }
   return result;
@@ -511,14 +507,14 @@ export async function readFile(filePath: string, options?: ReadOptions): Promise
 // @returns File content without status headers, with preserved line endings
 
 // 14. Read file internal ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function readFileInternal(filePath: string, offset: number = 0, length?: number): Promise<string> {
+export async function readFileInternal(filePath: string, offset: number=0, length?: number): Promise<string> {
   const validPath = await validatePath(filePath);
 
   // Get MIME type
   const { isImage } = await getMimeTypeInfo(validPath);
 
   if (isImage) {
-    throw new Error("Cannot read image files as text for internal operations");
+  	throw new Error("Cannot read image files as text for internal operations");
   }
   // IMPORTANT: For internal operations (especially edit operations), we must
   // preserve exact file content including original line endings.
@@ -529,7 +525,7 @@ export async function readFileInternal(filePath: string, offset: number = 0, len
 
   // If we need to apply offset/length, do it while preserving line endings
   if (offset === 0 && (length === undefined || length >= Number.MAX_SAFE_INTEGER)) {
-    // Most common case for edit operations: read entire file
+  	// Most common case for edit operations: read entire file
     return content;
   }
   // Handle offset/length by splitting on line boundaries while preserving line endings
@@ -543,23 +539,23 @@ export async function readFileInternal(filePath: string, offset: number = 0, len
 }
 
 // 15. Read text slice internal ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function readTextSliceInternal(filePath: string, offset: number = 0, length?: number): Promise<string> {
+export async function readTextSliceInternal(filePath: string, offset: number=0, length?: number): Promise<string> {
   if (!Number.isInteger(offset) || offset < 0) {
-    throw new Error("Text slice offset must be a non-negative integer");
+  	throw new Error("Text slice offset must be a non-negative integer");
   }
   if (length !== undefined && (!Number.isInteger(length) || length < 0)) {
-    throw new Error("Text slice length must be a non-negative integer");
+  	throw new Error("Text slice length must be a non-negative integer");
   }
   const validPath = await validatePath(filePath);
 
   const { isImage } = await getMimeTypeInfo(validPath);
 
   if (isImage) {
-    throw new Error("Cannot read image files as text for internal operations");
+  	throw new Error("Cannot read image files as text for internal operations");
   }
   const content = await fs.readFile(validPath, "utf8");
   if (length === undefined) {
-    return content.slice(offset);
+  	return content.slice(offset);
   }
   return content.slice(offset, offset + length);
 }
@@ -574,10 +570,9 @@ export async function writeFile(filePath: string, content: string, mode: "rewrit
   const validPath = await validateTargetPath(filePath);
 
   if (shouldUseTextFileFastPath(validPath)) {
-    await TEXT_FILE_HANDLER.write(validPath, content, mode);
+  	await TEXT_FILE_HANDLER.write(validPath, content, mode);
     return;
   }
-
   // Get appropriate handler for binary and format-specific writes.
   const handler = await getFileHandler(validPath);
 
@@ -591,7 +586,7 @@ export async function createDirectory(dirPath: string): Promise<void> {
 }
 
 // 18. List directory ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function listDirectory(dirPath: string, depth: number = 2, options: ListDirectoryOptions = {}): Promise<string[]> {
+export async function listDirectory(dirPath: string, depth: number=2, options: ListDirectoryOptions={}): Promise<string[]> {
   const validPath = await validatePath(dirPath);
   const results: string[] = [];
 
@@ -603,15 +598,14 @@ export async function listDirectory(dirPath: string, depth: number = 2, options:
   // 19. Should skip directory entry ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   function shouldSkipEntry(entry: Dirent, displayPath: string): boolean {
     if (!includeFiles && !entry.isDirectory()) {
-      return true;
+    	return true;
     }
     return excludePatterns.some((pattern) => pattern.test(entry.name) || pattern.test(displayPath));
   }
-
   // 19. List recursive ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  async function listRecursive(currentPath: string, currentDepth: number, relativePath: string = "", isTopLevel: boolean = true): Promise<void> {
+  async function listRecursive(currentPath: string, currentDepth: number, relativePath: string="", isTopLevel: boolean=true): Promise<void> {
     if (currentDepth <= 0) {
-      return;
+    	return;
     }
     let entries: Dirent[];
     try {
@@ -638,10 +632,10 @@ export async function listDirectory(dirPath: string, depth: number = 2, options:
     });
     let entriesToShow = visibleEntries;
     let filteredCount = 0;
-    const itemLimit = isTopLevel ? maxEntries : maxEntries ?? MAX_NESTED_ITEMS;
+    const itemLimit = isTopLevel ? maxEntries : (maxEntries ?? MAX_NESTED_ITEMS);
 
     if (itemLimit !== undefined && visibleEntries.length > itemLimit) {
-      entriesToShow = visibleEntries.slice(0, itemLimit);
+    	entriesToShow = visibleEntries.slice(0, itemLimit);
       filteredCount = visibleEntries.length - itemLimit;
     }
     for (const entry of entriesToShow) {
@@ -675,7 +669,7 @@ export async function listDirectory(dirPath: string, depth: number = 2, options:
 }
 
 // 20. Copy file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function copyFile(sourcePath: string, destinationPath: string, recursive: boolean = false, force: boolean = false): Promise<void> {
+export async function copyFile(sourcePath: string, destinationPath: string, recursive: boolean=false, force: boolean=false): Promise<void> {
   const validSourcePath = await validatePath(sourcePath);
   const validDestPath = await validateTargetPath(destinationPath);
   await fs.cp(validSourcePath, validDestPath, {
@@ -693,7 +687,7 @@ export async function moveFile(sourcePath: string, destinationPath: string): Pro
 }
 
 // 22. Remove path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function removePath(filePath: string, recursive: boolean = false, force: boolean = false): Promise<void> {
+export async function removePath(filePath: string, recursive: boolean=false, force: boolean=false): Promise<void> {
   const validPath = await validatePath(filePath);
   let stats: Stats;
 
@@ -711,7 +705,7 @@ export async function removePath(filePath: string, recursive: boolean = false, f
   const isDirectory = stats.isDirectory();
 
   if (isDirectory && !recursive) {
-    await fs.rmdir(validPath);
+  	await fs.rmdir(validPath);
     return;
   }
   await fs.rm(validPath, { force, recursive });
@@ -760,17 +754,17 @@ export async function getFileInfo(filePath: string): Promise<LegacyFileInfo> {
   if (fileInfo.metadata) {
     // For text files
     if (fileInfo.metadata.lineCount !== undefined) {
-      info.lineCount = fileInfo.metadata.lineCount;
+    	info.lineCount = fileInfo.metadata.lineCount;
       info.lastLine = fileInfo.metadata.lineCount - 1;
       info.appendPosition = fileInfo.metadata.lineCount;
     }
     // For images
     if (fileInfo.metadata.isImage) {
-      info.isImage = true;
+    	info.isImage = true;
     }
     // For binary files
     if (fileInfo.metadata.isBinary) {
-      info.isBinary = true;
+    	info.isBinary = true;
     }
   }
   return info;

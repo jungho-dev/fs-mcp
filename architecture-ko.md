@@ -123,10 +123,10 @@ Tool catalog module은 runtime domain별로 나뉩니다. 현재 catalog는 25�
 - 기본 DB 경로는 `~/.mcp/fs-mcp.sqlite`이고 런타임에서 `~`가 home directory로 확장됩니다.
 - Text는 80줄 chunk와 20줄 overlap으로 나뉘며 SQLite FTS로 검색됩니다.
 - Content hash는 같은 source/tool payload가 기존 context-index reference를 재사용하게 합니다.
-- `context-output-compactor.ts`는 큰 text field와 structured collection을 index하고, 큰 auto-indexed
-  payload를 기본적으로 context-index reference로 대체합니다.
+- `context-output-compactor.ts`는 큰 text field와 structured collection을 index하되, 기본적으로 원본 response
+  payload를 유지합니다. Reference replacement는 `contextIndexReplaceLargeOutputs=true`로 명시할 때만 동작합니다.
 - `read_files`, `list_directories`, `get_full_search`는 response marker replacement를 우회하고 oversized result를
-  bounded inline preview payload로 유지합니다.
+  inline payload로 유지합니다.
 - 이번 버전에는 수동 context-index tool surface를 노출하지 않습니다. 자동 indexing은 response normalization
   경로에서 계속 동작합니다.
 

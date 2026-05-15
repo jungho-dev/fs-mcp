@@ -95,7 +95,7 @@ Current measured tool-definition payload improvements:
 Runtime defaults also reduce large-output pressure:
 
 - Tool catalogs are built once and schema conversion is lazy-cached.
-- Large auto-indexed outputs are replaced with context-index references by default.
+- Large outputs are indexed by default, while response payloads keep original data unless replacement is explicitly enabled.
 - Search sessions default to `maxResults=5000` and return preview-only start responses.
 - Process sessions keep bounded output windows: active output `4000` lines and completed session budget `25`.
 
@@ -125,10 +125,10 @@ payload in every transcript.
 - The default database path is `~/.mcp/fs-mcp.sqlite`.
 - Text is chunked into 80-line chunks with 20-line overlap and searched through SQLite FTS.
 - There is no public manual context-index tool surface in this version.
-- Output compaction replaces large auto-indexed payloads with context-index references by default through
-  `contextIndexReplaceLargeOutputs=true`.
-- `read_files`, `list_directories`, and `get_full_search` keep oversized responses inline as preview payloads instead
-  of exposing context-index reference markers.
+- Output compaction does not replace large auto-indexed payloads by default. Set
+  `contextIndexReplaceLargeOutputs=true` only when the client can tolerate context-index reference markers.
+- `read_files`, `list_directories`, and `get_full_search` keep oversized responses inline instead of exposing
+  context-index reference markers.
 
 ## Client Compatibility
 

@@ -587,16 +587,13 @@ export async function forceTerminate(args: unknown): Promise<ServerResult> {
 }
 
 // 8. List sessions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function listSessions(): Promise<ServerResult> {
+export async function listSessions(_args: unknown): Promise<ServerResult> {
   const sessions = terminalManager.listActiveSessions();
 
   // Include virtual Node.js sessions
   const virtualSessions = listVirtualNodeSessions();
-
   const realSessionsText = sessions.map((s) => `PID: ${s.pid}, Blocked: ${s.isBlocked}, Runtime: ${Math.round(s.runtime / 1000)}s`);
-
   const virtualSessionsText = virtualSessions.map((s) => `PID: ${s.pid} (node:local), Timeout: ${s.timeout_ms}ms`);
-
   const allSessions = [...realSessionsText, ...virtualSessionsText];
 
   return {

@@ -2,6 +2,9 @@
 
 ## [Unreleased]
 
+* keep large MCP response payloads inline by default while preserving optional context indexing metadata
+* document that context-index replacement is opt-in because no manual context-index retrieval tool is exposed
+
 ## [1.4.2] - 2026-05-12
 
 * publish the npm README under the conventional `README.md` filename
@@ -255,3 +258,7 @@
 ## \[ 1.5.3 \]
 
 - 2026-05-15 (12:53:21)
+
+## \[ 1.5.4 \]
+
+- 2026-05-15 (18:17:39)

@@ -60,7 +60,7 @@ export const CONFIG_FIELD_DEFINITIONS = {
     valueType: "number",
   },
   contextIndexReplaceLargeOutputs: {
-    description: "When enabled, large auto-indexed tool output is replaced in responses with context index references. Enabled by default to reduce payload size.",
+    description: "When explicitly enabled, large auto-indexed tool output is replaced in responses with context index references. Disabled by default so responses keep original data.",
     label: "Context Index Replace Large Outputs",
     valueType: "boolean",
   },

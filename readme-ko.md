@@ -93,7 +93,7 @@ stdio를 사용하며 network listener를 열지 않습니다.
 Runtime default도 large-output 부담을 줄입니다.
 
 - Tool catalog는 한 번만 구성하고 schema conversion은 lazy cache합니다.
-- 큰 auto-indexed output은 기본적으로 context-index reference로 대체합니다.
+- 큰 output은 기본적으로 index하지만, response payload는 replacement를 명시적으로 켠 경우가 아니면 원본 data를 유지합니다.
 - Search session은 기본 `maxResults=5000`이며 start response는 preview만 반환합니다.
 - Process session은 active output `4000`줄, completed session `25개` budget을 적용합니다.
 
@@ -123,10 +123,10 @@ local path를 실패가 아닌 missing 결과로 반환할 수 있습니다.
 - 기본 DB 경로는 `~/.mcp/fs-mcp.sqlite`입니다.
 - Text는 80줄 chunk와 20줄 overlap으로 나뉘며 SQLite FTS로 검색합니다.
 - 이번 버전에는 수동 context-index tool surface가 없습니다.
-- Output compaction은 기본값 `contextIndexReplaceLargeOutputs=true`를 통해 큰 auto-indexed payload를
-  context-index reference로 대체합니다.
+- Output compaction은 기본적으로 큰 auto-indexed payload를 대체하지 않습니다.
+  `contextIndexReplaceLargeOutputs=true`는 client가 context-index reference marker를 처리할 수 있을 때만 사용합니다.
 - `read_files`, `list_directories`, `get_full_search`는 oversized response에 context-index reference marker를
-  노출하지 않고 inline preview payload를 유지합니다.
+  노출하지 않고 inline payload를 유지합니다.
 
 ## Client 호환성
 

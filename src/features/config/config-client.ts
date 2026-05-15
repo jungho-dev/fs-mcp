@@ -16,7 +16,6 @@ export type ClientInfoUpdate = {
 };
 
 const DEFAULT_CLIENT: CurrentClient = {name: "uninitialized", version: "uninitialized"};
-
 export let currentClient: CurrentClient = {...DEFAULT_CLIENT};
 
 // 1. Get current client snapshot ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――

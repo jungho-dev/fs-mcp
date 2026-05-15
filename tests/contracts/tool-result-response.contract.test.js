@@ -186,6 +186,23 @@ function testExistingSummaryPreserved() {
   assert.equal(output.data.text, batchText);
 }
 
+// 10-1. Default context index keeps original output ―――――――――――――――――――――――――――――――――――――――――――――――
+function testDefaultContextIndexKeepsOriginalOutput() {
+  const fullText = Array.from({ length: 180 }, (_value, index) => `line${index + 1} ${"x".repeat(640)}`).join("\n");
+  const normalized = normalizeToolResult("default_compaction_tool", createToolTextResponse(fullText, {
+    structuredContent: { textContent: fullText },
+  }), 9);
+  const output = parseStandardOutput(normalized);
+  const serializedData = JSON.stringify(output.data);
+
+  assert.equal(output.data.text, fullText);
+  assert.equal(output.data.content[0].text, fullText);
+  assert.equal(output.data.structuredContent.textContent, fullText);
+  assert.equal(Array.isArray(output.contextIndexes), true);
+  assert.equal(serializedData.includes("[context-index:"), false);
+  assert.equal(serializedData.includes("\"omitted\":"), false);
+}
+
 // 11. Display keeps original output when context index is enabled ――――――――――――――――――――――――――――――――――
 function testDisplayKeepsOriginalOutput() {
   const fullText = Array.from({ length: 180 }, (_value, index) => `line${index + 1} ${"x".repeat(640)}`).join("\n");
@@ -216,9 +233,9 @@ function testDisplayReplacesLargeOutputWhenEnabled() {
   assert.equal(output.contextIndexes.length > 0, true);
 }
 
-// 12-1. Tracked tools use inline preview without context index markers ―――――――――――――――――――――――――――――
-function testTrackedToolUsesInlinePreview() {
-  const fullText = Array.from({ length: 180 }, (_value, index) => "line" + (index + 1) + " " + "x".repeat(640)).join("\n");
+// 12-1. Tracked tools bypass output compaction ―――――――――――――――――――――――――――――――――――――――――――――――――――
+function testTrackedToolBypassesOutputCompaction() {
+  const fullText = Array.from({ length: 180 }, (_value, index) => `line${index + 1} ${"x".repeat(640)}`).join("\n");
   const trackedTools = ["read_files", "list_directories", "get_full_search"];
 
   for (const toolName of trackedTools) {
@@ -229,19 +246,22 @@ function testTrackedToolUsesInlinePreview() {
     const serializedOutput = JSON.stringify(output);
 
     assert.equal(output.contextIndexes, undefined);
-    assert.equal(output.data.text.includes("[context-index:"), false);
-    assert.equal(output.data.text.includes("(preview)"), true);
-    assert.equal(output.data.structuredContent.textContent.previewOnly, true);
+    assert.equal(output.data.text, fullText);
+    assert.equal(output.data.content[0].text, fullText);
+    assert.equal(output.data.structuredContent.textContent, fullText);
     assert.equal(serializedOutput.includes("contextIndex"), false);
     assert.equal(serializedOutput.includes("omitted"), false);
+    assert.equal(serializedOutput.includes("previewOnly"), false);
+    assert.equal(serializedOutput.includes("(preview)"), false);
   }
 }
 
 // 13. Clear display compaction contexts ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function clearDisplayCompactionContexts() {
+  const toolNames = new Set(["default_compaction_tool", "display_compaction_tool"]);
   const indexIds = contextIndexService
     .listDocuments()
-    .filter((document) => document.toolName === "display_compaction_tool")
+    .filter((document) => typeof document.toolName === "string" && toolNames.has(document.toolName))
     .map((document) => document.indexId);
 
   if (indexIds.length > 0) {
@@ -270,6 +290,10 @@ async function main() {
     testLongTextStructuredDataPreserved();
     testExistingSummaryPreserved();
 
+    await configManager.resetConfig();
+    clearDisplayCompactionContexts();
+    testDefaultContextIndexKeepsOriginalOutput();
+
     await configManager.updateConfig({
       ...originalConfig,
       contextIndexEnabled: true,
@@ -285,7 +309,7 @@ async function main() {
     });
     clearDisplayCompactionContexts();
     testDisplayReplacesLargeOutputWhenEnabled();
-    testTrackedToolUsesInlinePreview();
+    testTrackedToolBypassesOutputCompaction();
   }
   finally {
     clearDisplayCompactionContexts();

@@ -39,8 +39,8 @@ function normalizeArrayConfigValue(key: string, value: unknown): unknown {
 
 // 2. Normalize context index config value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function normalizeContextIndexConfigValue(key: string, value: unknown): unknown {
-  if (key === "contextIndexEnabled" && typeof value !== "boolean") {
-    throw new Error("contextIndexEnabled must be a boolean");
+  if ((key === "contextIndexEnabled" || key === "contextIndexReplaceLargeOutputs") && typeof value !== "boolean") {
+    throw new Error(`${key} must be a boolean`);
   }
   if (key === "contextIndexDbPath" && (typeof value !== "string" || value.trim().length === 0)) {
     throw new Error("contextIndexDbPath must be a non-empty string");
