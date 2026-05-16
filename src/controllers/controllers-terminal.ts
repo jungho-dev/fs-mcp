@@ -6,31 +6,31 @@
  */
 
 import type { ServerResult } from "@assets/type/common";
-import { createBatchToolResponse, runParallelBatch } from "@controllers/controllers-batch";
-import { interactWithProcess, listSessions, readProcessOutput, startProcess } from "@features/process/process-runner";
+import { createBatchToolResponse as crtBtchTlRes, runParallelBatch as rnPrllBtch } from "@controllers/controllers-batch";
+import { interactWithProcess as intrWthProc, listSessions, readProcessOutput as rdProcOtpt, startProcess } from "@features/process/process-runner";
 import {
-  InteractWithProcessesArgsSchema,
-  ReadProcessOutputArgsSchema,
-  ReadProcessOutputsArgsSchema,
-  StartProcessArgsSchema,
-  StartProcessesArgsSchema,
+  IntWtPrArSc,
+  RdPrOtArSc,
+  RdPrOtArSc2,
+  StrPrArSc,
+  StrPrArSc2,
 } from "@schemas/schemas-process";
 
 // 1. Handle start process ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStartProcess(args: unknown): Promise<ServerResult> {
-  const parsed = StartProcessArgsSchema.parse(args);
+  const parsed = StrPrArSc.parse(args);
   return startProcess(parsed);
 }
 
 // 2. Handle read process output ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleReadProcessOutput(args: unknown): Promise<ServerResult> {
-  const parsed = ReadProcessOutputArgsSchema.parse(args);
-  return readProcessOutput(parsed);
+  const parsed = RdPrOtArSc.parse(args);
+  return rdProcOtpt(parsed);
 }
 
 // 3. Handle interact with process ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleInteractWithProcess(args: unknown): Promise<ServerResult> {
-  return interactWithProcess(args);
+  return intrWthProc(args);
 }
 
 // 4. Handle list sessions ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -40,27 +40,27 @@ export async function handleListSessions(args: unknown): Promise<ServerResult> {
 
 // 5. Handle start processes ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStartProcesses(args: unknown): Promise<ServerResult> {
-  const parsed = StartProcessesArgsSchema.parse(args);
-  const results = await runParallelBatch(parsed.items, (item) => handleStartProcess(item));
-  const response = createBatchToolResponse("start_processes", results);
+  const parsed = StrPrArSc2.parse(args);
+  const results = await rnPrllBtch(parsed.items, (item) => handleStartProcess(item));
+  const response = crtBtchTlRes("start_processes", results);
 
   return response;
 }
 
 // 6. Handle read process outputs ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleReadProcessOutputs(args: unknown): Promise<ServerResult> {
-  const parsed = ReadProcessOutputsArgsSchema.parse(args);
-  const results = await runParallelBatch(parsed.items, (item) => handleReadProcessOutput(item));
-  const response = createBatchToolResponse("read_process_outputs", results);
+  const parsed = RdPrOtArSc2.parse(args);
+  const results = await rnPrllBtch(parsed.items, (item) => handleReadProcessOutput(item));
+  const response = crtBtchTlRes("read_process_outputs", results);
 
   return response;
 }
 
 // 7. Handle interact with processes ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleInteractWithProcesses(args: unknown): Promise<ServerResult> {
-  const parsed = InteractWithProcessesArgsSchema.parse(args);
-  const results = await runParallelBatch(parsed.items, (item) => handleInteractWithProcess(item));
-  const response = createBatchToolResponse("interact_with_processes", results);
+  const parsed = IntWtPrArSc.parse(args);
+  const results = await rnPrllBtch(parsed.items, (item) => handleInteractWithProcess(item));
+  const response = crtBtchTlRes("interact_with_processes", results);
 
   return response;
 }

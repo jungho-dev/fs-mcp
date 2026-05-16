@@ -5,19 +5,19 @@
  * @since 2026-05-02
  */
 
-import { createBatchToolResponse, runParallelBatch } from "@controllers/controllers-batch";
-import { handleEditBlock } from "@features/edit/edit-service";
-import { EditBlocksArgsSchema } from "@schemas/schemas-edit";
+import { createBatchToolResponse as crtBtchTlRes, runParallelBatch as rnPrllBtch } from "@controllers/controllers-batch";
+import { handleEditBlock as hndlEdtBlck } from "@features/edit/edit-service";
+import { EdtBlArSc } from "@schemas/schemas-edit";
 
 // Handle edit_block command
 // Uses the enhanced implementation with multiple occurrence support and fuzzy matching
-export { handleEditBlock };
+export { hndlEdtBlck as handleEditBlock };
 
 // 1. Handle edit blocks ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleEditBlocks(args: unknown) {
-  const parsed = EditBlocksArgsSchema.parse(args);
-  const results = await runParallelBatch(parsed.items, (item) => handleEditBlock(item));
-  const response = createBatchToolResponse("edit_blocks", results);
+  const parsed = EdtBlArSc.parse(args);
+  const results = await rnPrllBtch(parsed.items, (item) => hndlEdtBlck(item));
+  const response = crtBtchTlRes("edit_blocks", results);
 
   return response;
 }

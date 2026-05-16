@@ -5,9 +5,9 @@
  * @since 2026-05-02
  */
 
-import type { ServerResponseContent, ServerResult } from "@assets/type/common";
-import {createToolDisplayText} from "@cores/responses/responses-tool-display";
-import {compactStandardToolOutput} from "@features/context/context-output-compactor";
+import type { ServerResponseContent as SrvrResCont, ServerResult } from "@assets/type/common";
+import {createToolDisplayText as crtTlDsplTxt} from "@cores/responses/responses-tool-display";
+import {compactStandardToolOutput as cmpStTlOt} from "@features/context/context-output-compactor";
 
 export type ToolResultStatus = "success" | "error";
 
@@ -27,7 +27,7 @@ export interface StandardToolOutput {
   contextIndexError?: string;
   contextIndexes?: unknown[];
   data: {
-    content: ServerResponseContent[];
+    content: SrvrResCont[];
     structuredContent: ServerResult["structuredContent"] | null;
     text: string;
   };
@@ -42,38 +42,41 @@ export interface ToolResponseOptions {
   meta?: Record<string, unknown>;
   structuredContent?: ServerResult["structuredContent"];
 }
+const DTCML = 512;
+const DTCPL = 160;
+const DTCS = "\n... (preview; full text in data.text)";
 
 // 1. Normalize content item ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function normalizeContentItem(item: ServerResponseContent): ServerResponseContent {
+function normalizeContentItem(item: SrvrResCont): SrvrResCont {
   const itemType = typeof item.type === "string" && item.type.length > 0 ? item.type : "text";
-  const normalizedItem: ServerResponseContent = {
+  const normItm: SrvrResCont = {
     ...item,
     type: itemType,
   };
 
-  if (itemType === "text" && typeof normalizedItem.text !== "string") {
-    normalizedItem.text = "";
+  if (itemType === "text" && typeof normItm.text !== "string") {
+    normItm.text = "";
   }
-  return normalizedItem;
+  return normItm;
 }
 
 // 2. Normalize content ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function normalizeContent(content: ServerResponseContent[]): ServerResponseContent[] {
-  let normalizedContent = content.map((item) => normalizeContentItem(item));
+function normalizeContent(content: SrvrResCont[]): SrvrResCont[] {
+  let normCont2 = content.map((item) => normalizeContentItem(item));
 
-  if (normalizedContent.length === 0) {
-    normalizedContent = [{ text: "", type: "text" }];
+  if (normCont2.length === 0) {
+    normCont2 = [{ text: "", type: "text" }];
   }
-  return normalizedContent;
+  return normCont2;
 }
 
 // 3. Create combined text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function createCombinedText(content: ServerResponseContent[]): string {
+function createCombinedText(content: SrvrResCont[]): string {
   return content.map((item) => item.text ?? "").join("\n");
 }
 
 // 4. Create error details ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function createErrorDetails(status: ToolResultStatus, content: ServerResponseContent[]): ToolResultError | null {
+function createErrorDetails(status: ToolResultStatus, content: SrvrResCont[]): ToolResultError | null {
   if (status !== "error") {
     return null;
   }
@@ -83,10 +86,10 @@ function createErrorDetails(status: ToolResultStatus, content: ServerResponseCon
 }
 
 // 5. Create result metadata ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function createResultMetadata(toolName: string, result: ServerResult, content: ServerResponseContent[], durationMs?: number): ToolResultMetadata {
+function createResultMetadata(toolName: string, result: ServerResult, content: SrvrResCont[], durationMs?: number): ToolResultMetadata {
   const status: ToolResultStatus = result.isError === true ? "error" : "success";
   const errorDetails = createErrorDetails(status, content);
-  const resultMetadata: ToolResultMetadata = {
+  const resMeta: ToolResultMetadata = {
     contentTypes: content.map((item) => item.type),
     durationMs: durationMs ?? null,
     errorMessage: errorDetails?.message ?? null,
@@ -96,18 +99,18 @@ function createResultMetadata(toolName: string, result: ServerResult, content: S
     toolName,
   };
 
-  return resultMetadata;
+  return resMeta;
 }
 
 // 6. Create standard output ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function createStandardOutput(toolName: string, result: ServerResult, content: ServerResponseContent[], durationMs?: number): StandardToolOutput {
+function createStandardOutput(toolName: string, result: ServerResult, content: SrvrResCont[], durationMs?: number): StandardToolOutput {
   const status: ToolResultStatus = result.isError === true ? "error" : "success";
-  const structuredContent = result.structuredContent ?? null;
+  const strcCont = result.structuredContent ?? null;
   const text = createCombinedText(content);
-  const standardOutput: StandardToolOutput = {
+  const stndOtpt: StandardToolOutput = {
     data: {
       content,
-      structuredContent,
+      structuredContent: strcCont,
       text,
     },
     durationMs: durationMs ?? null,
@@ -117,7 +120,49 @@ function createStandardOutput(toolName: string, result: ServerResult, content: S
     toolName,
   };
 
-  return standardOutput;
+  return stndOtpt;
+}
+
+// 6-1. Create duplicate text content preview ――――――――――――――――――――――――――――――――――――――――――――――――
+function createDuplicateTextContentPreview(value: string): string {
+  const preview = value.slice(0, DTCPL);
+
+  return `${preview}${DTCS}`;
+}
+
+// 6-2. Compact duplicate text content ―――――――――――――――――――――――――――――――――――――――――――――――――――――
+function compactDuplicateTextContent(output: StandardToolOutput): StandardToolOutput {
+  const dataText = output.data.text;
+
+  if (dataText.length <= DTCML) {
+    return output;
+  }
+  let compacted = false;
+  const content = output.data.content.map((item) => {
+    if (item.type !== "text" || typeof item.text !== "string") {
+      return item;
+    }
+    if (item.text.length <= DTCML || !dataText.includes(item.text)) {
+      return item;
+    }
+    compacted = true;
+
+    return {
+      ...item,
+      text: createDuplicateTextContentPreview(item.text),
+    };
+  });
+
+  if (!compacted) {
+    return output;
+  }
+  return {
+    ...output,
+    data: {
+      ...output.data,
+      content,
+    },
+  };
 }
 
 // 7. Is standard tool output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -173,31 +218,32 @@ export function createToolErrorResponse(message: string, options: ToolResponseOp
 // 11. Normalize tool result ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function normalizeToolResult(toolName: string, result: ServerResult, durationMs?: number): ServerResult {
   if (isNormalizedToolResult(result)) {
-    const output = result.structuredContent as StandardToolOutput;
+    const output = compactDuplicateTextContent(result.structuredContent as StandardToolOutput);
 
     return {
       ...result,
-      content: [{ text: createToolDisplayText(output), type: "text" }],
+      content: [{ text: crtTlDsplTxt(output), type: "text" }],
+      structuredContent: output,
     };
   }
-  const originalContent = normalizeContent(result.content);
-  const fsMcpResult = createResultMetadata(toolName, result, originalContent, durationMs);
-  const originalOutput = createStandardOutput(toolName, result, originalContent, durationMs);
-  const standardOutput = compactStandardToolOutput(toolName, originalOutput);
-  const normalizedResult: ServerResult = {
+  const origCont = normalizeContent(result.content);
+  const fsMcpResult = createResultMetadata(toolName, result, origCont, durationMs);
+  const origOtpt = createStandardOutput(toolName, result, origCont, durationMs);
+  const stndOtpt = compactDuplicateTextContent(cmpStTlOt(toolName, origOtpt));
+  const normRes: ServerResult = {
     _meta: {
       ...result._meta,
       fsMcpResult,
     },
     content: [
       {
-        text: createToolDisplayText(standardOutput),
+        text: crtTlDsplTxt(stndOtpt),
         type: "text",
       },
     ],
     isError: result.isError === true,
-    structuredContent: standardOutput,
+    structuredContent: stndOtpt,
   };
 
-  return normalizedResult;
+  return normRes;
 }

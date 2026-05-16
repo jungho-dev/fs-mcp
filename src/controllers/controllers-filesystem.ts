@@ -7,39 +7,39 @@
 
 import path from "node:path";
 import type { ReadOptions } from "@assets/readers/readers-base";
-import { resolvePreviewFileType } from "@assets/readers/readers-filetypes";
-import type { DirectoryListingEntryType, ServerResult } from "@assets/type/common";
+import { resolvePreviewFileType as rslPrFlTy } from "@assets/readers/readers-filetypes";
+import type { DirectoryListingEntryType as DirLsEnTy, ServerResult } from "@assets/type/common";
 import { withTimeout } from "@assets/utils/utils-timeout";
-import { type BatchToolItemResult, createBatchToolResponse, runLimitedParallelBatch, runParallelBatch } from "@controllers/controllers-batch";
-import { createErrorResponse } from "@cores/responses/responses-error";
-import { configManager } from "@features/config/config-store";
-import { resolveAbsolutePath } from "@features/filesystem/filesystem-path-resolver";
-import { copyFile, createDirectory, getFileInfo, listDirectory, moveFile, readFile, readTextSliceInternal, removePath, writeFile } from "@features/filesystem/filesystem-service";
+import { type BatchToolItemResult as BtchTlItmRes, createBatchToolResponse as crtBtchTlRes, runLimitedParallelBatch as rnLmPrBt, runParallelBatch as rnPrllBtch } from "@controllers/controllers-batch";
+import { createErrorResponse as crtErrRes } from "@cores/responses/responses-error";
+import { cfgMgr } from "@features/config/config-store";
+import { resolveAbsolutePath as rslvAbslPth } from "@features/filesystem/filesystem-path-resolver";
+import { copyFile, createDirectory as crtDir, getFileInfo, listDirectory as lstDir, moveFile, readFile, readTextSliceInternal as rdTxtSlcInt, removePath, writeFile } from "@features/filesystem/filesystem-service";
 import {
-  CopyFileArgsSchema,
-  CopyFilesArgsSchema,
-  CreateDirectoriesArgsSchema,
-  CreateDirectoryArgsSchema,
-  GetFileInfoArgsSchema,
-  GetFileInfosArgsSchema,
-  ListDirectoriesArgsSchema,
-  ListDirectoryArgsSchema,
-  MoveFileArgsSchema,
-  MoveFilesArgsSchema,
-  ReadFileArgsSchema,
-  ReadFilesArgsSchema,
-  RemoveFilesArgsSchema,
-  RemovePathArgsSchema,
-  WriteFileArgsFromArgsPathSchema,
-  WriteFileArgsSchema,
-  WriteFilesArgsFromArgsPathSchema,
-  WriteFilesArgsSchema,
+  CpyFlArgsSch,
+  CpyFlArSc,
+  CrtDrArSc,
+  CrtDiArSc,
+  GtFlInArSc,
+  GtFlInArSc2,
+  LstDrArSc,
+  LstDiArSc,
+  MvFlArgsSch,
+  MvFlsArgsSch,
+  RdFlArgsSch,
+  RdFlsArgsSch,
+  RmvFlArSc,
+  RmvPtArSc,
+  WrtFlArFrArP,
+  WrtFlArgsSch,
+  WrtFlArFrAr2,
+  WrtFlArSc,
 } from "@schemas/schemas-filesystem";
 
-const DIRECTORY_LISTING_ENTRY_PATTERN = /^(?:\[(F|D|W|X)\]|(□|■))\s*(.*)$/;
-const READ_FILE_HANDLER_TIMEOUT_MS = 60_000;
-const MOVE_FILE_BATCH_CONCURRENCY = process.platform === "win32" ? 1 : 4;
-const ARGS_SOURCE_METADATA_FIELD = "__fs_mcp_args_source";
+const DLEP = /^(?:\[(F|D|W|X)\]|(□|■))\s*(.*)$/;
+const RFHTM = 60_000;
+const MFBC = process.platform === "win32" ? 1 : 4;
+const ASMF = "__fs_mcp_args_source";
 
 type ParsedReadFileArgs = {
   isUrl: boolean;
@@ -92,26 +92,26 @@ function isMissingPathError(error: unknown): boolean {
 }
 
 // 1-1. Create missing path response ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function createMissingPathResponse(requestedPath: string): ServerResult {
-  const resolvedPath = resolveAbsolutePath(requestedPath);
+function createMissingPathResponse(rqstPth: string): ServerResult {
+  const resolvedPath = rslvAbslPth(rqstPth);
 
   return {
-    content: [{ type: "text", text: `Missing path: ${requestedPath}` }],
+    content: [{ type: "text", text: `Missing path: ${rqstPth}` }],
     structuredContent: {
       fileName: path.basename(resolvedPath),
       filePath: resolvedPath,
       fileType: "missing",
       missing: true,
-      path: requestedPath,
+      path: rqstPth,
       reason: "not_found",
     },
   };
 }
 
 // 1-2. Missing local path check ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function isMissingLocalPath(requestedPath: string): Promise<boolean> {
+async function isMissingLocalPath(rqstPth: string): Promise<boolean> {
   try {
-    await getFileInfo(requestedPath);
+    await getFileInfo(rqstPth);
     return false;
   }
   catch (error) {
@@ -123,7 +123,7 @@ async function isMissingLocalPath(requestedPath: string): Promise<boolean> {
 }
 
 // 1. Resolve directory listing entry type ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function resolveDirectoryListingEntryType(match: RegExpMatchArray | null): DirectoryListingEntryType {
+function resolveDirectoryListingEntryType(match: RegExpMatchArray | null): DirLsEnTy {
   if (!match) {
     return "unknown";
   }
@@ -152,7 +152,7 @@ async function handleParsedReadFile(parsed: ParsedReadFileArgs): Promise<ServerR
   };
 
   // Resolve to absolute path for local files (not URLs) so "Open in folder" works
-  const resolvedFilePath = parsed.isUrl ? parsed.path : resolveAbsolutePath(parsed.path);
+  const rslvFlPth = parsed.isUrl ? parsed.path : rslvAbslPth(parsed.path);
 
   const fileResult = await readFile(parsed.path, options);
 
@@ -170,8 +170,8 @@ async function handleParsedReadFile(parsed: ParsedReadFileArgs): Promise<ServerR
         },
       ],
       structuredContent: {
-        fileName: path.basename(resolvedFilePath),
-        filePath: resolvedFilePath,
+        fileName: path.basename(rslvFlPth),
+        filePath: rslvFlPth,
         fileType: "image",
         imageData,
         mimeType: fileResult.mimeType,
@@ -182,12 +182,12 @@ async function handleParsedReadFile(parsed: ParsedReadFileArgs): Promise<ServerR
     // For all other files, return as text.
     // structuredContent mirrors text for preview hosts that prefer metadata payloads.
     const textContent = typeof fileResult.content === "string" ? fileResult.content : fileResult.content.toString("utf8");
-    const fileType = fileResult.metadata?.isDirectory ? ("directory" as const) : resolvePreviewFileType(resolvedFilePath);
+    const fileType = fileResult.metadata?.isDirectory ? ("directory" as const) : rslPrFlTy(rslvFlPth);
     return {
       content: [{ type: "text", text: textContent }],
       structuredContent: {
-        fileName: path.basename(resolvedFilePath),
-        filePath: resolvedFilePath,
+        fileName: path.basename(rslvFlPth),
+        filePath: rslvFlPth,
         fileType,
         textContent,
       },
@@ -197,7 +197,7 @@ async function handleParsedReadFile(parsed: ParsedReadFileArgs): Promise<ServerR
 
 // 3. Handle parsed read file with timeout ――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function handleParsedReadFileWithTimeout(parsed: ParsedReadFileArgs): Promise<ServerResult> {
-  const result = await withTimeout(handleParsedReadFile(parsed), READ_FILE_HANDLER_TIMEOUT_MS, "Read file handler operation", null);
+  const result = await withTimeout(handleParsedReadFile(parsed), RFHTM, "Read file handler operation", null);
   if (result == null) {
     // Handles the impossible case where withTimeout resolves to null instead of throwing
     throw new Error("Failed to read the file");
@@ -222,9 +222,9 @@ async function handleParsedReadFileWithMissing(parsed: ParsedReadFileArgs, allow
 export async function handleReadFile(args: unknown): Promise<ServerResult> {
   // Add input validation
   if (args === null || args === undefined) {
-    return createErrorResponse("No arguments provided for read_file command");
+    return crtErrRes("No arguments provided for read_file command");
   }
-  const parsed = ReadFileArgsSchema.parse(args);
+  const parsed = RdFlArgsSch.parse(args);
 
   return await handleParsedReadFileWithTimeout(parsed);
 }
@@ -236,7 +236,7 @@ function isToolArgsRecord(value: unknown): value is Record<string, unknown> {
 
 // 6. Resolve tool args source ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function resolveToolArgsSource(args: unknown): ToolArgsSource {
-  if (!isToolArgsRecord(args) || args[ARGS_SOURCE_METADATA_FIELD] !== "args_path") {
+  if (!isToolArgsRecord(args) || args[ASMF] !== "args_path") {
     return "inline";
   }
   return "args_path";
@@ -244,10 +244,10 @@ function resolveToolArgsSource(args: unknown): ToolArgsSource {
 
 // 7. Strip tool args metadata ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function stripToolArgsMetadata(args: unknown): unknown {
-  if (!isToolArgsRecord(args) || !Object.hasOwn(args, ARGS_SOURCE_METADATA_FIELD)) {
+  if (!isToolArgsRecord(args) || !Object.hasOwn(args, ASMF)) {
     return args;
   }
-  const { [ARGS_SOURCE_METADATA_FIELD]: _argsSource, ...rest } = args;
+  const { [ASMF]: _argsSource, ...rest } = args;
 
   return rest;
 }
@@ -257,7 +257,7 @@ async function resolveWriteContent(parsed: ParsedWriteFileArgs): Promise<string>
   if (parsed.content !== undefined) {
     return parsed.content;
   }
-  return readTextSliceInternal(parsed.content_path ?? "", parsed.content_offset, parsed.content_length);
+  return rdTxtSlcInt(parsed.content_path ?? "", parsed.content_offset, parsed.content_length);
 }
 
 // 4. Count write lines ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -266,8 +266,8 @@ function countWriteLines(content: string): number {
 }
 
 // 5. Build write warning message ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function buildWriteWarningMessage(lineCount: number, warningLineLimit: number): string {
-  if (lineCount <= warningLineLimit) {
+function buildWriteWarningMessage(lineCount: number, wrnnLnLmt: number): string {
+  if (lineCount <= wrnnLnLmt) {
     return "";
   }
   return `File written successfully! (${lineCount} lines)
@@ -276,27 +276,27 @@ Performance tip: For optimal speed, consider chunking files into ≤30 line piec
 }
 
 // 6. Handle parsed write file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function handleParsedWriteFile(parsed: ParsedWriteFileArgs, warningLineLimit: number): Promise<ServerResult> {
+async function handleParsedWriteFile(parsed: ParsedWriteFileArgs, wrnnLnLmt: number): Promise<ServerResult> {
   const content = await resolveWriteContent(parsed);
   const lineCount = countWriteLines(content);
-  const warningMessage = buildWriteWarningMessage(lineCount, warningLineLimit);
+  const wrnnMsg = buildWriteWarningMessage(lineCount, wrnnLnLmt);
 
   await writeFile(parsed.path, content, parsed.mode);
 
   const modeMessage = parsed.mode === "append" ? "appended to" : "wrote to";
-  const resolvedWritePath = resolveAbsolutePath(parsed.path);
+  const rslvWrtPth = rslvAbslPth(parsed.path);
 
   return {
     content: [
       {
         type: "text",
-        text: `Successfully ${modeMessage} ${parsed.path} (${lineCount} lines) ${warningMessage}`,
+        text: `Successfully ${modeMessage} ${parsed.path} (${lineCount} lines) ${wrnnMsg}`,
       },
     ],
     structuredContent: {
-      fileName: path.basename(resolvedWritePath),
-      filePath: resolvedWritePath,
-      fileType: resolvePreviewFileType(resolvedWritePath),
+      fileName: path.basename(rslvWrtPth),
+      filePath: rslvWrtPth,
+      fileType: rslPrFlTy(rslvWrtPth),
     },
   };
 }
@@ -306,21 +306,21 @@ export async function handleWriteFile(args: unknown): Promise<ServerResult> {
   try {
     const argsSource = resolveToolArgsSource(args);
     const rawArgs = stripToolArgsMetadata(args);
-    const parsed = argsSource === "args_path" ? WriteFileArgsFromArgsPathSchema.parse(rawArgs) : WriteFileArgsSchema.parse(rawArgs);
-    const config = await configManager.getConfig();
-    const warningLineLimit = config.fileWriteLineLimit ?? 50;
+    const parsed = argsSource === "args_path" ? WrtFlArFrArP.parse(rawArgs) : WrtFlArgsSch.parse(rawArgs);
+    const config = await cfgMgr.getConfig();
+    const wrnnLnLmt = config.fileWriteLineLimit ?? 50;
 
-    return await handleParsedWriteFile(parsed, warningLineLimit);
+    return await handleParsedWriteFile(parsed, wrnnLnLmt);
   }
   catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return createErrorResponse(errorMessage);
+    return crtErrRes(errorMessage);
   }
 }
 
 // 8. Handle parsed create directory ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function handleParsedCreateDirectory(parsed: ParsedCreateDirectoryArgs): Promise<ServerResult> {
-  await createDirectory(parsed.path);
+  await crtDir(parsed.path);
   return {
     content: [{ type: "text", text: `Successfully created directory ${parsed.path}` }],
   };
@@ -329,28 +329,28 @@ async function handleParsedCreateDirectory(parsed: ParsedCreateDirectoryArgs): P
 // 9. Handle create directory ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleCreateDirectory(args: unknown): Promise<ServerResult> {
   try {
-    const parsed = CreateDirectoryArgsSchema.parse(args);
+    const parsed = CrtDiArSc.parse(args);
 
     return await handleParsedCreateDirectory(parsed);
   }
   catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return createErrorResponse(errorMessage);
+    return crtErrRes(errorMessage);
   }
 }
 
 // 10. Handle parsed list directory ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function handleParsedListDirectory(parsed: ParsedListDirectoryArgs): Promise<ServerResult> {
-  const entries = await listDirectory(parsed.path, parsed.depth, {
+  const entries = await lstDir(parsed.path, parsed.depth, {
     excludePatterns: parsed.excludePatterns,
     includeFiles: parsed.includeFiles,
     maxEntries: parsed.maxEntries,
   });
 
   const resultText = entries.join("\n");
-  const resolvedPath = resolveAbsolutePath(parsed.path);
-  const structuredEntries = entries.map((entry) => {
-    const match = entry.match(DIRECTORY_LISTING_ENTRY_PATTERN);
+  const resolvedPath = rslvAbslPth(parsed.path);
+  const strcEntr = entries.map((entry) => {
+    const match = entry.match(DLEP);
 
     return {
       type: resolveDirectoryListingEntryType(match),
@@ -365,7 +365,7 @@ async function handleParsedListDirectory(parsed: ParsedListDirectoryArgs): Promi
       fileName: path.basename(resolvedPath),
       filePath: resolvedPath,
       fileType: "directory" as const,
-      entries: structuredEntries,
+      entries: strcEntr,
       listing: resultText,
     },
   };
@@ -382,13 +382,13 @@ async function handleParsedListDirectoryWithMissing(parsed: ParsedListDirectoryA
 // 11. Handle list directory ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleListDirectory(args: unknown): Promise<ServerResult> {
   try {
-    const parsed = ListDirectoryArgsSchema.parse(args);
+    const parsed = LstDiArSc.parse(args);
 
     return await handleParsedListDirectory(parsed);
   }
   catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return createErrorResponse(errorMessage);
+    return crtErrRes(errorMessage);
   }
 }
 
@@ -403,13 +403,13 @@ async function handleParsedCopyFile(parsed: ParsedCopyFileArgs): Promise<ServerR
 // 13. Handle copy file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleCopyFile(args: unknown): Promise<ServerResult> {
   try {
-    const parsed = CopyFileArgsSchema.parse(args);
+    const parsed = CpyFlArgsSch.parse(args);
 
     return await handleParsedCopyFile(parsed);
   }
   catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return createErrorResponse(errorMessage);
+    return crtErrRes(errorMessage);
   }
 }
 
@@ -424,19 +424,19 @@ async function handleParsedMoveFile(parsed: ParsedMoveFileArgs): Promise<ServerR
 // 15. Handle move file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleMoveFile(args: unknown): Promise<ServerResult> {
   try {
-    const parsed = MoveFileArgsSchema.parse(args);
+    const parsed = MvFlArgsSch.parse(args);
 
     return await handleParsedMoveFile(parsed);
   }
   catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return createErrorResponse(errorMessage);
+    return crtErrRes(errorMessage);
   }
 }
 
 // 19. Handle parsed remove path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function handleParsedRemovePath(parsed: ParsedRemovePathArgs): Promise<ServerResult> {
-  const resolvedPath = resolveAbsolutePath(parsed.path);
+  const resolvedPath = rslvAbslPth(parsed.path);
 
   await removePath(parsed.path, parsed.recursive, parsed.force);
   return {
@@ -453,13 +453,13 @@ async function handleParsedRemovePath(parsed: ParsedRemovePathArgs): Promise<Ser
 // 20. Handle remove path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleRemovePath(args: unknown): Promise<ServerResult> {
   try {
-    const parsed = RemovePathArgsSchema.parse(args);
+    const parsed = RmvPtArSc.parse(args);
 
     return await handleParsedRemovePath(parsed);
   }
   catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return createErrorResponse(errorMessage);
+    return crtErrRes(errorMessage);
   }
 }
 
@@ -495,7 +495,7 @@ async function handleParsedGetFileInfo(parsed: ParsedGetFileInfoArgs): Promise<S
   const info = await getFileInfo(parsed.path);
 
   // Generic formatting for any file type
-  const formattedText = Object.entries(info)
+  const frmtTxt = Object.entries(info)
     .map(([key, value]) => `${key}: ${formatValue(value)}`)
     .join("\n");
 
@@ -503,7 +503,7 @@ async function handleParsedGetFileInfo(parsed: ParsedGetFileInfoArgs): Promise<S
     content: [
       {
         type: "text",
-        text: formattedText,
+        text: frmtTxt,
       },
     ],
     structuredContent: info,
@@ -526,22 +526,22 @@ async function handleParsedGetFileInfoWithMissing(parsed: ParsedGetFileInfoArgs,
 // 23. Handle get file info ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleGetFileInfo(args: unknown): Promise<ServerResult> {
   try {
-    const parsed = GetFileInfoArgsSchema.parse(args);
+    const parsed = GtFlInArSc.parse(args);
 
     return await handleParsedGetFileInfo(parsed);
   }
   catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
-    return createErrorResponse(errorMessage);
+    return crtErrRes(errorMessage);
   }
 }
 
 // 14. Handle read files ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleReadFiles(args: unknown): Promise<ServerResult> {
-  const parsed = ReadFilesArgsSchema.parse(args);
+  const parsed = RdFlsArgsSch.parse(args);
   const items = parsed.items ?? parsed.paths?.map((filePath) => ({ isUrl: false, offset: 0, path: filePath })) ?? [];
-  const results = await runParallelBatch(items, (item) => handleParsedReadFileWithMissing(item, parsed.allowMissing));
-  const response = createBatchToolResponse("read_files", results, { resultMode: "full" });
+  const results = await rnPrllBtch(items, (item) => handleParsedReadFileWithMissing(item, parsed.allowMissing));
+  const response = crtBtchTlRes("read_files", results, { resultMode: "full" });
 
   return response;
 }
@@ -591,10 +591,10 @@ function compactWriteBatchResult(result: ServerResult): ServerResult {
 }
 
 // 18. Create write files batch response ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function createWriteFilesBatchResponse(items: BatchToolItemResult<ParsedWriteFileArgs>[]): ServerResult {
+function createWriteFilesBatchResponse(items: BtchTlItmRes<ParsedWriteFileArgs>[]): ServerResult {
   const totalCount = items.length;
   const failedCount = items.filter((item) => !item.ok).length;
-  const succeededCount = totalCount - failedCount;
+  const sccdCnt = totalCount - failedCount;
   const summaryLines = items.map((item) => {
     const statusText = item.ok ? "OK" : "ERROR";
     return `- [${item.index}] ${statusText} ${path.basename(item.input.path)}`;
@@ -604,7 +604,7 @@ function createWriteFilesBatchResponse(items: BatchToolItemResult<ParsedWriteFil
     content: [
       {
         type: "text",
-        text: `write_files: ${succeededCount}/${totalCount} succeeded${failedCount > 0 ? `, ${failedCount} failed` : ""}\n\n${summaryLines.join("\n")}`,
+        text: `write_files: ${sccdCnt}/${totalCount} succeeded${failedCount > 0 ? `, ${failedCount} failed` : ""}\n\n${summaryLines.join("\n")}`,
       },
     ],
     structuredContent: {
@@ -615,7 +615,7 @@ function createWriteFilesBatchResponse(items: BatchToolItemResult<ParsedWriteFil
         ok: item.ok,
         result: compactWriteBatchResult(item.result),
       })),
-      succeededCount,
+      succeededCount: sccdCnt,
       toolName: "write_files",
       totalCount,
     },
@@ -626,64 +626,64 @@ function createWriteFilesBatchResponse(items: BatchToolItemResult<ParsedWriteFil
 export async function handleWriteFiles(args: unknown): Promise<ServerResult> {
   const argsSource = resolveToolArgsSource(args);
   const rawArgs = stripToolArgsMetadata(args);
-  const parsed = argsSource === "args_path" ? WriteFilesArgsFromArgsPathSchema.parse(rawArgs) : WriteFilesArgsSchema.parse(rawArgs);
-  const config = await configManager.getConfig();
-  const warningLineLimit = config.fileWriteLineLimit ?? 50;
-  const results = await runParallelBatch(parsed.items, (item) => handleParsedWriteFile(item, warningLineLimit));
+  const parsed = argsSource === "args_path" ? WrtFlArFrAr2.parse(rawArgs) : WrtFlArSc.parse(rawArgs);
+  const config = await cfgMgr.getConfig();
+  const wrnnLnLmt = config.fileWriteLineLimit ?? 50;
+  const results = await rnPrllBtch(parsed.items, (item) => handleParsedWriteFile(item, wrnnLnLmt));
 
   return createWriteFilesBatchResponse(results);
 }
 
 // 16. Handle create directories ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleCreateDirectories(args: unknown): Promise<ServerResult> {
-  const parsed = CreateDirectoriesArgsSchema.parse(args);
-  const results = await runParallelBatch(parsed.paths, (dirPath) => handleParsedCreateDirectory({ path: dirPath }));
-  const response = createBatchToolResponse("create_directories", results);
+  const parsed = CrtDrArSc.parse(args);
+  const results = await rnPrllBtch(parsed.paths, (dirPath) => handleParsedCreateDirectory({ path: dirPath }));
+  const response = crtBtchTlRes("create_directories", results);
 
   return response;
 }
 
 // 17. Handle list directories ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleListDirectories(args: unknown): Promise<ServerResult> {
-  const parsed = ListDirectoriesArgsSchema.parse(args);
-  const results = await runParallelBatch(parsed.items, (item) => handleParsedListDirectoryWithMissing(item, parsed.allowMissing));
-  const response = createBatchToolResponse("list_directories", results, { resultMode: "full" });
+  const parsed = LstDrArSc.parse(args);
+  const results = await rnPrllBtch(parsed.items, (item) => handleParsedListDirectoryWithMissing(item, parsed.allowMissing));
+  const response = crtBtchTlRes("list_directories", results, { resultMode: "full" });
 
   return response;
 }
 
 // 18. Handle copy files ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleCopyFiles(args: unknown): Promise<ServerResult> {
-  const parsed = CopyFilesArgsSchema.parse(args);
-  const results = await runParallelBatch(parsed.items, (item) => handleParsedCopyFile(item));
-  const response = createBatchToolResponse("copy_files", results);
+  const parsed = CpyFlArSc.parse(args);
+  const results = await rnPrllBtch(parsed.items, (item) => handleParsedCopyFile(item));
+  const response = crtBtchTlRes("copy_files", results);
 
   return response;
 }
 
 // 19. Handle move files ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleMoveFiles(args: unknown): Promise<ServerResult> {
-  const parsed = MoveFilesArgsSchema.parse(args);
-  const results = await runLimitedParallelBatch(parsed.items, MOVE_FILE_BATCH_CONCURRENCY, (item) => handleParsedMoveFile(item));
-  const response = createBatchToolResponse("move_files", results);
+  const parsed = MvFlsArgsSch.parse(args);
+  const results = await rnLmPrBt(parsed.items, MFBC, (item) => handleParsedMoveFile(item));
+  const response = crtBtchTlRes("move_files", results);
 
   return response;
 }
 
 // 21. Handle remove files ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleRemoveFiles(args: unknown): Promise<ServerResult> {
-  const parsed = RemoveFilesArgsSchema.parse(args);
-  const results = await runParallelBatch(parsed.items, (item) => handleParsedRemovePath(item));
-  const response = createBatchToolResponse("remove_files", results);
+  const parsed = RmvFlArSc.parse(args);
+  const results = await rnPrllBtch(parsed.items, (item) => handleParsedRemovePath(item));
+  const response = crtBtchTlRes("remove_files", results);
 
   return response;
 }
 
 // 22. Handle get file infos ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleGetFileInfos(args: unknown): Promise<ServerResult> {
-  const parsed = GetFileInfosArgsSchema.parse(args);
-  const results = await runParallelBatch(parsed.paths, (filePath) => handleParsedGetFileInfoWithMissing({ path: filePath }, parsed.allowMissing));
-  const response = createBatchToolResponse("get_file_infos", results);
+  const parsed = GtFlInArSc2.parse(args);
+  const results = await rnPrllBtch(parsed.paths, (filePath) => handleParsedGetFileInfoWithMissing({ path: filePath }, parsed.allowMissing));
+  const response = crtBtchTlRes("get_file_infos", results);
 
   return response;
 }

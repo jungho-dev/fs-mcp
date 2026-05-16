@@ -8,8 +8,8 @@
 import {existsSync, readFileSync} from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import {fileURLToPath} from "node:url";
-import {getDefaultContextIndexDbPath} from "@features/config/config-client";
+import {fileURLToPath as flUrlTPth2} from "node:url";
+import {getDefaultContextIndexDbPath as gtDeCtIdDbPt} from "@features/config/config-client";
 
 export interface ServerConfig {
   allowedDirectories?: string[];
@@ -18,6 +18,8 @@ export interface ServerConfig {
   contextIndexAutoMinLines?: number;
   contextIndexDbPath?: string;
   contextIndexEnabled?: boolean;
+  contextIndexMaxBytes?: number;
+  contextIndexMaxDocuments?: number;
   contextIndexMaxEntryChars?: number;
   contextIndexReplaceLargeOutputs?: boolean;
   currentClient?: ClientInfo; // Current connected client information
@@ -31,12 +33,12 @@ export interface ClientInfo {
   version: string;
 }
 
-const WINDOWS_ALLOWED_DIRECTORIES_SEPARATOR = ";";
-const WINDOWS_POWERSHELL_COMMAND_SUFFIX = "-NoLogo -NoProfile -ExecutionPolicy Bypass -Command";
-const PACKAGE_JSON_PATH = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "package.json");
+const WADS = ";";
+const WPCS = "-NoLogo -NoProfile -ExecutionPolicy Bypass -Command";
+const PCKG_JSN_PT2 = path.resolve(path.dirname(flUrlTPth2(import.meta.url)), "..", "..", "..", "package.json");
 
 function readPackageVersion(): string {
-  const packageData = JSON.parse(readFileSync(PACKAGE_JSON_PATH, "utf8")) as unknown;
+  const packageData = JSON.parse(readFileSync(PCKG_JSN_PT2, "utf8")) as unknown;
 
   if (typeof packageData !== "object" || packageData === null || !("version" in packageData) || typeof packageData.version !== "string") {
     throw new Error("package.json version must be a string");
@@ -44,27 +46,27 @@ function readPackageVersion(): string {
   return packageData.version;
 }
 
-export const PACKAGE_VERSION = readPackageVersion();
+export const PCKG_VRSN = readPackageVersion();
 
 // 1. Get configured allowed directories ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getConfiguredAllowedDirectories(): string[] | undefined {
-  const rawAllowedDirectories = process.env.FS_MCP_ALLOWED_DIRECTORIES;
+  const rwAllwDrct = process.env.FS_MCP_ALLOWED_DIRECTORIES;
 
-  if (rawAllowedDirectories === undefined) {
+  if (rwAllwDrct === undefined) {
     return undefined;
   }
-  return rawAllowedDirectories
-    .split(os.platform() === "win32" ? WINDOWS_ALLOWED_DIRECTORIES_SEPARATOR : path.delimiter)
+  return rwAllwDrct
+    .split(os.platform() === "win32" ? WADS : path.delimiter)
     .map((directory) => directory.trim())
     .filter((directory) => directory.length > 0);
 }
 
 // 2. Get default allowed directories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getDefaultAllowedDirectories(): string[] {
-  const configuredDirectories = getConfiguredAllowedDirectories();
+  const cnfgDrct = getConfiguredAllowedDirectories();
 
-  if (configuredDirectories !== undefined) {
-    return configuredDirectories;
+  if (cnfgDrct !== undefined) {
+    return cnfgDrct;
   }
   return [];
 }
@@ -73,14 +75,14 @@ function getDefaultAllowedDirectories(): string[] {
 function getWindowsDefaultShell(): string {
   const userProfile = process.env.USERPROFILE?.trim();
   const programFiles = process.env.ProgramFiles?.trim();
-  const knownPwshPaths = [
+  const knwnPwshPths = [
     programFiles ? path.join(programFiles, "PowerShell", "7", "pwsh.exe") : "",
     userProfile ? path.join(userProfile, "AppData", "Local", "Programs", "PowerShell", "7", "pwsh.exe") : "",
   ].filter((shellPath) => shellPath.length > 0);
 
-  const resolvedPwshPath = knownPwshPaths.find((shellPath) => existsSync(shellPath));
-  if (resolvedPwshPath) {
-    return `${resolvedPwshPath} ${WINDOWS_POWERSHELL_COMMAND_SUFFIX}`;
+  const rslvPwshPth = knwnPwshPths.find((shellPath) => existsSync(shellPath));
+  if (rslvPwshPth) {
+    return `${rslvPwshPth} ${WPCS}`;
   }
   const comSpec = process.env.ComSpec?.trim();
   if (comSpec && comSpec.length > 0) {
@@ -88,9 +90,9 @@ function getWindowsDefaultShell(): string {
   }
   const systemRoot = process.env.SystemRoot?.trim();
   if (systemRoot && systemRoot.length > 0) {
-    const systemCmdPath = path.join(systemRoot, "System32", "cmd.exe");
-    if (existsSync(systemCmdPath)) {
-      return systemCmdPath;
+    const systCmdPth = path.join(systemRoot, "System32", "cmd.exe");
+    if (existsSync(systCmdPth)) {
+      return systCmdPth;
     }
   }
   return "cmd.exe";
@@ -101,10 +103,10 @@ function getDefaultShell(): string {
   if (os.platform() === "win32") {
     return getWindowsDefaultShell();
   }
-  const configuredShell = process.env.SHELL?.trim();
+  const cnfgShll = process.env.SHELL?.trim();
 
-  if (configuredShell && configuredShell.length > 0) {
-    return configuredShell;
+  if (cnfgShll && cnfgShll.length > 0) {
+    return cnfgShll;
   }
   return os.platform() === "darwin" ? "/bin/zsh" : "/bin/sh";
 }
@@ -167,14 +169,14 @@ function normalizeContextIndexDbPathOverride(value: string | undefined): string 
   if (value === undefined) {
     return undefined;
   }
-  return value === getDefaultContextIndexDbPath() ? undefined : value;
+  return value === gtDeCtIdDbPt() ? undefined : value;
 }
 
 // 7. Materialize runtime config ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function materializeRuntimeConfig(config: ServerConfig): ServerConfig {
   return {
     ...config,
-    contextIndexDbPath: getStoredContextIndexDbPath(config) ?? getDefaultContextIndexDbPath(),
+    contextIndexDbPath: getStoredContextIndexDbPath(config) ?? gtDeCtIdDbPt(),
   };
 }
 
@@ -189,7 +191,7 @@ class ConfigManager {
       return;
     }
     this.config = this.getDefaultConfig();
-    this.config["version"] = PACKAGE_VERSION;
+    this.config["version"] = PCKG_VRSN;
     this.initialized = true;
   }
 
@@ -224,7 +226,7 @@ class ConfigManager {
   getConfigSync(): ServerConfig {
     if (!this.initialized) {
       this.config = this.getDefaultConfig();
-      this.config["version"] = PACKAGE_VERSION;
+      this.config["version"] = PCKG_VRSN;
       this.initialized = true;
     }
     return materializeRuntimeConfig(this.config);
@@ -258,7 +260,7 @@ class ConfigManager {
   // 8-8. Reset runtime configuration to defaults ――――――――――――――――――――――――――――――――――――――――――――――――――
   async resetConfig(): Promise<ServerConfig> {
     this.config = this.getDefaultConfig();
-    this.config["version"] = PACKAGE_VERSION;
+    this.config["version"] = PCKG_VRSN;
     this.initialized = true;
     return materializeRuntimeConfig(this.config);
   }
@@ -270,4 +272,7 @@ class ConfigManager {
 }
 
 // Export singleton instance
-export const configManager = new ConfigManager();
+export const cfgMgr = new ConfigManager();
+export const cfgMgr2 = cfgMgr;
+export const PCKG_VRSN2 = PCKG_VRSN;
+export const cfgMgr3 = cfgMgr;

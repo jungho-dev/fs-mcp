@@ -14,15 +14,15 @@
 import assert from "node:assert";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { getFileHandler } from "../../../out/assets/readers/readers-factory.js";
-import { handleEditBlock } from "../../../out/controllers/controllers-edit.js";
-import { handleListDirectory, handleReadFile } from "../../../out/controllers/controllers-filesystem.js";
-import { configManager } from "../../../out/features/config/config-store.js";
+import { fileURLToPath as flUrlTPth2 } from "node:url";
+import { getFileHandler as gtFlHdl } from "../../../out/assets/readers/readers-factory.js";
+import { handleEditBlock as hndlEdtBlck } from "../../../out/controllers/controllers-edit.js";
+import { handleListDirectory as hndlLstDir, handleReadFile as hndlRdFl } from "../../../out/controllers/controllers-filesystem.js";
+import { configManager as cfgMgr } from "../../../out/features/config/config-store.js";
 import { getFileInfo, readFile, writeFile } from "../../../out/features/filesystem/filesystem-service.js";
 
 // Get directory name
-const __filename = fileURLToPath(import.meta.url);
+const __filename = flUrlTPth2(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Define test directory and files
@@ -34,7 +34,7 @@ const HTML_FILE = path.join(TEST_DIR, "test.html");
 const IMAGE_FILE = path.join(TEST_DIR, "test.png");
 const SVG_FILE = path.join(TEST_DIR, "test.svg");
 const LIST_DIR = path.join(TEST_DIR, "listing");
-const TINY_PNG_BYTES = [
+const TNY_PNG_BYTS = [
   137, 80, 78, 71, 13, 10, 26, 10, 0, 0, 0, 13, 73, 72, 68, 82, 0, 0, 0, 1, 0, 0, 0, 1, 8, 4, 0, 0, 0, 181, 28, 12,
   2, 0, 0, 0, 11, 73, 68, 65, 84, 120, 218, 99, 252, 255, 31, 0, 3, 3, 2, 0, 238, 169, 235, 25, 0, 0, 0, 0, 73, 69,
   78, 68, 174, 66, 96, 130,
@@ -59,17 +59,17 @@ async function setup () {
 
   await fs.mkdir(TEST_DIR, { recursive: true });
 
-  const originalConfig = await configManager.getConfig();
-  await configManager.setValue("allowedDirectories", [TEST_DIR]);
+  const origCfg = await cfgMgr.getConfig();
+  await cfgMgr.setValue("allowedDirectories", [TEST_DIR]);
 
-  return originalConfig;
+  return origCfg;
 }
 
 // 3. Teardown function ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Always runs cleanup, restores config only if provided
 
 // 3. Teardown ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function teardown (originalConfig) {
+async function teardown (origCfg) {
   // Always clean up test directories, even if setup failed
   try {
     await cleanupTestDirectories();
@@ -78,9 +78,9 @@ async function teardown (originalConfig) {
     console.error("Warning: Failed to clean up test directories:", error.message);
   }
   // Restore config only if we have the original
-  if (originalConfig) {
+  if (origCfg) {
     try {
-      await configManager.updateConfig(originalConfig);
+      await cfgMgr.updateConfig(origCfg);
     }
     catch (error) {
       console.error("Warning: Failed to restore config:", error.message);
@@ -103,7 +103,7 @@ async function testHandlerFactory () {
   ];
 
   await Promise.all(testCases.map(async ({ file, expected }) => {
-    const handler = await getFileHandler(file);
+    const handler = await gtFlHdl(file);
     assert.strictEqual(handler.constructor.name, expected, `${file} should use ${expected} but got ${handler.constructor.name}`);
   }));
 }
@@ -145,8 +145,8 @@ async function testReadOptionsInterface () {
 
 // 7. Test 4: Handler canHandle method ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testCanHandle () {
-  const textHandler = await getFileHandler("test.txt");
-  const imageHandler = await getFileHandler("test.png");
+  const textHandler = await gtFlHdl("test.txt");
+  const imageHandler = await gtFlHdl("test.png");
 
   // Image handler should handle images
   assert.ok(imageHandler.canHandle("photo.png"), "Image handler should handle .png");
@@ -173,7 +173,7 @@ async function testTextHandler () {
 
 // 9. Test 6: Text handler with JSON file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testJsonFile () {
-  const statusPrefixPattern = /^\[.*?\]\n\n/;
+  const statPrfxPat = /^\[.*?\]\n\n/;
   const data = { name: "Test", values: [1, 2, 3] };
   const content = JSON.stringify(data, null, 2);
 
@@ -181,7 +181,7 @@ async function testJsonFile () {
 
   const result = await readFile(JSON_FILE);
   const readContent = result.content.toString();
-  const parsed = JSON.parse(readContent.replace(statusPrefixPattern, "")); // Remove status message
+  const parsed = JSON.parse(readContent.replace(statPrfxPat, "")); // Remove status message
 
   assert.strictEqual(parsed.name, "Test", "JSON should be preserved");
   assert.deepStrictEqual(parsed.values, [1, 2, 3], "Array should be preserved");
@@ -226,37 +226,37 @@ async function testWriteModes () {
 
 // 12. Read file preview metadata ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testReadFilePreviewMetadata () {
-  const markdownContent = "# Title\n\n```js\nconst x = 1;\n```";
+  const mrkdCont = "# Title\n\n```js\nconst x = 1;\n```";
   const textContent = "hello\nplain text";
   const tinySvg = '<svg xmlns="http://www.w3.org/2000/svg" width="1" height="1"><rect width="1" height="1"/></svg>';
   const htmlContent = ["<h1>Preview</h1>", "<", "script", ">alert(1)</", "script", ">"].join("");
 
-  await fs.writeFile(MD_FILE, markdownContent);
+  await fs.writeFile(MD_FILE, mrkdCont);
   await fs.writeFile(TEXT_FILE, textContent);
   await fs.writeFile(HTML_FILE, htmlContent);
-  await fs.writeFile(IMAGE_FILE, Buffer.from(TINY_PNG_BYTES));
+  await fs.writeFile(IMAGE_FILE, Buffer.from(TNY_PNG_BYTS));
   await fs.writeFile(SVG_FILE, tinySvg);
 
-  const markdownResult = await handleReadFile({ path: MD_FILE });
-  assert.ok(Array.isArray(markdownResult.content), "Result should include content array");
-  assert.ok(markdownResult.content[0].text.includes(markdownContent), "Legacy content should still include markdown body");
-  assert.ok(markdownResult.structuredContent, "Markdown should include structuredContent");
-  assert.strictEqual(markdownResult.structuredContent.fileType, "markdown", "Markdown fileType should be markdown");
-  assert.strictEqual(markdownResult.structuredContent.filePath, MD_FILE, "Markdown file path should be present");
+  const mrkdRes = await hndlRdFl({ path: MD_FILE });
+  assert.ok(Array.isArray(mrkdRes.content), "Result should include content array");
+  assert.ok(mrkdRes.content[0].text.includes(mrkdCont), "Legacy content should still include markdown body");
+  assert.ok(mrkdRes.structuredContent, "Markdown should include structuredContent");
+  assert.strictEqual(mrkdRes.structuredContent.fileType, "markdown", "Markdown fileType should be markdown");
+  assert.strictEqual(mrkdRes.structuredContent.filePath, MD_FILE, "Markdown file path should be present");
 
-  const textResult = await handleReadFile({ path: TEXT_FILE });
+  const textResult = await hndlRdFl({ path: TEXT_FILE });
   assert.ok(Array.isArray(textResult.content), "Result should include content array");
   assert.ok(textResult.content[0].text.includes(textContent), "Legacy content should still include text body");
   assert.ok(textResult.structuredContent, "Text should include structuredContent");
   assert.strictEqual(textResult.structuredContent.fileType, "text", "Text fileType should be text");
 
-  const htmlResult = await handleReadFile({ path: HTML_FILE });
+  const htmlResult = await hndlRdFl({ path: HTML_FILE });
   assert.ok(Array.isArray(htmlResult.content), "Result should include content array");
   assert.ok(htmlResult.content[0].text.includes("<h1>Preview</h1>"), "Legacy content should still include html body");
   assert.ok(htmlResult.structuredContent, "HTML should include structuredContent");
   assert.strictEqual(htmlResult.structuredContent.fileType, "html", "HTML fileType should be html");
 
-  const imageResult = await handleReadFile({ path: IMAGE_FILE });
+  const imageResult = await hndlRdFl({ path: IMAGE_FILE });
   assert.ok(Array.isArray(imageResult.content), "Image result should include content array");
   assert.ok(!imageResult.content.some((item) => item.type === "image"), "Image result should avoid image content item for host compatibility");
   assert.ok(imageResult.structuredContent, "Image should include structuredContent");
@@ -266,7 +266,7 @@ async function testReadFilePreviewMetadata () {
   assert.strictEqual(imageResult.structuredContent.mimeType, "image/png", "Image structured payload should include mimeType");
   assert.strictEqual(imageResult.structuredContent.filePath, IMAGE_FILE, "Image file path should be present");
 
-  const svgResult = await handleReadFile({ path: SVG_FILE });
+  const svgResult = await hndlRdFl({ path: SVG_FILE });
   assert.ok(Array.isArray(svgResult.content), "SVG result should include content array");
   assert.ok(!svgResult.content.some((item) => item.type === "image"), "SVG result should avoid image content item for host compatibility");
   assert.ok(svgResult.structuredContent, "SVG should include structuredContent");
@@ -275,24 +275,24 @@ async function testReadFilePreviewMetadata () {
   assert.strictEqual(typeof svgResult.structuredContent.imageData, "string", "SVG structured payload should include imageData");
   assert.ok(svgResult.structuredContent.imageData.length > 0, "SVG structured payload should include non-empty imageData");
 
-  const nullArgsResult = await handleReadFile(null);
-  assert.ok(Array.isArray(nullArgsResult.content), "Null-args result should include content array");
-  assert.strictEqual(nullArgsResult.isError, true, "Null-args should be returned as error");
-  assert.ok(nullArgsResult.content[0].text.includes("Error: No arguments provided for read_file command"), "Null-args should include standard error text");
+  const nllArgsRes = await hndlRdFl(null);
+  assert.ok(Array.isArray(nllArgsRes.content), "Null-args result should include content array");
+  assert.strictEqual(nllArgsRes.isError, true, "Null-args should be returned as error");
+  assert.ok(nllArgsRes.content[0].text.includes("Error: No arguments provided for read_file command"), "Null-args should include standard error text");
 }
 
 // 13. Test 10: Markdown exact-match save flow works through edit_block ――――――――――――――――――――――――――――
 async function testMarkdownExactMatchSave () {
-  const readingStatusPattern = /\[Reading \d+ lines? from/;
-  const originalContent = "# Title\n\nOriginal paragraph.\n";
-  const updatedContent = "# Title\n\nUpdated paragraph.\n";
+  const rdngStatPat = /\[Reading \d+ lines? from/;
+  const origCont = "# Title\n\nOriginal paragraph.\n";
+  const updtCont2 = "# Title\n\nUpdated paragraph.\n";
 
-  await fs.writeFile(MD_FILE, originalContent);
+  await fs.writeFile(MD_FILE, origCont);
 
-  const result = await handleEditBlock({
+  const result = await hndlEdtBlck({
     file_path: MD_FILE,
-    old_string: originalContent,
-    new_string: updatedContent,
+    old_string: origCont,
+    new_string: updtCont2,
     expected_replacements: 1,
   });
 
@@ -303,10 +303,10 @@ async function testMarkdownExactMatchSave () {
   assert.strictEqual(result.content[0].type, "text", "edit_block result[0] should be text");
   assert.ok(result.structuredContent, "edit_block should return structuredContent");
   assert.ok(result.structuredContent.filePath, "edit_block structuredContent should include filePath");
-  assert.match(result.content[0].text, readingStatusPattern, "edit_block should return a file-preview status line");
+  assert.match(result.content[0].text, rdngStatPat, "edit_block should return a file-preview status line");
 
   const readBack = await fs.readFile(MD_FILE, "utf8");
-  assert.strictEqual(readBack, updatedContent, "Markdown file should be rewritten with the updated content");
+  assert.strictEqual(readBack, updtCont2, "Markdown file should be rewritten with the updated content");
 }
 
 // 14. Test 11: Directory listing controls output volume ―――――――――――――――――――――――――――――――――――――――――――
@@ -317,14 +317,14 @@ async function testListDirectoryControls () {
   await fs.writeFile(path.join(LIST_DIR, "skip.txt"), "skip");
   await fs.writeFile(path.join(nestedDir, "child.txt"), "child");
 
-  const dirsOnly = await handleListDirectory({ path: LIST_DIR, depth: 2, includeFiles: false });
+  const dirsOnly = await hndlLstDir({ path: LIST_DIR, depth: 2, includeFiles: false });
   assert.ok(dirsOnly.content[0].text.includes("nested"), "Directory-only listing should keep directories");
   assert.ok(!dirsOnly.content[0].text.includes("root.txt"), "Directory-only listing should hide files");
 
-  const excluded = await handleListDirectory({ path: LIST_DIR, depth: 1, excludePatterns: ["skip*"] });
+  const excluded = await hndlLstDir({ path: LIST_DIR, depth: 1, excludePatterns: ["skip*"] });
   assert.ok(!excluded.content[0].text.includes("skip.txt"), "Excluded glob pattern should hide matching files");
 
-  const limited = await handleListDirectory({ path: LIST_DIR, depth: 1, maxEntries: 1 });
+  const limited = await hndlLstDir({ path: LIST_DIR, depth: 1, maxEntries: 1 });
   assert.ok(limited.content[0].text.includes("items hidden"), "maxEntries should report hidden visible entries");
 }
 
@@ -345,9 +345,9 @@ async function runAllTests () {
 
 // 16. Run tests ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export default async function runTests () {
-  let originalConfig;
+  let origCfg;
   try {
-    originalConfig = await setup();
+    origCfg = await setup();
     await runAllTests();
   }
   catch (error) {
@@ -358,7 +358,7 @@ export default async function runTests () {
   finally {
     // Always run teardown to clean up test directories and restore config
     // teardown handles the case where originalConfig is undefined
-    await teardown(originalConfig);
+    await teardown(origCfg);
   }
   return true;
 }

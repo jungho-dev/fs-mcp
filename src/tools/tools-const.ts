@@ -5,11 +5,11 @@
  * @since 2026-05-03
  */
 
-import {getSystemInfo} from "@cores/runtime/runtime-info";
+import {getSystemInfo as gtSystInf} from "@cores/runtime/runtime-info";
 import type {ZodTypeAny} from "zod";
-import {zodToJsonSchema} from "zod-to-json-schema";
+import {zodToJsonSchema as zdTJsnSch} from "zod-to-json-schema";
 
-const systemInfo = getSystemInfo();
+const systemInfo = gtSystInf();
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export type ToolCatalogAnnotations = {
@@ -59,24 +59,24 @@ function createCompactPathGuidance(): string {
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function compactToolDescription(description: string): string {
-  const compactedLines = description
+  const cmpcLns = description
     .split("\n")
     .map((line) => line.trim())
     .filter((line, index, lines) => line.length > 0 || (index > 0 && index < lines.length - 1 && lines[index - 1]?.length > 0));
 
-  return compactedLines.join("\n");
+  return cmpcLns.join("\n");
 }
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function createToolCatalogEntry(config: ToolCatalogEntryConfig): ToolCatalogEntry {
-  let cachedInputSchema: Record<string, unknown> | undefined;
+  let cchdInptSch: Record<string, unknown> | undefined;
 
   return {
     annotations: config.annotations,
     description: compactToolDescription(config.description),
     get inputSchema() {
-      cachedInputSchema ??= zodToJsonSchema(config.inputSchema);
-      return cachedInputSchema;
+      cchdInptSch ??= zdTJsnSch(config.inputSchema);
+      return cchdInptSch;
     },
     name: config.name,
   };
@@ -86,13 +86,13 @@ export function createToolCatalogEntry(config: ToolCatalogEntryConfig): ToolCata
 export const OS_GUIDANCE = createCompactOsGuidance();
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export const PATH_GUIDANCE = createCompactPathGuidance();
+export const PTH_GDNC = createCompactPathGuidance();
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export const BATCH_GUIDANCE = "Batch same-kind operations into one call.";
+export const BTCH_GDNC = "Batch same-kind operations into one call.";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export const APPLY_PATCH_PERFORMANCE_GUIDANCE = "For large or multi-file writes/edits, prefer fs-mcp batch tools with *_path or args_path.";
+export const APPG = "For large or multi-file writes/edits, prefer fs-mcp batch tools with *_path or args_path.";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export const CMD_PREFIX_DESCRIPTION = "For large arguments, pass a UTF-8 JSON file via {\"args_path\":\"ABSOLUTE_PATH_TO_ARGS_JSON\"}.";
+export const CMD_PRF_DSC = "For large arguments, pass a UTF-8 JSON file via {\"args_path\":\"ABSOLUTE_PATH_TO_ARGS_JSON\"}.";

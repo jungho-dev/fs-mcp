@@ -10,7 +10,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 
-const DOCKER_CGROUP_CONTAINER_ID_REGEX = /docker\/([a-f0-9]{64})/;
+const DCCIR = /docker\/([a-f0-9]{64})/;
 
 export interface DockerMount {
   containerPath: string;
@@ -200,11 +200,11 @@ function discoverContainerMounts(isContainer: boolean): DockerMount[] {
   // Method 1: Parse /proc/mounts (Linux only)
   if (os.platform() === "linux") {
     try {
-      const mountsContent = fs.readFileSync("/proc/mounts", "utf8");
-      const mountLines = mountsContent.split("\n");
+      const mntsCont = fs.readFileSync("/proc/mounts", "utf8");
+      const mountLines = mntsCont.split("\n");
 
       // System filesystem types that are never user mounts
-      const systemFsTypes = new Set([
+      const systFsTyps = new Set([
         "overlay",
         "tmpfs",
         "proc",
@@ -227,7 +227,7 @@ function discoverContainerMounts(isContainer: boolean): DockerMount[] {
       ]);
 
       // Filesystem types that indicate host mounts
-      const hostMountFsTypes = new Set(["fakeowner", "9p", "virtiofs", "fuse.sshfs"]);
+      const hstMntFsTyps = new Set(["fakeowner", "9p", "virtiofs", "fuse.sshfs"]);
 
       for (const line of mountLines) {
         const parts = line.split(" ");
@@ -238,7 +238,7 @@ function discoverContainerMounts(isContainer: boolean): DockerMount[] {
           const options = parts[3].split(",");
 
           // Skip system mount points
-          const isSystemMountPoint =
+          const isSystMntPnt =
             mountPoint === "/" ||
             mountPoint.startsWith("/dev") ||
             mountPoint.startsWith("/sys") ||
@@ -249,7 +249,7 @@ function discoverContainerMounts(isContainer: boolean): DockerMount[] {
             mountPoint === "/etc/hostname" ||
             mountPoint === "/etc/hosts";
 
-          if (isSystemMountPoint) {
+          if (isSystMntPnt) {
             continue;
           }
 
@@ -257,10 +257,10 @@ function discoverContainerMounts(isContainer: boolean): DockerMount[] {
           // 1. Known host-mount filesystem types (fakeowner, 9p, virtiofs)
           // 2. Device from /run/host_mark/ (docker-mcp-gateway pattern)
           // 3. Non-system filesystem type with user-like mount point
-          const isHostMountFs = hostMountFsTypes.has(fsType);
-          const isHostMarkDevice = device.startsWith("/run/host_mark/");
-          const isNonSystemFs = !systemFsTypes.has(fsType);
-          const isUserLikePath =
+          const isHstMntFs = hstMntFsTyps.has(fsType);
+          const isHstMrkDvc = device.startsWith("/run/host_mark/");
+          const isNnSystFs = !systFsTyps.has(fsType);
+          const isUsrLkPth =
             mountPoint.startsWith("/mnt/") ||
             mountPoint.startsWith("/workspace") ||
             mountPoint.startsWith("/data/") ||
@@ -271,7 +271,7 @@ function discoverContainerMounts(isContainer: boolean): DockerMount[] {
             mountPoint.startsWith("/src/") ||
             mountPoint.startsWith("/code/");
 
-          if (isHostMountFs || isHostMarkDevice || (isNonSystemFs && isUserLikePath)) {
+          if (isHstMntFs || isHstMrkDvc || (isNnSystFs && isUsrLkPth)) {
             const isReadOnly = options.includes("ro");
 
             mounts.push({
@@ -376,7 +376,7 @@ function discoverContainerMounts(isContainer: boolean): DockerMount[] {
 }
 
 // 3. Get container environment ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function getContainerEnvironment(containerType: ContainerInfo["containerType"]): ContainerInfo["containerEnvironment"] {
+function getContainerEnvironment(cntnTyp: ContainerInfo["containerType"]): ContainerInfo["containerEnvironment"] {
   const env: ContainerInfo["containerEnvironment"] = {};
 
   // Try to get container name from hostname (often set to container ID/name)
@@ -391,7 +391,7 @@ function getContainerEnvironment(containerType: ContainerInfo["containerType"]):
   }
 
   // Docker-specific environment
-  if (containerType === "docker") {
+  if (cntnTyp === "docker") {
     // Try multiple sources for Docker image name
     if (process.env.DOCKER_IMAGE) {
       env.dockerImage = process.env.DOCKER_IMAGE;
@@ -408,10 +408,10 @@ function getContainerEnvironment(containerType: ContainerInfo["containerType"]):
       if (fs.existsSync("/proc/self/cgroup")) {
         const cgroup = fs.readFileSync("/proc/self/cgroup", "utf8");
         // Extract container ID from cgroup path
-        const containerIdMatch = cgroup.match(DOCKER_CGROUP_CONTAINER_ID_REGEX);
-        if (containerIdMatch && !env.containerName) {
+        const cntnIdMtch = cgroup.match(DCCIR);
+        if (cntnIdMtch && !env.containerName) {
           // Use short container ID as fallback name
-          env.containerName = containerIdMatch[1].slice(0, 12);
+          env.containerName = cntnIdMtch[1].slice(0, 12);
         }
       }
     }
@@ -421,7 +421,7 @@ function getContainerEnvironment(containerType: ContainerInfo["containerType"]):
   }
 
   // Kubernetes-specific environment
-  if (containerType === "kubernetes") {
+  if (cntnTyp === "kubernetes") {
     if (process.env.KUBERNETES_NAMESPACE || process.env.POD_NAMESPACE) {
       env.kubernetesNamespace = process.env.KUBERNETES_NAMESPACE || process.env.POD_NAMESPACE;
     }
@@ -458,13 +458,13 @@ function getContainerEnvironment(containerType: ContainerInfo["containerType"]):
 
   // Podman-specific environment
   // Podman uses similar environment variables to Docker
-  if (containerType === "podman" && (process.env.CONTAINER_IMAGE || process.env.PODMAN_IMAGE)) {
+  if (cntnTyp === "podman" && (process.env.CONTAINER_IMAGE || process.env.PODMAN_IMAGE)) {
     env.dockerImage = process.env.CONTAINER_IMAGE || process.env.PODMAN_IMAGE;
   }
 
   // LXC-specific environment
   // LXC containers might have different naming conventions
-  if (containerType === "lxc" && process.env.LXC_NAME) {
+  if (cntnTyp === "lxc" && process.env.LXC_NAME) {
     env.containerName = process.env.LXC_NAME;
   }
 
@@ -502,12 +502,12 @@ function detectNodeInfo(): SystemInfo["nodeInfo"] {
 // 5. Detect python info ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function detectPythonInfo(): SystemInfo["pythonInfo"] {
   // Try python commands in order of preference
-  const pythonCommands =
+  const pythCmds =
     process.platform === "win32"
       ? ["python", "python3", "py"] // Windows: 'python' is common, 'py' launcher
       : ["python3", "python"]; // Unix: prefer python3
 
-  for (const cmd of pythonCommands) {
+  for (const cmd of pythCmds) {
     try {
       const version = execSync(`${cmd} --version`, {
         encoding: "utf8",
@@ -540,20 +540,20 @@ export function getSystemInfo(): SystemInfo {
   const isLinux = platform === "linux";
 
   // Container detection
-  const containerDetection = detectContainerEnvironment();
-  const mountPoints = containerDetection.isContainer ? discoverContainerMounts(containerDetection.isContainer) : [];
+  const cntnDtct = detectContainerEnvironment();
+  const mountPoints = cntnDtct.isContainer ? discoverContainerMounts(cntnDtct.isContainer) : [];
   const homeDir = os.homedir();
   const tempDir = os.tmpdir();
 
   let platformName: string;
   let defaultShell: string;
-  let pathSeparator: string;
+  let pthSprt: string;
   let examplePaths: SystemInfo["examplePaths"];
 
   if (isWindows) {
     platformName = "Windows";
     defaultShell = "pwsh.exe -NoLogo -NoProfile -ExecutionPolicy Bypass -Command";
-    pathSeparator = "\\";
+    pthSprt = "\\";
     examplePaths = {
       home: homeDir,
       temp: tempDir,
@@ -563,7 +563,7 @@ export function getSystemInfo(): SystemInfo {
   else if (isMacOS) {
     platformName = "macOS";
     defaultShell = "zsh";
-    pathSeparator = "/";
+    pthSprt = "/";
     examplePaths = {
       home: homeDir,
       temp: tempDir,
@@ -573,7 +573,7 @@ export function getSystemInfo(): SystemInfo {
   else if (isLinux) {
     platformName = "Linux";
     defaultShell = "bash";
-    pathSeparator = "/";
+    pthSprt = "/";
     examplePaths = {
       home: homeDir,
       temp: tempDir,
@@ -584,7 +584,7 @@ export function getSystemInfo(): SystemInfo {
     // Fallback for other Unix-like systems
     platformName = "Unix";
     defaultShell = "bash";
-    pathSeparator = "/";
+    pthSprt = "/";
     examplePaths = {
       home: homeDir,
       temp: tempDir,
@@ -593,38 +593,38 @@ export function getSystemInfo(): SystemInfo {
   }
 
   // Adjust platform name for containers
-  if (containerDetection.isContainer) {
-    let containerLabel = "";
+  if (cntnDtct.isContainer) {
+    let cntnLbl = "";
 
-    if (containerDetection.containerType === "kubernetes") {
-      containerLabel = "Kubernetes";
-      if (containerDetection.orchestrator === "kubernetes") {
-        containerLabel += " Pod";
+    if (cntnDtct.containerType === "kubernetes") {
+      cntnLbl = "Kubernetes";
+      if (cntnDtct.orchestrator === "kubernetes") {
+        cntnLbl += " Pod";
       }
     }
-    else if (containerDetection.containerType === "docker") {
-      containerLabel = "Docker";
-      if (containerDetection.orchestrator === "docker-compose") {
-        containerLabel += " Compose";
+    else if (cntnDtct.containerType === "docker") {
+      cntnLbl = "Docker";
+      if (cntnDtct.orchestrator === "docker-compose") {
+        cntnLbl += " Compose";
       }
-      else if (containerDetection.orchestrator === "docker-swarm") {
-        containerLabel += " Swarm";
+      else if (cntnDtct.orchestrator === "docker-swarm") {
+        cntnLbl += " Swarm";
       }
     }
-    else if (containerDetection.containerType === "podman") {
-      containerLabel = "Podman";
+    else if (cntnDtct.containerType === "podman") {
+      cntnLbl = "Podman";
     }
-    else if (containerDetection.containerType === "lxc") {
-      containerLabel = "LXC";
+    else if (cntnDtct.containerType === "lxc") {
+      cntnLbl = "LXC";
     }
-    else if (containerDetection.containerType === "systemd-nspawn") {
-      containerLabel = "systemd-nspawn";
+    else if (cntnDtct.containerType === "systemd-nspawn") {
+      cntnLbl = "systemd-nspawn";
     }
     else {
-      containerLabel = "Container";
+      cntnLbl = "Container";
     }
 
-    platformName = `${platformName} (${containerLabel})`;
+    platformName = `${platformName} (${cntnLbl})`;
 
     // Add accessible paths from mounts
     if (mountPoints.length > 0) {
@@ -650,19 +650,19 @@ export function getSystemInfo(): SystemInfo {
     platform,
     platformName,
     defaultShell,
-    pathSeparator,
+    pathSeparator: pthSprt,
     isWindows,
     isMacOS,
     isLinux,
     docker: {
       // New container detection fields
-      isContainer: containerDetection.isContainer,
-      containerType: containerDetection.containerType,
-      orchestrator: containerDetection.orchestrator,
+      isContainer: cntnDtct.isContainer,
+      containerType: cntnDtct.containerType,
+      orchestrator: cntnDtct.orchestrator,
       // Backward compatibility - keep old field
-      isDocker: containerDetection.isContainer && containerDetection.containerType === "docker",
+      isDocker: cntnDtct.isContainer && cntnDtct.containerType === "docker",
       mountPoints,
-      containerEnvironment: getContainerEnvironment(containerDetection.containerType),
+      containerEnvironment: getContainerEnvironment(cntnDtct.containerType),
     },
     isDXT: !!process.env.MCP_DXT,
     nodeInfo,

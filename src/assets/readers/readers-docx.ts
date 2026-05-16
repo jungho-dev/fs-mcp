@@ -25,17 +25,17 @@ import fs from "node:fs/promises";
 import type { EditResult, FileHandler, FileInfo, FileResult, ReadOptions } from "@assets/readers/readers-base";
 import PizZip from "pizzip";
 
-const XML_TAG_BOUNDARY_PATTERN = /(?<=>)(?=<)/;
-const XML_BODY_PATTERN = /<w:body[^>]*>([\s\S]*)<\/w:body>/;
-const XML_TAG_NAME_PATTERN = /^<(\S+?)[\s>/]/;
-const WORD_TEXT_PATTERN = /<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>/g;
-const WORD_PARAGRAPH_STYLE_PATTERN = /<w:pStyle\s+w:val="([^"]+)"/;
-const WORD_TABLE_STYLE_PATTERN = /<w:tblStyle\s+w:val="([^"]+)"/;
-const WORD_TABLE_TAG_PATTERN = /<w:tbl[\s>]/g;
-const MARKDOWN_HEADING_PATTERN = /^(#{1,6})\s+(.+)/;
-const WORD_SPLIT_PATTERN = /\s+/;
-const WORD_PARAGRAPH_TAG_PATTERN = /<w:p[\s>]/g;
-const WORD_IMAGE_TAG_PATTERN = /<w:drawing[\s>]/g;
+const XTBP = /(?<=>)(?=<)/;
+const XML_BDY_PAT = /<w:body[^>]*>([\s\S]*)<\/w:body>/;
+const XTNP = /^<(\S+?)[\s>/]/;
+const WRD_TXT_PAT = /<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>/g;
+const WPSP = /<w:pStyle\s+w:val="([^"]+)"/;
+const WTSP = /<w:tblStyle\s+w:val="([^"]+)"/;
+const WTTP = /<w:tbl[\s>]/g;
+const MRK_HDN_PAT = /^(#{1,6})\s+(.+)/;
+const WRD_SPLT_PAT = /\s+/;
+const WPTP = /<w:p[\s>]/g;
+const WITP = /<w:drawing[\s>]/g;
 type DocxEditContent = {
   oldStr?: string;
   old_string?: string;
@@ -51,7 +51,7 @@ type DocxEditContent = {
 function isDocxEditContent(value: unknown): value is DocxEditContent {
   return typeof value === "object" && value !== null;
 }
-const HEADER_FOOTER_XML_PARTS = ["word/header1.xml", "word/header2.xml", "word/header3.xml", "word/footer1.xml", "word/footer2.xml", "word/footer3.xml"];
+const HFXP = ["word/header1.xml", "word/header2.xml", "word/header3.xml", "word/footer1.xml", "word/footer2.xml", "word/footer3.xml"];
 
 // 1. XML transform ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 
@@ -59,7 +59,7 @@ const HEADER_FOOTER_XML_PARTS = ["word/header1.xml", "word/header2.xml", "word/h
 // Preserves text node content exactly. compact→pretty→compact is lossless.
 // 2. Pretty print XML ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function prettyPrintXml(xml: string): string {
-  const parts = xml.split(XML_TAG_BOUNDARY_PATTERN);
+  const parts = xml.split(XTBP);
   const lines: string[] = [];
   let depth = 0;
 
@@ -69,16 +69,16 @@ function prettyPrintXml(xml: string): string {
       continue;
     }
     const isClosing = trimmed.startsWith("</");
-    const isSelfClosing = trimmed.endsWith("/>");
-    const isProcessingInstruction = trimmed.startsWith("<?");
-    const isInline = !isClosing && !isSelfClosing && trimmed.includes("</");
+    const isSlfClsn = trimmed.endsWith("/>");
+    const isPrcsInst = trimmed.startsWith("<?");
+    const isInline = !isClosing && !isSlfClsn && trimmed.includes("</");
 
     if (isClosing) {
       depth = Math.max(0, depth - 1);
     }
     lines.push("  ".repeat(depth) + trimmed);
 
-    if (!isClosing && !isSelfClosing && !isInline && !isProcessingInstruction) {
+    if (!isClosing && !isSlfClsn && !isInline && !isPrcsInst) {
       depth++;
     }
   }
@@ -146,7 +146,7 @@ function extractOutline(xml: string): string {
 
   // Parse body children using regex — faster and more reliable than DOM for outline
   // Find <w:body>...</w:body>
-  const bodyMatch = xml.match(XML_BODY_PATTERN);
+  const bodyMatch = xml.match(XML_BDY_PAT);
   if (!bodyMatch) {
     return "No w:body found in document.xml";
   }
@@ -156,12 +156,12 @@ function extractOutline(xml: string): string {
   // We need to find top-level elements, respecting nesting
   const children = splitTopLevelElements(bodyContent);
 
-  let paragraphCount = 0;
+  let prgrCnt = 0;
   let tableCount = 0;
   let imageCount = 0;
 
   for (const [index, child] of children.entries()) {
-    const tagMatch = child.match(XML_TAG_NAME_PATTERN);
+    const tagMatch = child.match(XTNP);
     if (!tagMatch) {
       continue;
     }
@@ -169,7 +169,7 @@ function extractOutline(xml: string): string {
 
     if (tag === "w:p") {
       const text = extractAllText(child);
-      const textFragments = extractTextFragments(child);
+      const txtFrgm = extractTextFragments(child);
       const style = extractParagraphStyle(child);
       const hasDrawing = child.includes("<w:drawing") || child.includes("<mc:AlternateContent");
 
@@ -186,14 +186,14 @@ function extractOutline(xml: string): string {
         imageCount++;
         if (!text) {
           lines.push(line);
-          paragraphCount++;
+          prgrCnt++;
           continue;
         }
       }
-      if (textFragments.length > 0) {
-        const joined = textFragments.join("");
+      if (txtFrgm.length > 0) {
+        const joined = txtFrgm.join("");
         if (joined.length > 500) {
-          line += `\n  ${textFragments.slice(0, 8).join("")}...`;
+          line += `\n  ${txtFrgm.slice(0, 8).join("")}...`;
         }
         else {
           line += `\n  ${joined}`;
@@ -203,7 +203,7 @@ function extractOutline(xml: string): string {
         line += " (empty)";
       }
       lines.push(line);
-      paragraphCount++;
+      prgrCnt++;
     }
     else if (tag === "w:tbl") {
       const rows = extractTableRows(child);
@@ -228,7 +228,7 @@ function extractOutline(xml: string): string {
     else if (tag === "w:sdt") {
       // Structured document tag — look inside for content
       const sdtFragments = extractTextFragments(child);
-      const innerTables = (child.match(WORD_TABLE_TAG_PATTERN) || []).length;
+      const innerTables = (child.match(WTTP) || []).length;
       let line = `[${index}] w:sdt`;
       if (innerTables > 0) {
         line += ` (contains ${innerTables} table${innerTables > 1 ? "s" : ""})`;
@@ -257,7 +257,7 @@ function extractOutline(xml: string): string {
     }
   }
   // Summary header
-  const header = `DOCX Outline: ${children.length} body children, ${paragraphCount} paragraphs, ${tableCount} tables, ${imageCount} images\nEdit with: edit_block(file, old_string="<w:t>old text</w:t>", new_string="<w:t>new text</w:t>")\nRaw XML: use read_file with offset=1 to see pretty-printed XML for advanced edits.\n${"─".repeat(70)}`;
+  const header = `DOCX Outline: ${children.length} body children, ${prgrCnt} paragraphs, ${tableCount} tables, ${imageCount} images\nEdit with: edit_block(file, old_string="<w:t>old text</w:t>", new_string="<w:t>new text</w:t>")\nRaw XML: use read_file with offset=1 to see pretty-printed XML for advanced edits.\n${"─".repeat(70)}`;
 
   return `${header}\n${lines.join("\n")}`;
 }
@@ -268,7 +268,7 @@ function extractOutline(xml: string): string {
 function extractAllText(xml: string): string {
   const texts: string[] = [];
 
-  for (const match of xml.matchAll(WORD_TEXT_PATTERN)) {
+  for (const match of xml.matchAll(WRD_TXT_PAT)) {
     if (match[1]) {
       texts.push(match[1]);
     }
@@ -280,7 +280,7 @@ function extractAllText(xml: string): string {
 function extractTextFragments(xml: string): string[] {
   const fragments: string[] = [];
 
-  for (const match of xml.matchAll(WORD_TEXT_PATTERN)) {
+  for (const match of xml.matchAll(WRD_TXT_PAT)) {
     if (match[1]?.trim()) {
       fragments.push(match[0]);
     }
@@ -290,13 +290,13 @@ function extractTextFragments(xml: string): string[] {
 
 // 8. Extract paragraph style ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractParagraphStyle(xml: string): string | null {
-  const match = xml.match(WORD_PARAGRAPH_STYLE_PATTERN);
+  const match = xml.match(WPSP);
   return match?.[1] ?? null;
 }
 
 // 9. Extract table style ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractTableStyle(xml: string): string | null {
-  const match = xml.match(WORD_TABLE_STYLE_PATTERN);
+  const match = xml.match(WTSP);
   return match?.[1] ?? null;
 }
 
@@ -601,11 +601,11 @@ export class DocxFileHandler implements FileHandler {
     }
     // Default: return outline
     const outline = extractOutline(documentXml);
-    const headerFooterInfo = extractHeaderFooterOutline(zip);
+    const hdrFtrInf = extractHeaderFooterOutline(zip);
     const rawSizeKB = (documentXml.length / 1024).toFixed(1);
 
     return {
-      content: `${outline + headerFooterInfo}\n\nRaw XML: ${totalLines} lines, ${rawSizeKB}KB.\nFor bulk changes (translation, mass find/replace): use start_process with a Python script using zipfile to edit <w:t> elements.`,
+      content: `${outline + hdrFtrInf}\n\nRaw XML: ${totalLines} lines, ${rawSizeKB}KB.\nFor bulk changes (translation, mass find/replace): use start_process with a Python script using zipfile to edit <w:t> elements.`,
       mimeType: "text/plain",
       metadata: { isDocx: true, lineCount: totalLines },
     };
@@ -626,7 +626,7 @@ export class DocxFileHandler implements FileHandler {
     // Build paragraph XML from lines
     const paragraphs: string[] = [];
     for (const line of lines) {
-      const headingMatch = line.match(MARKDOWN_HEADING_PATTERN);
+      const headingMatch = line.match(MRK_HDN_PAT);
       if (headingMatch) {
         const level = headingMatch[1].length;
         const headingText = headingMatch[2];
@@ -656,12 +656,12 @@ export class DocxFileHandler implements FileHandler {
     try {
       let oldStr: string;
       let newStr: string;
-      let expectedReplacements = 1;
+      let expRplc = 1;
 
       if (isDocxEditContent(content)) {
         oldStr = content.oldStr ?? content.old_string ?? content.search ?? "";
         newStr = content.newStr ?? content.new_string ?? content.replace ?? "";
-        expectedReplacements = content.expectedReplacements ?? content.expected_replacements ?? 1;
+        expRplc = content.expectedReplacements ?? content.expected_replacements ?? 1;
       }
       else {
         return {
@@ -694,7 +694,7 @@ export class DocxFileHandler implements FileHandler {
 
       // If not found in document.xml, search through headers/footers
       if (matchCount === 0) {
-        for (const xmlPath of HEADER_FOOTER_XML_PARTS) {
+        for (const xmlPath of HFXP) {
           const f = zip.file(xmlPath);
           if (!f) {
             continue;
@@ -716,21 +716,21 @@ export class DocxFileHandler implements FileHandler {
           errors: [{ location: targetFile, error: `Search string not found in DOCX` }],
         };
       }
-      if (matchCount !== expectedReplacements) {
+      if (matchCount !== expRplc) {
         return {
           success: false,
           editsApplied: 0,
           errors: [
             {
               location: targetFile,
-              error: `Expected ${expectedReplacements} occurrence(s) but found ${matchCount}. Set expected_replacements to ${matchCount} to replace all, or add more context to make the search unique.`,
+              error: `Expected ${expRplc} occurrence(s) but found ${matchCount}. Set expected_replacements to ${matchCount} to replace all, or add more context to make the search unique.`,
             },
           ],
         };
       }
       // Apply replacement
       let edited = targetPretty;
-      if (expectedReplacements === 1) {
+      if (expRplc === 1) {
         const idx = edited.indexOf(oldStr);
         edited = edited.slice(0, idx) + newStr + edited.slice(idx + oldStr.length);
       }
@@ -769,14 +769,14 @@ export class DocxFileHandler implements FileHandler {
       const buf = await fs.readFile(path);
       const { documentXml } = loadDocxZip(buf);
       const text = extractAllText(documentXml);
-      const wordCount = text.split(WORD_SPLIT_PATTERN).filter((w) => w.length > 0).length;
-      const paragraphCount = (documentXml.match(WORD_PARAGRAPH_TAG_PATTERN) || []).length;
-      const tableCount = (documentXml.match(WORD_TABLE_TAG_PATTERN) || []).length;
-      const imageCount = (documentXml.match(WORD_IMAGE_TAG_PATTERN) || []).length;
+      const wordCount = text.split(WRD_SPLT_PAT).filter((w) => w.length > 0).length;
+      const prgrCnt = (documentXml.match(WPTP) || []).length;
+      const tableCount = (documentXml.match(WTTP) || []).length;
+      const imageCount = (documentXml.match(WITP) || []).length;
 
       metadata = {
         isDocx: true,
-        paragraphCount,
+        paragraphCount: prgrCnt,
         tableCount,
         imageCount,
         wordCount,

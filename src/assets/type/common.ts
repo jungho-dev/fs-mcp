@@ -6,13 +6,13 @@
  */
 
 import type {ChildProcess} from "node:child_process";
-import type {PreviewFileType} from "@assets/readers/readers-filetypes";
-import type {FilteredStdioServerTransport} from "@cores/transport/transport-stdio-transport";
+import type {PreviewFileType as PrvwFlTyp} from "@assets/readers/readers-filetypes";
+import type {FilteredStdioServerTransport as FltStSrTr} from "@cores/transport/transport-stdio-transport";
 
 declare global {
-  var mcpTransport: FilteredStdioServerTransport | undefined;
+  var mcpTransport: FltStSrTr | undefined;
 }
-export interface ProcessInfo {
+export declare interface ProcessInfo {
   command: string;
   cpu: string;
   memory: string;
@@ -73,7 +73,7 @@ export interface FilePreviewStructuredContent {
   entries?: FilePreviewDirectoryEntry[];
   fileName: string;
   filePath: string;
-  fileType: PreviewFileType;
+  fileType: PrvwFlTyp;
   imageData?: string;
   listing?: string;
   mimeType?: string;

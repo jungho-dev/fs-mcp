@@ -2,8 +2,10 @@
 
 ## [Unreleased]
 
-* keep large MCP response payloads inline by default while preserving optional context indexing metadata
-* document that context-index replacement is opt-in because no manual context-index retrieval tool is exposed
+* add manual context-index list, search, and clear tools with catalog, dispatcher, schema, and contract coverage
+* validate custom contextIndexDbPath values against ~/.mcp or allowedDirectories and add document/byte retention
+* store full payload hashes, indexed lengths, and truncated flags for safer context-index reuse
+* keep context-index maintenance responses out of automatic self-indexing
 
 ## [1.4.2] - 2026-05-12
 
@@ -262,3 +264,6 @@
 ## \[ 1.5.4 \]
 
 - 2026-05-15 (18:17:39)
+## \[ 1.5.5 \]
+
+- 2026-05-16 (21:19:43)

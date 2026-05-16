@@ -5,25 +5,25 @@
  * @since 2026-05-03
  */
 
-import { withArgsPathSchema } from "@schemas/schemas-args-ref";
-import { EditBlocksArgsSchema } from "@schemas/schemas-edit";
-import { CopyFilesArgsSchema, CreateDirectoriesArgsSchema, GetFileInfosArgsSchema, ListDirectoriesArgsSchema, MoveFilesArgsSchema, ReadFilesArgsSchema, RemoveFilesArgsSchema, WriteFilesArgsSchema } from "@schemas/schemas-filesystem";
-import { GetFullSearchResultsArgsSchema, StartSearchesArgsSchema, StopSearchesArgsSchema } from "@schemas/schemas-search";
-import { APPLY_PATCH_PERFORMANCE_GUIDANCE, BATCH_GUIDANCE, CMD_PREFIX_DESCRIPTION, PATH_GUIDANCE, createToolCatalogEntry, type ToolCatalogEntry, type ToolCatalogEntryConfig } from "@tools/tools-const";
+import { withArgsPathSchema as wthArPtSc } from "@schemas/schemas-args-ref";
+import { EdtBlArSc } from "@schemas/schemas-edit";
+import { CpyFlArSc, CrtDrArSc, GtFlInArSc2, LstDrArSc, MvFlsArgsSch, RdFlsArgsSch, RmvFlArSc, WrtFlArSc } from "@schemas/schemas-filesystem";
+import { GtFlSrReArSc, StrSrArSc2, StpSrArSc2 } from "@schemas/schemas-search";
+import { APPG, BTCH_GDNC, CMD_PRF_DSC, PTH_GDNC, createToolCatalogEntry as crtTlCtEn, type ToolCatalogEntry as TlCtlgEntr, type ToolCatalogEntryConfig as TlCtEnCf } from "@tools/tools-const";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-const FILESYSTEM_TOOL_DEFINITIONS = [
+const FLSY_TL_DFNT = [
   {
     name: "read_files",
     description: `
       Read files in parallel.
       Use paths for simple reads or items for offset, length, headers, or URL reads.
       Set allowMissing true to return missing local paths as non-error missing results.
-      ${BATCH_GUIDANCE}
-      ${PATH_GUIDANCE}
-      ${CMD_PREFIX_DESCRIPTION}
+      ${BTCH_GDNC}
+      ${PTH_GDNC}
+      ${CMD_PRF_DSC}
     `,
-    inputSchema: withArgsPathSchema(ReadFilesArgsSchema),
+    inputSchema: wthArPtSc(RdFlsArgsSch),
     annotations: {
       title: "Read Files",
       readOnlyHint: true,
@@ -35,11 +35,11 @@ const FILESYSTEM_TOOL_DEFINITIONS = [
     description: (`
       Write files in parallel.
       Prefer content_path or args_path for large text.
-      ${BATCH_GUIDANCE}
-      ${PATH_GUIDANCE}
-      ${CMD_PREFIX_DESCRIPTION}
+      ${BTCH_GDNC}
+      ${PTH_GDNC}
+      ${CMD_PRF_DSC}
     `),
-    inputSchema: withArgsPathSchema(WriteFilesArgsSchema),
+    inputSchema: wthArPtSc(WrtFlArSc),
     annotations: {
       title: "Write Files",
       readOnlyHint: false,
@@ -51,11 +51,11 @@ const FILESYSTEM_TOOL_DEFINITIONS = [
     name: "create_directories",
     description: (`
       Create one or many directories in parallel.
-      ${BATCH_GUIDANCE}
-      ${PATH_GUIDANCE}
-      ${CMD_PREFIX_DESCRIPTION}
+      ${BTCH_GDNC}
+      ${PTH_GDNC}
+      ${CMD_PRF_DSC}
     `),
-    inputSchema: withArgsPathSchema(CreateDirectoriesArgsSchema),
+    inputSchema: wthArPtSc(CrtDrArSc),
     annotations: {
       title: "Create Directories",
       readOnlyHint: false,
@@ -68,11 +68,11 @@ const FILESYSTEM_TOOL_DEFINITIONS = [
       List one or many directories in parallel.
       Use items: [{ path, depth?, maxEntries?, excludePatterns?, includeFiles? }].
       Set allowMissing true to return missing local paths as non-error missing results.
-      ${BATCH_GUIDANCE}
-      ${PATH_GUIDANCE}
-      ${CMD_PREFIX_DESCRIPTION}
+      ${BTCH_GDNC}
+      ${PTH_GDNC}
+      ${CMD_PRF_DSC}
     `),
-    inputSchema: withArgsPathSchema(ListDirectoriesArgsSchema),
+    inputSchema: wthArPtSc(LstDrArSc),
     annotations: {
       title: "List Directories",
       readOnlyHint: true,
@@ -83,11 +83,11 @@ const FILESYSTEM_TOOL_DEFINITIONS = [
     description: (`
       Copy one or many files or directories in parallel.
       Use items: [{ source, destination, recursive?, force? }].
-      ${BATCH_GUIDANCE}
-      ${PATH_GUIDANCE}
-      ${CMD_PREFIX_DESCRIPTION}
+      ${BTCH_GDNC}
+      ${PTH_GDNC}
+      ${CMD_PRF_DSC}
     `),
-    inputSchema: withArgsPathSchema(CopyFilesArgsSchema),
+    inputSchema: wthArPtSc(CpyFlArSc),
     annotations: {
       title: "Copy Files",
       readOnlyHint: false,
@@ -99,11 +99,11 @@ const FILESYSTEM_TOOL_DEFINITIONS = [
     name: "move_files",
     description: (`
       Move or rename one or many files in parallel.
-      ${BATCH_GUIDANCE}
-      ${PATH_GUIDANCE}
-      ${CMD_PREFIX_DESCRIPTION}
+      ${BTCH_GDNC}
+      ${PTH_GDNC}
+      ${CMD_PRF_DSC}
     `),
-    inputSchema: withArgsPathSchema(MoveFilesArgsSchema),
+    inputSchema: wthArPtSc(MvFlsArgsSch),
     annotations: {
       title: "Move/Rename Files",
       readOnlyHint: false,
@@ -116,11 +116,11 @@ const FILESYSTEM_TOOL_DEFINITIONS = [
     description: (`
       Delete one or many files or directories in parallel.
       Use items: [{ path, recursive?, force? }].
-      ${BATCH_GUIDANCE}
-      ${PATH_GUIDANCE}
-      ${CMD_PREFIX_DESCRIPTION}
+      ${BTCH_GDNC}
+      ${PTH_GDNC}
+      ${CMD_PRF_DSC}
     `),
-    inputSchema: withArgsPathSchema(RemoveFilesArgsSchema),
+    inputSchema: wthArPtSc(RmvFlArSc),
     annotations: {
       title: "Remove Files",
       readOnlyHint: false,
@@ -133,11 +133,11 @@ const FILESYSTEM_TOOL_DEFINITIONS = [
     description: (`
       Start searches in parallel.
       Use pattern_path for large patterns and filePattern to narrow the target set.
-      ${BATCH_GUIDANCE}
-      ${PATH_GUIDANCE}
-      ${CMD_PREFIX_DESCRIPTION}
+      ${BTCH_GDNC}
+      ${PTH_GDNC}
+      ${CMD_PRF_DSC}
     `),
-    inputSchema: withArgsPathSchema(StartSearchesArgsSchema),
+    inputSchema: wthArPtSc(StrSrArSc2),
     annotations: {
       title: "Start Searches",
       readOnlyHint: true,
@@ -148,10 +148,10 @@ const FILESYSTEM_TOOL_DEFINITIONS = [
     description: (`
       Read one or many active search sessions in parallel with full per-item result text.
       Use offset or length for pagination.
-      ${BATCH_GUIDANCE}
-      ${CMD_PREFIX_DESCRIPTION}
+      ${BTCH_GDNC}
+      ${CMD_PRF_DSC}
     `),
-    inputSchema: withArgsPathSchema(GetFullSearchResultsArgsSchema),
+    inputSchema: wthArPtSc(GtFlSrReArSc),
     annotations: {
       title: "Get Full Search Results",
       readOnlyHint: true,
@@ -161,10 +161,10 @@ const FILESYSTEM_TOOL_DEFINITIONS = [
     name: "stop_searches",
     description: (`
       Stop one or many active searches in parallel.
-      ${BATCH_GUIDANCE}
-      ${CMD_PREFIX_DESCRIPTION}
+      ${BTCH_GDNC}
+      ${CMD_PRF_DSC}
     `),
-    inputSchema: withArgsPathSchema(StopSearchesArgsSchema),
+    inputSchema: wthArPtSc(StpSrArSc2),
     annotations: {
       title: "Stop Searches",
       readOnlyHint: false,
@@ -176,11 +176,11 @@ const FILESYSTEM_TOOL_DEFINITIONS = [
     description: (`
       Retrieve metadata for one or many files in parallel.
       Set allowMissing true to return missing local paths as non-error missing results.
-      ${BATCH_GUIDANCE}
-      ${PATH_GUIDANCE}
-      ${CMD_PREFIX_DESCRIPTION}
+      ${BTCH_GDNC}
+      ${PTH_GDNC}
+      ${CMD_PRF_DSC}
     `),
-    inputSchema: withArgsPathSchema(GetFileInfosArgsSchema),
+    inputSchema: wthArPtSc(GtFlInArSc2),
     annotations: {
       title: "Get File Information",
       readOnlyHint: true,
@@ -191,12 +191,12 @@ const FILESYSTEM_TOOL_DEFINITIONS = [
     description: (`
       Apply exact block replacements in parallel.
       Prefer *_path or args_path for large text.
-      ${APPLY_PATCH_PERFORMANCE_GUIDANCE}
-      ${BATCH_GUIDANCE}
-      ${PATH_GUIDANCE}
-      ${CMD_PREFIX_DESCRIPTION}
+      ${APPG}
+      ${BTCH_GDNC}
+      ${PTH_GDNC}
+      ${CMD_PRF_DSC}
     `),
-    inputSchema: withArgsPathSchema(EditBlocksArgsSchema),
+    inputSchema: wthArPtSc(EdtBlArSc),
     annotations: {
       title: "Edit Blocks",
       readOnlyHint: false,
@@ -204,7 +204,9 @@ const FILESYSTEM_TOOL_DEFINITIONS = [
       openWorldHint: false,
     },
   },
-] satisfies ToolCatalogEntryConfig[];
+] satisfies TlCtEnCf[];
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export const FILESYSTEM_TOOL_CATALOG: ToolCatalogEntry[] = FILESYSTEM_TOOL_DEFINITIONS.map((entry) => createToolCatalogEntry(entry));
+export const FLSY_TL_CTLG: TlCtlgEntr[] = FLSY_TL_DFNT.map((entry) => crtTlCtEn(entry));
+
+export const FLSY_TL_CTL2 = FLSY_TL_CTLG;

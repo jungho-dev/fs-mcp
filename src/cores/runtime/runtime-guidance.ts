@@ -15,11 +15,11 @@ export function getOSSpecificGuidance(systemInfo: SystemInfo): string {
 
   // Container-specific guidance
   if (docker.isContainer) {
-    const containerTypeLabel = docker.containerType === "kubernetes" ? "KUBERNETES POD" : docker.containerType === "docker" ? "DOCKER CONTAINER" : docker.containerType === "podman" ? "PODMAN CONTAINER" : docker.containerType === "lxc" ? "LXC CONTAINER" : docker.containerType === "systemd-nspawn" ? "SYSTEMD-NSPAWN CONTAINER" : "CONTAINER";
+    const cntnTypLbl = docker.containerType === "kubernetes" ? "KUBERNETES POD" : docker.containerType === "docker" ? "DOCKER CONTAINER" : docker.containerType === "podman" ? "PODMAN CONTAINER" : docker.containerType === "lxc" ? "LXC CONTAINER" : docker.containerType === "systemd-nspawn" ? "SYSTEMD-NSPAWN CONTAINER" : "CONTAINER";
 
     guidance += `
 
-${containerTypeLabel} ENVIRONMENT DETECTED:`;
+${cntnTypLbl} ENVIRONMENT DETECTED:`;
 
     if (docker.containerType === "kubernetes") {
       guidance += `
@@ -135,11 +135,11 @@ export function getPathGuidance(systemInfo: SystemInfo): string {
   let guidance = `Always use absolute paths for reliability. Paths are automatically normalized regardless of slash direction.`;
 
   if (systemInfo.docker.isContainer && systemInfo.docker.mountPoints.length > 0) {
-    const containerLabel = systemInfo.docker.containerType === "kubernetes" ? "KUBERNETES" : systemInfo.docker.containerType === "docker" ? "DOCKER" : systemInfo.docker.containerType === "podman" ? "PODMAN" : "CONTAINER";
+    const cntnLbl = systemInfo.docker.containerType === "kubernetes" ? "KUBERNETES" : systemInfo.docker.containerType === "docker" ? "DOCKER" : systemInfo.docker.containerType === "podman" ? "PODMAN" : "CONTAINER";
 
     guidance += `
 
-${containerLabel}: Prefer paths within mounted directories: ${systemInfo.docker.mountPoints.map((m) => m.containerPath).join(", ")}.
+${cntnLbl}: Prefer paths within mounted directories: ${systemInfo.docker.mountPoints.map((m) => m.containerPath).join(", ")}.
 When users ask about file locations, check these mounted paths first.`;
   }
   return guidance;

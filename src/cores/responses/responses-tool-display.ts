@@ -5,7 +5,7 @@
  * @since 2026-05-10
  */
 
-import type { ServerResponseContent, ServerResult } from "@assets/type/common";
+import type { ServerResponseContent as SrvrResCont, ServerResult } from "@assets/type/common";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 type ToolDisplayStatus = "success" | "error";
@@ -13,7 +13,7 @@ type ToolDisplayValue = number | string;
 
 export interface ToolDisplayOutput {
   data: {
-    content: ServerResponseContent[];
+    content: SrvrResCont[];
     structuredContent: ServerResult["structuredContent"] | null;
     text: string;
   };
@@ -57,7 +57,7 @@ const config = {
 const renderLine = () => `${config.line.color}${config.line.str}${config.reset.color}\n`;
 const renderRow = (key: string, value: string) => `${config.key.color}${config.key.str}${key} = ${config.value.color}${config.value.str}${value}${config.reset.color}\n`;
 
-export const TOOL_DISPLAY_TEMPLATE = [
+export const TL_DSPL_TMPL = [
   renderLine(),
   renderRow(`tool`, `\${tool}`),
   renderRow(`items`, `\${items}`),
@@ -68,8 +68,8 @@ export const TOOL_DISPLAY_TEMPLATE = [
   renderLine(),
 ].join(``);
 
-const integerFormatter = new Intl.NumberFormat(`en-US`);
-const secondsFormatter = new Intl.NumberFormat(`en-US`, {
+const intgFrmt = new Intl.NumberFormat(`en-US`);
+const scndFrmt = new Intl.NumberFormat(`en-US`, {
   maximumFractionDigits: 3,
   minimumFractionDigits: 0,
 });
@@ -89,11 +89,11 @@ function stringifyDisplayStructuredContent(value: ServerResult["structuredConten
 
 // 2. Count display items ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function itemsDisplayItems(output: ToolDisplayOutput): number {
-  const structuredContent = output.data.structuredContent;
+  const strcCont = output.data.structuredContent;
 
-  if (typeof structuredContent === "object" && structuredContent !== null) {
-    const totalCount = (structuredContent as Record<string, unknown>).totalCount;
-    const results = (structuredContent as Record<string, unknown>).results;
+  if (typeof strcCont === "object" && strcCont !== null) {
+    const totalCount = (strcCont as Record<string, unknown>).totalCount;
+    const results = (strcCont as Record<string, unknown>).results;
 
     if (typeof totalCount === "number" && Number.isFinite(totalCount)) {
       return totalCount;
@@ -107,7 +107,7 @@ function itemsDisplayItems(output: ToolDisplayOutput): number {
 
 // 3. Format display number with unit ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function formatDisplayNumber(value: number, unit: string): string {
-  return `${integerFormatter.format(value)} ${unit}`;
+  return `${intgFrmt.format(value)} ${unit}`;
 }
 
 // 4. Format display duration ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -115,12 +115,12 @@ function formatDisplayDuration(durationMs?: number | null): string {
   if (durationMs === null || durationMs === undefined) {
     return `null`;
   }
-  return `${secondsFormatter.format(durationMs / 1000)} s`;
+  return `${scndFrmt.format(durationMs / 1000)} s`;
 }
 
 // 5. Create tool display values ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createToolDisplayValues(output: ToolDisplayOutput): ToolDisplayTemplateValues {
-  const structuredText = stringifyDisplayStructuredContent(output.data.structuredContent);
+  const strcTxt = stringifyDisplayStructuredContent(output.data.structuredContent);
 
   return {
     count: itemsDisplayItems(output),
@@ -128,7 +128,7 @@ function createToolDisplayValues(output: ToolDisplayOutput): ToolDisplayTemplate
     contents: formatDisplayNumber(output.data.text.length, `chars`),
     durationMs: formatDisplayDuration(output.durationMs),
     status: output.status,
-    structuredText: formatDisplayNumber(structuredText.length, `chars`),
+    structuredText: formatDisplayNumber(strcTxt.length, `chars`),
     tool: output.toolName,
     toolName: output.toolName,
   };
@@ -136,9 +136,9 @@ function createToolDisplayValues(output: ToolDisplayOutput): ToolDisplayTemplate
 
 // 6. Render tool display template ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function renderToolDisplayTemplate(template: string, values: ToolDisplayTemplateValues): string {
-  const placeholderPattern = /\$\{([A-Za-z][A-Za-z0-9]*)\}/g;
+  const plchPat = /\$\{([A-Za-z][A-Za-z0-9]*)\}/g;
 
-  return template.replace(placeholderPattern, (placeholder: string, field: string) => {
+  return template.replace(plchPat, (placeholder: string, field: string) => {
     const value = values[field as keyof ToolDisplayTemplateValues] as ToolDisplayValue | undefined;
 
     if (value === undefined) {
@@ -149,6 +149,6 @@ function renderToolDisplayTemplate(template: string, values: ToolDisplayTemplate
 }
 
 // 7. Create tool display text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export function createToolDisplayText(output: ToolDisplayOutput, template = TOOL_DISPLAY_TEMPLATE): string {
+export function createToolDisplayText(output: ToolDisplayOutput, template = TL_DSPL_TMPL): string {
   return renderToolDisplayTemplate(template, createToolDisplayValues(output));
 }

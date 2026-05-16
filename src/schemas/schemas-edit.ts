@@ -7,15 +7,15 @@
 
 import {z} from "zod";
 
-const INLINE_TEXT_ARGUMENT_MAX_LENGTH = 50_000;
+const ITAML = 50_000;
 
-export const EditBlockArgsSchema = z.object({
+export const EdtBlArSc2 = z.object({
   file_path: z.string(),
-  old_string: z.string().max(INLINE_TEXT_ARGUMENT_MAX_LENGTH, "Use old_string_path for large search text").optional(),
+  old_string: z.string().max(ITAML, "Use old_string_path for large search text").optional(),
   old_string_path: z.string().optional(),
   old_string_offset: z.number().optional().default(0),
   old_string_length: z.number().optional(),
-  new_string: z.string().max(INLINE_TEXT_ARGUMENT_MAX_LENGTH, "Use new_string_path for large replacement text").optional(),
+  new_string: z.string().max(ITAML, "Use new_string_path for large replacement text").optional(),
   new_string_path: z.string().optional(),
   new_string_offset: z.number().optional().default(0),
   new_string_length: z.number().optional(),
@@ -26,6 +26,6 @@ export const EditBlockArgsSchema = z.object({
   message: "Either new_string or new_string_path is required",
 });
 
-export const EditBlocksArgsSchema = z.object({
-  items: z.array(EditBlockArgsSchema).min(1),
+export const EdtBlArSc = z.object({
+  items: z.array(EdtBlArSc2).min(1),
 });

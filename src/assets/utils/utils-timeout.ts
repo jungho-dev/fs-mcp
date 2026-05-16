@@ -14,7 +14,7 @@
 // @returns Promise that resolves with the operation result or the default value on timeout
 
 // 1. With timeout ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export function withTimeout<T>(operation: Promise<T>, timeoutMs: number, operationName: string, defaultValue: T): Promise<T> {
+export function withTimeout<T>(operation: Promise<T>, timeoutMs: number, opNm2: string, defaultValue: T): Promise<T> {
   // Don't sanitize operation name for logs; callers decide how to report it.
   return new Promise((resolve, reject) => {
     let isCompleted = false;
@@ -29,7 +29,7 @@ export function withTimeout<T>(operation: Promise<T>, timeoutMs: number, operati
         else {
           // Keep the original operation name in the error message
           // Telemetry sanitization happens at the capture level
-          reject(`__ERROR__: ${operationName} timed out after ${timeoutMs / 1000} seconds`);
+          reject(`__ERROR__: ${opNm2} timed out after ${timeoutMs / 1000} seconds`);
         }
       }
     }, timeoutMs);

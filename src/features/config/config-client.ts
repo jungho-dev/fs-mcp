@@ -15,17 +15,17 @@ export type ClientInfoUpdate = {
   version?: string;
 };
 
-const DEFAULT_CLIENT: CurrentClient = {name: "uninitialized", version: "uninitialized"};
-export let currentClient: CurrentClient = {...DEFAULT_CLIENT};
+const DEF_CLNT: CurrentClient = {name: "uninitialized", version: "uninitialized"};
+export let curClnt: CurrentClient = {...DEF_CLNT};
 
 // 1. Get current client snapshot ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function getCurrentClient(): CurrentClient {
-  return {...currentClient};
+  return {...curClnt};
 }
 
 // 2. Build current client session key ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function buildCurrentClientSessionKey(): string {
-  return `${currentClient.name}@${currentClient.version}`;
+  return `${curClnt.name}@${curClnt.version}`;
 }
 
 // 3. Get default context index DB path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -36,14 +36,14 @@ export function getDefaultContextIndexDbPath(): string {
 // 4. Update current client ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function updateCurrentClient(clientInfo: ClientInfoUpdate): {changed: boolean; nameChanged: boolean} {
   const nextClient: CurrentClient = {
-    name: clientInfo.name ?? currentClient.name,
-    version: clientInfo.version ?? currentClient.version,
+    name: clientInfo.name ?? curClnt.name,
+    version: clientInfo.version ?? curClnt.version,
   };
-  const changed = nextClient.name !== currentClient.name || nextClient.version !== currentClient.version;
-  const nameChanged = nextClient.name !== currentClient.name;
+  const changed = nextClient.name !== curClnt.name || nextClient.version !== curClnt.version;
+  const nameChanged = nextClient.name !== curClnt.name;
 
   if (changed) {
-    currentClient = nextClient;
+    curClnt = nextClient;
   }
   return {changed, nameChanged};
 }

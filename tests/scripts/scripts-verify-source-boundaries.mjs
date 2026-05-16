@@ -1,18 +1,18 @@
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as flUrlTPth2 } from "node:url";
 
-const scriptPath = fileURLToPath(import.meta.url);
+const scriptPath = flUrlTPth2(import.meta.url);
 const projectRoot = path.resolve(path.dirname(scriptPath), "..", "..");
 const sourceRoot = path.join(projectRoot, "src");
 const testRoot = path.join(projectRoot, "tests");
-const requiredSourceEntries = new Set(["assets", "controllers", "cores", "features", "schemas", "tools", "index.mts"]);
-const forbiddenSourceRootEntries = new Set(["app", "config", "core", "domains", "handlers", "mcp", "responses", "tests", "types"]);
-const requiredTestEntries = new Set(["contracts", "fixtures", "run-all-tests.js", "scripts", "smoke"]);
-const scannedTextSurfaces = [path.join(projectRoot, "package.json"), path.join(projectRoot, "tsconfig.json"), path.join(projectRoot, "tests"), path.join(projectRoot, "src")];
-const ignoredDirectories = new Set([".git", "node_modules", "out", "fixtures"]);
-const textFileExtensions = new Set([".json", ".mjs", ".ts", ".ts", ".js", ".md", ".txt"]);
-const forbiddenRuntimeTerm = ["caff", "einate"].join("");
+const rqrdSrcEntr = new Set(["assets", "controllers", "cores", "features", "schemas", "tools", "index.mts"]);
+const frbSrRtEn = new Set(["app", "config", "core", "domains", "handlers", "mcp", "responses", "tests", "types"]);
+const rqrdTstEntr = new Set(["contracts", "fixtures", "run-all-tests.js", "scripts", "smoke"]);
+const scnnTxtSrfc = [path.join(projectRoot, "package.json"), path.join(projectRoot, "tsconfig.json"), path.join(projectRoot, "tests"), path.join(projectRoot, "src")];
+const ignrDrct = new Set([".git", "node_modules", "out", "fixtures"]);
+const txtFlExts = new Set([".json", ".mjs", ".ts", ".ts", ".js", ".md", ".txt"]);
+const frbdRtTrm = ["caff", "einate"].join("");
 
 // 1. filesystem helpers ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function pathExists(targetPath) {
@@ -32,7 +32,7 @@ async function pathExists(targetPath) {
 async function collectTextFiles(targetPath, results = []) {
   const targetStat = await stat(targetPath);
   if (targetStat.isFile()) {
-    if (textFileExtensions.has(path.extname(targetPath))) {
+    if (txtFlExts.has(path.extname(targetPath))) {
       results.push(targetPath);
     }
     return results;
@@ -40,7 +40,7 @@ async function collectTextFiles(targetPath, results = []) {
 
   const entries = await readdir(targetPath, { withFileTypes: true });
   await Promise.all(entries.map(async (entry) => {
-    if (entry.isDirectory() && ignoredDirectories.has(entry.name)) {
+    if (entry.isDirectory() && ignrDrct.has(entry.name)) {
       return;
     }
 
@@ -50,7 +50,7 @@ async function collectTextFiles(targetPath, results = []) {
       return;
     }
 
-    if (textFileExtensions.has(path.extname(entry.name))) {
+    if (txtFlExts.has(path.extname(entry.name))) {
       results.push(entryPath);
     }
   }));
@@ -62,16 +62,16 @@ async function collectTextFiles(targetPath, results = []) {
 async function verifySourceRootEntries() {
   const entries = await readdir(sourceRoot, { withFileTypes: true });
   const names = new Set(entries.map((entry) => entry.name));
-  const missingEntries = [...requiredSourceEntries].filter((entry) => !names.has(entry)).sort();
-  const forbiddenEntries = [...forbiddenSourceRootEntries].filter((entry) => names.has(entry)).sort();
+  const mssnEntr = [...rqrdSrcEntr].filter((entry) => !names.has(entry)).sort();
+  const frbdEntr = [...frbSrRtEn].filter((entry) => names.has(entry)).sort();
   const failures = [];
 
-  if (missingEntries.length > 0) {
-    failures.push(`Missing src boundary entries: ${missingEntries.join(", ")}`);
+  if (mssnEntr.length > 0) {
+    failures.push(`Missing src boundary entries: ${mssnEntr.join(", ")}`);
   }
 
-  if (forbiddenEntries.length > 0) {
-    failures.push(`Legacy src root entries found: ${forbiddenEntries.join(", ")}`);
+  if (frbdEntr.length > 0) {
+    failures.push(`Legacy src root entries found: ${frbdEntr.join(", ")}`);
   }
 
   return failures;
@@ -79,22 +79,22 @@ async function verifySourceRootEntries() {
 
 // 4. Verify test root entries ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function verifyTestRootEntries() {
-  const rootTestFilePattern = /^test.*\.(js|mjs)$/;
+  const rtTstFlPat = /^test.*\.(js|mjs)$/;
   const entries = await readdir(testRoot, { withFileTypes: true });
   const names = new Set(entries.map((entry) => entry.name));
-  const missingEntries = [...requiredTestEntries].filter((entry) => !names.has(entry)).sort();
-  const rootTestFiles = entries
-    .filter((entry) => entry.isFile() && rootTestFilePattern.test(entry.name))
+  const mssnEntr = [...rqrdTstEntr].filter((entry) => !names.has(entry)).sort();
+  const rtTstFls = entries
+    .filter((entry) => entry.isFile() && rtTstFlPat.test(entry.name))
     .map((entry) => entry.name)
     .sort();
   const failures = [];
 
-  if (missingEntries.length > 0) {
-    failures.push(`Missing tests boundary entries: ${missingEntries.join(", ")}`);
+  if (mssnEntr.length > 0) {
+    failures.push(`Missing tests boundary entries: ${mssnEntr.join(", ")}`);
   }
 
-  if (rootTestFiles.length > 0) {
-    failures.push(`Root test files must be topic-scoped: ${rootTestFiles.join(", ")}`);
+  if (rtTstFls.length > 0) {
+    failures.push(`Root test files must be topic-scoped: ${rtTstFls.join(", ")}`);
   }
 
   return failures;
@@ -104,7 +104,7 @@ async function verifyTestRootEntries() {
 async function verifyForbiddenRuntimeTerms() {
   const failures = [];
 
-  await Promise.all(scannedTextSurfaces.map(async (surface) => {
+  await Promise.all(scnnTxtSrfc.map(async (surface) => {
     if (!(await pathExists(surface))) {
       return;
     }
@@ -112,7 +112,7 @@ async function verifyForbiddenRuntimeTerms() {
     const files = await collectTextFiles(surface);
     await Promise.all(files.map(async (file) => {
       const content = await readFile(file, "utf8");
-      if (content.toLowerCase().includes(forbiddenRuntimeTerm)) {
+      if (content.toLowerCase().includes(frbdRtTrm)) {
         failures.push(`Forbidden removed platform helper reference: ${path.relative(projectRoot, file)}`);
       }
     }));

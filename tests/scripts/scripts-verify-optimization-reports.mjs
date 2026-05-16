@@ -1,11 +1,11 @@
 import { readdir } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as flUrlTPth2 } from "node:url";
 
-const scriptPath = fileURLToPath(import.meta.url);
+const scriptPath = flUrlTPth2(import.meta.url);
 const projectRoot = path.resolve(path.dirname(scriptPath), "..", "..");
 const docsPath = path.join(projectRoot, ".docs", "optimization");
-const reportPattern = /^fs-mcp-optimization-(v\d+)-\d{4}-\d{2}-\d{2}\.md$/;
+const rprtPat = /^fs-mcp-optimization-(v\d+)-\d{4}-\d{2}-\d{2}\.md$/;
 
 // 1. report discovery ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function collectOptimizationReports() {
@@ -28,7 +28,7 @@ async function collectOptimizationReports() {
       continue;
     }
 
-    const match = entry.name.match(reportPattern);
+    const match = entry.name.match(rprtPat);
     if (!match) {
       continue;
     }
@@ -47,9 +47,9 @@ async function main() {
   const reports = await collectOptimizationReports();
   const failures = [];
 
-  for (const [version, matchingReports] of reports.entries()) {
-    if (matchingReports.length > 1) {
-      failures.push(`Duplicate optimization reports for ${version}: ${matchingReports.join(", ")}`);
+  for (const [version, mtchRprt] of reports.entries()) {
+    if (mtchRprt.length > 1) {
+      failures.push(`Duplicate optimization reports for ${version}: ${mtchRprt.join(", ")}`);
     }
   }
 

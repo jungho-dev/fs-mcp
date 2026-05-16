@@ -28,15 +28,15 @@ export function detectLineEnding(content: string): LineEndingStyle {
 }
 
 // 2. Normalize line endings ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export function normalizeLineEndings(text: string, targetLineEnding: LineEndingStyle): string {
+export function normalizeLineEndings(text: string, tgtLnEndn: LineEndingStyle): string {
   // First normalize to LF
   const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");
 
   // Then convert to target
-  if (targetLineEnding === "\r\n") {
+  if (tgtLnEndn === "\r\n") {
     return normalized.replace(/\n/g, "\r\n");
   }
-  else if (targetLineEnding === "\r") {
+  else if (tgtLnEndn === "\r") {
     return normalized.replace(/\n/g, "\r");
   }
   return normalized;

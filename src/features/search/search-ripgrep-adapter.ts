@@ -10,11 +10,11 @@ import {chmodSync, existsSync} from "node:fs";
 import {homedir} from "node:os";
 import {join} from "node:path";
 
-const RIPGREP_PATH_LINE_PATTERN = /\r?\n/;
-const WINDOWS_PLATFORM = "win32";
+const RPLP = /\r?\n/;
+const WNDW_PLTF = "win32";
 // biome-ignore lint/security/noSecrets: Windows ProgramFiles(x86) environment variable name is not a secret.
-const PROGRAM_FILES_X86_ENV = "ProgramFiles(x86)";
-const RIPGREP_NOT_FOUND_MESSAGE = "ripgrep binary not found. fs-mcp requires ripgrep to perform searches. " + "Please install ripgrep:\n" + "  macOS: brew install ripgrep\n" + "  Linux: See https://github.com/BurntSushi/ripgrep#installation\n" + "  Windows: choco install ripgrep or download from https://github.com/BurntSushi/ripgrep/releases";
+const PFXE = "ProgramFiles(x86)";
+const RNFM = "ripgrep binary not found. fs-mcp requires ripgrep to perform searches. " + "Please install ripgrep:\n" + "  macOS: brew install ripgrep\n" + "  Linux: See https://github.com/BurntSushi/ripgrep#installation\n" + "  Windows: choco install ripgrep or download from https://github.com/BurntSushi/ripgrep/releases";
 
 let cachedRgPath: string | null = null;
 
@@ -35,7 +35,7 @@ export async function getRipgrepPath(): Promise<string> {
   if (commonPath) {
     return cacheRipgrepPath(commonPath);
   }
-  throw new Error(RIPGREP_NOT_FOUND_MESSAGE);
+  throw new Error(RNFM);
 }
 
 // 2. Resolve bundled ripgrep path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -56,10 +56,10 @@ async function resolveBundledRipgrepPath(): Promise<string | null> {
 // 3. Resolve system ripgrep path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function resolveSystemRipgrepPath(): string | null {
   try {
-    const isWindows = process.platform === WINDOWS_PLATFORM;
+    const isWindows = process.platform === WNDW_PLTF;
     const systemRg = isWindows ? "rg.exe" : "rg";
     const whichCmd = isWindows ? "where" : "which";
-    const result = execSync(`${whichCmd} ${systemRg}`, {encoding: "utf-8"}).trim().split(RIPGREP_PATH_LINE_PATTERN)[0];
+    const result = execSync(`${whichCmd} ${systemRg}`, {encoding: "utf-8"}).trim().split(RPLP)[0];
     if (result && existsSync(result)) {
       return result;
     }
@@ -82,16 +82,16 @@ function resolveCommonRipgrepPath(): string | null {
 
 // 5. Get common ripgrep paths ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getCommonRipgrepPaths(): string[] {
-  if (process.platform === WINDOWS_PLATFORM) {
+  if (process.platform === WNDW_PLTF) {
     const commonPaths = [join(homedir(), "scoop", "apps", "ripgrep", "current", "rg.exe"), join(homedir(), ".cargo", "bin", "rg.exe")];
     const programFiles = process.env.ProgramFiles?.trim();
-    const programFilesX86 = process.env[PROGRAM_FILES_X86_ENV]?.trim();
+    const prgrFlsX86 = process.env[PFXE]?.trim();
 
     if (programFiles && programFiles.length > 0) {
       commonPaths.unshift(join(programFiles, "Ripgrep", "rg.exe"));
     }
-    if (programFilesX86 && programFilesX86.length > 0) {
-      commonPaths.push(join(programFilesX86, "Ripgrep", "rg.exe"));
+    if (prgrFlsX86 && prgrFlsX86.length > 0) {
+      commonPaths.push(join(prgrFlsX86, "Ripgrep", "rg.exe"));
     }
     return commonPaths;
   }
@@ -100,7 +100,7 @@ function getCommonRipgrepPaths(): string[] {
 
 // 6. Ensure executable ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function ensureExecutable(rgPath: string): void {
-  if (process.platform === WINDOWS_PLATFORM) {
+  if (process.platform === WNDW_PLTF) {
     return;
   }
   try {

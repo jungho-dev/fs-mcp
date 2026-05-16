@@ -6,14 +6,14 @@
  */
 
 import type { ServerResult } from "@assets/type/common";
-import { createBatchToolResponse, runParallelBatch } from "@controllers/controllers-batch";
-import { readFileInternal } from "@features/filesystem/filesystem-service";
-import { searchManager } from "@features/search/search-service";
-import { GetFullSearchResultsArgsSchema, GetMoreSearchResultsArgsSchema, StartSearchArgsSchema, StartSearchesArgsSchema, StopSearchArgsSchema, StopSearchesArgsSchema } from "@schemas/schemas-search";
+import { createBatchToolResponse as crtBtchTlRes, runParallelBatch as rnPrllBtch } from "@controllers/controllers-batch";
+import { readFileInternal as rdFlInt } from "@features/filesystem/filesystem-service";
+import { srchMgr } from "@features/search/search-service";
+import { GtFlSrReArSc, GtMrSrReArSc, StrSrArSc, StrSrArSc2, StpSrArSc, StpSrArSc2 } from "@schemas/schemas-search";
 
 // 1. Handle start search ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStartSearch(args: unknown): Promise<ServerResult> {
-  const parsed = StartSearchArgsSchema.safeParse(args);
+  const parsed = StrSrArSc.safeParse(args);
   if (!parsed.success) {
     return {
       content: [{ type: "text", text: `Invalid arguments for start_search: ${parsed.error}` }],
@@ -21,8 +21,8 @@ export async function handleStartSearch(args: unknown): Promise<ServerResult> {
     };
   }
   try {
-    const pattern = parsed.data.pattern ?? await readFileInternal(parsed.data.pattern_path ?? "", parsed.data.pattern_offset, parsed.data.pattern_length);
-    const result = await searchManager.startSearch({
+    const pattern = parsed.data.pattern ?? await rdFlInt(parsed.data.pattern_path ?? "", parsed.data.pattern_offset, parsed.data.pattern_length);
+    const result = await srchMgr.startSearch({
       rootPath: parsed.data.path,
       pattern: pattern,
       searchType: parsed.data.searchType,
@@ -36,11 +36,11 @@ export async function handleStartSearch(args: unknown): Promise<ServerResult> {
       literalSearch: parsed.data.literalSearch,
     });
 
-    const searchTypeText = parsed.data.searchType === "content" ? "content search" : "file search";
-    const displayedInitialResults = Math.min(result.results.length, 10);
-    const nextOffset = result.isComplete && result.results.length <= displayedInitialResults ? null : displayedInitialResults;
+    const srchTypTxt = parsed.data.searchType === "content" ? "content search" : "file search";
+    const dsplIntlRess = Math.min(result.results.length, 10);
+    const nextOffset = result.isComplete && result.results.length <= dsplIntlRess ? null : dsplIntlRess;
 
-    let output = `Started ${searchTypeText} session: ${result.sessionId}\n`;
+    let output = `Started ${srchTypTxt} session: ${result.sessionId}\n`;
     output += `Pattern: "${pattern}"\n`;
     output += `Path: ${parsed.data.path}\n`;
     output += `Status: ${result.isComplete ? "COMPLETED" : "RUNNING"}\n`;
@@ -77,7 +77,7 @@ export async function handleStartSearch(args: unknown): Promise<ServerResult> {
     return {
       content: [{ type: "text", text: output }],
       structuredContent: {
-        displayedInitialResults,
+        displayedInitialResults: dsplIntlRess,
         hasMoreResults: nextOffset !== null,
         nextOffset,
         sessionId: result.sessionId,
@@ -98,7 +98,7 @@ export async function handleStartSearch(args: unknown): Promise<ServerResult> {
 
 // 2. Handle get more search results ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleGetMoreSearchResults(args: unknown): Promise<ServerResult> {
-  const parsed = GetMoreSearchResultsArgsSchema.safeParse(args);
+  const parsed = GtMrSrReArSc.safeParse(args);
   if (!parsed.success) {
     return {
       content: [{ type: "text", text: `Invalid arguments for search result read: ${parsed.error}` }],
@@ -106,7 +106,7 @@ export async function handleGetMoreSearchResults(args: unknown): Promise<ServerR
     };
   }
   try {
-    const results = searchManager.readSearchResults(parsed.data.sessionId, parsed.data.offset, parsed.data.length);
+    const results = srchMgr.readSearchResults(parsed.data.sessionId, parsed.data.offset, parsed.data.length);
 
     // Only return error if we have no results AND there's an actual error
     // Permission errors should not block returning found results
@@ -201,7 +201,7 @@ export async function handleGetMoreSearchResults(args: unknown): Promise<ServerR
 
 // 3. Handle stop search ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStopSearch(args: unknown): Promise<ServerResult> {
-  const parsed = StopSearchArgsSchema.safeParse(args);
+  const parsed = StpSrArSc.safeParse(args);
   if (!parsed.success) {
     return {
       content: [{ type: "text", text: `Invalid arguments for stop_search: ${parsed.error}` }],
@@ -209,7 +209,7 @@ export async function handleStopSearch(args: unknown): Promise<ServerResult> {
     };
   }
   try {
-    const success = searchManager.terminateSearch(parsed.data.sessionId);
+    const success = srchMgr.terminateSearch(parsed.data.sessionId);
 
     if (success) {
       return {
@@ -244,27 +244,27 @@ export async function handleStopSearch(args: unknown): Promise<ServerResult> {
 
 // 5. Handle start searches ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStartSearches(args: unknown): Promise<ServerResult> {
-  const parsed = StartSearchesArgsSchema.parse(args);
-  const results = await runParallelBatch(parsed.items, (item) => handleStartSearch(item));
-  const response = createBatchToolResponse("start_searches", results);
+  const parsed = StrSrArSc2.parse(args);
+  const results = await rnPrllBtch(parsed.items, (item) => handleStartSearch(item));
+  const response = crtBtchTlRes("start_searches", results);
 
   return response;
 }
 
 // 7. Handle get full search results ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleGetFullSearchResults(args: unknown): Promise<ServerResult> {
-  const parsed = GetFullSearchResultsArgsSchema.parse(args);
-  const results = await runParallelBatch(parsed.items, (item) => handleGetMoreSearchResults(item));
-  const response = createBatchToolResponse("get_full_search", results, { resultMode: "full" });
+  const parsed = GtFlSrReArSc.parse(args);
+  const results = await rnPrllBtch(parsed.items, (item) => handleGetMoreSearchResults(item));
+  const response = crtBtchTlRes("get_full_search", results, { resultMode: "full" });
 
   return response;
 }
 
 // 8. Handle stop searches ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleStopSearches(args: unknown): Promise<ServerResult> {
-  const parsed = StopSearchesArgsSchema.parse(args);
-  const results = await runParallelBatch(parsed.sessionIds, (sessionId) => handleStopSearch({ sessionId: sessionId }));
-  const response = createBatchToolResponse("stop_searches", results);
+  const parsed = StpSrArSc2.parse(args);
+  const results = await rnPrllBtch(parsed.sessionIds, (sessionId) => handleStopSearch({ sessionId: sessionId }));
+  const response = crtBtchTlRes("stop_searches", results);
 
   return response;
 }

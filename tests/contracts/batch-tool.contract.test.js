@@ -9,59 +9,60 @@ import assert from "node:assert/strict";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { createBatchToolResponse } from "../../out/controllers/controllers-batch.js";
-import { configManager } from "../../out/features/config/config-store.js";
-import { dispatchToolCall } from "../../out/tools/tools-dispatcher.js";
+import { fileURLToPath as flUrlTPth2 } from "node:url";
+import { createBatchToolResponse as crtBtchTlRes } from "../../out/controllers/controllers-batch.js";
+import { configManager as cfgMgr } from "../../out/features/config/config-store.js";
+import { dispatchToolCall as dsptTlCll } from "../../out/tools/tools-dispatcher.js";
 
-const __filename = fileURLToPath(import.meta.url);
+const __filename = flUrlTPth2(import.meta.url);
 const __dirname = path.dirname(__filename);
 const TEST_DIR = path.join(os.tmpdir(), "fs-mcp-batch-tool-contract");
 const CREATED_DIR = path.join(TEST_DIR, "created-dir");
 const SOURCE_FILE = path.join(TEST_DIR, "source.txt");
 const EXTRA_FILE = path.join(TEST_DIR, "extra.txt");
-const COPY_SOURCE_FILE = path.join(TEST_DIR, "copy-source.txt");
+const CPY_SRC_FL = path.join(TEST_DIR, "copy-source.txt");
 const COPIED_FILE = path.join(TEST_DIR, "copied.txt");
-const COPIED_FORCE_FILE = path.join(TEST_DIR, "copied-force.txt");
-const COPY_SOURCE_DIR = path.join(TEST_DIR, "copy-source-dir");
+const CPD_FRC_FL = path.join(TEST_DIR, "copied-force.txt");
+const CPY_SRC_DR = path.join(TEST_DIR, "copy-source-dir");
 const COPIED_DIR = path.join(TEST_DIR, "copied-dir");
 const LARGE_FILE = path.join(TEST_DIR, "large.txt");
-const LARGE_WRITTEN_FILE = path.join(TEST_DIR, "large-written.txt");
-const LARGE_WRITE_REF_FILE = path.join(TEST_DIR, "large-write-ref.txt");
-const ARGS_PATH_WRITTEN_FILE = path.join(TEST_DIR, "args-path-written.txt");
-const ARGS_PATH_WRITE_ARGS_FILE = path.join(TEST_DIR, "args-path-write-args.json");
-const OVERSIZED_INLINE_WRITTEN_FILE = path.join(TEST_DIR, "oversized-inline-written.txt");
-const PARTIAL_WRITTEN_FILE = path.join(TEST_DIR, "partial-written.txt");
-const PARTIAL_WRITE_REF_FILE = path.join(TEST_DIR, "partial-write-ref.txt");
-const LARGE_EDIT_OLD_REF_FILE = path.join(TEST_DIR, "large-edit-old-ref.txt");
-const LARGE_EDIT_NEW_REF_FILE = path.join(TEST_DIR, "large-edit-new-ref.txt");
-const PARTIAL_EDIT_FILE = path.join(TEST_DIR, "partial-edit.txt");
-const PARTIAL_EDIT_OLD_REF_FILE = path.join(TEST_DIR, "partial-edit-old-ref.txt");
-const PARTIAL_EDIT_NEW_REF_FILE = path.join(TEST_DIR, "partial-edit-new-ref.txt");
-const ARGS_PATH_EDIT_FILE = path.join(TEST_DIR, "args-path-edit.txt");
-const ARGS_PATH_EDIT_SECOND_FILE = path.join(TEST_DIR, "args-path-edit-second.txt");
-const ARGS_PATH_EDIT_ARGS_FILE = path.join(TEST_DIR, "args-path-edit-args.json");
+const LRG_WRTT_FL = path.join(TEST_DIR, "large-written.txt");
+const LWRF = path.join(TEST_DIR, "large-write-ref.txt");
+const APWF = path.join(TEST_DIR, "args-path-written.txt");
+const APWAF = path.join(TEST_DIR, "args-path-write-args.json");
+const OIWF = path.join(TEST_DIR, "oversized-inline-written.txt");
+const PRTL_WRTT_FL = path.join(TEST_DIR, "partial-written.txt");
+const PWRF = path.join(TEST_DIR, "partial-write-ref.txt");
+const LEORF = path.join(TEST_DIR, "large-edit-old-ref.txt");
+const LENRF = path.join(TEST_DIR, "large-edit-new-ref.txt");
+const PRTL_EDT_FL = path.join(TEST_DIR, "partial-edit.txt");
+const FZZY_EDT_FL = path.join(TEST_DIR, "fuzzy-edit.txt");
+const PEORF = path.join(TEST_DIR, "partial-edit-old-ref.txt");
+const PENRF = path.join(TEST_DIR, "partial-edit-new-ref.txt");
+const APEF = path.join(TEST_DIR, "args-path-edit.txt");
+const APESF = path.join(TEST_DIR, "args-path-edit-second.txt");
+const APEAF = path.join(TEST_DIR, "args-path-edit-args.json");
 const MOVED_FILE = path.join(TEST_DIR, "moved.txt");
 const RENAMED_FILE = path.join(TEST_DIR, "renamed.txt");
 const WRITTEN_FILE = path.join(TEST_DIR, "written.txt");
-const MANY_LINE_SOURCE_FILE = path.join(TEST_DIR, "many-line-source.txt");
-const BATCH_RESULT_PREVIEW_MAX_CHARS = 160;
-const OLD_VALUE_PATTERN = /old value/;
-const EXTRA_VALUE_PATTERN = /extra value/;
-const CREATED_DIR_PATTERN = /created-dir/;
-const PREVIEW_PATTERN = /preview/;
-const UNSTRUCTURED_LINE_PATTERN = /unstructured line 79/;
-const READING_TWO_LINES_PATTERN = /Reading 2 lines/;
-const THREE_HUNDRED_X_PATTERN = /x{300}/;
-const THREE_HUNDRED_Y_PATTERN = /y{300}/;
-const LARGE_INLINE_CONTENT_PATTERN = /Large inline content can stall MCP hosts/;
-const CONTENT_PATH_OR_ARGS_PATH_PATTERN = /content_path or args_path/;
+const MLSF = path.join(TEST_DIR, "many-line-source.txt");
+const BRPMC = 160;
+const OLD_VAL_PAT = /old value/;
+const EXTR_VAL_PAT = /extra value/;
+const CRTD_DR_PAT = /created-dir/;
+const PRVW_PAT = /preview/;
+const UNST_LN_PAT = /unstructured line 79/;
+const RTLP = /Reading 2 lines/;
+const THXP = /x{300}/;
+const THYP = /y{300}/;
+const LICP = /Large inline content can stall MCP hosts/;
+const CPOAPP = /content_path or args_path/;
 const LARGE_TEXT = `${"x".repeat(300)}\n${"y".repeat(300)}\n`;
-const TEN_THOUSAND_A = "a".repeat(10_000);
-const TEN_THOUSAND_B = "b".repeat(10_000);
-const MANY_LINE_PREFIX = Array.from({ length: 1100 }, (_value, index) => `prefix-${index}`).join("\n");
-const MANY_LINE_TEXT = `${MANY_LINE_PREFIX}\n${TEN_THOUSAND_A}\n`;
-const MANY_LINE_REPLACED_TEXT = `${MANY_LINE_PREFIX}\n${TEN_THOUSAND_B}\n`;
+const TN_THSN_A = "a".repeat(10_000);
+const TN_THSN_B = "b".repeat(10_000);
+const MNY_LN_PRFX = Array.from({ length: 1100 }, (_value, index) => `prefix-${index}`).join("\n");
+const MNY_LN_TXT = `${MNY_LN_PRFX}\n${TN_THSN_A}\n`;
+const MLRT = `${MNY_LN_PRFX}\n${TN_THSN_B}\n`;
 
 // 1. Parse tool output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function parseToolOutput(result) {
@@ -100,108 +101,111 @@ async function pathExists(filePath) {
 
 // 4. Setup ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function setup() {
-  const originalConfig = await configManager.getConfig();
+  const origCfg = await cfgMgr.getConfig();
 
   await fs.rm(TEST_DIR, { recursive: true, force: true });
   await fs.mkdir(TEST_DIR, { recursive: true });
   await fs.writeFile(SOURCE_FILE, "old value\n", "utf8");
   await fs.writeFile(EXTRA_FILE, "extra value\n", "utf8");
-  await fs.writeFile(COPY_SOURCE_FILE, "copy value\n", "utf8");
-  await fs.writeFile(COPIED_FORCE_FILE, "old copy\n", "utf8");
-  await fs.mkdir(COPY_SOURCE_DIR, { recursive: true });
-  await fs.writeFile(path.join(COPY_SOURCE_DIR, "nested.txt"), "nested copy\n", "utf8");
+  await fs.writeFile(CPY_SRC_FL, "copy value\n", "utf8");
+  await fs.writeFile(CPD_FRC_FL, "old copy\n", "utf8");
+  await fs.mkdir(CPY_SRC_DR, { recursive: true });
+  await fs.writeFile(path.join(CPY_SRC_DR, "nested.txt"), "nested copy\n", "utf8");
   await fs.writeFile(LARGE_FILE, LARGE_TEXT, "utf8");
-  await fs.writeFile(LARGE_WRITE_REF_FILE, TEN_THOUSAND_A, "utf8");
-  await fs.writeFile(PARTIAL_WRITE_REF_FILE, "abc\0\0", "utf8");
-  await fs.writeFile(LARGE_EDIT_OLD_REF_FILE, TEN_THOUSAND_A, "utf8");
-  await fs.writeFile(LARGE_EDIT_NEW_REF_FILE, TEN_THOUSAND_B, "utf8");
-  await fs.writeFile(PARTIAL_EDIT_FILE, "alpha\n", "utf8");
-  await fs.writeFile(PARTIAL_EDIT_OLD_REF_FILE, "alpha\0\0", "utf8");
-  await fs.writeFile(PARTIAL_EDIT_NEW_REF_FILE, "omega\0\0", "utf8");
-  await fs.writeFile(ARGS_PATH_EDIT_FILE, "alpha\nbeta\n", "utf8");
-  await fs.writeFile(ARGS_PATH_EDIT_SECOND_FILE, "one\ntwo\n", "utf8");
-  await fs.writeFile(MANY_LINE_SOURCE_FILE, MANY_LINE_TEXT, "utf8");
-  await configManager.updateConfig({
-    ...originalConfig,
+  await fs.writeFile(LWRF, TN_THSN_A, "utf8");
+  await fs.writeFile(PWRF, "abc\0\0", "utf8");
+  await fs.writeFile(LEORF, TN_THSN_A, "utf8");
+  await fs.writeFile(LENRF, TN_THSN_B, "utf8");
+  await fs.writeFile(PRTL_EDT_FL, "alpha\n", "utf8");
+  await fs.writeFile(FZZY_EDT_FL, "function oldName() {\n  return 1;\n}\n", "utf8");
+  await fs.writeFile(PEORF, "alpha\0\0", "utf8");
+  await fs.writeFile(PENRF, "omega\0\0", "utf8");
+  await fs.writeFile(APEF, "alpha\nbeta\n", "utf8");
+  await fs.writeFile(APESF, "one\ntwo\n", "utf8");
+  await fs.writeFile(MLSF, MNY_LN_TXT, "utf8");
+  await cfgMgr.updateConfig({
+    ...origCfg,
     allowedDirectories: [TEST_DIR],
     contextIndexEnabled: false,
     fileReadLineLimit: 1,
   });
 
-  return originalConfig;
+  return origCfg;
 }
 
 // 5. Teardown ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function teardown(originalConfig) {
-  await configManager.updateConfig(originalConfig);
+async function teardown(origCfg) {
+  await cfgMgr.updateConfig(origCfg);
   await fs.rm(TEST_DIR, { recursive: true, force: true });
 }
 
 // 6. Test read files surface ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testReadFilesSurface() {
-  const result = await dispatchToolCall("read_files", {
+  const result = await dsptTlCll("read_files", {
     paths: [SOURCE_FILE, EXTRA_FILE],
   });
   const batchResults = extractBatchResults(result);
 
   assert.equal(batchResults.length, 2);
   assert.equal(batchResults[0].ok, true);
-  assert.ok(batchResults[0].result.content[0].text.length <= BATCH_RESULT_PREVIEW_MAX_CHARS);
-  assert.ok(batchResults[1].result.content[0].text.length <= BATCH_RESULT_PREVIEW_MAX_CHARS);
-  assert.match(batchResults[0].result.structuredContent.textContent, OLD_VALUE_PATTERN);
-  assert.match(batchResults[1].result.structuredContent.textContent, EXTRA_VALUE_PATTERN);
+  assert.ok(batchResults[0].result.content[0].text.length <= BRPMC);
+  assert.ok(batchResults[1].result.content[0].text.length <= BRPMC);
+  assert.match(batchResults[0].result.structuredContent.textContent, OLD_VAL_PAT);
+  assert.match(batchResults[1].result.structuredContent.textContent, EXTR_VAL_PAT);
 
-  const largeResult = await dispatchToolCall("read_files", {
+  const largeResult = await dsptTlCll("read_files", {
     paths: [LARGE_FILE],
   });
-  const largeBatchResults = extractBatchResults(largeResult);
+  const largeOutput = parseToolOutput(largeResult);
+  const lrgBtchRess = largeOutput.data.structuredContent.results;
 
-  assert.equal(largeBatchResults[0].ok, true);
-  assert.doesNotMatch(largeBatchResults[0].result.content[0].text, PREVIEW_PATTERN);
-  assert.match(largeBatchResults[0].result.content[0].text, THREE_HUNDRED_X_PATTERN);
-  assert.match(largeBatchResults[0].result.content[0].text, THREE_HUNDRED_Y_PATTERN);
-  assert.match(largeBatchResults[0].result.structuredContent.textContent, READING_TWO_LINES_PATTERN);
-  assert.match(largeBatchResults[0].result.structuredContent.textContent, THREE_HUNDRED_X_PATTERN);
-  assert.match(largeBatchResults[0].result.structuredContent.textContent, THREE_HUNDRED_Y_PATTERN);
+  assert.equal(lrgBtchRess[0].ok, true);
+  assert.match(lrgBtchRess[0].result.content[0].text, PRVW_PAT);
+  assert.ok(lrgBtchRess[0].result.content[0].text.length <= BRPMC);
+  assert.equal(lrgBtchRess[0].result.structuredContent.textContent.previewOnly, true);
+  assert.match(lrgBtchRess[0].result.structuredContent.textContent.preview, RTLP);
+  assert.match(largeOutput.data.text, THXP);
+  assert.match(largeOutput.data.text, THYP);
+  assert.doesNotMatch(JSON.stringify(lrgBtchRess[0].result), THYP);
 
   const missingFile = path.join(TEST_DIR, "missing.txt");
-  const defaultMissingResult = await dispatchToolCall("read_files", {
+  const defMssnRes = await dsptTlCll("read_files", {
     paths: [missingFile],
   });
-  const defaultMissingPayload = parseToolOutput(defaultMissingResult).data.structuredContent;
-  assert.equal(defaultMissingPayload.failedCount, 1);
+  const defMssnPyld = parseToolOutput(defMssnRes).data.structuredContent;
+  assert.equal(defMssnPyld.failedCount, 1);
 
-  const allowedMissingResult = await dispatchToolCall("read_files", {
+  const allwMssnRes = await dsptTlCll("read_files", {
     allowMissing: true,
     paths: [SOURCE_FILE, missingFile],
   });
-  const allowedMissingPayload = parseToolOutput(allowedMissingResult).data.structuredContent;
-  assert.equal(allowedMissingPayload.failedCount, 0);
-  assert.equal(allowedMissingPayload.results[1].ok, true);
-  assert.equal(allowedMissingPayload.results[1].result.structuredContent.missing, true);
+  const allwMssnPyld = parseToolOutput(allwMssnRes).data.structuredContent;
+  assert.equal(allwMssnPyld.failedCount, 0);
+  assert.equal(allwMssnPyld.results[1].ok, true);
+  assert.equal(allwMssnPyld.results[1].result.structuredContent.missing, true);
 
-  const missingInfoResult = await dispatchToolCall("get_file_infos", {
+  const mssnInfRes = await dsptTlCll("get_file_infos", {
     allowMissing: true,
     paths: [missingFile],
   });
-  const missingInfoPayload = parseToolOutput(missingInfoResult).data.structuredContent;
-  assert.equal(missingInfoPayload.failedCount, 0);
-  assert.equal(missingInfoPayload.results[0].result.structuredContent.missing, true);
+  const mssnInfPyld = parseToolOutput(mssnInfRes).data.structuredContent;
+  assert.equal(mssnInfPyld.failedCount, 0);
+  assert.equal(mssnInfPyld.results[0].result.structuredContent.missing, true);
 
-  const missingDirectoryResult = await dispatchToolCall("list_directories", {
+  const mssnDirRes = await dsptTlCll("list_directories", {
     allowMissing: true,
     items: [{ path: path.join(TEST_DIR, "missing-dir") }],
   });
-  const missingDirectoryPayload = parseToolOutput(missingDirectoryResult).data.structuredContent;
-  assert.equal(missingDirectoryPayload.failedCount, 0);
-  assert.equal(missingDirectoryPayload.results[0].result.structuredContent.missing, true);
+  const mssnDirPyld = parseToolOutput(mssnDirRes).data.structuredContent;
+  assert.equal(mssnDirPyld.failedCount, 0);
+  assert.equal(mssnDirPyld.results[0].result.structuredContent.missing, true);
 }
 
 // 7. Test large unstructured result preview ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testLargeUnstructuredResultPreview() {
-  const unstructuredLineZeroPattern = /unstructured line 0/;
+  const unstLnZrPat = /unstructured line 0/;
   const largeText = Array.from({ length: 80 }, (_value, index) => `unstructured line ${index} ${"z".repeat(40)}`).join("\n");
-  const result = createBatchToolResponse("synthetic_tool", [
+  const result = crtBtchTlRes("synthetic_tool", [
     {
       index: 1,
       input: { id: 1 },
@@ -213,22 +217,22 @@ function testLargeUnstructuredResultPreview() {
   ]);
   const batchResult = result.structuredContent.results[0].result;
 
-  assert.match(batchResult.content[0].text, PREVIEW_PATTERN);
-  assert.ok(batchResult.content[0].text.length <= BATCH_RESULT_PREVIEW_MAX_CHARS);
-  assert.match(batchResult.content[0].text, unstructuredLineZeroPattern);
-  assert.doesNotMatch(batchResult.content[0].text, UNSTRUCTURED_LINE_PATTERN);
-  assert.match(batchResult.structuredContent.textContent, UNSTRUCTURED_LINE_PATTERN);
+  assert.match(batchResult.content[0].text, PRVW_PAT);
+  assert.ok(batchResult.content[0].text.length <= BRPMC);
+  assert.match(batchResult.content[0].text, unstLnZrPat);
+  assert.doesNotMatch(batchResult.content[0].text, UNST_LN_PAT);
+  assert.match(batchResult.structuredContent.textContent, UNST_LN_PAT);
 }
 
 // 8. Test create and list directory surface ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testCreateAndListDirectorySurface() {
-  const createResult = await dispatchToolCall("create_directories", {
+  const createResult = await dsptTlCll("create_directories", {
     paths: [CREATED_DIR],
   });
-  const createBatchResults = extractBatchResults(createResult);
-  assert.equal(createBatchResults[0].ok, true);
+  const crtBtchRess = extractBatchResults(createResult);
+  assert.equal(crtBtchRess[0].ok, true);
 
-  const listResult = await dispatchToolCall("list_directories", {
+  const listResult = await dsptTlCll("list_directories", {
     items: [
       {
         depth: 2,
@@ -236,59 +240,61 @@ async function testCreateAndListDirectorySurface() {
       },
     ],
   });
-  const listBatchResults = extractBatchResults(listResult);
+  const listOutput = parseToolOutput(listResult);
+  const lstBtchRess = listOutput.data.structuredContent.results;
 
-  assert.equal(listBatchResults.length, 1);
-  assert.equal(listBatchResults[0].ok, true);
-  assert.match(listBatchResults[0].result.structuredContent.listing, CREATED_DIR_PATTERN);
+  assert.equal(lstBtchRess.length, 1);
+  assert.equal(lstBtchRess[0].ok, true);
+  assert.equal(lstBtchRess[0].result.structuredContent.listing.previewOnly, true);
+  assert.match(listOutput.data.text, CRTD_DR_PAT);
 }
 
 // 9. Test copy files surface ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testCopyFilesSurface() {
-  const copyResult = await dispatchToolCall("copy_files", {
+  const copyResult = await dsptTlCll("copy_files", {
     items: [
       {
         destination: COPIED_FILE,
-        source: COPY_SOURCE_FILE,
+        source: CPY_SRC_FL,
       },
       {
-        destination: COPIED_FORCE_FILE,
+        destination: CPD_FRC_FL,
         force: true,
-        source: COPY_SOURCE_FILE,
+        source: CPY_SRC_FL,
       },
       {
         destination: COPIED_DIR,
         recursive: true,
-        source: COPY_SOURCE_DIR,
+        source: CPY_SRC_DR,
       },
     ],
   });
-  const copyBatchResults = extractBatchResults(copyResult);
+  const cpyBtchRess = extractBatchResults(copyResult);
 
-  assert.equal(copyBatchResults.length, 3);
-  assert.equal(copyBatchResults[0].ok, true);
-  assert.equal(copyBatchResults[1].ok, true);
-  assert.equal(copyBatchResults[2].ok, true);
+  assert.equal(cpyBtchRess.length, 3);
+  assert.equal(cpyBtchRess[0].ok, true);
+  assert.equal(cpyBtchRess[1].ok, true);
+  assert.equal(cpyBtchRess[2].ok, true);
   assert.equal(await fs.readFile(COPIED_FILE, "utf8"), "copy value\n");
-  assert.equal(await fs.readFile(COPIED_FORCE_FILE, "utf8"), "copy value\n");
+  assert.equal(await fs.readFile(CPD_FRC_FL, "utf8"), "copy value\n");
   assert.equal(await fs.readFile(path.join(COPIED_DIR, "nested.txt"), "utf8"), "nested copy\n");
-  assert.equal(await fs.readFile(COPY_SOURCE_FILE, "utf8"), "copy value\n");
+  assert.equal(await fs.readFile(CPY_SRC_FL, "utf8"), "copy value\n");
 
-  const overwriteResult = await dispatchToolCall("copy_files", {
+  const ovrwRes = await dsptTlCll("copy_files", {
     items: [
       {
         destination: COPIED_FILE,
-        source: COPY_SOURCE_FILE,
+        source: CPY_SRC_FL,
       },
     ],
   });
-  const overwriteBatchResults = extractBatchResults(overwriteResult);
-  assert.equal(overwriteBatchResults[0].ok, false);
+  const ovrwBtchRess = extractBatchResults(ovrwRes);
+  assert.equal(ovrwBtchRess[0].ok, false);
 }
 
 // 10. Test write move info and edit surface ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testWriteMoveInfoAndEditSurface() {
-  const writeResult = await dispatchToolCall("write_files", {
+  const writeResult = await dsptTlCll("write_files", {
     items: [
       {
         content: "written value\n",
@@ -297,77 +303,77 @@ async function testWriteMoveInfoAndEditSurface() {
       },
     ],
   });
-  const writeBatchResults = extractBatchResults(writeResult);
-  assert.equal(writeBatchResults[0].ok, true);
+  const wrtBtchRess = extractBatchResults(writeResult);
+  assert.equal(wrtBtchRess[0].ok, true);
 
-  const largeWriteResult = await dispatchToolCall("write_files", {
+  const lrgWrtRes = await dsptTlCll("write_files", {
     items: [
       {
-        content_path: LARGE_WRITE_REF_FILE,
+        content_path: LWRF,
         mode: "rewrite",
-        path: LARGE_WRITTEN_FILE,
+        path: LRG_WRTT_FL,
       },
     ],
   });
-  const largeWriteBatchResults = extractBatchResults(largeWriteResult);
+  const lrgWrBtRe = extractBatchResults(lrgWrtRes);
 
-  assert.equal(largeWriteBatchResults[0].ok, true);
-  assert.equal(largeWriteBatchResults[0].input.content_path, LARGE_WRITE_REF_FILE);
-  assert.equal(await fs.readFile(LARGE_WRITTEN_FILE, "utf8"), TEN_THOUSAND_A);
+  assert.equal(lrgWrBtRe[0].ok, true);
+  assert.equal(lrgWrBtRe[0].input.content_path, LWRF);
+  assert.equal(await fs.readFile(LRG_WRTT_FL, "utf8"), TN_THSN_A);
 
-  const argsPathWritePayload = {
+  const argPtWrPy = {
     items: [
       {
-        content: TEN_THOUSAND_B,
+        content: TN_THSN_B,
         mode: "rewrite",
-        path: ARGS_PATH_WRITTEN_FILE,
+        path: APWF,
       },
     ],
   };
-  const argsPathWritePayloadText = JSON.stringify(argsPathWritePayload);
-  const argsPathWriteCall = { args_length: argsPathWritePayloadText.length, args_path: ARGS_PATH_WRITE_ARGS_FILE };
+  const argPtWrPyTx = JSON.stringify(argPtWrPy);
+  const argPtWrCl = { args_length: argPtWrPyTx.length, args_path: APWAF };
 
-  await fs.writeFile(ARGS_PATH_WRITE_ARGS_FILE, `${argsPathWritePayloadText}\0\0`, "utf8");
-  assert.ok(JSON.stringify(argsPathWriteCall).length < JSON.stringify(argsPathWritePayload).length);
-  const argsPathWriteResult = await dispatchToolCall("write_files", argsPathWriteCall);
-  const argsPathWriteBatchResults = extractBatchResults(argsPathWriteResult);
-  assert.equal(argsPathWriteBatchResults.length, 1);
-  assert.equal(argsPathWriteBatchResults[0].ok, true);
-  assert.equal(argsPathWriteBatchResults[0].input.contentLength, TEN_THOUSAND_B.length);
-  assert.equal(await fs.readFile(ARGS_PATH_WRITTEN_FILE, "utf8"), TEN_THOUSAND_B);
+  await fs.writeFile(APWAF, `${argPtWrPyTx}\0\0`, "utf8");
+  assert.ok(JSON.stringify(argPtWrCl).length < JSON.stringify(argPtWrPy).length);
+  const argPtWrRe = await dsptTlCll("write_files", argPtWrCl);
+  const argPtWrBtRe = extractBatchResults(argPtWrRe);
+  assert.equal(argPtWrBtRe.length, 1);
+  assert.equal(argPtWrBtRe[0].ok, true);
+  assert.equal(argPtWrBtRe[0].input.contentLength, TN_THSN_B.length);
+  assert.equal(await fs.readFile(APWF, "utf8"), TN_THSN_B);
 
-  const oversizedInlineWriteResult = await dispatchToolCall("write_files", {
+  const ovrInWrRe = await dsptTlCll("write_files", {
     items: [
       {
         content: "z".repeat(20_000),
         mode: "rewrite",
-        path: OVERSIZED_INLINE_WRITTEN_FILE,
+        path: OIWF,
       },
     ],
   });
-  const oversizedInlineWriteOutput = parseToolOutput(oversizedInlineWriteResult);
+  const ovrInWrOt = parseToolOutput(ovrInWrRe);
 
-  assert.equal(oversizedInlineWriteResult.isError, true);
-  assert.equal(oversizedInlineWriteOutput.status, "error");
-  assert.match(oversizedInlineWriteOutput.error.message, LARGE_INLINE_CONTENT_PATTERN);
-  assert.match(oversizedInlineWriteOutput.error.message, CONTENT_PATH_OR_ARGS_PATH_PATTERN);
-  assert.equal(await pathExists(OVERSIZED_INLINE_WRITTEN_FILE), false);
+  assert.equal(ovrInWrRe.isError, true);
+  assert.equal(ovrInWrOt.status, "error");
+  assert.match(ovrInWrOt.error.message, LICP);
+  assert.match(ovrInWrOt.error.message, CPOAPP);
+  assert.equal(await pathExists(OIWF), false);
 
-  const partialWriteResult = await dispatchToolCall("write_files", {
+  const prtlWrtRes = await dsptTlCll("write_files", {
     items: [
       {
         content_length: 3,
-        content_path: PARTIAL_WRITE_REF_FILE,
+        content_path: PWRF,
         mode: "rewrite",
-        path: PARTIAL_WRITTEN_FILE,
+        path: PRTL_WRTT_FL,
       },
     ],
   });
-  const partialWriteBatchResults = extractBatchResults(partialWriteResult);
-  assert.equal(partialWriteBatchResults[0].ok, true);
-  assert.equal(await fs.readFile(PARTIAL_WRITTEN_FILE, "utf8"), "abc");
+  const prtWrBtRe = extractBatchResults(prtlWrtRes);
+  assert.equal(prtWrBtRe[0].ok, true);
+  assert.equal(await fs.readFile(PRTL_WRTT_FL, "utf8"), "abc");
 
-  const editResult = await dispatchToolCall("edit_blocks", {
+  const editResult = await dsptTlCll("edit_blocks", {
     items: [
       {
         expected_replacements: 1,
@@ -377,79 +383,97 @@ async function testWriteMoveInfoAndEditSurface() {
       },
     ],
   });
-  const editBatchResults = extractBatchResults(editResult);
-  assert.equal(editBatchResults[0].ok, true);
+  const edtBtchRess = extractBatchResults(editResult);
+  assert.equal(edtBtchRess[0].ok, true);
 
-  const largeEditResult = await dispatchToolCall("edit_blocks", {
+  const fzzyMssRes = await dsptTlCll("edit_blocks", {
     items: [
       {
         expected_replacements: 1,
-        file_path: MANY_LINE_SOURCE_FILE,
-        new_string_path: LARGE_EDIT_NEW_REF_FILE,
-        old_string_path: LARGE_EDIT_OLD_REF_FILE,
+        file_path: FZZY_EDT_FL,
+        new_string: "function newName() {\n  return 1;\n}\n",
+        old_string: "function oldNme() {\n  return 1;\n}\n",
       },
     ],
   });
-  const largeEditBatchResults = extractBatchResults(largeEditResult);
-  assert.equal(largeEditBatchResults[0].ok, true);
-  assert.equal(largeEditBatchResults[0].input.old_string_path, LARGE_EDIT_OLD_REF_FILE);
-  assert.equal(largeEditBatchResults[0].input.new_string_path, LARGE_EDIT_NEW_REF_FILE);
+  const fzzyMssBtch = extractBatchResults(fzzyMssRes);
+  assert.equal(fzzyMssRes.isError, true);
+  assert.equal(fzzyMssBtch[0].ok, false);
+  assert.match(fzzyMssBtch[0].result.content[0].text, /Exact match not found/);
+  assert.equal(await fs.readFile(FZZY_EDT_FL, "utf8"), "function oldName() {\n  return 1;\n}\n");
 
-  const partialEditResult = await dispatchToolCall("edit_blocks", {
+  const lrgEdtRes = await dsptTlCll("edit_blocks", {
     items: [
       {
         expected_replacements: 1,
-        file_path: PARTIAL_EDIT_FILE,
+        file_path: MLSF,
+        new_string_path: LENRF,
+        old_string_path: LEORF,
+      },
+    ],
+  });
+  const lrgEdBtRe = extractBatchResults(lrgEdtRes);
+  assert.equal(lrgEdBtRe[0].ok, true);
+  assert.equal(lrgEdBtRe[0].input.old_string_path, LEORF);
+  assert.equal(lrgEdBtRe[0].input.new_string_path, LENRF);
+
+  const prtlEdtRes = await dsptTlCll("edit_blocks", {
+    items: [
+      {
+        expected_replacements: 1,
+        file_path: PRTL_EDT_FL,
         new_string_length: 5,
-        new_string_path: PARTIAL_EDIT_NEW_REF_FILE,
+        new_string_path: PENRF,
         old_string_length: 5,
-        old_string_path: PARTIAL_EDIT_OLD_REF_FILE,
+        old_string_path: PEORF,
       },
     ],
   });
-  const partialEditBatchResults = extractBatchResults(partialEditResult);
-  assert.equal(partialEditBatchResults[0].ok, true);
-  assert.equal(await fs.readFile(PARTIAL_EDIT_FILE, "utf8"), "omega\n");
+  const prtEdBtRe = extractBatchResults(prtlEdtRes);
+  assert.equal(prtEdBtRe[0].ok, true);
+  assert.equal(await fs.readFile(PRTL_EDT_FL, "utf8"), "omega\n");
 
-  const argsPathEditPayload = {
+  const argPtEdPy = {
     items: [
       {
         expected_replacements: 1,
-        file_path: ARGS_PATH_EDIT_FILE,
+        file_path: APEF,
         new_string: "gamma",
         old_string: "alpha",
       },
       {
         expected_replacements: 1,
-        file_path: ARGS_PATH_EDIT_SECOND_FILE,
+        file_path: APESF,
         new_string: "delta",
         old_string: "two",
       },
     ],
   };
-  const argsPathPayloadText = JSON.stringify(argsPathEditPayload);
-  const argsPathCall = { args_length: argsPathPayloadText.length, args_path: ARGS_PATH_EDIT_ARGS_FILE };
+  const argPtPyTx = JSON.stringify(argPtEdPy);
+  const argsPathCall = { args_length: argPtPyTx.length, args_path: APEAF };
 
-  await fs.writeFile(ARGS_PATH_EDIT_ARGS_FILE, `${argsPathPayloadText}\0\0`, "utf8");
-  assert.ok(JSON.stringify(argsPathCall).length < JSON.stringify(argsPathEditPayload).length);
-  const argsPathEditResult = await dispatchToolCall("edit_blocks", argsPathCall);
-  const argsPathEditBatchResults = extractBatchResults(argsPathEditResult);
-  assert.equal(argsPathEditBatchResults.length, 2);
-  assert.equal(argsPathEditBatchResults[0].ok, true);
-  assert.equal(argsPathEditBatchResults[1].ok, true);
-  assert.equal(await fs.readFile(ARGS_PATH_EDIT_FILE, "utf8"), "gamma\nbeta\n");
-  assert.equal(await fs.readFile(ARGS_PATH_EDIT_SECOND_FILE, "utf8"), "one\ndelta\n");
+  await fs.writeFile(APEAF, `${argPtPyTx}\0\0`, "utf8");
+  assert.ok(JSON.stringify(argsPathCall).length < JSON.stringify(argPtEdPy).length);
+  const argPtEdRe = await dsptTlCll("edit_blocks", argsPathCall);
+  const argPtEdBtRe = extractBatchResults(argPtEdRe);
+  assert.equal(argPtEdBtRe.length, 2);
+  assert.equal(argPtEdBtRe[0].ok, true);
+  assert.equal(argPtEdBtRe[1].ok, true);
+  assert.equal(await fs.readFile(APEF, "utf8"), "gamma\nbeta\n");
+  assert.equal(await fs.readFile(APESF, "utf8"), "one\ndelta\n");
 
-  const largeReadResult = await dispatchToolCall("read_files", {
-    paths: [MANY_LINE_SOURCE_FILE],
+  const lrgRdRes = await dsptTlCll("read_files", {
+    paths: [MLSF],
   });
-  const largeReadBatchResults = extractBatchResults(largeReadResult);
-  assert.equal(largeReadBatchResults[0].ok, true);
-  assert.doesNotMatch(largeReadBatchResults[0].result.content[0].text, PREVIEW_PATTERN);
-  assert.ok(largeReadBatchResults[0].result.content[0].text.includes(TEN_THOUSAND_B));
-  assert.ok(largeReadBatchResults[0].result.structuredContent.textContent.includes(TEN_THOUSAND_B));
+  const lrgRdOtpt = parseToolOutput(lrgRdRes);
+  const lrgRdBtRe = lrgRdOtpt.data.structuredContent.results;
+  assert.equal(lrgRdBtRe[0].ok, true);
+  assert.match(lrgRdBtRe[0].result.content[0].text, PRVW_PAT);
+  assert.ok(lrgRdOtpt.data.text.includes(TN_THSN_B));
+  assert.equal(lrgRdBtRe[0].result.structuredContent.textContent.previewOnly, true);
+  assert.equal(JSON.stringify(lrgRdBtRe[0].result).includes(TN_THSN_B), false);
 
-  const renameResult = await dispatchToolCall("move_files", {
+  const renameResult = await dsptTlCll("move_files", {
     items: [
       {
         destination: RENAMED_FILE,
@@ -457,10 +481,10 @@ async function testWriteMoveInfoAndEditSurface() {
       },
     ],
   });
-  const renameBatchResults = extractBatchResults(renameResult);
-  assert.equal(renameBatchResults[0].ok, true);
+  const rnmBtchRess = extractBatchResults(renameResult);
+  assert.equal(rnmBtchRess[0].ok, true);
 
-  const moveResult = await dispatchToolCall("move_files", {
+  const moveResult = await dsptTlCll("move_files", {
     items: [
       {
         destination: MOVED_FILE,
@@ -468,42 +492,43 @@ async function testWriteMoveInfoAndEditSurface() {
       },
     ],
   });
-  const moveBatchResults = extractBatchResults(moveResult);
-  assert.equal(moveBatchResults[0].ok, true);
+  const mvBtchRess = extractBatchResults(moveResult);
+  assert.equal(mvBtchRess[0].ok, true);
 
-  const infoResult = await dispatchToolCall("get_file_infos", {
+  const infoResult = await dsptTlCll("get_file_infos", {
     paths: [SOURCE_FILE, MOVED_FILE],
   });
-  const infoBatchResults = extractBatchResults(infoResult);
-  assert.equal(infoBatchResults.length, 2);
-  assert.equal(infoBatchResults[0].ok, true);
-  assert.equal(infoBatchResults[1].ok, true);
+  const infBtchRess = extractBatchResults(infoResult);
+  assert.equal(infBtchRess.length, 2);
+  assert.equal(infBtchRess[0].ok, true);
+  assert.equal(infBtchRess[1].ok, true);
 
   const editedText = await fs.readFile(SOURCE_FILE, "utf8");
-  const largeEditedText = await fs.readFile(MANY_LINE_SOURCE_FILE, "utf8");
+  const lrgEdtdTxt = await fs.readFile(MLSF, "utf8");
   const movedText = await fs.readFile(MOVED_FILE, "utf8");
 
   assert.equal(editedText, "new value\n");
-  assert.equal(largeEditedText, MANY_LINE_REPLACED_TEXT);
+  assert.equal(lrgEdtdTxt, MLRT);
   assert.equal(movedText, "written value\n");
 
-  const removeResult = await dispatchToolCall("remove_files", {
+  const removeResult = await dsptTlCll("remove_files", {
     items: [
       { path: MOVED_FILE },
       { path: CREATED_DIR },
     ],
   });
-  const removeBatchResults = extractBatchResults(removeResult);
-  assert.equal(removeBatchResults.length, 2);
-  assert.equal(removeBatchResults[0].ok, true);
-  assert.equal(removeBatchResults[1].ok, true);
+  const rmvBtchRess = extractBatchResults(removeResult);
+  assert.equal(rmvBtchRess.length, 2);
+  assert.equal(rmvBtchRess[0].ok, true);
+  assert.equal(rmvBtchRess[1].ok, true);
   assert.equal(await pathExists(MOVED_FILE), false);
   assert.equal(await pathExists(CREATED_DIR), false);
 }
 
-// 10. Main ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Main \u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015
+
 async function main() {
-  const originalConfig = await setup();
+  const origCfg = await setup();
 
   try {
     await testReadFilesSurface();
@@ -513,7 +538,7 @@ async function main() {
     await testWriteMoveInfoAndEditSurface();
   }
   finally {
-    await teardown(originalConfig);
+    await teardown(origCfg);
   }
 }
 

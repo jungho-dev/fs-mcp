@@ -3,11 +3,11 @@
  */
 
 import assert from "node:assert";
-import {CONFIG_TOOL_CATALOG} from "../../out/tools/tools-config.js";
-import {FILESYSTEM_TOOL_CATALOG} from "../../out/tools/tools-filesystem.js";
-import {PROCESS_TOOL_CATALOG} from "../../out/tools/tools-process.js";
+import {CONFIG_TOOL_CATALOG as CFG_TL_CTLG} from "../../out/tools/tools-config.js";
+import {FILESYSTEM_TOOL_CATALOG as FLSY_TL_CTLG} from "../../out/tools/tools-filesystem.js";
+import {PROCESS_TOOL_CATALOG as PROC_TL_CTLG} from "../../out/tools/tools-process.js";
 
-const EXPECTED_TOOL_NAMES = [
+const EXP_TL_NMS = [
   "get_configs",
   "set_config_values",
   "read_files",
@@ -29,7 +29,7 @@ const EXPECTED_TOOL_NAMES = [
   "kill_processes",
 ];
 
-const BATCH_FIRST_TOOL_NAMES = [
+const BFTN = [
   "get_configs",
   "set_config_values",
   "read_files",
@@ -50,28 +50,28 @@ const BATCH_FIRST_TOOL_NAMES = [
   "kill_processes",
 ];
 
-const APPLY_PATCH_PERFORMANCE_TOOL_NAMES = [
+const APPTN = [
   "write_files",
   "edit_blocks",
 ];
 
 // 1. Test tool catalog shape ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testToolCatalogShape() {
-  const tools = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG];
+  const tools = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG];
 
-  assert.strictEqual(tools.length, EXPECTED_TOOL_NAMES.length);
+  assert.strictEqual(tools.length, EXP_TL_NMS.length);
   assert.deepStrictEqual(
     tools.map((tool) => tool.name),
-    EXPECTED_TOOL_NAMES,
+    EXP_TL_NMS,
   );
 }
 
 // 2. Test batch first descriptions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testBatchFirstDescriptions() {
-  const tools = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG];
+  const tools = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG];
   const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
 
-  for (const toolName of BATCH_FIRST_TOOL_NAMES) {
+  for (const toolName of BFTN) {
     const tool = toolsByName.get(toolName);
 
     assert.ok(tool, `Missing tool: ${toolName}`);
@@ -82,10 +82,10 @@ function testBatchFirstDescriptions() {
 
 // 3. Test apply patch performance guidance ――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testApplyPatchPerformanceGuidance() {
-  const tools = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG];
+  const tools = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG];
   const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
 
-  for (const toolName of APPLY_PATCH_PERFORMANCE_TOOL_NAMES) {
+  for (const toolName of APPTN) {
     const tool = toolsByName.get(toolName);
 
     assert.ok(tool, `Missing tool: ${toolName}`);

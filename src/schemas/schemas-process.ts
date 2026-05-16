@@ -7,10 +7,10 @@
 
 import {z} from "zod";
 
-const INLINE_TEXT_ARGUMENT_MAX_LENGTH = 50_000;
+const ITAML = 50_000;
 
-export const StartProcessArgsSchema = z.object({
-  command: z.string().max(INLINE_TEXT_ARGUMENT_MAX_LENGTH, "Use command_path for long commands").optional(),
+export const StrPrArSc = z.object({
+  command: z.string().max(ITAML, "Use command_path for long commands").optional(),
   command_path: z.string().optional(),
   command_offset: z.number().optional().default(0),
   command_length: z.number().optional(),
@@ -21,11 +21,11 @@ export const StartProcessArgsSchema = z.object({
   message: "Either command or command_path is required",
 });
 
-export const StartProcessesArgsSchema = z.object({
-  items: z.array(StartProcessArgsSchema).min(1),
+export const StrPrArSc2 = z.object({
+  items: z.array(StrPrArSc).min(1),
 });
 
-export const ReadProcessOutputArgsSchema = z.object({
+export const RdPrOtArSc = z.object({
   pid: z.number(),
   timeout_ms: z.number().optional(),
   offset: z.number().optional(),
@@ -33,27 +33,27 @@ export const ReadProcessOutputArgsSchema = z.object({
   verbose_timing: z.boolean().optional(),
 });
 
-export const ReadProcessOutputsArgsSchema = z.object({
-  items: z.array(ReadProcessOutputArgsSchema).min(1),
+export const RdPrOtArSc2 = z.object({
+  items: z.array(RdPrOtArSc).min(1),
 });
 
-export const ForceTerminateArgsSchema = z.object({
+export const FrcTrArSc = z.object({
   pid: z.number(),
 });
 
-export const ListSessionsArgsSchema = z.object({});
+export const LstSsArSc = z.object({});
 
-export const KillProcessArgsSchema = z.object({
+export const KllPrArSc = z.object({
   pid: z.number(),
 });
 
-export const KillProcessesArgsSchema = z.object({
+export const KllPrArSc2 = z.object({
   pids: z.array(z.number()).min(1),
 });
 
-export const InteractWithProcessArgsSchema = z.object({
+export const IntWtPrArSc2 = z.object({
   pid: z.number(),
-  input: z.string().max(INLINE_TEXT_ARGUMENT_MAX_LENGTH, "Use input_path for large input").optional(),
+  input: z.string().max(ITAML, "Use input_path for large input").optional(),
   input_path: z.string().optional(),
   input_offset: z.number().optional().default(0),
   input_length: z.number().optional(),
@@ -64,6 +64,6 @@ export const InteractWithProcessArgsSchema = z.object({
   message: "Either input or input_path is required",
 });
 
-export const InteractWithProcessesArgsSchema = z.object({
-  items: z.array(InteractWithProcessArgsSchema).min(1),
+export const IntWtPrArSc = z.object({
+  items: z.array(IntWtPrArSc2).min(1),
 });

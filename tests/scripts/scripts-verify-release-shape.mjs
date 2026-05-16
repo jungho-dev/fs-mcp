@@ -1,13 +1,13 @@
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as flUrlTPth2 } from "node:url";
 
-const scriptPath = fileURLToPath(import.meta.url);
+const scriptPath = flUrlTPth2(import.meta.url);
 const projectRoot = path.resolve(path.dirname(scriptPath), "..", "..");
-const packageJsonPath = path.join(projectRoot, "package.json");
-const ignoredDirectories = new Set([".git", "node_modules"]);
-const forbiddenSuffixes = [".map", ".d.ts"];
-const expectedBinShebang = "#!/usr/bin/env bun";
+const pckgJsnPth2 = path.join(projectRoot, "package.json");
+const ignrDrct = new Set([".git", "node_modules"]);
+const frbdSffx = [".map", ".d.ts"];
+const expBnShbn = "#!/usr/bin/env bun";
 
 // 1. filesystem helpers ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function pathExists(targetPath) {
@@ -25,7 +25,7 @@ async function pathExists(targetPath) {
 
 // 2. bin entrypoint check ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function verifyBinEntrypoint() {
-  const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
+  const packageJson = JSON.parse(await readFile(pckgJsnPth2, "utf8"));
   const binTarget = packageJson.bin?.["fs-mcp"];
   const failures = [];
 
@@ -40,29 +40,29 @@ async function verifyBinEntrypoint() {
 
   const binContent = await readFile(binPath, "utf8");
   const firstLine = binContent.split(/\r?\n/, 1)[0];
-  if (firstLine !== expectedBinShebang) {
-    failures.push(`Invalid fs-mcp bin shebang in ${binTarget}: expected "${expectedBinShebang}"`);
+  if (firstLine !== expBnShbn) {
+    failures.push(`Invalid fs-mcp bin shebang in ${binTarget}: expected "${expBnShbn}"`);
   }
 
   return failures;
 }
 
 // 3. forbidden artifact scan ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function collectForbiddenArtifacts(directoryPath, results = []) {
-  const entries = await readdir(directoryPath, { withFileTypes: true });
+async function collectForbiddenArtifacts(dirPth2, results = []) {
+  const entries = await readdir(dirPth2, { withFileTypes: true });
 
   await Promise.all(entries.map(async (entry) => {
-    if (ignoredDirectories.has(entry.name)) {
+    if (ignrDrct.has(entry.name)) {
       return;
     }
 
-    const entryPath = path.join(directoryPath, entry.name);
+    const entryPath = path.join(dirPth2, entry.name);
     if (entry.isDirectory()) {
       await collectForbiddenArtifacts(entryPath, results);
       return;
     }
 
-    if (forbiddenSuffixes.some((suffix) => entry.name.endsWith(suffix))) {
+    if (frbdSffx.some((suffix) => entry.name.endsWith(suffix))) {
       results.push(path.relative(projectRoot, entryPath));
     }
   }));
@@ -72,26 +72,26 @@ async function collectForbiddenArtifacts(directoryPath, results = []) {
 
 // 4. release shape check ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function main() {
-  const requiredDirectories = ["src", "out", "tests", path.join("tests", "scripts")];
-  const missingDirectories = [];
+  const rqrdDrct = ["src", "out", "tests", path.join("tests", "scripts")];
+  const mssnDrct = [];
 
-  await Promise.all(requiredDirectories.map(async (directory) => {
-    const directoryPath = path.join(projectRoot, directory);
-    if (!(await pathExists(directoryPath))) {
-      missingDirectories.push(directory);
+  await Promise.all(rqrdDrct.map(async (directory) => {
+    const dirPth2 = path.join(projectRoot, directory);
+    if (!(await pathExists(dirPth2))) {
+      mssnDrct.push(directory);
     }
   }));
 
-  const forbiddenArtifacts = await collectForbiddenArtifacts(projectRoot);
+  const frbdArtf = await collectForbiddenArtifacts(projectRoot);
   const distExists = await pathExists(path.join(projectRoot, "dist"));
   const failures = await verifyBinEntrypoint();
 
-  if (missingDirectories.length > 0) {
-    failures.push(`Missing required directories: ${missingDirectories.join(", ")}`);
+  if (mssnDrct.length > 0) {
+    failures.push(`Missing required directories: ${mssnDrct.join(", ")}`);
   }
 
-  if (forbiddenArtifacts.length > 0) {
-    failures.push(`Forbidden generated artifacts found: ${forbiddenArtifacts.join(", ")}`);
+  if (frbdArtf.length > 0) {
+    failures.push(`Forbidden generated artifacts found: ${frbdArtf.join(", ")}`);
   }
 
   if (distExists) {

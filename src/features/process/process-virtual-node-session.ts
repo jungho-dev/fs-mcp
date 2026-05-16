@@ -8,7 +8,7 @@
 import {spawn} from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import {fileURLToPath} from "node:url";
+import {fileURLToPath as flUrlTPth2} from "node:url";
 import type {ServerResult} from "@assets/type/common";
 
 type VirtualNodeSession = {
@@ -17,22 +17,22 @@ type VirtualNodeSession = {
   type: "node:local";
 };
 
-const __filename = fileURLToPath(import.meta.url);
+const __filename = flUrlTPth2(import.meta.url);
 const __dirname = path.dirname(__filename);
 const mcpRoot = path.resolve(__dirname, "..", "..");
 
-const virtualNodeSessions = new Map<number, VirtualNodeSession>();
-let virtualPidCounter = -1000;
+const vrtlNdSssn = new Map<number, VirtualNodeSession>();
+let vrtlPdCntr = -1000;
 
 // 1. Start virtual node session ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function startVirtualNodeSession(timeoutMs: number): ServerResult {
   const session: VirtualNodeSession = {
-    pid: virtualPidCounter--,
+    pid: vrtlPdCntr--,
     timeout_ms: timeoutMs,
     type: "node:local",
   };
 
-  virtualNodeSessions.set(session.pid, session);
+  vrtlNdSssn.set(session.pid, session);
 
   return {
     content: [
@@ -54,17 +54,17 @@ export function startVirtualNodeSession(timeoutMs: number): ServerResult {
 
 // 2. Get virtual node session ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function getVirtualNodeSession(pid: number): VirtualNodeSession | undefined {
-  return virtualNodeSessions.get(pid);
+  return vrtlNdSssn.get(pid);
 }
 
 // 3. Clear virtual node session ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function clearVirtualNodeSession(pid: number): boolean {
-  return virtualNodeSessions.delete(pid);
+  return vrtlNdSssn.delete(pid);
 }
 
 // 4. List virtual node sessions ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function listVirtualNodeSessions(): VirtualNodeSession[] {
-  return Array.from(virtualNodeSessions.values());
+  return Array.from(vrtlNdSssn.values());
 }
 
 // 5. Execute virtual node code ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――

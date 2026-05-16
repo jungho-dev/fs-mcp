@@ -9,26 +9,26 @@ import path from "node:path";
 
 export type PreviewFileType = "markdown" | "text" | "html" | "image" | "directory" | "unsupported";
 
-export const MARKDOWN_PREVIEW_EXTENSIONS = new Set([".md", ".markdown", ".mdx"]);
-export const HTML_PREVIEW_EXTENSIONS = new Set([".html", ".htm"]);
+export const MRK_PRV_EXT = new Set([".md", ".markdown", ".mdx"]);
+export const HTM_PRV_EXT = new Set([".html", ".htm"]);
 
-export const TEXT_PREVIEW_EXTENSIONS = new Set([".txt", ".text", ".log", ".json", ".yaml", ".yml", ".toml", ".ini", ".xml", ".css", ".scss", ".less", ".js", ".cjs", ".mjs", ".ts", ".jsx", ".tsx", ".sh", ".bash", ".zsh", ".py", ".rb", ".java", ".go", ".rs", ".sql", ".srt", ".vtt"]);
+export const TXT_PRV_EXT = new Set([".txt", ".text", ".log", ".json", ".yaml", ".yml", ".toml", ".ini", ".xml", ".css", ".scss", ".less", ".js", ".cjs", ".mjs", ".ts", ".jsx", ".tsx", ".sh", ".bash", ".zsh", ".py", ".rb", ".java", ".go", ".rs", ".sql", ".srt", ".vtt"]);
 
-const TEXT_PREVIEW_BASENAMES = new Set([".env", ".gitignore", ".gitattributes", "dockerfile", "makefile"]);
+const TXT_PRV_BSN = new Set([".env", ".gitignore", ".gitattributes", "dockerfile", "makefile"]);
 
 // 1. Resolve preview file type ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function resolvePreviewFileType(filePath: string): PreviewFileType {
-  const normalizedPath = filePath.toLowerCase();
-  const extension = path.extname(normalizedPath);
-  const basename = path.basename(normalizedPath);
+  const normPth2 = filePath.toLowerCase();
+  const extension = path.extname(normPth2);
+  const basename = path.basename(normPth2);
 
-  if (MARKDOWN_PREVIEW_EXTENSIONS.has(extension)) {
+  if (MRK_PRV_EXT.has(extension)) {
     return "markdown";
   }
-  if (HTML_PREVIEW_EXTENSIONS.has(extension)) {
+  if (HTM_PRV_EXT.has(extension)) {
     return "html";
   }
-  if (TEXT_PREVIEW_EXTENSIONS.has(extension) || TEXT_PREVIEW_BASENAMES.has(basename)) {
+  if (TXT_PRV_EXT.has(extension) || TXT_PRV_BSN.has(basename)) {
     return "text";
   }
   return "unsupported";

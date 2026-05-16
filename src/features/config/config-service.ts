@@ -5,49 +5,119 @@
  * @since 2026-05-02
  */
 
-import {constants as fsConstants} from "node:fs";
+import {constants as fsConstants, existsSync, statSync} from "node:fs";
 import {access, readFile} from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
 import type {ServerResult} from "@assets/type/common";
-import {getSystemInfo} from "@cores/runtime/runtime-info";
-import {getCurrentClient} from "@features/config/config-client";
-import {CONFIG_FIELD_DEFINITIONS, CONFIG_FIELD_KEYS, CONFIG_QUERY_DEFINITIONS, type ConfigQueryKey, isConfigFieldKey} from "@features/config/config-metadata";
-import {configManager} from "@features/config/config-store";
-import {readFileInternal} from "@features/filesystem/filesystem-service";
-import {GetConfigValueArgsSchema, SetConfigValueArgsSchema} from "@schemas/schemas-config";
+import {getSystemInfo as gtSystInf} from "@cores/runtime/runtime-info";
+import {getCurrentClient as gtCurClnt, getDefaultContextIndexDbPath as gtDfCtIdDbPt} from "@features/config/config-client";
+import {CFG_FLD_DFNT, CFG_FLD_KYS, CFG_QRY_DFNT, type ConfigQueryKey as CfgQryKy, isConfigFieldKey as isCfgFldKy} from "@features/config/config-metadata";
+import {cfgMgr, type ServerConfig as SrvrCfg} from "@features/config/config-store";
+import {readFileInternal as rdFlInt} from "@features/filesystem/filesystem-service";
+import {GtCfVaArSc, StCfVaArSc2} from "@schemas/schemas-config";
 
-const ALLOWED_CONFIG_KEYS = new Set(CONFIG_FIELD_KEYS);
-const CONFIG_DEBUG_LOG_ENABLED = process.env.FS_MCP_DEBUG_CONFIG === "1";
-const SHELL_LINE_SEPARATOR_REGEX = /\r?\n/;
+const ALLW_CFG_KYS = new Set(CFG_FLD_KYS);
+const CDLO = process.env.FS_MCP_DEBUG_CONFIG === "1";
+const SLSR = /\r?\n/;
+const CTX_BOOL_KYS = new Set(["contextIndexEnabled", "contextIndexReplaceLargeOutputs"]);
+const CTX_ZERO_KYS = new Set(["contextIndexAutoMinChars", "contextIndexAutoMinLines"]);
+const CTX_POS_KYS = new Set(["contextIndexMaxBytes", "contextIndexMaxDocuments", "contextIndexMaxEntryChars"]);
 
 // 1. Log config debug ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function logConfigDebug(message: string): void {
-  if (CONFIG_DEBUG_LOG_ENABLED) {
+  if (CDLO) {
     console.error(message);
   }
 }
 
 // 1. Normalize array config value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function normalizeArrayConfigValue(key: string, value: unknown): unknown {
-  let normalizedValue = value;
+  let normVal2 = value;
 
   if (key === "allowedDirectories" && (value === null || (typeof value === "string" && value.trim().length === 0))) {
-    normalizedValue = [];
+    normVal2 = [];
   }
-  return normalizedValue;
+  return normVal2;
 }
 
-// 2. Normalize context index config value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function normalizeContextIndexConfigValue(key: string, value: unknown): unknown {
-  if ((key === "contextIndexEnabled" || key === "contextIndexReplaceLargeOutputs") && typeof value !== "boolean") {
-    throw new Error(`${key} must be a boolean`);
+// 2. Expand home path \u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015
+function expandHomePath(value: string): string {
+  if (value === "~") {
+    return os.homedir();
   }
-  if (key === "contextIndexDbPath" && (typeof value !== "string" || value.trim().length === 0)) {
-    throw new Error("contextIndexDbPath must be a non-empty string");
+  if (value.startsWith("~/") || value.startsWith("~\\")) {
+    return path.join(os.homedir(), value.slice(2));
   }
-  // biome-ignore lint/security/noSecrets: Context-index config key names are public option identifiers.
-  if ((key === "contextIndexAutoMinChars" || key === "contextIndexAutoMinLines" || key === "contextIndexMaxEntryChars") && (typeof value !== "number" || !Number.isFinite(value) || value < 0)) {
-    throw new Error(`${key} must be a non-negative finite number`);
+  return value;
+}
+
+// 3. Normalize path for containment \u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015
+function normalizePathForContainment(value: string): string {
+  return path.resolve(expandHomePath(value));
+}
+
+// 4. Is path inside \u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015
+function isPathInside(rootPath: string, targetPath: string): boolean {
+  const relativePath = path.relative(rootPath, targetPath);
+
+  return relativePath === "" || (!relativePath.startsWith("..") && !path.isAbsolute(relativePath));
+}
+
+// 5. Get default context index DB directory \u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015
+function getDefaultContextIndexDbDirectory(): string {
+  return normalizePathForContainment(path.dirname(gtDfCtIdDbPt()));
+}
+
+// 6. Validate context index DB path \u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015
+function validateContextIndexDbPath(value: string, cfgOvrr?: SrvrCfg): void {
+  const resolvedPath = normalizePathForContainment(value.trim());
+  const defaultPath = normalizePathForContainment(gtDfCtIdDbPt());
+
+  if (resolvedPath === defaultPath) {
+    return;
+  }
+  if (existsSync(resolvedPath) && statSync(resolvedPath).isDirectory()) {
+    throw new Error("contextIndexDbPath must point to a SQLite file, not a directory");
+  }
+  const config = cfgOvrr ?? cfgMgr.getConfigSync();
+  const allwDrct = Array.isArray(config.allowedDirectories)
+    ? config.allowedDirectories.filter((directory): directory is string => typeof directory === "string" && directory.trim().length > 0)
+    : [];
+  const allowedRoots = [
+    getDefaultContextIndexDbDirectory(),
+    ...allwDrct.map((directory) => normalizePathForContainment(directory)),
+  ];
+
+  if (!allowedRoots.some((rootPath) => isPathInside(rootPath, resolvedPath))) {
+    throw new Error("contextIndexDbPath must stay under ~/.mcp or an allowedDirectories entry");
+  }
+  const parentDir = path.dirname(resolvedPath);
+
+  if (!existsSync(parentDir)) {
+    throw new Error("contextIndexDbPath parent directory must exist for custom paths");
+  }
+  if (!statSync(parentDir).isDirectory()) {
+    throw new Error("contextIndexDbPath parent must be a directory");
+  }
+}
+
+// 7. Normalize context index config value \u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015
+function normalizeContextIndexConfigValue(key: string, value: unknown, cfgOvrr?: SrvrCfg): unknown {
+  if (CTX_BOOL_KYS.has(key) && typeof value !== "boolean") {
+    throw new Error(key + " must be a boolean");
+  }
+  if (key === "contextIndexDbPath") {
+    if (typeof value !== "string" || value.trim().length === 0) {
+      throw new Error("contextIndexDbPath must be a non-empty string");
+    }
+    validateContextIndexDbPath(value, cfgOvrr);
+  }
+  if (CTX_ZERO_KYS.has(key) && (typeof value !== "number" || !Number.isFinite(value) || value < 0)) {
+    throw new Error(key + " must be a non-negative finite number");
+  }
+  if (CTX_POS_KYS.has(key) && (typeof value !== "number" || !Number.isFinite(value) || value < 1)) {
+    throw new Error(key + " must be a positive finite number");
   }
   return value;
 }
@@ -64,7 +134,7 @@ async function pathExists(pathValue: string): Promise<boolean> {
 }
 
 // 3. Detect available shells ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function detectAvailableShells(systemInfo: ReturnType<typeof getSystemInfo>): Promise<string[]> {
+async function detectAvailableShells(systemInfo: ReturnType<typeof gtSystInf>): Promise<string[]> {
   const detected = new Set<string>();
   const add = (shell: string): void => {
     if (shell.trim().length > 0) {
@@ -87,7 +157,7 @@ async function detectAvailableShells(systemInfo: ReturnType<typeof getSystemInfo
       candidates.unshift(path.join(programFiles, "PowerShell", "7", "pwsh.exe"));
     }
 
-    const availableCandidates = await Promise.all(
+    const availCndd = await Promise.all(
       candidates.map(async (shell) => {
         if (shell.includes("\\")) {
           return (await pathExists(shell)) ? shell : null;
@@ -96,7 +166,7 @@ async function detectAvailableShells(systemInfo: ReturnType<typeof getSystemInfo
       }),
     );
 
-    for (const shell of availableCandidates) {
+    for (const shell of availCndd) {
       if (shell !== null) {
         add(shell);
       }
@@ -106,7 +176,7 @@ async function detectAvailableShells(systemInfo: ReturnType<typeof getSystemInfo
   add(process.env.SHELL ?? "");
 
   const shellFiles = ["/etc/shells"];
-  const shellFileContents = await Promise.all(
+  const shllFlCntn = await Promise.all(
     shellFiles.map(async (shellFile) => {
       try {
         return await readFile(shellFile, "utf8");
@@ -117,19 +187,19 @@ async function detectAvailableShells(systemInfo: ReturnType<typeof getSystemInfo
     }),
   );
 
-  for (const content of shellFileContents) {
+  for (const content of shllFlCntn) {
     if (content !== null) {
       content
-        .split(SHELL_LINE_SEPARATOR_REGEX)
+        .split(SLSR)
         .map((line) => line.trim())
         .filter((line) => line.length > 0 && !line.startsWith("#"))
         .forEach(add);
     }
   }
-  const fallbackCandidates = ["/bin/zsh", "/bin/bash", "/bin/sh", "/usr/bin/fish"];
-  const availableFallbacks = await Promise.all(fallbackCandidates.map(async (shell) => ((await pathExists(shell)) ? shell : null)));
+  const fbCndd = ["/bin/zsh", "/bin/bash", "/bin/sh", "/usr/bin/fish"];
+  const availFllb = await Promise.all(fbCndd.map(async (shell) => ((await pathExists(shell)) ? shell : null)));
 
-  for (const shell of availableFallbacks) {
+  for (const shell of availFllb) {
     if (shell !== null) {
       add(shell);
     }
@@ -139,16 +209,16 @@ async function detectAvailableShells(systemInfo: ReturnType<typeof getSystemInfo
 
 // 4. Format config value ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function formatConfigValue(value: unknown): string {
-  const serializedValue = JSON.stringify(value, null, 2);
+  const srlzVal2 = JSON.stringify(value, null, 2);
 
-  if (serializedValue !== undefined) {
-    return serializedValue;
+  if (srlzVal2 !== undefined) {
+    return srlzVal2;
   }
   return String(value);
 }
 
 // 5. Create system info snapshot ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function createSystemInfoSnapshot(): ReturnType<typeof getSystemInfo> & {
+function createSystemInfoSnapshot(): ReturnType<typeof gtSystInf> & {
   memory: {
     rss: string;
     heapTotal: string;
@@ -157,7 +227,7 @@ function createSystemInfoSnapshot(): ReturnType<typeof getSystemInfo> & {
     arrayBuffers: string;
   };
 } {
-  const systemInfo = getSystemInfo();
+  const systemInfo = gtSystInf();
   const memoryUsage = process.memoryUsage();
 
   return {
@@ -175,7 +245,7 @@ function createSystemInfoSnapshot(): ReturnType<typeof getSystemInfo> & {
 // 6. Get config value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getConfigValue(args: unknown): Promise<ServerResult> {
   logConfigDebug(`getConfigValue called with args: ${JSON.stringify(args)}`);
-  const parsed = GetConfigValueArgsSchema.safeParse(args);
+  const parsed = GtCfVaArSc.safeParse(args);
 
   if (!parsed.success) {
     logConfigDebug(`Invalid arguments for get_configs: ${parsed.error}`);
@@ -190,21 +260,21 @@ export async function getConfigValue(args: unknown): Promise<ServerResult> {
     };
   }
   try {
-    const key = parsed.data.key as ConfigQueryKey;
-    const definition = CONFIG_QUERY_DEFINITIONS[key];
+    const key = parsed.data.key as CfgQryKy;
+    const definition = CFG_QRY_DFNT[key];
     let value: unknown;
 
-    if (isConfigFieldKey(key) || key === "version") {
-      value = await configManager.getValue(key);
+    if (isCfgFldKy(key) || key === "version") {
+      value = await cfgMgr.getValue(key);
     }
     else if (key === "currentClient") {
-      value = getCurrentClient();
+      value = gtCurClnt();
     }
     else if (key === "systemInfo") {
       value = createSystemInfoSnapshot();
     }
     else if (key === "availableShells") {
-      const systemInfo = getSystemInfo();
+      const systemInfo = gtSystInf();
 
       value = await detectAvailableShells(systemInfo);
     }
@@ -252,111 +322,93 @@ export async function getConfigValue(args: unknown): Promise<ServerResult> {
   }
 }
 
-// 7. Set config value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function setConfigValue(args: unknown): Promise<ServerResult> {
-  logConfigDebug(`setConfigValue called with args: ${JSON.stringify(args)}`);
-  try {
-    const parsed = SetConfigValueArgsSchema.safeParse(args);
-    if (!parsed.success) {
-      logConfigDebug(`Invalid arguments for set_config_value: ${parsed.error}`);
-      return {
-        content: [
-          {
-            text: `Invalid arguments: ${parsed.error}`,
-            type: "text",
-          },
-        ],
-        isError: true,
-      };
-    }
-    if (!isConfigFieldKey(parsed.data.key)) {
-      return {
-        content: [
-          {
-            text: `Key "${parsed.data.key}" is not configurable via this tool. Allowed keys: ${[...ALLOWED_CONFIG_KEYS].join(", ")}`,
-            type: "text",
-          },
-        ],
-        isError: true,
-      };
-    }
-    try {
-      const fieldDefinition = CONFIG_FIELD_DEFINITIONS[parsed.data.key];
-      const rawValue = parsed.data.value ?? await readFileInternal(parsed.data.value_path ?? "", parsed.data.value_offset, parsed.data.value_length);
-      // Parse string values that should be arrays or objects
-      let valueToStore = normalizeArrayConfigValue(parsed.data.key, rawValue);
+// 8. Prepared config value update \u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015
+export interface PreparedConfigValueUpdate {
+  key: string;
+  value: unknown;
+}
 
-      // If the value is a string that looks like an array or object, try to parse it
-      if (typeof valueToStore === "string" && (valueToStore.startsWith("[") || valueToStore.startsWith("{"))) {
-        try {
-          valueToStore = JSON.parse(valueToStore);
-          logConfigDebug(`Parsed string value to object/array: ${JSON.stringify(valueToStore)}`);
-        }
-        catch (parseError) {
-          logConfigDebug(`Failed to parse string as JSON, using as-is: ${parseError}`);
-        }
-      }
-      // Special handling for known array configuration keys
-      if (fieldDefinition.valueType === "array" && !Array.isArray(valueToStore)) {
-        if (typeof valueToStore === "string") {
-          const originalString = valueToStore;
-          try {
-            const parsedValue = JSON.parse(originalString);
-            valueToStore = parsedValue;
-          }
-          catch (parseError) {
-            logConfigDebug(`Failed to parse string as array for ${parsed.data.key}: ${parseError}`);
-            // If parsing failed and it's a single value, convert to an array with one item
-            if (!originalString.includes("[")) {
-              valueToStore = [originalString];
-            }
-          }
-        }
-        else if (valueToStore !== null) {
-          // If not a string or array (and not null), convert to an array with one item
-          valueToStore = [String(valueToStore)];
-        }
-        // Ensure the value is an array after all our conversions
-        if (!Array.isArray(valueToStore)) {
-          logConfigDebug(`Value for ${parsed.data.key} is still not an array, converting to array`);
-          valueToStore = [String(valueToStore)];
-        }
-      }
-      valueToStore = normalizeContextIndexConfigValue(parsed.data.key, valueToStore);
-      await configManager.setValue(parsed.data.key, valueToStore);
-      // Get the updated configuration to show the user
-      const updatedConfig = await configManager.getConfig();
-      logConfigDebug(`setConfigValue: Successfully set ${parsed.data.key} to ${JSON.stringify(valueToStore)}`);
-      return {
-        content: [
-          {
-            text: `Successfully set ${parsed.data.key} to ${JSON.stringify(valueToStore, null, 2)}\n\nUpdated configuration:\n${JSON.stringify(updatedConfig, null, 2)}`,
-            type: "text",
-          },
-        ],
-      };
+// 9. Prepare config value update \u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015
+export async function prepareConfigValueUpdate(args: unknown, cfgOvrr?: SrvrCfg): Promise<PreparedConfigValueUpdate> {
+  const parsed = StCfVaArSc2.safeParse(args);
+
+  if (!parsed.success) {
+    logConfigDebug("Invalid arguments for set_config_value: " + parsed.error.message);
+    throw new Error("Invalid arguments: " + parsed.error.message);
+  }
+  if (!isCfgFldKy(parsed.data.key)) {
+    throw new Error("Key \"" + parsed.data.key + "\" is not configurable via this tool. Allowed keys: " + [...ALLW_CFG_KYS].join(", "));
+  }
+  const fldDfnt = CFG_FLD_DFNT[parsed.data.key];
+  const rawValue = parsed.data.value !== undefined ? parsed.data.value : await rdFlInt(parsed.data.value_path ?? "", parsed.data.value_offset, parsed.data.value_length);
+  let valueToStore = normalizeArrayConfigValue(parsed.data.key, rawValue);
+
+  if (typeof valueToStore === "string" && (valueToStore.startsWith("[") || valueToStore.startsWith("{"))) {
+    try {
+      valueToStore = JSON.parse(valueToStore);
+      logConfigDebug("Parsed string value to object/array: " + JSON.stringify(valueToStore));
     }
-    catch (updateError) {
-      const updateErrorMessage = updateError instanceof Error ? updateError.message : String(updateError);
-      console.error(`Error updating config: ${updateErrorMessage}`);
-      return {
-        content: [
-          {
-            text: `Error updating configuration value: ${updateErrorMessage}`,
-            type: "text",
-          },
-        ],
-        isError: true,
-      };
+    catch (parseError) {
+      logConfigDebug("Failed to parse string as JSON, using as-is: " + String(parseError));
     }
   }
-  catch (error) {
-    console.error(`Error in setConfigValue: ${error instanceof Error ? error.message : String(error)}`);
-    console.error(error instanceof Error && error.stack ? error.stack : "No stack trace available");
+  if (fldDfnt.valueType === "array" && !Array.isArray(valueToStore)) {
+    if (typeof valueToStore === "string") {
+      const origStr = valueToStore;
+
+      try {
+        valueToStore = JSON.parse(origStr);
+      }
+      catch (parseError) {
+        logConfigDebug("Failed to parse string as array for " + parsed.data.key + ": " + String(parseError));
+        if (!origStr.includes("[")) {
+          valueToStore = [origStr];
+        }
+      }
+    }
+    else if (valueToStore !== null) {
+      valueToStore = [String(valueToStore)];
+    }
+    if (!Array.isArray(valueToStore)) {
+      logConfigDebug("Value for " + parsed.data.key + " is still not an array, converting to array");
+      valueToStore = [String(valueToStore)];
+    }
+  }
+  valueToStore = normalizeContextIndexConfigValue(parsed.data.key, valueToStore, cfgOvrr);
+
+  return {
+    key: parsed.data.key,
+    value: valueToStore,
+  };
+}
+
+// 10. Set config value \u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015
+export async function setConfigValue(args: unknown): Promise<ServerResult> {
+  logConfigDebug("setConfigValue called with args: " + JSON.stringify(args));
+  try {
+    const update = await prepareConfigValueUpdate(args);
+
+    await cfgMgr.setValue(update.key, update.value);
+    const updtCfg = await cfgMgr.getConfig();
+
+    logConfigDebug("setConfigValue: Successfully set " + update.key + " to " + JSON.stringify(update.value));
     return {
       content: [
         {
-          text: `Error setting value: ${error instanceof Error ? error.message : String(error)}`,
+          text: "Successfully set " + update.key + " to " + JSON.stringify(update.value, null, 2) + "\\n\\nUpdated configuration:\\n" + JSON.stringify(updtCfg, null, 2),
+          type: "text",
+        },
+      ],
+    };
+  }
+  catch (error) {
+    const errMsg = error instanceof Error ? error.message : String(error);
+
+    console.error("Error updating config: " + errMsg);
+    return {
+      content: [
+        {
+          text: "Error updating configuration value: " + errMsg,
           type: "text",
         },
       ],

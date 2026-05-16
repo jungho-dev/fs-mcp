@@ -6,11 +6,11 @@
  */
 
 import assert from "node:assert/strict";
-import { createToolDisplayText } from "../../out/cores/responses/responses-tool-display.js";
-import { normalizeToolResult } from "../../out/cores/responses/responses-tool-result.js";
-import { dispatchToolCall, getDispatchableToolNames } from "../../out/tools/tools-dispatcher.js";
+import { createToolDisplayText as crtTlDsplTxt } from "../../out/cores/responses/responses-tool-display.js";
+import { normalizeToolResult as nrmlTlRes } from "../../out/cores/responses/responses-tool-result.js";
+import { dispatchToolCall as dsptTlCll, getDispatchableToolNames as gtDsptTlNms } from "../../out/tools/tools-dispatcher.js";
 
-const UNKNOWN_TOOL_PATTERN = /Unknown tool: missing_tool_for_contract_test/;
+const UNKN_TL_PAT = /Unknown tool: missing_tool_for_contract_test/;
 
 // 1. standard output parser ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function parseStandardOutput(result) {
@@ -41,18 +41,18 @@ function assertStandardToolResult(result, toolName, status) {
 
 // 2. unknown tool contract ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testUnknownToolResponse() {
-  const result = await dispatchToolCall("missing_tool_for_contract_test", {});
+  const result = await dsptTlCll("missing_tool_for_contract_test", {});
   const output = assertStandardToolResult(result, "missing_tool_for_contract_test", "error");
 
-  assert.match(output.error.message, UNKNOWN_TOOL_PATTERN);
-  assert.match(output.data.text, UNKNOWN_TOOL_PATTERN);
-  assert.equal(result.content[0].text, createToolDisplayText(output));
-  assert.doesNotMatch(result.content[0].text, UNKNOWN_TOOL_PATTERN);
+  assert.match(output.error.message, UNKN_TL_PAT);
+  assert.match(output.data.text, UNKN_TL_PAT);
+  assert.equal(result.content[0].text, crtTlDsplTxt(output));
+  assert.doesNotMatch(result.content[0].text, UNKN_TL_PAT);
 }
 
 // 3. dispatcher output contract ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testDispatcherNormalizesKnownToolResponse() {
-  const result = await dispatchToolCall("get_configs", {
+  const result = await dsptTlCll("get_configs", {
     items: [
       { key: "version" },
       { key: "defaultShell" },
@@ -61,7 +61,7 @@ async function testDispatcherNormalizesKnownToolResponse() {
   const output = assertStandardToolResult(result, "get_configs", "success");
 
   assert.equal(output.error, null);
-  assert.equal(result.content[0].text, createToolDisplayText(output));
+  assert.equal(result.content[0].text, crtTlDsplTxt(output));
   assert.doesNotMatch(result.content[0].text, /succeeded/);
   assert.equal(output.data.structuredContent.totalCount, 2);
   assert.equal(output.data.structuredContent.succeededCount, 2);
@@ -70,19 +70,19 @@ async function testDispatcherNormalizesKnownToolResponse() {
 // 4. display data preservation ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testDisplayPreservesStructuredData() {
   const longText = Array.from({ length: 20 }, (_value, index) => `synthetic output line ${index} ${"x".repeat(80)}`).join("\n");
-  const result = normalizeToolResult("synthetic_tool", {
+  const result = nrmlTlRes("synthetic_tool", {
     content: [{ type: "text", text: longText }],
   }, 1);
   const output = assertStandardToolResult(result, "synthetic_tool", "success");
 
-  assert.equal(result.content[0].text, createToolDisplayText(output));
+  assert.equal(result.content[0].text, crtTlDsplTxt(output));
   assert.doesNotMatch(result.content[0].text, /synthetic output line/);
   assert.equal(output.data.text, longText);
 }
 
 // 6. Test get configs supports default batch ――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testGetConfigsSupportsDefaultBatch() {
-  const result = await dispatchToolCall("get_configs", {});
+  const result = await dsptTlCll("get_configs", {});
   const output = assertStandardToolResult(result, "get_configs", "success");
 
   assert.equal(output.error, null);
@@ -91,11 +91,11 @@ async function testGetConfigsSupportsDefaultBatch() {
 
 // 7. Test every dispatchable tool returns display text ―――――――――――――――――――――――――――――――――――――――――
 async function testEveryDispatchableToolReturnsDisplayText() {
-  for (const toolName of getDispatchableToolNames()) {
+  for (const toolName of gtDsptTlNms()) {
     // Invalid args keep the check side-effect-light while still proving dispatcher normalization.
     // No-arg tools may run normally; they are read-only listings.
     // biome-ignore lint/performance/noAwaitInLoops: Tool names are checked sequentially to avoid process/git state races.
-    const result = await dispatchToolCall(toolName, { __contractInvalid: true });
+    const result = await dsptTlCll(toolName, { __contractInvalid: true });
 
     assert.equal(result.content.length, 1, toolName);
     assert.equal(result.content[0].type, "text", toolName);

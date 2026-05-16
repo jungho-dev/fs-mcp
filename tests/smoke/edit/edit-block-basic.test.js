@@ -1,27 +1,27 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { handleEditBlock } from "../../../out/controllers/controllers-edit.js";
-import { configManager } from "../../../out/features/config/config-store.js";
+import { fileURLToPath as flUrlTPth2 } from "node:url";
+import { handleEditBlock as hndlEdtBlck } from "../../../out/controllers/controllers-edit.js";
+import { configManager as cfgMgr } from "../../../out/features/config/config-store.js";
 
-const __filename = fileURLToPath(import.meta.url);
+const __filename = flUrlTPth2(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const TEST_FILEPATH = path.join(__dirname, "test.txt");
+const TST_FLPT = path.join(__dirname, "test.txt");
 
 // 1. Setup ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function setup() {
   // Save original config to restore later
-  const originalConfig = await configManager.getConfig();
-  return originalConfig;
+  const origCfg = await cfgMgr.getConfig();
+  return origCfg;
 }
 
 // 1. Teardown function to clean up after tests ――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function teardown(originalConfig) {
+async function teardown(origCfg) {
   // Reset configuration to original
-  await configManager.updateConfig(originalConfig);
+  await cfgMgr.updateConfig(origCfg);
 
-  await fs.rm(TEST_FILEPATH, { force: true, recursive: true });
+  await fs.rm(TST_FLPT, { force: true, recursive: true });
 }
 
 // Export the main test function
@@ -29,28 +29,28 @@ async function teardown(originalConfig) {
 // 3. Test edit block ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testEditBlock() {
   try {
-    await configManager.setValue("allowedDirectories", [__dirname]);
+    await cfgMgr.setValue("allowedDirectories", [__dirname]);
 
     // Create a test file
     const fs = await import("node:fs/promises");
-    await fs.writeFile(TEST_FILEPATH, "This is old content to replace");
+    await fs.writeFile(TST_FLPT, "This is old content to replace");
 
     // Test handleEditBlock
-    const _result = await handleEditBlock({
-      file_path: TEST_FILEPATH,
+    const _result = await hndlEdtBlck({
+      file_path: TST_FLPT,
       old_string: "old content",
       new_string: "new content",
       expected_replacements: 1,
     });
 
-    const fileContent = await fs.readFile(TEST_FILEPATH, "utf8");
+    const fileContent = await fs.readFile(TST_FLPT, "utf8");
 
     if (!fileContent.includes("new content")) {
       throw new Error("Replace test failed!");
     }
 
     // Cleanup
-    await fs.unlink(TEST_FILEPATH);
+    await fs.unlink(TST_FLPT);
     return true;
   }
   catch (error) {
@@ -63,9 +63,9 @@ async function testEditBlock() {
 
 // 4. Run tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export default async function runTests() {
-  let originalConfig;
+  let origCfg;
   try {
-    originalConfig = await setup();
+    origCfg = await setup();
     await testEditBlock();
   }
   catch (error) {
@@ -73,8 +73,8 @@ export default async function runTests() {
     return false;
   }
   finally {
-    if (originalConfig) {
-      await teardown(originalConfig);
+    if (origCfg) {
+      await teardown(origCfg);
     }
   }
   return true;

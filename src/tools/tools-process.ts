@@ -5,23 +5,23 @@
  * @since 2026-05-03
  */
 
-import { withArgsPathSchema } from "@schemas/schemas-args-ref";
-import { InteractWithProcessesArgsSchema, KillProcessesArgsSchema, ListSessionsArgsSchema, ReadProcessOutputsArgsSchema, StartProcessesArgsSchema } from "@schemas/schemas-process";
-import { BATCH_GUIDANCE, CMD_PREFIX_DESCRIPTION, OS_GUIDANCE, PATH_GUIDANCE, createToolCatalogEntry, type ToolCatalogEntry, type ToolCatalogEntryConfig } from "@tools/tools-const";
+import { withArgsPathSchema as wthArPtSc } from "@schemas/schemas-args-ref";
+import { IntWtPrArSc, KllPrArSc2, LstSsArSc, RdPrOtArSc2, StrPrArSc2 } from "@schemas/schemas-process";
+import { BTCH_GDNC, CMD_PRF_DSC, OS_GUIDANCE, PTH_GDNC, createToolCatalogEntry as crtTlCtEn, type ToolCatalogEntry as TlCtlgEntr, type ToolCatalogEntryConfig as TlCtEnCf } from "@tools/tools-const";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-const PROCESS_TOOL_DEFINITIONS = [
+const PROC_TL_DFNT = [
   {
     name: "start_processes",
     description: (`
       Start terminal processes in parallel.
       Use command_path for long commands and shell for compatibility overrides.
-      ${BATCH_GUIDANCE}
-      ${PATH_GUIDANCE}
+      ${BTCH_GDNC}
+      ${PTH_GDNC}
       ${OS_GUIDANCE}
-      ${CMD_PREFIX_DESCRIPTION}
+      ${CMD_PRF_DSC}
     `),
-    inputSchema: withArgsPathSchema(StartProcessesArgsSchema),
+    inputSchema: wthArPtSc(StrPrArSc2),
     annotations: {
       title: "Start Terminal Processes",
       readOnlyHint: false,
@@ -33,10 +33,10 @@ const PROCESS_TOOL_DEFINITIONS = [
     name: "read_process_outputs",
     description: (`
       Read one or many process outputs in parallel.
-      ${BATCH_GUIDANCE}
-      ${CMD_PREFIX_DESCRIPTION}
+      ${BTCH_GDNC}
+      ${CMD_PRF_DSC}
     `),
-    inputSchema: withArgsPathSchema(ReadProcessOutputsArgsSchema),
+    inputSchema: wthArPtSc(RdPrOtArSc2),
     annotations: {
       title: "Read Process Outputs",
       readOnlyHint: true,
@@ -47,10 +47,10 @@ const PROCESS_TOOL_DEFINITIONS = [
     description: (`
       Send input to running processes in parallel.
       Use input_path for large stdin payloads.
-      ${BATCH_GUIDANCE}
-      ${CMD_PREFIX_DESCRIPTION}
+      ${BTCH_GDNC}
+      ${CMD_PRF_DSC}
     `),
-    inputSchema: withArgsPathSchema(InteractWithProcessesArgsSchema),
+    inputSchema: wthArPtSc(IntWtPrArSc),
     annotations: {
       title: "Send Input to Processes",
       readOnlyHint: false,
@@ -63,9 +63,9 @@ const PROCESS_TOOL_DEFINITIONS = [
     description: (`
       List all active terminal sessions.
       Shows pid, blocked state, and runtime.
-      ${CMD_PREFIX_DESCRIPTION}
+      ${CMD_PRF_DSC}
     `),
-    inputSchema: withArgsPathSchema(ListSessionsArgsSchema),
+    inputSchema: wthArPtSc(LstSsArSc),
     annotations: {
       title: "List Terminal Sessions",
       readOnlyHint: true,
@@ -75,10 +75,10 @@ const PROCESS_TOOL_DEFINITIONS = [
     name: "kill_processes",
     description: (`
       Kill one or many processes in parallel.
-      ${BATCH_GUIDANCE}
-      ${CMD_PREFIX_DESCRIPTION}
+      ${BTCH_GDNC}
+      ${CMD_PRF_DSC}
     `),
-    inputSchema: withArgsPathSchema(KillProcessesArgsSchema),
+    inputSchema: wthArPtSc(KllPrArSc2),
     annotations: {
       title: "Kill Processes",
       readOnlyHint: false,
@@ -86,7 +86,9 @@ const PROCESS_TOOL_DEFINITIONS = [
       openWorldHint: false,
     },
   },
-] satisfies ToolCatalogEntryConfig[];
+] satisfies TlCtEnCf[];
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export const PROCESS_TOOL_CATALOG: ToolCatalogEntry[] = PROCESS_TOOL_DEFINITIONS.map((entry) => createToolCatalogEntry(entry));
+export const PROC_TL_CTLG: TlCtlgEntr[] = PROC_TL_DFNT.map((entry) => crtTlCtEn(entry));
+
+export const PROC_TL_CTL2 = PROC_TL_CTLG;

@@ -1,5 +1,5 @@
-import type { FilteredStdioServerTransport } from "@cores/transport/transport-stdio-transport";
+import type { FilteredStdioServerTransport as FltStSrTr } from "@cores/transport/transport-stdio-transport";
 
 declare global {
-  var mcpTransport: FilteredStdioServerTransport | undefined;
+  var mcpTransport: FltStSrTr | undefined;
 }

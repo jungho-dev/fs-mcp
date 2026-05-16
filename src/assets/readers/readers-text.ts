@@ -17,13 +17,13 @@
 //
 // The fuzzy search/replace logic should be moved here.
 
-import {createReadStream} from "node:fs";
+import {createReadStream as crtRdStrm} from "node:fs";
 import fs from "node:fs/promises";
-import {createInterface} from "node:readline";
+import {createInterface as crtIntr} from "node:readline";
 import type {FileHandler, FileInfo, FileMetadata, FileResult, ReadOptions} from "@assets/readers/readers-base";
-import {FILE_SIZE_LIMITS, READ_PERFORMANCE_THRESHOLDS} from "@features/filesystem/filesystem-limits";
+import {FL_SZ_LMTS, RD_PERF_THRS} from "@features/filesystem/filesystem-limits";
 
-const READLINE_SPLIT_PATTERN = /\r\n|\r|\n/;
+const RDL_SPL_PAT = /\r\n|\r|\n/;
 
 // 1. Text file handler implementation ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // Binary detection is done at the factory level - this handler assumes file is text
@@ -41,10 +41,10 @@ export class TextFileHandler implements FileHandler {
   async read(filePath: string, options?: ReadOptions): Promise<FileResult> {
     const offset = options?.offset ?? 0;
     const length = options?.length;
-    const includeStatusMessage = options?.includeStatusMessage ?? true;
+    const incStatMsg = options?.includeStatusMessage ?? true;
 
     // Binary detection is done at factory level - just read as text
-    return this.readFileWithSmartPositioning(filePath, offset, length, "text/plain", includeStatusMessage);
+    return this.readFileWithSmartPositioning(filePath, offset, length, "text/plain", incStatMsg);
   }
 
   // 4. Write ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -77,7 +77,7 @@ export class TextFileHandler implements FileHandler {
     };
 
     // For text files that aren't too large, count lines
-    if (stats.isFile() && stats.size < FILE_SIZE_LIMITS.LINE_COUNT_LIMIT) {
+    if (stats.isFile() && stats.size < FL_SZ_LMTS.LINE_COUNT_LIMIT) {
       try {
         const content = await fs.readFile(path, "utf8");
         const lineCount = TextFileHandler.countLines(content);
@@ -110,7 +110,7 @@ export class TextFileHandler implements FileHandler {
   private async getFileLineCount(filePath: string): Promise<number | undefined> {
     try {
       const stats = await fs.stat(filePath);
-      if (stats.size < FILE_SIZE_LIMITS.LINE_COUNT_LIMIT) {
+      if (stats.size < FL_SZ_LMTS.LINE_COUNT_LIMIT) {
         const content = await fs.readFile(filePath, "utf8");
         return TextFileHandler.countLines(content);
       }
@@ -122,8 +122,8 @@ export class TextFileHandler implements FileHandler {
   }
 
   // 3. Generate enhanced status message ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  private generateEnhancedStatusMessage(readLines: number, offset: number, totalLines?: number, isNegativeOffset: boolean = false): string {
-    if (isNegativeOffset) {
+  private generateEnhancedStatusMessage(readLines: number, offset: number, totalLines?: number, isNgtvOffs: boolean = false): string {
+    if (isNgtvOffs) {
       if (totalLines !== undefined) {
         return `Reading last ${readLines} lines (total: ${totalLines} lines)`;
       }
@@ -134,13 +134,13 @@ export class TextFileHandler implements FileHandler {
     else {
       if (totalLines !== undefined) {
         const endLine = offset + readLines;
-        const remainingLines = Math.max(0, totalLines - endLine);
+        const rmnnLns = Math.max(0, totalLines - endLine);
 
         if (offset === 0) {
-          return `Reading ${readLines} lines from start (total: ${totalLines} lines, ${remainingLines} remaining)`;
+          return `Reading ${readLines} lines from start (total: ${totalLines} lines, ${rmnnLns} remaining)`;
         }
         else {
-          return `Reading ${readLines} lines from line ${offset} (total: ${totalLines} lines, ${remainingLines} remaining)`;
+          return `Reading ${readLines} lines from line ${offset} (total: ${totalLines} lines, ${rmnnLns} remaining)`;
         }
       }
       else {
@@ -191,7 +191,7 @@ export class TextFileHandler implements FileHandler {
 
   // 10. Split content for readline-compatible output ―――――――――――――――――――――――――――――――――――――――――――
   private splitContentForReadline(content: string): string[] {
-    const lines = content.split(READLINE_SPLIT_PATTERN);
+    const lines = content.split(RDL_SPL_PAT);
 
     if (lines.at(-1) === "") {
       lines.pop();
@@ -200,60 +200,60 @@ export class TextFileHandler implements FileHandler {
   }
 
   // 11. Read small file from start ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  private async readSmallFileFromStart(filePath: string, offset: number, length: number | undefined, mimeType: string, includeStatusMessage: boolean): Promise<FileResult> {
+  private async readSmallFileFromStart(filePath: string, offset: number, length: number | undefined, mimeType: string, incStatMsg: boolean): Promise<FileResult> {
     const fileContent = await fs.readFile(filePath, "utf8");
     const lines = this.splitContentForReadline(fileContent);
-    const selectedLines = length === undefined ? lines.slice(offset) : lines.slice(offset, offset + length);
-    const content = selectedLines.join("\n");
+    const selLns = length === undefined ? lines.slice(offset) : lines.slice(offset, offset + length);
+    const content = selLns.join("\n");
 
-    if (!includeStatusMessage) {
+    if (!incStatMsg) {
       return {content, mimeType, metadata: {}};
     }
-    const statusMessage = this.generateEnhancedStatusMessage(selectedLines.length, offset, lines.length, false);
+    const statMsg = this.generateEnhancedStatusMessage(selLns.length, offset, lines.length, false);
 
-    return {content: `${statusMessage}\n\n${content}`, mimeType, metadata: {}};
+    return {content: `${statMsg}\n\n${content}`, mimeType, metadata: {}};
   }
 
   // 4. Read file with smart positioning ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  private async readFileWithSmartPositioning(filePath: string, offset: number, length: number | undefined, mimeType: string, includeStatusMessage: boolean = true): Promise<FileResult> {
+  private async readFileWithSmartPositioning(filePath: string, offset: number, length: number | undefined, mimeType: string, incStatMsg: boolean = true): Promise<FileResult> {
     const stats = await fs.stat(filePath);
     const fileSize = stats.size;
 
-    if (offset >= 0 && fileSize < FILE_SIZE_LIMITS.LARGE_FILE_THRESHOLD) {
-      return await this.readSmallFileFromStart(filePath, offset, length, mimeType, includeStatusMessage);
+    if (offset >= 0 && fileSize < FL_SZ_LMTS.LARGE_FILE_THRESHOLD) {
+      return await this.readSmallFileFromStart(filePath, offset, length, mimeType, incStatMsg);
     }
 
     const totalLines = await this.getFileLineCount(filePath);
 
     // For negative offsets (tail behavior), use reverse reading
     if (offset < 0) {
-      const requestedLines = Math.abs(offset);
+      const rqstLns = Math.abs(offset);
 
-      if (fileSize > FILE_SIZE_LIMITS.LARGE_FILE_THRESHOLD && requestedLines <= READ_PERFORMANCE_THRESHOLDS.SMALL_READ_THRESHOLD) {
-        return await this.readLastNLinesReverse(filePath, requestedLines, mimeType, includeStatusMessage, totalLines);
+      if (fileSize > FL_SZ_LMTS.LARGE_FILE_THRESHOLD && rqstLns <= RD_PERF_THRS.SMALL_READ_THRESHOLD) {
+        return await this.readLastNLinesReverse(filePath, rqstLns, mimeType, incStatMsg, totalLines);
       }
       else {
-        return await this.readFromEndWithReadline(filePath, requestedLines, mimeType, includeStatusMessage, totalLines);
+        return await this.readFromEndWithReadline(filePath, rqstLns, mimeType, incStatMsg, totalLines);
       }
     }
     // For positive offsets
     else {
-      if (fileSize < FILE_SIZE_LIMITS.LARGE_FILE_THRESHOLD || offset === 0) {
-        return await this.readFromStartWithReadline(filePath, offset, length, mimeType, includeStatusMessage, totalLines);
+      if (fileSize < FL_SZ_LMTS.LARGE_FILE_THRESHOLD || offset === 0) {
+        return await this.readFromStartWithReadline(filePath, offset, length, mimeType, incStatMsg, totalLines);
       }
       else {
-        if (offset > READ_PERFORMANCE_THRESHOLDS.DEEP_OFFSET_THRESHOLD) {
-          return await this.readFromEstimatedPosition(filePath, offset, length, mimeType, includeStatusMessage, totalLines);
+        if (offset > RD_PERF_THRS.DEEP_OFFSET_THRESHOLD) {
+          return await this.readFromEstimatedPosition(filePath, offset, length, mimeType, incStatMsg, totalLines);
         }
         else {
-          return await this.readFromStartWithReadline(filePath, offset, length, mimeType, includeStatusMessage, totalLines);
+          return await this.readFromStartWithReadline(filePath, offset, length, mimeType, incStatMsg, totalLines);
         }
       }
     }
   }
 
   // 5. Read last n lines reverse ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  private async readLastNLinesReverse(filePath: string, n: number, mimeType: string, includeStatusMessage: boolean = true, fileTotalLines?: number): Promise<FileResult> {
+  private async readLastNLinesReverse(filePath: string, n: number, mimeType: string, incStatMsg: boolean = true, flTtlLns?: number): Promise<FileResult> {
     const fd = await fs.open(filePath, "r");
     try {
       const stats = await fd.stat();
@@ -264,7 +264,7 @@ export class TextFileHandler implements FileHandler {
       let partialLine = "";
 
       while (position > 0 && lines.length < n) {
-        const readSize = Math.min(READ_PERFORMANCE_THRESHOLDS.CHUNK_SIZE, position);
+        const readSize = Math.min(RD_PERF_THRS.CHUNK_SIZE, position);
         position -= readSize;
 
         const buffer = Buffer.alloc(readSize);
@@ -282,7 +282,7 @@ export class TextFileHandler implements FileHandler {
         lines.unshift(partialLine);
       }
       const result = lines.slice(-n);
-      const content = includeStatusMessage ? `${this.generateEnhancedStatusMessage(result.length, -n, fileTotalLines, true)}\n\n${result.join("\n")}` : result.join("\n");
+      const content = incStatMsg ? `${this.generateEnhancedStatusMessage(result.length, -n, flTtlLns, true)}\n\n${result.join("\n")}` : result.join("\n");
 
       return {content, mimeType, metadata: {}};
     }
@@ -292,39 +292,39 @@ export class TextFileHandler implements FileHandler {
   }
 
   // 6. Read from end with readline ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  private async readFromEndWithReadline(filePath: string, requestedLines: number, mimeType: string, includeStatusMessage: boolean = true, fileTotalLines?: number): Promise<FileResult> {
-    const rl = createInterface({
-      input: createReadStream(filePath),
+  private async readFromEndWithReadline(filePath: string, rqstLns: number, mimeType: string, incStatMsg: boolean = true, flTtlLns?: number): Promise<FileResult> {
+    const rl = crtIntr({
+      input: crtRdStrm(filePath),
       crlfDelay: Number.POSITIVE_INFINITY,
     });
 
-    const buffer: string[] = new Array(requestedLines);
+    const buffer: string[] = new Array(rqstLns);
     let bufferIndex = 0;
     let totalLines = 0;
 
     for await (const line of rl) {
       buffer[bufferIndex] = line;
-      bufferIndex = (bufferIndex + 1) % requestedLines;
+      bufferIndex = (bufferIndex + 1) % rqstLns;
       totalLines++;
     }
     rl.close();
 
     let result: string[];
-    if (totalLines >= requestedLines) {
+    if (totalLines >= rqstLns) {
       result = [...buffer.slice(bufferIndex), ...buffer.slice(0, bufferIndex)].filter((line) => line !== undefined);
     }
     else {
       result = buffer.slice(0, totalLines);
     }
-    const content = includeStatusMessage ? `${this.generateEnhancedStatusMessage(result.length, -requestedLines, fileTotalLines, true)}\n\n${result.join("\n")}` : result.join("\n");
+    const content = incStatMsg ? `${this.generateEnhancedStatusMessage(result.length, -rqstLns, flTtlLns, true)}\n\n${result.join("\n")}` : result.join("\n");
 
     return {content, mimeType, metadata: {}};
   }
 
   // 7. Read from start with readline ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  private async readFromStartWithReadline(filePath: string, offset: number, length: number | undefined, mimeType: string, includeStatusMessage: boolean = true, fileTotalLines?: number): Promise<FileResult> {
-    const rl = createInterface({
-      input: createReadStream(filePath),
+  private async readFromStartWithReadline(filePath: string, offset: number, length: number | undefined, mimeType: string, incStatMsg: boolean = true, flTtlLns?: number): Promise<FileResult> {
+    const rl = crtIntr({
+      input: crtRdStrm(filePath),
       crlfDelay: Number.POSITIVE_INFINITY,
     });
 
@@ -342,9 +342,9 @@ export class TextFileHandler implements FileHandler {
     }
     rl.close();
 
-    if (includeStatusMessage) {
-      const statusMessage = this.generateEnhancedStatusMessage(result.length, offset, fileTotalLines, false);
-      const content = `${statusMessage}\n\n${result.join("\n")}`;
+    if (incStatMsg) {
+      const statMsg = this.generateEnhancedStatusMessage(result.length, offset, flTtlLns, false);
+      const content = `${statMsg}\n\n${result.join("\n")}`;
       return {content, mimeType, metadata: {}};
     }
     else {
@@ -354,10 +354,10 @@ export class TextFileHandler implements FileHandler {
   }
 
   // 8. Read from estimated position ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  private async readFromEstimatedPosition(filePath: string, offset: number, length: number | undefined, mimeType: string, includeStatusMessage: boolean = true, fileTotalLines?: number): Promise<FileResult> {
+  private async readFromEstimatedPosition(filePath: string, offset: number, length: number | undefined, mimeType: string, incStatMsg: boolean = true, flTtlLns?: number): Promise<FileResult> {
     // First, do a quick scan to estimate lines per byte
-    const rl = createInterface({
-      input: createReadStream(filePath),
+    const rl = crtIntr({
+      input: crtRdStrm(filePath),
       crlfDelay: Number.POSITIVE_INFINITY,
     });
 
@@ -367,36 +367,36 @@ export class TextFileHandler implements FileHandler {
     for await (const line of rl) {
       bytesRead += Buffer.byteLength(line, "utf-8") + 1;
       sampleLines++;
-      if (bytesRead >= READ_PERFORMANCE_THRESHOLDS.SAMPLE_SIZE) {
+      if (bytesRead >= RD_PERF_THRS.SAMPLE_SIZE) {
         break;
       }
     }
     rl.close();
 
     if (sampleLines === 0) {
-      return await this.readFromStartWithReadline(filePath, offset, length, mimeType, includeStatusMessage, fileTotalLines);
+      return await this.readFromStartWithReadline(filePath, offset, length, mimeType, incStatMsg, flTtlLns);
     }
     // Estimate position
-    const avgLineLength = bytesRead / sampleLines;
-    const estimatedBytePosition = Math.floor(offset * avgLineLength);
+    const avgLnLen = bytesRead / sampleLines;
+    const estmBytPstn = Math.floor(offset * avgLnLen);
 
     const fd = await fs.open(filePath, "r");
     try {
       const stats = await fd.stat();
-      const startPosition = Math.min(estimatedBytePosition, stats.size);
+      const strtPstn = Math.min(estmBytPstn, stats.size);
 
-      const stream = createReadStream(filePath, {start: startPosition});
-      const rl2 = createInterface({
+      const stream = crtRdStrm(filePath, {start: strtPstn});
+      const rl2 = crtIntr({
         input: stream,
         crlfDelay: Number.POSITIVE_INFINITY,
       });
 
       const result: string[] = [];
-      let firstLineSkipped = false;
+      let frstLnSkpp = false;
 
       for await (const line of rl2) {
-        if (!firstLineSkipped && startPosition > 0) {
-          firstLineSkipped = true;
+        if (!frstLnSkpp && strtPstn > 0) {
+          frstLnSkpp = true;
           continue;
         }
         if (length === undefined || result.length < length) {
@@ -408,7 +408,7 @@ export class TextFileHandler implements FileHandler {
       }
       rl2.close();
 
-      const content = includeStatusMessage ? `${this.generateEnhancedStatusMessage(result.length, offset, fileTotalLines, false)}\n\n${result.join("\n")}` : result.join("\n");
+      const content = incStatMsg ? `${this.generateEnhancedStatusMessage(result.length, offset, flTtlLns, false)}\n\n${result.join("\n")}` : result.join("\n");
 
       return {content, mimeType, metadata: {}};
     }

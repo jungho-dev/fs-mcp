@@ -23,7 +23,7 @@ export type ConfigQueryDefinition = {
 };
 
 // Single source of truth for user-editable configuration fields.
-export const CONFIG_FIELD_DEFINITIONS = {
+export const CFG_FLD_DFNT = {
   allowedDirectories: {
     description: "These are the folders fs-mcp is allowed to read and edit. Think of this as a permission list. Keeping it small is safer. If this list is empty, fs-mcp can access your entire filesystem.",
     label: "Allowed Folders",
@@ -54,6 +54,16 @@ export const CONFIG_FIELD_DEFINITIONS = {
     label: "Context Index Enabled",
     valueType: "boolean",
   },
+  contextIndexMaxBytes: {
+    description: "Maximum original UTF-8 bytes retained in the SQLite context index before older entries are pruned.",
+    label: "Context Index Max Bytes",
+    valueType: "number",
+  },
+  contextIndexMaxDocuments: {
+    description: "Maximum context index documents retained before older entries are pruned.",
+    label: "Context Index Max Documents",
+    valueType: "number",
+  },
   contextIndexMaxEntryChars: {
     description: "Maximum characters indexed per context entry. The response metadata still records the original size.",
     label: "Context Index Max Entry Chars",
@@ -81,13 +91,13 @@ export const CONFIG_FIELD_DEFINITIONS = {
   },
 } as const satisfies Record<string, ConfigFieldDefinition>;
 
-export type ConfigFieldKey = keyof typeof CONFIG_FIELD_DEFINITIONS;
+export type ConfigFieldKey = keyof typeof CFG_FLD_DFNT;
 
-export const CONFIG_FIELD_KEYS = Object.keys(CONFIG_FIELD_DEFINITIONS) as ConfigFieldKey[];
+export const CFG_FLD_KYS = Object.keys(CFG_FLD_DFNT) as ConfigFieldKey[];
 
-export const CONFIG_QUERY_DEFINITIONS = {
+export const CFG_QRY_DFNT = {
   allowedDirectories: {
-    ...CONFIG_FIELD_DEFINITIONS.allowedDirectories,
+    ...CFG_FLD_DFNT.allowedDirectories,
     editable: true,
   },
   availableShells: {
@@ -97,7 +107,7 @@ export const CONFIG_QUERY_DEFINITIONS = {
     valueType: "array",
   },
   blockedCommands: {
-    ...CONFIG_FIELD_DEFINITIONS.blockedCommands,
+    ...CFG_FLD_DFNT.blockedCommands,
     editable: true,
   },
   currentClient: {
@@ -107,39 +117,47 @@ export const CONFIG_QUERY_DEFINITIONS = {
     valueType: "object",
   },
   contextIndexAutoMinChars: {
-    ...CONFIG_FIELD_DEFINITIONS.contextIndexAutoMinChars,
+    ...CFG_FLD_DFNT.contextIndexAutoMinChars,
     editable: true,
   },
   contextIndexAutoMinLines: {
-    ...CONFIG_FIELD_DEFINITIONS.contextIndexAutoMinLines,
+    ...CFG_FLD_DFNT.contextIndexAutoMinLines,
     editable: true,
   },
   contextIndexDbPath: {
-    ...CONFIG_FIELD_DEFINITIONS.contextIndexDbPath,
+    ...CFG_FLD_DFNT.contextIndexDbPath,
     editable: true,
   },
   contextIndexEnabled: {
-    ...CONFIG_FIELD_DEFINITIONS.contextIndexEnabled,
+    ...CFG_FLD_DFNT.contextIndexEnabled,
+    editable: true,
+  },
+  contextIndexMaxBytes: {
+    ...CFG_FLD_DFNT.contextIndexMaxBytes,
+    editable: true,
+  },
+  contextIndexMaxDocuments: {
+    ...CFG_FLD_DFNT.contextIndexMaxDocuments,
     editable: true,
   },
   contextIndexMaxEntryChars: {
-    ...CONFIG_FIELD_DEFINITIONS.contextIndexMaxEntryChars,
+    ...CFG_FLD_DFNT.contextIndexMaxEntryChars,
     editable: true,
   },
   contextIndexReplaceLargeOutputs: {
-    ...CONFIG_FIELD_DEFINITIONS.contextIndexReplaceLargeOutputs,
+    ...CFG_FLD_DFNT.contextIndexReplaceLargeOutputs,
     editable: true,
   },
   defaultShell: {
-    ...CONFIG_FIELD_DEFINITIONS.defaultShell,
+    ...CFG_FLD_DFNT.defaultShell,
     editable: true,
   },
   fileReadLineLimit: {
-    ...CONFIG_FIELD_DEFINITIONS.fileReadLineLimit,
+    ...CFG_FLD_DFNT.fileReadLineLimit,
     editable: true,
   },
   fileWriteLineLimit: {
-    ...CONFIG_FIELD_DEFINITIONS.fileWriteLineLimit,
+    ...CFG_FLD_DFNT.fileWriteLineLimit,
     editable: true,
   },
   systemInfo: {
@@ -156,16 +174,16 @@ export const CONFIG_QUERY_DEFINITIONS = {
   },
 } as const satisfies Record<string, ConfigQueryDefinition>;
 
-export type ConfigQueryKey = keyof typeof CONFIG_QUERY_DEFINITIONS;
+export type ConfigQueryKey = keyof typeof CFG_QRY_DFNT;
 
-export const CONFIG_QUERY_KEYS = Object.keys(CONFIG_QUERY_DEFINITIONS) as ConfigQueryKey[];
+export const CFG_QRY_KYS = Object.keys(CFG_QRY_DFNT) as ConfigQueryKey[];
 
 // 1. Is config field key ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function isConfigFieldKey(value: string): value is ConfigFieldKey {
-  return Object.hasOwn(CONFIG_FIELD_DEFINITIONS, value);
+  return Object.hasOwn(CFG_FLD_DFNT, value);
 }
 
 // 2. Is config query key ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function isConfigQueryKey(value: string): value is ConfigQueryKey {
-  return Object.hasOwn(CONFIG_QUERY_DEFINITIONS, value);
+  return Object.hasOwn(CFG_QRY_DFNT, value);
 }

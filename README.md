@@ -61,17 +61,18 @@ uses stdio and does not open a network listener.
 - Search tools backed by bundled `@vscode/ripgrep`, active search sessions, pagination, and stop controls.
 - Process tools for command sessions, process output, interactive input, session listing, and process termination.
 - Git session tools for pinned repository state, status, diff, show, staging, and commit.
-- Automatic context indexing for large tool outputs in the shared SQLite context database.
-- Runtime configuration tools for command policy, shell selection, allowed directories, context-index thresholds,
+- Automatic context indexing plus manual context-index list, search, and clear tools for the shared SQLite database.
+- Runtime configuration tools for command policy, shell selection, allowed directories, context-index thresholds and retention,
   client metadata, version data, and system information.
 
 ## Tool Surface
 
-The current source and compiled runtime expose 25 tools. Batch-capable tools are documented as batch-first
+The current source and compiled runtime expose 28 tools. Batch-capable tools are documented as batch-first
 surfaces: when a task needs multiple same-kind filesystem, search, process, or config operations,
 clients should put all items into one tool call instead of repeatedly calling the same tool.
 
 - Config: `get_configs`, `set_config_values`.
+- Context index: `list_context_index`, `search_context_index`, `clear_context_index`.
 - Filesystem/search/edit: `read_files`, `write_files`, `create_directories`, `list_directories`,
   `copy_files`, `move_files`, `remove_files`, `start_searches`, `get_full_search`, `stop_searches`,
   `get_file_infos`, `edit_blocks`.
@@ -86,7 +87,7 @@ exports only `ESSENTIAL_GIT_TOOL_NAMES` in this version.
 
 Current measured tool-definition payload improvements:
 
-- Tool count: `29 -> 25`, down `13.8%` from the pre-surface-reduction baseline.
+- Tool count: `29 -> 28`, down `3.4%` from the pre-surface-reduction baseline.
 - `list_tools` payload: `48,129 -> 28,002 chars`, down `41.8%`.
 - Tool descriptions: `23,121 -> 6,173 chars`, down `73.3%`.
 - Tool schemas: `20,334 -> 18,128 chars`, down `10.9%`.
@@ -121,14 +122,20 @@ Large tool outputs can be indexed into SQLite so clients can search or recall th
 payload in every transcript.
 
 - Automatic indexing is controlled by `contextIndexEnabled`, `contextIndexAutoMinChars`,
-  `contextIndexAutoMinLines`, `contextIndexMaxEntryChars`, and `contextIndexReplaceLargeOutputs`.
+  `contextIndexAutoMinLines`, `contextIndexMaxEntryChars`, `contextIndexMaxBytes`,
+  `contextIndexMaxDocuments`, and `contextIndexReplaceLargeOutputs`.
 - The default database path is `~/.mcp/fs-mcp.sqlite`.
+- Custom `contextIndexDbPath` values must stay under `~/.mcp` or an `allowedDirectories` entry; custom parent
+  directories must already exist.
 - Text is chunked into 80-line chunks with 20-line overlap and searched through SQLite FTS.
-- There is no public manual context-index tool surface in this version.
+- Full original payload hashes are used for reuse, while `indexedLength` and `truncated` record indexed slices.
+- Retention deletes older documents when `contextIndexMaxDocuments` or `contextIndexMaxBytes` is exceeded.
+- Manual maintenance tools are exposed as `list_context_index`, `search_context_index`, and
+  `clear_context_index`.
 - Output compaction does not replace large auto-indexed payloads by default. Set
   `contextIndexReplaceLargeOutputs=true` only when the client can tolerate context-index reference markers.
-- `read_files`, `list_directories`, and `get_full_search` keep oversized responses inline instead of exposing
-  context-index reference markers.
+- `read_files`, `list_directories`, `get_full_search`, and context-index maintenance tools keep oversized
+  responses inline instead of exposing context-index reference markers.
 
 ## Client Compatibility
 

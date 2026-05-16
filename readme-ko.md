@@ -59,17 +59,18 @@ stdio를 사용하며 network listener를 열지 않습니다.
 - Bundled `@vscode/ripgrep` 기반 검색, active search session, pagination, stop control.
 - Command session, process output, interactive input, session listing, process termination 도구.
 - Pinned repository state, status, diff, show, staging, commit 중심의 git session 도구.
-- 큰 tool output을 공유 SQLite context DB에 자동 index하는 기능.
-- Command policy, shell, allowed directory, context-index threshold, client metadata, version, system 정보를
+- 큰 tool output을 공유 SQLite context DB에 자동 index하고 수동 list/search/clear를 수행하는 context 도구.
+- Command policy, shell, allowed directory, context-index threshold와 retention, client metadata, version, system 정보를
   다루는 runtime configuration 도구.
 
 ## 도구 표면
 
-현재 source와 compiled runtime은 25개 도구를 노출합니다. Batch-capable 도구는 batch-first surface로
+현재 source와 compiled runtime은 28개 도구를 노출합니다. Batch-capable 도구는 batch-first surface로
 문서화됩니다. 같은 종류의 filesystem, search, process, config 작업이 여러 개 필요하면 client는
 같은 도구를 반복 호출하지 않고 하나의 multi-item call로 묶어야 합니다.
 
 - Config: `get_configs`, `set_config_values`.
+- Context index: `list_context_index`, `search_context_index`, `clear_context_index`.
 - Filesystem/search/edit: `read_files`, `write_files`, `create_directories`, `list_directories`,
   `copy_files`, `move_files`, `remove_files`, `start_searches`, `get_full_search`, `stop_searches`,
   `get_file_infos`, `edit_blocks`.
@@ -84,7 +85,7 @@ stdio를 사용하며 network listener를 열지 않습니다.
 
 현재 측정된 tool definition payload 개선 수치입니다.
 
-- Tool count: `29 -> 25`, surface 축소 전 baseline 대비 `13.8%` 감소.
+- Tool count: `29 -> 28`, surface 축소 전 baseline 대비 `3.4%` 감소.
 - `list_tools` payload: `48,129 -> 28,002 chars`, `41.8%` 감소.
 - Tool description: `23,121 -> 6,173 chars`, `73.3%` 감소.
 - Tool schema: `20,334 -> 18,128 chars`, `10.9%` 감소.
@@ -119,14 +120,20 @@ local path를 실패가 아닌 missing 결과로 반환할 수 있습니다.
 수 있습니다.
 
 - 자동 indexing은 `contextIndexEnabled`, `contextIndexAutoMinChars`, `contextIndexAutoMinLines`,
-  `contextIndexMaxEntryChars`, `contextIndexReplaceLargeOutputs`로 제어합니다.
+  `contextIndexMaxEntryChars`, `contextIndexMaxBytes`, `contextIndexMaxDocuments`,
+  `contextIndexReplaceLargeOutputs`로 제어합니다.
 - 기본 DB 경로는 `~/.mcp/fs-mcp.sqlite`입니다.
+- Custom `contextIndexDbPath`는 `~/.mcp` 또는 `allowedDirectories` 내부여야 하며, custom parent directory는
+  미리 존재해야 합니다.
 - Text는 80줄 chunk와 20줄 overlap으로 나뉘며 SQLite FTS로 검색합니다.
-- 이번 버전에는 수동 context-index tool surface가 없습니다.
+- 재사용 판단은 원본 전체 payload hash를 사용하고, `indexedLength`와 `truncated`로 indexed slice 상태를
+  기록합니다.
+- `contextIndexMaxDocuments` 또는 `contextIndexMaxBytes`를 넘으면 오래된 document를 삭제합니다.
+- 수동 관리 도구는 `list_context_index`, `search_context_index`, `clear_context_index`입니다.
 - Output compaction은 기본적으로 큰 auto-indexed payload를 대체하지 않습니다.
   `contextIndexReplaceLargeOutputs=true`는 client가 context-index reference marker를 처리할 수 있을 때만 사용합니다.
-- `read_files`, `list_directories`, `get_full_search`는 oversized response에 context-index reference marker를
-  노출하지 않고 inline payload를 유지합니다.
+- `read_files`, `list_directories`, `get_full_search`, context-index 관리 도구는 oversized response에
+  context-index reference marker를 노출하지 않고 inline payload를 유지합니다.
 
 ## Client 호환성
 

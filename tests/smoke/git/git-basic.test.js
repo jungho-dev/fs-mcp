@@ -11,9 +11,9 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import {promisify} from "node:util";
-import {dispatchToolCall} from "../../../out/tools/tools-dispatcher.js";
+import {dispatchToolCall as dsptTlCll} from "../../../out/tools/tools-dispatcher.js";
 
-const execFileAsync = promisify(execFile);
+const excFlAsyn = promisify(execFile);
 
 // 1. standard output parser ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function parseStandardOutput(result) {
@@ -27,40 +27,40 @@ function parseStandardOutput(result) {
 
 // 2. git fixture setup ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function setupRepository(repoPath) {
-  await execFileAsync("git", ["config", "user.name", "fs-mcp-test"], {cwd: repoPath, windowsHide: true});
-  await execFileAsync("git", ["config", "user.email", "fs-mcp@example.com"], {cwd: repoPath, windowsHide: true});
+  await excFlAsyn("git", ["config", "user.name", "fs-mcp-test"], {cwd: repoPath, windowsHide: true});
+  await excFlAsyn("git", ["config", "user.email", "fs-mcp@example.com"], {cwd: repoPath, windowsHide: true});
 }
 
 // 3. smoke flow ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testGitBasicFlow() {
   const repoPath = await fs.mkdtemp(path.join(os.tmpdir(), "fs-mcp-git-basic-"));
-  const commitMessage = `feat: add demo file
+  const cmmtMsg2 = `feat: add demo file
 
 - Add demo file fixture.
 - Verify git smoke flow.`;
 
   try {
-    const workingDirOutput = parseStandardOutput(await dispatchToolCall("git_set_working_dir", {path: repoPath, initializeIfNotPresent: true}));
-    assert.equal(workingDirOutput.success, true);
+    const wrknDrOtpt = parseStandardOutput(await dsptTlCll("git_set_working_dir", {path: repoPath, initializeIfNotPresent: true}));
+    assert.equal(wrknDrOtpt.success, true);
 
     await setupRepository(repoPath);
 
-    const refreshedWorkingDirOutput = parseStandardOutput(await dispatchToolCall("git_set_working_dir", {path: repoPath}));
-    assert.equal(refreshedWorkingDirOutput.success, true);
-    assert.equal(refreshedWorkingDirOutput.repository.status.branch, "main");
+    const rfrWrDrOt = parseStandardOutput(await dsptTlCll("git_set_working_dir", {path: repoPath}));
+    assert.equal(rfrWrDrOt.success, true);
+    assert.equal(rfrWrDrOt.repository.status.branch, "main");
 
-    const cleanStatusOutput = parseStandardOutput(await dispatchToolCall("git_status", {}));
-    assert.equal(cleanStatusOutput.success, true);
-    assert.equal(cleanStatusOutput.currentBranch, "main");
-    assert.equal(cleanStatusOutput.isClean, true);
+    const clnStatOtpt = parseStandardOutput(await dsptTlCll("git_status", {}));
+    assert.equal(clnStatOtpt.success, true);
+    assert.equal(clnStatOtpt.currentBranch, "main");
+    assert.equal(clnStatOtpt.isClean, true);
 
     await fs.writeFile(path.join(repoPath, "demo.txt"), "hello git\n", "utf8");
 
-    const addOutput = parseStandardOutput(await dispatchToolCall("git_add", {paths: ["demo.txt"]}));
+    const addOutput = parseStandardOutput(await dsptTlCll("git_add", {paths: ["demo.txt"]}));
     assert.equal(addOutput.success, true);
     assert.equal(addOutput.stagedFiles.includes("demo.txt"), true);
 
-    const commitOutput = parseStandardOutput(await dispatchToolCall("git_commit", {message: commitMessage}));
+    const commitOutput = parseStandardOutput(await dsptTlCll("git_commit", {message: cmmtMsg2}));
     assert.equal(commitOutput.success, true);
     assert.equal(commitOutput.message, "feat: add demo file");
     assert.equal(commitOutput.status.is_clean, true);

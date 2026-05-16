@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { forceTerminate, interactWithProcess, listSessions, startProcess } from "../../../out/features/process/process-runner.js";
+import { forceTerminate as frcTrmn, interactWithProcess as intrWthProc, listSessions, startProcess } from "../../../out/features/process/process-runner.js";
 
 // 1. Extract pid ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractPid(result) {
@@ -30,7 +30,7 @@ async function testVirtualNodeSessionLifecycle() {
     assert(listBefore.content[0].text.includes(`PID: ${pid} (node:local)`), "Virtual session should appear in list_sessions");
     assert(listBefore.content[0].text.includes("Timeout: 4321ms"), "Configured virtual timeout should appear in list_sessions");
 
-    const runResult = await interactWithProcess({
+    const runResult = await intrWthProc({
       pid,
       input: 'console.log("virtual-node-ok")',
       timeout_ms: 5000,
@@ -39,9 +39,9 @@ async function testVirtualNodeSessionLifecycle() {
     assert(!runResult.isError, "Executing code in virtual session should succeed");
     assert(runResult.content[0].text.includes("virtual-node-ok"), "Virtual session should return script output");
 
-    const terminateResult = await forceTerminate({ pid });
-    assert(!terminateResult.isError, "Virtual session termination should succeed");
-    assert.equal(terminateResult.content[0].text, `Cleared virtual Node.js session ${pid}`);
+    const trmnRes = await frcTrmn({ pid });
+    assert(!trmnRes.isError, "Virtual session termination should succeed");
+    assert.equal(trmnRes.content[0].text, `Cleared virtual Node.js session ${pid}`);
 
     pid = null;
 
@@ -51,7 +51,7 @@ async function testVirtualNodeSessionLifecycle() {
   }
   finally {
     if (pid !== null) {
-      await forceTerminate({ pid }).catch(() => undefined);
+      await frcTrmn({ pid }).catch(() => undefined);
     }
   }
 }

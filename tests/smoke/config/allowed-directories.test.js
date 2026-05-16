@@ -12,26 +12,26 @@ import assert from "node:assert";
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { setConfigValue } from "../../../out/features/config/config-service.js";
-import { configManager } from "../../../out/features/config/config-store.js";
+import { fileURLToPath as flUrlTPth2 } from "node:url";
+import { setConfigValue as stCfgVal } from "../../../out/features/config/config-service.js";
+import { configManager as cfgMgr } from "../../../out/features/config/config-store.js";
 import { validatePath } from "../../../out/features/filesystem/filesystem-service.js";
 
 // Get directory name
-const __filename = fileURLToPath(import.meta.url);
+const __filename = flUrlTPth2(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Define test paths for different locations
 const HOME_DIR = os.homedir();
-const TEST_DIR_WITH_SLASH = `${path.join(__dirname, "test_allowed_dirs")}/`;
+const TDWS = `${path.join(__dirname, "test_allowed_dirs")}/`;
 const TEST_DIR = path.join(__dirname, "test_allowed_dirs");
 const OUTSIDE_DIR = path.join(os.tmpdir(), "test_outside_allowed");
 const _ROOT_PATH = "/";
 
 // For Windows compatibility - use forward slash for more consistent recognition
 const isWindows = process.platform === "win32";
-const TEST_ROOT_PATH = isWindows ? path.parse(TEST_DIR).root.replaceAll("\\", "/") : "/";
-const TEST_ROOT_WILDCARD = isWindows ? `${path.parse(TEST_DIR).root}*` : null;
+const TST_RT_PTH = isWindows ? path.parse(TEST_DIR).root.replaceAll("\\", "/") : "/";
+const TST_RT_WLDC = isWindows ? `${path.parse(TEST_DIR).root}*` : null;
 
 // 1. Helper function to clean up test directories ―――――――――――――――――――――――――――――――――――――――――――――――――
 async function cleanupTestDirectories() {
@@ -54,7 +54,7 @@ async function cleanupTestDirectories() {
 // 2. Check if a path is accessible ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function isPathAccessible(testPath) {
   try {
-    const _validatedPath = await validatePath(testPath);
+    const _vldtPth = await validatePath(testPath);
     return true;
   }
   catch (_error) {
@@ -82,14 +82,14 @@ async function setup() {
   await fs.writeFile(path.join(OUTSIDE_DIR, "outside-file.txt"), "Outside content");
 
   // Save original config to restore later
-  const originalConfig = await configManager.getConfig();
-  return originalConfig;
+  const origCfg = await cfgMgr.getConfig();
+  return origCfg;
 }
 
 // 4. Teardown function to clean up after tests ――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function teardown(originalConfig) {
+async function teardown(origCfg) {
   // Reset configuration to original
-  await configManager.updateConfig(originalConfig);
+  await cfgMgr.updateConfig(origCfg);
 
   // Clean up test directories
   await cleanupTestDirectories();
@@ -98,22 +98,22 @@ async function teardown(originalConfig) {
 // 5. Test empty allowedDirectories array (should allow full access) ―――――――――――――――――――――――――――――――
 async function testEmptyAllowedDirectories() {
   // Set empty allowedDirectories
-  await configManager.setValue("allowedDirectories", []);
+  await cfgMgr.setValue("allowedDirectories", []);
 
   // Verify config was set correctly
-  const config = await configManager.getConfig();
+  const config = await cfgMgr.getConfig();
   assert.deepStrictEqual(config.allowedDirectories, [], "allowedDirectories should be an empty array");
 
   // Test access to various locations
   const homeAccess = await isPathAccessible(HOME_DIR);
-  const testDirAccess = await isPathAccessible(TEST_DIR);
-  const outsideDirAccess = await isPathAccessible(OUTSIDE_DIR);
-  const rootAccess = await isPathAccessible(TEST_ROOT_PATH);
+  const tstDrAccs = await isPathAccessible(TEST_DIR);
+  const otsdDrAccs = await isPathAccessible(OUTSIDE_DIR);
+  const rootAccess = await isPathAccessible(TST_RT_PTH);
 
   // All paths should be accessible with an empty array
   assert.strictEqual(homeAccess, true, "Home directory should be accessible with empty allowedDirectories");
-  assert.strictEqual(testDirAccess, true, "Test directory should be accessible with empty allowedDirectories");
-  assert.strictEqual(outsideDirAccess, true, "Outside directory should be accessible with empty allowedDirectories");
+  assert.strictEqual(tstDrAccs, true, "Test directory should be accessible with empty allowedDirectories");
+  assert.strictEqual(otsdDrAccs, true, "Outside directory should be accessible with empty allowedDirectories");
   assert.strictEqual(rootAccess, true, "Root path should be accessible with empty allowedDirectories");
 }
 
@@ -121,44 +121,44 @@ async function testEmptyAllowedDirectories() {
 async function testEmptyAllowedDirectoriesInputValues() {
   for (const emptyValue of ["", "   ", null]) {
     // biome-ignore lint/performance/noAwaitInLoops: Config mutation assertions must stay sequential.
-    const result = await setConfigValue({
+    const result = await stCfgVal({
       key: "allowedDirectories",
       value: emptyValue,
     });
 
     assert.notStrictEqual(result.isError, true, `set_config_value should accept ${JSON.stringify(emptyValue)}`);
 
-    const config = await configManager.getConfig();
+    const config = await cfgMgr.getConfig();
     assert.deepStrictEqual(config.allowedDirectories, [], `${JSON.stringify(emptyValue)} should normalize to an empty array`);
 
-    const outsideDirAccess = await isPathAccessible(OUTSIDE_DIR);
-    assert.strictEqual(outsideDirAccess, true, `${JSON.stringify(emptyValue)} should allow full filesystem access`);
+    const otsdDrAccs = await isPathAccessible(OUTSIDE_DIR);
+    assert.strictEqual(otsdDrAccs, true, `${JSON.stringify(emptyValue)} should allow full filesystem access`);
   }
 }
 
 // 7. Test with specific directory in allowedDirectories ―――――――――――――――――――――――――――――――――――――――――――
 async function testSpecificAllowedDirectory() {
   // Set allowedDirectories to just the test directory
-  await configManager.setValue("allowedDirectories", [TEST_DIR]);
+  await cfgMgr.setValue("allowedDirectories", [TEST_DIR]);
 
   // Verify config was set correctly
-  const config = await configManager.getConfig();
+  const config = await cfgMgr.getConfig();
   assert.deepStrictEqual(config.allowedDirectories, [TEST_DIR], "allowedDirectories should contain only the test directory");
 
   // Test access to various locations
-  const testDirAccess = await isPathAccessible(TEST_DIR);
-  const testFileAccess = await isPathAccessible(path.join(TEST_DIR, "test-file.txt"));
-  const homeDirAccess = await isPathAccessible(HOME_DIR);
-  const homeTildaDirAccess = await isPathAccessible("~");
-  const outsideDirAccess = await isPathAccessible(OUTSIDE_DIR);
-  const rootAccess = await isPathAccessible(TEST_ROOT_PATH);
+  const tstDrAccs = await isPathAccessible(TEST_DIR);
+  const tstFlAccs = await isPathAccessible(path.join(TEST_DIR, "test-file.txt"));
+  const hmDrAccs = await isPathAccessible(HOME_DIR);
+  const hmTldDrAccs = await isPathAccessible("~");
+  const otsdDrAccs = await isPathAccessible(OUTSIDE_DIR);
+  const rootAccess = await isPathAccessible(TST_RT_PTH);
 
   // Only test directory and its contents should be accessible
-  assert.strictEqual(testDirAccess, true, "Test directory should be accessible");
-  assert.strictEqual(testFileAccess, true, "Files in test directory should be accessible");
-  assert.strictEqual(homeDirAccess, TEST_DIR === HOME_DIR, "Home directory should not be accessible (unless it equals test dir)");
-  assert.strictEqual(homeTildaDirAccess, TEST_DIR === HOME_DIR, "Home directory should not be accessible (unless it equals test dir)");
-  assert.strictEqual(outsideDirAccess, false, "Outside directory should not be accessible");
+  assert.strictEqual(tstDrAccs, true, "Test directory should be accessible");
+  assert.strictEqual(tstFlAccs, true, "Files in test directory should be accessible");
+  assert.strictEqual(hmDrAccs, TEST_DIR === HOME_DIR, "Home directory should not be accessible (unless it equals test dir)");
+  assert.strictEqual(hmTldDrAccs, TEST_DIR === HOME_DIR, "Home directory should not be accessible (unless it equals test dir)");
+  assert.strictEqual(otsdDrAccs, false, "Outside directory should not be accessible");
   assert.strictEqual(rootAccess, false, "Root path should not be accessible");
 }
 
@@ -169,17 +169,17 @@ async function testSpecificAllowedDirectory() {
 // 9. Test root in allowed directories ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testRootInAllowedDirectories() {
   // Set allowedDirectories to include root path
-  await configManager.setValue("allowedDirectories", [TEST_ROOT_PATH]);
+  await cfgMgr.setValue("allowedDirectories", [TST_RT_PTH]);
 
   // Verify config was set correctly
-  const config = await configManager.getConfig();
-  assert.deepStrictEqual(config.allowedDirectories, [TEST_ROOT_PATH], "allowedDirectories should contain only the root path");
-  const rootAccess = await isPathAccessible(TEST_ROOT_PATH);
-  const rootTildaAccess = await isPathAccessible("~");
+  const config = await cfgMgr.getConfig();
+  assert.deepStrictEqual(config.allowedDirectories, [TST_RT_PTH], "allowedDirectories should contain only the root path");
+  const rootAccess = await isPathAccessible(TST_RT_PTH);
+  const rtTldAccs = await isPathAccessible("~");
 
   // Root path should be accessible
   assert.strictEqual(rootAccess, true, "Root path should be accessible when set in allowedDirectories");
-  assert.strictEqual(rootTildaAccess, true, "Root path should be accessible when set in allowedDirectories");
+  assert.strictEqual(rtTldAccs, true, "Root path should be accessible when set in allowedDirectories");
 
   // Check if we're on Windows
   if (isWindows) {
@@ -189,70 +189,70 @@ async function testRootInAllowedDirectories() {
   }
   else {
     const homeAccess = await isPathAccessible(HOME_DIR);
-    const testDirAccess = await isPathAccessible(TEST_DIR);
-    const outsideDirAccess = await isPathAccessible(OUTSIDE_DIR);
+    const tstDrAccs = await isPathAccessible(TEST_DIR);
+    const otsdDrAccs = await isPathAccessible(OUTSIDE_DIR);
 
     // All paths should be accessible on Unix
     assert.strictEqual(homeAccess, true, "Home directory should be accessible with root in allowedDirectories");
-    assert.strictEqual(testDirAccess, true, "Test directory should be accessible with root in allowedDirectories");
-    assert.strictEqual(outsideDirAccess, true, "Outside directory should be accessible with root in allowedDirectories");
+    assert.strictEqual(tstDrAccs, true, "Test directory should be accessible with root in allowedDirectories");
+    assert.strictEqual(otsdDrAccs, true, "Outside directory should be accessible with root in allowedDirectories");
   }
 }
 
 // 9. Test with Windows drive wildcard in allowedDirectories ―――――――――――――――――――――――――――――――――――――――
 async function testWindowsDriveWildcardAllowedDirectories() {
-  if (!isWindows || !TEST_ROOT_WILDCARD) {
+  if (!isWindows || !TST_RT_WLDC) {
     return;
   }
 
-  await configManager.setValue("allowedDirectories", [TEST_ROOT_WILDCARD]);
+  await cfgMgr.setValue("allowedDirectories", [TST_RT_WLDC]);
 
-  const config = await configManager.getConfig();
-  assert.deepStrictEqual(config.allowedDirectories, [TEST_ROOT_WILDCARD], "allowedDirectories should contain the Windows drive wildcard");
+  const config = await cfgMgr.getConfig();
+  assert.deepStrictEqual(config.allowedDirectories, [TST_RT_WLDC], "allowedDirectories should contain the Windows drive wildcard");
 
-  const rootAccess = await isPathAccessible(TEST_ROOT_PATH);
+  const rootAccess = await isPathAccessible(TST_RT_PTH);
   const homeAccess = await isPathAccessible(HOME_DIR);
-  const testDirAccess = await isPathAccessible(TEST_DIR);
-  const outsideDirAccess = await isPathAccessible(OUTSIDE_DIR);
+  const tstDrAccs = await isPathAccessible(TEST_DIR);
+  const otsdDrAccs = await isPathAccessible(OUTSIDE_DIR);
 
   assert.strictEqual(rootAccess, true, "Drive root should be accessible with Windows drive wildcard");
   assert.strictEqual(homeAccess, true, "Home directory should be accessible with Windows drive wildcard");
-  assert.strictEqual(testDirAccess, true, "Test directory should be accessible with Windows drive wildcard");
-  assert.strictEqual(outsideDirAccess, true, "Outside directory should be accessible with Windows drive wildcard");
+  assert.strictEqual(tstDrAccs, true, "Test directory should be accessible with Windows drive wildcard");
+  assert.strictEqual(otsdDrAccs, true, "Outside directory should be accessible with Windows drive wildcard");
 }
 
 // 10. Test with home directory in allowedDirectories ――――――――――――――――――――――――――――――――――――――――――――――
 async function testHomeAllowedDirectory() {
   // Set allowedDirectories to just the home directory
-  await configManager.setValue("allowedDirectories", [HOME_DIR]);
+  await cfgMgr.setValue("allowedDirectories", [HOME_DIR]);
 
   // Verify config was set correctly
-  const config = await configManager.getConfig();
+  const config = await cfgMgr.getConfig();
   assert.deepStrictEqual(config.allowedDirectories, [HOME_DIR], "allowedDirectories should contain only the home directory");
 
-  const isTestDirInHome = isPathInside(HOME_DIR, TEST_DIR);
-  const isOutsideDirInHome = isPathInside(HOME_DIR, OUTSIDE_DIR);
+  const isTstDrInHm = isPathInside(HOME_DIR, TEST_DIR);
+  const isOtsdDrInHm = isPathInside(HOME_DIR, OUTSIDE_DIR);
 
   // Test access to various locations
-  const testDirAccess = await isPathAccessible(TEST_DIR);
-  const testFileAccess = await isPathAccessible(path.join(TEST_DIR, "test-file.txt"));
-  const homeDirAccess = await isPathAccessible(HOME_DIR);
-  const homeTildaDirAccess = await isPathAccessible("~");
-  const outsideDirAccess = await isPathAccessible(OUTSIDE_DIR);
-  const rootAccess = await isPathAccessible(TEST_ROOT_PATH);
+  const tstDrAccs = await isPathAccessible(TEST_DIR);
+  const tstFlAccs = await isPathAccessible(path.join(TEST_DIR, "test-file.txt"));
+  const hmDrAccs = await isPathAccessible(HOME_DIR);
+  const hmTldDrAccs = await isPathAccessible("~");
+  const otsdDrAccs = await isPathAccessible(OUTSIDE_DIR);
+  const rootAccess = await isPathAccessible(TST_RT_PTH);
 
-  assert.strictEqual(testDirAccess, isTestDirInHome, "Test directory accessibility should match its home-directory location");
-  assert.strictEqual(testFileAccess, isTestDirInHome, "Test file accessibility should match its home-directory location");
-  assert.strictEqual(homeDirAccess, true, "Home directory should be accessible");
-  assert.strictEqual(homeTildaDirAccess, true, "HOME TILDA directory should be accessible");
+  assert.strictEqual(tstDrAccs, isTstDrInHm, "Test directory accessibility should match its home-directory location");
+  assert.strictEqual(tstFlAccs, isTstDrInHm, "Test file accessibility should match its home-directory location");
+  assert.strictEqual(hmDrAccs, true, "Home directory should be accessible");
+  assert.strictEqual(hmTldDrAccs, true, "HOME TILDA directory should be accessible");
 
   // For the outside directory, the expectation depends on whether it's inside the home directory
   // On Windows, the temp directory is often inside the user home directory
-  if (isOutsideDirInHome) {
-    assert.strictEqual(outsideDirAccess, true, "Outside directory is inside home, so it should be accessible");
+  if (isOtsdDrInHm) {
+    assert.strictEqual(otsdDrAccs, true, "Outside directory is inside home, so it should be accessible");
   }
   else {
-    assert.strictEqual(outsideDirAccess, false, "Outside directory should not be accessible");
+    assert.strictEqual(otsdDrAccs, false, "Outside directory should not be accessible");
   }
 
   assert.strictEqual(rootAccess, false, "Root path should not be accessible");
@@ -261,27 +261,27 @@ async function testHomeAllowedDirectory() {
 // 11. Specific allowed directory with slash ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testSpecificAllowedDirectoryWithSlash() {
   // Set allowedDirectories to just the test directory
-  await configManager.setValue("allowedDirectories", [TEST_DIR_WITH_SLASH]);
+  await cfgMgr.setValue("allowedDirectories", [TDWS]);
 
   // Verify config was set correctly
-  const config = await configManager.getConfig();
+  const config = await cfgMgr.getConfig();
 
-  assert.deepStrictEqual(config.allowedDirectories, [TEST_DIR_WITH_SLASH], "allowedDirectories should contain only the test directory");
+  assert.deepStrictEqual(config.allowedDirectories, [TDWS], "allowedDirectories should contain only the test directory");
 
   // Test access to various locations
-  const testDirAccess = await isPathAccessible(TEST_DIR);
-  const testFileAccess = await isPathAccessible(path.join(TEST_DIR, "test-file.txt"));
-  const homeDirAccess = await isPathAccessible(HOME_DIR);
-  const homeTildaDirAccess = await isPathAccessible("~");
-  const outsideDirAccess = await isPathAccessible(OUTSIDE_DIR);
-  const rootAccess = await isPathAccessible(TEST_ROOT_PATH);
+  const tstDrAccs = await isPathAccessible(TEST_DIR);
+  const tstFlAccs = await isPathAccessible(path.join(TEST_DIR, "test-file.txt"));
+  const hmDrAccs = await isPathAccessible(HOME_DIR);
+  const hmTldDrAccs = await isPathAccessible("~");
+  const otsdDrAccs = await isPathAccessible(OUTSIDE_DIR);
+  const rootAccess = await isPathAccessible(TST_RT_PTH);
 
   // Only test directory and its contents should be accessible
-  assert.strictEqual(testDirAccess, true, "Test directory should be accessible");
-  assert.strictEqual(testFileAccess, true, "Files in test directory should be accessible");
-  assert.strictEqual(homeDirAccess, TEST_DIR === HOME_DIR, "Home directory should not be accessible (unless it equals test dir)");
-  assert.strictEqual(homeTildaDirAccess, TEST_DIR === HOME_DIR, "Home directory should not be accessible (unless it equals test dir)");
-  assert.strictEqual(outsideDirAccess, false, "Outside directory should not be accessible");
+  assert.strictEqual(tstDrAccs, true, "Test directory should be accessible");
+  assert.strictEqual(tstFlAccs, true, "Files in test directory should be accessible");
+  assert.strictEqual(hmDrAccs, TEST_DIR === HOME_DIR, "Home directory should not be accessible (unless it equals test dir)");
+  assert.strictEqual(hmTldDrAccs, TEST_DIR === HOME_DIR, "Home directory should not be accessible (unless it equals test dir)");
+  assert.strictEqual(otsdDrAccs, false, "Outside directory should not be accessible");
   assert.strictEqual(rootAccess, false, "Root path should not be accessible");
 }
 
@@ -290,44 +290,44 @@ async function testPrefixPathBlocking() {
   // Create a directory with a name that would be caught by string prefix matching
   // Deliberately use path names that are clearly not subdirectories of each other
   const baseDir = path.join(__dirname, "test_dir_abc");
-  const prefixMatchDir = path.join(__dirname, "test_dir_abc_xyz");
+  const prfxMtchDr = path.join(__dirname, "test_dir_abc_xyz");
 
   try {
     // Create both directories for testing
     await fs.mkdir(baseDir, { recursive: true });
-    await fs.mkdir(prefixMatchDir, { recursive: true });
+    await fs.mkdir(prfxMtchDr, { recursive: true });
 
     // Create test files
     await fs.writeFile(path.join(baseDir, "base-file.txt"), "Base content");
-    await fs.writeFile(path.join(prefixMatchDir, "prefix-file.txt"), "Prefix content");
+    await fs.writeFile(path.join(prfxMtchDr, "prefix-file.txt"), "Prefix content");
 
     // Set allowedDirectories to just the base directory
-    await configManager.setValue("allowedDirectories", [baseDir]);
+    await cfgMgr.setValue("allowedDirectories", [baseDir]);
 
     // Verify config was set correctly
-    const config = await configManager.getConfig();
+    const config = await cfgMgr.getConfig();
     assert.deepStrictEqual(config.allowedDirectories, [baseDir], "allowedDirectories should contain only the base directory");
 
     // Test access to the base directory and its contents
-    const baseDirAccess = await isPathAccessible(baseDir);
-    const baseFileAccess = await isPathAccessible(path.join(baseDir, "base-file.txt"));
+    const bsDrAccs = await isPathAccessible(baseDir);
+    const bsFlAccs = await isPathAccessible(path.join(baseDir, "base-file.txt"));
 
     // Test access to the prefix-matching directory and its contents
-    const prefixDirAccess = await isPathAccessible(prefixMatchDir);
-    const prefixFileAccess = await isPathAccessible(path.join(prefixMatchDir, "prefix-file.txt"));
+    const prfxDrAccs = await isPathAccessible(prfxMtchDr);
+    const prfxFlAccs = await isPathAccessible(path.join(prfxMtchDr, "prefix-file.txt"));
 
     // Base directory and its contents should be accessible
-    assert.strictEqual(baseDirAccess, true, "Base directory should be accessible");
-    assert.strictEqual(baseFileAccess, true, "Files in base directory should be accessible");
+    assert.strictEqual(bsDrAccs, true, "Base directory should be accessible");
+    assert.strictEqual(bsFlAccs, true, "Files in base directory should be accessible");
 
     // Prefix-matching directory should NOT be accessible
-    assert.strictEqual(prefixDirAccess, false, "Prefix-matching directory should not be accessible");
-    assert.strictEqual(prefixFileAccess, false, "Files in prefix-matching directory should not be accessible");
+    assert.strictEqual(prfxDrAccs, false, "Prefix-matching directory should not be accessible");
+    assert.strictEqual(prfxFlAccs, false, "Files in prefix-matching directory should not be accessible");
   }
   finally {
     // Clean up test directories
     await fs.rm(baseDir, { recursive: true, force: true }).catch(() => undefined);
-    await fs.rm(prefixMatchDir, { recursive: true, force: true }).catch(() => undefined);
+    await fs.rm(prfxMtchDr, { recursive: true, force: true }).catch(() => undefined);
   }
 }
 
@@ -362,9 +362,9 @@ async function testAllowedDirectories() {
 
 // 15. Run tests ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export default async function runTests() {
-  let originalConfig;
+  let origCfg;
   try {
-    originalConfig = await setup();
+    origCfg = await setup();
     await testAllowedDirectories();
   }
   catch (error) {
@@ -372,8 +372,8 @@ export default async function runTests() {
     return false;
   }
   finally {
-    if (originalConfig) {
-      await teardown(originalConfig);
+    if (origCfg) {
+      await teardown(origCfg);
     }
   }
   return true;

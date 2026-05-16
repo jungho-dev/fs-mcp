@@ -21,7 +21,7 @@ export function recursiveFuzzyIndexOf(
   query: string,
   start: number=0,
   end: number | null=null,
-  parentDistance: number=Number.POSITIVE_INFINITY,
+  prntDstn: number=Number.POSITIVE_INFINITY,
   depth: number=0,
 ): {
   start: number;
@@ -30,14 +30,14 @@ export function recursiveFuzzyIndexOf(
   distance: number;
 } {
   if (depth === 0) {
-    return recursiveFuzzyIndexOf(text, query, start, end, parentDistance, depth + 1);
+    return recursiveFuzzyIndexOf(text, query, start, end, prntDstn, depth + 1);
   }
   if (end === null) {
     end = text.length;
   }
   // For small text segments, use iterative approach
   if (end - start <= 2 * query.length) {
-    return iterativeReduction(text, query, start, end, parentDistance);
+    return iterativeReduction(text, query, start, end, prntDstn);
   }
   const midPoint = start + Math.floor((end - start) / 2);
   const leftEnd = Math.min(end, midPoint + query.length); // Include query length to cover overlaps
@@ -45,15 +45,15 @@ export function recursiveFuzzyIndexOf(
 
   // Calculate distance for current segments
   const leftDistance = distance(text.slice(start, leftEnd), query);
-  const rightDistance = distance(text.slice(rightStart, end), query);
-  const bestDistance = Math.min(leftDistance, parentDistance, rightDistance);
+  const rghtDstn = distance(text.slice(rightStart, end), query);
+  const bestDistance = Math.min(leftDistance, prntDstn, rghtDstn);
 
   // If parent distance is already the best, use iterative approach
-  if (parentDistance === bestDistance) {
-    return iterativeReduction(text, query, start, end, parentDistance);
+  if (prntDstn === bestDistance) {
+    return iterativeReduction(text, query, start, end, prntDstn);
   }
   // Recursively search the better half
-  if (leftDistance < rightDistance) {
+  if (leftDistance < rghtDstn) {
     return recursiveFuzzyIndexOf(text, query, start, leftEnd, bestDistance, depth + 1);
   }
   else {
@@ -75,14 +75,14 @@ function iterativeReduction(
   query: string,
   start: number,
   end: number,
-  parentDistance: number,
+  prntDstn: number,
 ): {
   start: number;
   end: number;
   value: string;
   distance: number;
 } {
-  let bestDistance = parentDistance;
+  let bestDistance = prntDstn;
   let bestStart = start;
   let bestEnd = end;
 
@@ -92,8 +92,8 @@ function iterativeReduction(
   while (nextDistance < bestDistance) {
     bestDistance = nextDistance;
     bestStart++;
-    const smallerString = text.slice(bestStart + 1, bestEnd);
-    nextDistance = distance(smallerString, query);
+    const smllStr = text.slice(bestStart + 1, bestEnd);
+    nextDistance = distance(smllStr, query);
   }
   // Improve end position
   nextDistance = distance(text.slice(bestStart, bestEnd - 1), query);
@@ -101,8 +101,8 @@ function iterativeReduction(
   while (nextDistance < bestDistance) {
     bestDistance = nextDistance;
     bestEnd--;
-    const smallerString = text.slice(bestStart, bestEnd - 1);
-    nextDistance = distance(smallerString, query);
+    const smllStr = text.slice(bestStart, bestEnd - 1);
+    nextDistance = distance(smllStr, query);
   }
 
   return {
@@ -124,6 +124,6 @@ export function getSimilarityRatio(a: string, b: string): number {
   if (maxLength === 0) {
     return 1; // Both strings are empty
   }
-  const levenshteinDistance = distance(a, b);
-  return 1 - levenshteinDistance / maxLength;
+  const lvnsDstn = distance(a, b);
+  return 1 - lvnsDstn / maxLength;
 }

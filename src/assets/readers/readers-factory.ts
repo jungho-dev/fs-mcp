@@ -12,45 +12,45 @@
 // or async (content-based like BinaryFileHandler using isBinaryFile)
 
 import type {FileHandler} from "@assets/readers/readers-base";
-import {BinaryFileHandler} from "@assets/readers/readers-binary";
-import {DocxFileHandler} from "@assets/readers/readers-docx";
-import {ImageFileHandler} from "@assets/readers/readers-image";
-import {TextFileHandler} from "@assets/readers/readers-text";
+import {BinaryFileHandler as BnryFlHdl} from "@assets/readers/readers-binary";
+import {DocxFileHandler as DcxFlHdl} from "@assets/readers/readers-docx";
+import {ImageFileHandler as ImgFlHdl} from "@assets/readers/readers-image";
+import {TextFileHandler as TxtFlHdl} from "@assets/readers/readers-text";
 
 // Singleton instances of each handler
-let imageHandler: ImageFileHandler | null = null;
-let textHandler: TextFileHandler | null = null;
-let binaryHandler: BinaryFileHandler | null = null;
-let docxHandler: DocxFileHandler | null = null;
+let imageHandler: ImgFlHdl | null = null;
+let textHandler: TxtFlHdl | null = null;
+let bnryHdl: BnryFlHdl | null = null;
+let docxHandler: DcxFlHdl | null = null;
 
 // 1. Get image handler ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function getImageHandler(): ImageFileHandler {
+function getImageHandler(): ImgFlHdl {
   if (!imageHandler) {
-    imageHandler = new ImageFileHandler();
+    imageHandler = new ImgFlHdl();
   }
   return imageHandler;
 }
 
 // 2. Get text handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function getTextHandler(): TextFileHandler {
+function getTextHandler(): TxtFlHdl {
   if (!textHandler) {
-    textHandler = new TextFileHandler();
+    textHandler = new TxtFlHdl();
   }
   return textHandler;
 }
 
 // 3. Get binary handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function getBinaryHandler(): BinaryFileHandler {
-  if (!binaryHandler) {
-    binaryHandler = new BinaryFileHandler();
+function getBinaryHandler(): BnryFlHdl {
+  if (!bnryHdl) {
+    bnryHdl = new BnryFlHdl();
   }
-  return binaryHandler;
+  return bnryHdl;
 }
 
 // 4. Get docx handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function getDocxHandler(): DocxFileHandler {
+function getDocxHandler(): DcxFlHdl {
   if (!docxHandler) {
-    docxHandler = new DocxFileHandler();
+    docxHandler = new DcxFlHdl();
   }
   return docxHandler;
 }

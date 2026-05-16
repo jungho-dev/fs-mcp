@@ -6,24 +6,24 @@
  */
 
 import {type LogLevel, logger} from "@cores/runtime/runtime-app-logger";
-import {flushDeferredMessages, server} from "@cores/server/server-create-mcp-server";
-import {FilteredStdioServerTransport} from "@cores/transport/transport-stdio-transport";
-import {configManager} from "@features/config/config-store";
+import {flushDeferredMessages as flshDfrrMsgs, server} from "@cores/server/server-create-mcp-server";
+import {FilteredStdioServerTransport as FltStSrTr} from "@cores/transport/transport-stdio-transport";
+import {cfgMgr} from "@features/config/config-store";
 
 type DeferredStartupMessage = {
   level: LogLevel;
   message: string;
 };
 
-const deferredMessages: DeferredStartupMessage[] = [];
+const dfrrMsgs: DeferredStartupMessage[] = [];
 
 // 1. Defer log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function deferLog(level: LogLevel, message: string): void {
-  deferredMessages.push({level, message});
+  dfrrMsgs.push({level, message});
 }
 
 // 2. Flush startup logs ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export function flushStartupLogs(transport: Pick<FilteredStdioServerTransport, "sendLog">, messages: DeferredStartupMessage[]): DeferredStartupMessage[] {
+export function flushStartupLogs(transport: Pick<FltStSrTr, "sendLog">, messages: DeferredStartupMessage[]): DeferredStartupMessage[] {
   const sentMessages: DeferredStartupMessage[] = [];
   while (messages.length > 0) {
     const message = messages.shift();
@@ -52,14 +52,14 @@ export async function runServer () {
   try {
     // Create transport FIRST so all logging gets properly buffered
     // This must happen before any code that might use logger.*
-    const transport = new FilteredStdioServerTransport();
+    const transport = new FltStSrTr();
 
     // Export transport for use throughout the application
     global.mcpTransport = transport;
 
     try {
       deferLog("info", "Loading configuration...");
-      await configManager.loadConfig();
+      await cfgMgr.loadConfig();
       deferLog("info", "Configuration loaded successfully");
     }
     catch (configError) {
@@ -88,8 +88,8 @@ export async function runServer () {
       // At this point, the MCP protocol handshake is fully complete
       transport.enableNotifications();
 
-      flushStartupLogs(transport, deferredMessages);
-      flushDeferredMessages();
+      flushStartupLogs(transport, dfrrMsgs);
+      flshDfrrMsgs();
 
       transport.sendLog("info", "Server connected successfully");
       transport.sendLog("info", "MCP fully initialized, all startup messages sent");
@@ -103,7 +103,7 @@ export async function runServer () {
     if (error instanceof Error && error.stack) {
       logger.debug(error.stack);
     }
-    const errorNotification = {
+    const errNtfc = {
       jsonrpc: "2.0" as const,
       method: "notifications/message",
       params: {
@@ -112,7 +112,7 @@ export async function runServer () {
         logger: "fs-mcp",
       },
     };
-    process.stdout.write(`${JSON.stringify(errorNotification)}\n`);
+    process.stdout.write(`${JSON.stringify(errNtfc)}\n`);
 
     process.exit(1);
   }

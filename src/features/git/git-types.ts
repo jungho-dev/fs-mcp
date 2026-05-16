@@ -5,11 +5,11 @@
  * @since 2026-05-03
  */
 
-import type {GIT_INPUT_SCHEMAS, GitToolName} from "@schemas/schemas-git";
+import type {GT_INPT_SCHS, GitToolName} from "@schemas/schemas-git";
 import type {z} from "zod";
 
 export type GitArgsMap = {
-  [K in GitToolName]: z.infer<(typeof GIT_INPUT_SCHEMAS)[K]>;
+  [K in GitToolName]: z.infer<(typeof GT_INPT_SCHS)[K]>;
 };
 
 export type GitCommandError = Error & {

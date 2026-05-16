@@ -79,14 +79,15 @@ tests -> out
 
 ## 도구 표면
 
-Tool catalog module은 runtime domain별로 나뉩니다. 현재 catalog는 25개 도구를 export합니다.
+Tool catalog module은 runtime domain별로 나뉩니다. 현재 catalog는 28개 도구를 export합니다.
 
 - `tools-config.ts`: configuration 도구 2개.
+- `tools-context.ts`: context-index 관리 도구 3개.
 - `tools-filesystem.ts`: filesystem, search-session, metadata, exact block edit 도구 12개.
 - `tools-process.ts`: process 및 terminal-session 도구 5개.
 - `tools-git.ts`: essential git session 도구 6개.
 
-`server-create-mcp-server.ts`는 이 catalog들을 합쳐 `list_tools`에 제공합니다. `tools-dispatcher.ts`는
+`server-create-mcp-server.ts`는 config, context, filesystem, process, git catalog를 합쳐 `list_tools`에 제공합니다. `tools-dispatcher.ts`는
 대응되는 `call_tool` registry를 담당합니다. Git schema는 더 넓은 operation contract를 정의하지만,
 `tools-git.ts`는 `ESSENTIAL_GIT_TOOL_NAMES`로 public catalog를 필터링합니다.
 
@@ -97,7 +98,7 @@ Tool catalog module은 runtime domain별로 나뉩니다. 현재 catalog는 25�
 
 - `InitializeRequestSchema`는 client metadata를 수집하고 notification 동작을 설정하며 protocol version을
   협상합니다.
-- `ListToolsRequestSchema`는 config, filesystem, process, git module의 catalog를 합쳐 반환합니다.
+- `ListToolsRequestSchema`는 config, context, filesystem, process, git module의 catalog를 합쳐 반환합니다.
 - `CallToolRequestSchema`는 각 call을 current client git-session scope 안에서 dispatch합니다.
 - `tools-dispatcher.ts`는 schema별 controller validation 전에 선택적 `args_path`, `args_offset`,
   `args_length`를 해석합니다.
@@ -121,14 +122,16 @@ Tool catalog module은 runtime domain별로 나뉩니다. 현재 catalog는 25�
 
 - 기본 threshold는 5,000자 또는 120줄이고, 단일 indexed entry 최대 크기는 1,000,000자입니다.
 - 기본 DB 경로는 `~/.mcp/fs-mcp.sqlite`이고 런타임에서 `~`가 home directory로 확장됩니다.
+- Custom DB path는 기본 `~/.mcp` root 또는 configured `allowedDirectories` 내부여야 합니다.
 - Text는 80줄 chunk와 20줄 overlap으로 나뉘며 SQLite FTS로 검색됩니다.
-- Content hash는 같은 source/tool payload가 기존 context-index reference를 재사용하게 합니다.
+- 재사용 판단은 원본 전체 payload hash를 사용해 같은 prefix를 가진 truncated payload가 잘못 재사용되지 않게 합니다.
+- Document row는 indexed slice metadata로 `indexed_length`와 `truncated`를 저장합니다.
+- `contextIndexMaxDocuments` 또는 `contextIndexMaxBytes`를 넘으면 오래된 row와 chunk를 삭제합니다.
 - `context-output-compactor.ts`는 큰 text field와 structured collection을 index하되, 기본적으로 원본 response
   payload를 유지합니다. Reference replacement는 `contextIndexReplaceLargeOutputs=true`로 명시할 때만 동작합니다.
-- `read_files`, `list_directories`, `get_full_search`는 response marker replacement를 우회하고 oversized result를
-  inline payload로 유지합니다.
-- 이번 버전에는 수동 context-index tool surface를 노출하지 않습니다. 자동 indexing은 response normalization
-  경로에서 계속 동작합니다.
+- `read_files`, `list_directories`, `get_full_search`, context-index 관리 도구는 response marker replacement를
+  우회하고 oversized result를 inline payload로 유지합니다.
+- 수동 context-index tool surface는 `list_context_index`, `search_context_index`, `clear_context_index`입니다.
 
 ## Runtime Configuration
 

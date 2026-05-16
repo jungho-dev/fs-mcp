@@ -80,14 +80,15 @@ are MCP adapters and not reusable domain services.
 
 ## Tool Surface
 
-Tool catalog modules are grouped by runtime domain. The current catalog has 25 exported tools.
+Tool catalog modules are grouped by runtime domain. The current catalog has 28 exported tools.
 
 - `tools-config.ts`: 2 configuration tools.
+- `tools-context.ts`: 3 context-index maintenance tools.
 - `tools-filesystem.ts`: 12 filesystem, search-session, metadata, and exact block edit tools.
 - `tools-process.ts`: 5 process and terminal-session tools.
 - `tools-git.ts`: 6 essential git session tools.
 
-`server-create-mcp-server.ts` concatenates those catalogs for `list_tools`. `tools-dispatcher.ts` owns the
+`server-create-mcp-server.ts` concatenates config, context, filesystem, process, and git catalogs for `list_tools`. `tools-dispatcher.ts` owns the
 matching `call_tool` registry. Git schemas define a wider set of operation contracts, but `tools-git.ts` filters
 the public catalog through `ESSENTIAL_GIT_TOOL_NAMES`.
 
@@ -99,7 +100,7 @@ support.
 
 - `InitializeRequestSchema` captures client metadata, configures notification behavior, and negotiates protocol
   version.
-- `ListToolsRequestSchema` returns the concatenated catalog from config, filesystem, process, and git
+- `ListToolsRequestSchema` returns the concatenated catalog from config, context, filesystem, process, and git
   modules.
 - `CallToolRequestSchema` wraps each call in the current client git-session scope before dispatch.
 - `tools-dispatcher.ts` resolves optional `args_path`, `args_offset`, and `args_length` before schema-specific
@@ -123,14 +124,17 @@ support.
 
 - Default thresholds are 5,000 characters or 120 lines, with a maximum indexed entry size of 1,000,000 characters.
 - The default database path is `~/.mcp/fs-mcp.sqlite` and `~` is expanded at runtime.
+- Custom database paths must stay under the default `~/.mcp` root or configured `allowedDirectories`.
 - Text is chunked into overlapping 80-line chunks with 20-line overlap and searched through SQLite FTS.
-- Content hashes allow equivalent source/tool payloads to reuse an existing context-index reference.
+- Full original payload hashes prevent same-prefix truncated payloads from reusing the wrong reference.
+- Document rows store `indexed_length` and `truncated` for indexed-slice metadata.
+- Retention deletes older rows and chunks when `contextIndexMaxDocuments` or `contextIndexMaxBytes` is exceeded.
 - `context-output-compactor.ts` indexes large text fields and structured collections while preserving original
   response payloads by default. Reference replacement is opt-in through `contextIndexReplaceLargeOutputs=true`.
-- `read_files`, `list_directories`, and `get_full_search` bypass response marker replacement and keep inline
-  payloads for oversized results.
-- Manual context-index tool surface is not exposed in this version; automatic indexing remains available through
-  response normalization.
+- `read_files`, `list_directories`, `get_full_search`, and context-index maintenance tools bypass response marker
+  replacement and keep inline payloads for oversized results.
+- Manual context-index tool surface is exposed through `list_context_index`, `search_context_index`, and
+  `clear_context_index`.
 
 ## Runtime Configuration
 

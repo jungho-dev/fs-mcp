@@ -5,54 +5,54 @@
  * @since 2026-05-03
  */
 
-import {AsyncLocalStorage} from "node:async_hooks";
+import {AsyncLocalStorage as AsynLclStrg} from "node:async_hooks";
 import fs from "node:fs/promises";
 import path from "node:path";
 import {validatePath} from "@features/filesystem/filesystem-service";
-import {PROTECTED_BRANCHES, runGitCommand } from "@features/git/git-runtime";
+import {PRTC_BRNC, runGitCommand as rnGtCmd } from "@features/git/git-runtime";
 
-const DEFAULT_GIT_SESSION_KEY = "__default__";
-const gitSessionScope = new AsyncLocalStorage<string>();
-const gitWorkingDirectories = new Map<string, string>();
+const DGSK = "__default__";
+const gtSessScp = new AsynLclStrg<string>();
+const gtWrknDrct = new Map<string, string>();
 
 // 1. Get current git session key ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getCurrentGitSessionKey(): string {
-  const sessionKey = gitSessionScope.getStore();
-  return sessionKey ?? DEFAULT_GIT_SESSION_KEY;
+  const sessionKey = gtSessScp.getStore();
+  return sessionKey ?? DGSK;
 }
 
 // 2. Run with git session scope ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runWithGitSessionScope<T>(sessionKey: string, operation: () => Promise<T>): Promise<T> {
-  return await gitSessionScope.run(sessionKey, operation);
+  return await gtSessScp.run(sessionKey, operation);
 }
 
 // 3. Get current git working directory ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function getCurrentGitWorkingDirectory(): string | null {
-  const currentWorkingDirectory = gitWorkingDirectories.get(getCurrentGitSessionKey());
-  return currentWorkingDirectory ?? null;
+  const curWrknDir = gtWrknDrct.get(getCurrentGitSessionKey());
+  return curWrknDir ?? null;
 }
 
 // 4. Set current git working directory ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export function setCurrentGitWorkingDirectory(workingDirectory: string | null): void {
+export function setCurrentGitWorkingDirectory(wrknDir: string | null): void {
   const sessionKey = getCurrentGitSessionKey();
-  if (workingDirectory === null) {
-    gitWorkingDirectories.delete(sessionKey);
+  if (wrknDir === null) {
+    gtWrknDrct.delete(sessionKey);
   }
   else {
-    gitWorkingDirectories.set(sessionKey, workingDirectory);
+    gtWrknDrct.set(sessionKey, wrknDir);
   }
 }
 
 // 3. Resolve existing path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function resolveExistingPath(requestedPath: string): Promise<string> {
-  const resolvedPath = await validatePath(requestedPath);
+export async function resolveExistingPath(rqstPth: string): Promise<string> {
+  const resolvedPath = await validatePath(rqstPth);
   return resolvedPath;
 }
 
 // 4. Resolve creation path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function resolveCreationPath(requestedPath: string): Promise<string> {
-  const validatedPath = await validatePath(requestedPath);
-  const resolvedPath = path.resolve(validatedPath);
+export async function resolveCreationPath(rqstPth: string): Promise<string> {
+  const vldtPth = await validatePath(rqstPth);
+  const resolvedPath = path.resolve(vldtPth);
   return resolvedPath;
 }
 
@@ -63,13 +63,13 @@ export async function ensureDirectoryExists(targetPath: string): Promise<void> {
 
 // 6. Get repository root ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getRepositoryRoot(cwd: string): Promise<string> {
-  const commandResult = await runGitCommand(["rev-parse", "--show-toplevel"], { cwd });
-  return commandResult.stdout.trim();
+  const cmdRes = await rnGtCmd(["rev-parse", "--show-toplevel"], { cwd });
+  return cmdRes.stdout.trim();
 }
 
 // 7. Resolve repository path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function resolveRepositoryPath(requestedPath?: string): Promise<string> {
-  const basePath = requestedPath ?? getCurrentGitWorkingDirectory();
+export async function resolveRepositoryPath(rqstPth?: string): Promise<string> {
+  const basePath = rqstPth ?? getCurrentGitWorkingDirectory();
 
   if (!basePath) {
     throw new Error("No git working directory set. Pass path or call git_set_working_dir first.");
@@ -79,29 +79,29 @@ export async function resolveRepositoryPath(requestedPath?: string): Promise<str
 }
 
 // 8. Resolve creation base path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function resolveCreationBasePath(requestedPath?: string): Promise<string> {
-  const basePath = requestedPath ?? getCurrentGitWorkingDirectory() ?? process.cwd();
+export async function resolveCreationBasePath(rqstPth?: string): Promise<string> {
+  const basePath = rqstPth ?? getCurrentGitWorkingDirectory() ?? process.cwd();
   return await resolveCreationPath(basePath);
 }
 
 // 9. Get head commit ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getHeadCommit(cwd: string): Promise<string | null> {
-  const commandResult = await runGitCommand(["rev-parse", "HEAD"], { cwd, allowFailure: true });
-  const headCommit = commandResult.exitCode === 0 ? commandResult.stdout.trim() : "";
+  const cmdRes = await rnGtCmd(["rev-parse", "HEAD"], { cwd, allowFailure: true });
+  const headCommit = cmdRes.exitCode === 0 ? cmdRes.stdout.trim() : "";
   return headCommit.length > 0 ? headCommit : null;
 }
 
 // 10. Get current branch ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function getCurrentBranch(cwd: string): Promise<string | null> {
-  const commandResult = await runGitCommand(["branch", "--show-current"], { cwd, allowFailure: true });
-  const branchName = commandResult.stdout.trim();
+  const cmdRes = await rnGtCmd(["branch", "--show-current"], { cwd, allowFailure: true });
+  const branchName = cmdRes.stdout.trim();
   return branchName.length > 0 ? branchName : null;
 }
 
 // 11. Is protected branch ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function isProtectedBranch(branchName: string | null): boolean {
-  const protectedBranch = branchName !== null && PROTECTED_BRANCHES.has(branchName.toLowerCase());
-  return protectedBranch;
+  const prtcBrnc = branchName !== null && PRTC_BRNC.has(branchName.toLowerCase());
+  return prtcBrnc;
 }
 
 // 12. Ensure protected branch confirmation ――――――――――――――――――――――――――――――――――――――――――――――――――――――――

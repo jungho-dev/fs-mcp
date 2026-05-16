@@ -8,8 +8,8 @@
  * 4. Testing empty blockedCommands array
  */
 
-import { configManager } from "../../../out/features/config/config-store.js";
-import { commandManager } from "../../../out/features/process/process-command-policy.js";
+import { configManager as cfgMgr } from "../../../out/features/config/config-store.js";
+import { commandManager as cmdMgr2 } from "../../../out/features/process/process-command-policy.js";
 import { startProcess } from "../../../out/features/process/process-runner.js";
 
 // We need a wrapper because startProcess in tools/improved-process-tools.js returns a ServerResult
@@ -32,19 +32,19 @@ async function executeCommand(command, timeout_ms = 2000, shell = null) {
 import assert from "node:assert";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as flUrlTPth2 } from "node:url";
 
 // Get directory name
-const __filename = fileURLToPath(import.meta.url);
+const __filename = flUrlTPth2(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Define test directory
 const TEST_DIR = path.join(__dirname, "test_blocked_commands");
 
 // Define some test commands
-const SAFE_COMMANDS = ['echo "Hello World"', "pwd", "date"];
+const SF_CMDS = ['echo "Hello World"', "pwd", "date"];
 
-const POTENTIALLY_HARMFUL_COMMANDS = ["rm", "mkfs", "dd"];
+const POT_HRM_CMD = ["rm", "mkfs", "dd"];
 
 // 1. Helper function to clean up test directories ―――――――――――――――――――――――――――――――――――――――――――――――――
 async function cleanupTestDirectories() {
@@ -105,14 +105,14 @@ async function setup() {
   await fs.writeFile(path.join(TEST_DIR, "test-file.txt"), "Test content");
 
   // Save original config to restore later
-  const originalConfig = await configManager.getConfig();
-  return originalConfig;
+  const origCfg = await cfgMgr.getConfig();
+  return origCfg;
 }
 
 // 4. Teardown function to clean up after tests ――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function teardown(originalConfig) {
+async function teardown(origCfg) {
   // Reset configuration to original
-  await configManager.updateConfig(originalConfig);
+  await cfgMgr.updateConfig(origCfg);
 
   // Clean up test directories
   await cleanupTestDirectories();
@@ -121,17 +121,17 @@ async function teardown(originalConfig) {
 // 5. Test execution of non-blocked commands ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testNonBlockedCommands() {
   // Set blockedCommands to include specific harmful commands
-  const blockedCommands = ["rm -rf /", ":(){ :|:& };:", "> /dev/sda", "dd if=/dev/zero of=/dev/sda", "mkfs", "mkfs.ext4", "format"];
+  const blckCmds = ["rm -rf /", ":(){ :|:& };:", "> /dev/sda", "dd if=/dev/zero of=/dev/sda", "mkfs", "mkfs.ext4", "format"];
 
-  await configManager.setValue("blockedCommands", blockedCommands);
+  await cfgMgr.setValue("blockedCommands", blckCmds);
 
   // Verify config was set correctly
-  const config = await configManager.getConfig();
-  assert.deepStrictEqual(config.blockedCommands, blockedCommands, "blockedCommands should be correctly set");
+  const config = await cfgMgr.getConfig();
+  assert.deepStrictEqual(config.blockedCommands, blckCmds, "blockedCommands should be correctly set");
 
   // Try to execute safe commands
   await Promise.all(
-    SAFE_COMMANDS.map(async (command) => {
+    SF_CMDS.map(async (command) => {
       const result = await tryCommand(command);
       assert.strictEqual(result.blocked, false, `Command should not be blocked: ${command}`);
     }),
@@ -141,19 +141,19 @@ async function testNonBlockedCommands() {
 // 6. Test execution of blocked commands ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testBlockedCommandsExecution() {
   // Set blockedCommands to block our test harmful commands
-  const blockedCommands = POTENTIALLY_HARMFUL_COMMANDS.slice();
-  await configManager.setValue("blockedCommands", blockedCommands);
+  const blckCmds = POT_HRM_CMD.slice();
+  await cfgMgr.setValue("blockedCommands", blckCmds);
 
   // Verify config was set correctly
-  const config = await configManager.getConfig();
-  assert.deepStrictEqual(config.blockedCommands, blockedCommands, "blockedCommands should be correctly set");
+  const config = await cfgMgr.getConfig();
+  assert.deepStrictEqual(config.blockedCommands, blckCmds, "blockedCommands should be correctly set");
 
   // We'll test this by directly checking against commandManager.validateCommand
   // since that's what determines if a command is blocked
   await Promise.all(
-    POTENTIALLY_HARMFUL_COMMANDS.map(async (command) => {
+    POT_HRM_CMD.map(async (command) => {
       // Check validation directly
-      const isAllowed = await commandManager.validateCommand(command);
+      const isAllowed = await cmdMgr2.validateCommand(command);
 
       // The command should NOT be allowed
       assert.strictEqual(isAllowed, false, `Command should be blocked: ${command}`);
@@ -165,35 +165,35 @@ async function testBlockedCommandsExecution() {
 async function testUpdatingBlockedCommands() {
   // Start with one blocked command
   const testCommand = "echo";
-  await configManager.setValue("blockedCommands", [testCommand]);
+  await cfgMgr.setValue("blockedCommands", [testCommand]);
 
   // Verify the command is blocked
-  const isAllowed1 = await commandManager.validateCommand(testCommand);
+  const isAllowed1 = await cmdMgr2.validateCommand(testCommand);
   assert.strictEqual(isAllowed1, false, "Command should be blocked before update");
 
   // Update blockedCommands to empty array
-  await configManager.setValue("blockedCommands", []);
+  await cfgMgr.setValue("blockedCommands", []);
 
   // Verify the command is now allowed
-  const isAllowed2 = await commandManager.validateCommand(testCommand);
+  const isAllowed2 = await cmdMgr2.validateCommand(testCommand);
   assert.strictEqual(isAllowed2, true, "Command should be allowed after update");
 }
 
 // 8. Test empty blockedCommands array ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testEmptyBlockedCommands() {
   // Set blockedCommands to empty array
-  await configManager.setValue("blockedCommands", []);
+  await cfgMgr.setValue("blockedCommands", []);
 
   // Verify config was set correctly
-  const config = await configManager.getConfig();
+  const config = await cfgMgr.getConfig();
   assert.deepStrictEqual(config.blockedCommands, [], "blockedCommands should be an empty array");
 
   // Try to execute both safe and potentially harmful commands
-  const allCommands = [...SAFE_COMMANDS, ...POTENTIALLY_HARMFUL_COMMANDS];
+  const allCommands = [...SF_CMDS, ...POT_HRM_CMD];
 
   await Promise.all(
     allCommands.map(async (command) => {
-      const isAllowed = await commandManager.validateCommand(command);
+      const isAllowed = await cmdMgr2.validateCommand(command);
       assert.strictEqual(isAllowed, true, `No commands should be blocked with empty blockedCommands: ${command}`);
     }),
   );
@@ -218,9 +218,9 @@ async function runBlockedCommandsTests() {
 
 // 11. Run tests ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export default async function runTests() {
-  let originalConfig;
+  let origCfg;
   try {
-    originalConfig = await setup();
+    origCfg = await setup();
     await runBlockedCommandsTests();
   }
   catch (error) {
@@ -228,8 +228,8 @@ export default async function runTests() {
     return false;
   }
   finally {
-    if (originalConfig) {
-      await teardown(originalConfig);
+    if (origCfg) {
+      await teardown(origCfg);
     }
   }
   return true;

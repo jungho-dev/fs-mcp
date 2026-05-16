@@ -6,132 +6,132 @@
  */
 
 import path from "node:path";
-import {configManager} from "@features/config/config-store";
+import {cfgMgr} from "@features/config/config-store";
 
-const COMMAND_SEPARATORS = [";", "&&", "||", "|", "&"] as const;
-const ENV_ASSIGNMENT_PATTERN = /\w+=\S+\s*/g;
-const WHITESPACE_PATTERN = /\s+/;
+const CMD_SPRT = [";", "&&", "||", "|", "&"] as const;
+const ENV_ASSG_PAT = /\w+=\S+\s*/g;
+const WHTS_PAT = /\s+/;
 
 // 1. Command manager ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 class CommandManager {
 
   // 1-1. base command logging name ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   getBaseCommand(command: string): string {
-    const firstToken = command.trim().split(WHITESPACE_PATTERN)[0] ?? "";
+    const firstToken = command.trim().split(WHTS_PAT)[0] ?? "";
     const baseCommand = firstToken.toLowerCase();
 
     return baseCommand;
   }
 
   // 1-2. command chain extraction ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  extractCommands(commandString: string): string[] {
-    let extractedCommands: string[] = [];
+  extractCommands(cmdStr: string): string[] {
+    let extrCmds: string[] = [];
 
     try {
-      const commandSource = commandString.trim();
+      const cmdSrc = cmdStr.trim();
       const commands: string[] = [];
       let inQuote = false;
       let quoteChar = "";
-      let currentCommand = "";
+      let curCmd = "";
       let escaped = false;
       let index = 0;
 
-      while (index < commandSource.length) {
-        const char = commandSource[index] ?? "";
+      while (index < cmdSrc.length) {
+        const char = cmdSrc[index] ?? "";
 
         if (char === "\\" && !escaped) {
           escaped = true;
-          currentCommand = `${currentCommand}${char}`;
+          curCmd = `${curCmd}${char}`;
         }
         else if (escaped) {
           escaped = false;
-          currentCommand = `${currentCommand}${char}`;
+          curCmd = `${curCmd}${char}`;
         }
         else if ((char === "\"" || char === "'") && !inQuote) {
           inQuote = true;
           quoteChar = char;
-          currentCommand = `${currentCommand}${char}`;
+          curCmd = `${curCmd}${char}`;
         }
         else if (char === quoteChar && inQuote) {
           inQuote = false;
           quoteChar = "";
-          currentCommand = `${currentCommand}${char}`;
+          curCmd = `${curCmd}${char}`;
         }
-        else if (char === "$" && commandSource[index + 1] === "(") {
-          const groupEnd = this.findBalancedGroupEnd(commandSource, index + 1);
+        else if (char === "$" && cmdSrc[index + 1] === "(") {
+          const groupEnd = this.findBalancedGroupEnd(cmdSrc, index + 1);
 
           if (groupEnd === null) {
-            currentCommand = `${currentCommand}${char}`;
+            curCmd = `${curCmd}${char}`;
           }
           else {
-            const subContent = commandSource.slice(index + 2, groupEnd - 1);
+            const subContent = cmdSrc.slice(index + 2, groupEnd - 1);
             commands.push(...this.extractCommands(subContent));
 
             if (inQuote) {
-              currentCommand = `${currentCommand}${commandSource.slice(index, groupEnd)}`;
+              curCmd = `${curCmd}${cmdSrc.slice(index, groupEnd)}`;
             }
 
             index = groupEnd - 1;
           }
         }
         else if (char === "`") {
-          const backtickEnd = this.findBacktickEnd(commandSource, index);
+          const backtickEnd = this.findBacktickEnd(cmdSrc, index);
 
           if (backtickEnd === null) {
-            currentCommand = `${currentCommand}${char}`;
+            curCmd = `${curCmd}${char}`;
           }
           else {
-            const subContent = commandSource.slice(index + 1, backtickEnd);
+            const subContent = cmdSrc.slice(index + 1, backtickEnd);
             commands.push(...this.extractCommands(subContent));
 
             if (inQuote) {
-              currentCommand = `${currentCommand}${commandSource.slice(index, backtickEnd + 1)}`;
+              curCmd = `${curCmd}${cmdSrc.slice(index, backtickEnd + 1)}`;
             }
 
             index = backtickEnd;
           }
         }
         else if (inQuote) {
-          currentCommand = `${currentCommand}${char}`;
+          curCmd = `${curCmd}${char}`;
         }
         else if (char === "(") {
-          const groupEnd = this.findBalancedGroupEnd(commandSource, index);
+          const groupEnd = this.findBalancedGroupEnd(cmdSrc, index);
 
           if (groupEnd === null) {
-            currentCommand = `${currentCommand}${char}`;
+            curCmd = `${curCmd}${char}`;
           }
           else {
-            const subContent = commandSource.slice(index + 1, groupEnd - 1);
+            const subContent = cmdSrc.slice(index + 1, groupEnd - 1);
             commands.push(...this.extractCommands(subContent));
             index = groupEnd - 1;
           }
         }
         else {
-          const separator = this.findSeparator(commandSource, index);
+          const separator = this.findSeparator(cmdSrc, index);
 
           if (separator) {
-            this.pushBaseCommand(commands, currentCommand);
-            currentCommand = "";
+            this.pushBaseCommand(commands, curCmd);
+            curCmd = "";
             index += separator.length - 1;
           }
           else {
-            currentCommand = `${currentCommand}${char}`;
+            curCmd = `${curCmd}${char}`;
           }
         }
 
         index++;
       }
 
-      this.pushBaseCommand(commands, currentCommand);
-      extractedCommands = [...new Set(commands)];
+      this.pushBaseCommand(commands, curCmd);
+      extrCmds = [...new Set(commands)];
     }
     catch (_error) {
 
-      const baseCommand = this.extractBaseCommand(commandString);
-      extractedCommands = baseCommand ? [baseCommand] : [];
+      const baseCommand = this.extractBaseCommand(cmdStr);
+      extrCmds = baseCommand ? [baseCommand] : [];
     }
 
-    return extractedCommands;
+    return extrCmds;
   }
 
   // 1-3. command token normalization ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -139,17 +139,17 @@ class CommandManager {
     let baseCommand: string | null = null;
 
     try {
-      const withoutEnvVars = commandStr.replace(ENV_ASSIGNMENT_PATTERN, "").trim();
+      const wthtEnvVrs = commandStr.replace(ENV_ASSG_PAT, "").trim();
 
-      if (withoutEnvVars) {
-        const tokens = withoutEnvVars.split(WHITESPACE_PATTERN);
+      if (wthtEnvVrs) {
+        const tokens = wthtEnvVrs.split(WHTS_PAT);
         const firstToken = this.findFirstCommandToken(tokens);
 
         if (firstToken?.startsWith("$(") && firstToken.endsWith(")")) {
           const inner = firstToken.slice(2, -1).trim();
 
           if (inner) {
-            const innerToken = inner.split(WHITESPACE_PATTERN)[0] ?? "";
+            const innerToken = inner.split(WHTS_PAT)[0] ?? "";
             baseCommand = innerToken ? path.basename(innerToken).toLowerCase() : null;
           }
         }
@@ -170,12 +170,12 @@ class CommandManager {
     let isAllowed = false;
 
     try {
-      const config = await configManager.getConfig();
-      const blockedCommands = config.blockedCommands || [];
-      const extractedCommands = this.extractCommands(command);
-      const commandsToValidate = extractedCommands.length > 0 ? extractedCommands : [this.getBaseCommand(command)];
+      const config = await cfgMgr.getConfig();
+      const blckCmds = config.blockedCommands || [];
+      const extrCmds = this.extractCommands(command);
+      const cmdsTVal = extrCmds.length > 0 ? extrCmds : [this.getBaseCommand(command)];
 
-      isAllowed = commandsToValidate.every((extractedCommand) => !blockedCommands.includes(extractedCommand));
+      isAllowed = cmdsTVal.every((extrCmd) => !blckCmds.includes(extrCmd));
     }
     catch (error) {
       console.error("Error validating command:", error);
@@ -188,13 +188,13 @@ class CommandManager {
   // 1-5. balanced parenthesis range ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 
   // 2. Find balanced group end ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  private findBalancedGroupEnd(commandSource: string, openParenIndex: number): number | null {
+  private findBalancedGroupEnd(cmdSrc: string, opnPrnIdx: number): number | null {
     let groupEnd: number | null = null;
     let openParens = 1;
-    let index = openParenIndex + 1;
+    let index = opnPrnIdx + 1;
 
-    while (index < commandSource.length && openParens > 0) {
-      const char = commandSource[index];
+    while (index < cmdSrc.length && openParens > 0) {
+      const char = cmdSrc[index];
 
       if (char === "(") {
         openParens++;
@@ -217,12 +217,12 @@ class CommandManager {
   // 1-6. backtick substitution range ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 
   // 3. Find backtick end ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  private findBacktickEnd(commandSource: string, backtickStart: number): number | null {
+  private findBacktickEnd(cmdSrc: string, bcktStrt: number): number | null {
     let backtickEnd: number | null = null;
-    let index = backtickStart + 1;
+    let index = bcktStrt + 1;
 
-    while (index < commandSource.length && backtickEnd === null) {
-      if (commandSource[index] === "`") {
+    while (index < cmdSrc.length && backtickEnd === null) {
+      if (cmdSrc[index] === "`") {
         backtickEnd = index;
       }
 
@@ -235,16 +235,16 @@ class CommandManager {
   // 1-7. command separator match ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 
   // 4. Find separator ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  private findSeparator(commandSource: string, index: number): string | null {
-    let matchedSeparator: string | null = null;
+  private findSeparator(cmdSrc: string, index: number): string | null {
+    let mtchSprt: string | null = null;
 
-    for (const separator of COMMAND_SEPARATORS) {
-      if (matchedSeparator === null && commandSource.startsWith(separator, index)) {
-        matchedSeparator = separator;
+    for (const separator of CMD_SPRT) {
+      if (mtchSprt === null && cmdSrc.startsWith(separator, index)) {
+        mtchSprt = separator;
       }
     }
 
-    return matchedSeparator;
+    return mtchSprt;
   }
 
   // 1-8. extracted command append ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -265,10 +265,10 @@ class CommandManager {
     let firstToken: string | null = null;
 
     for (const token of tokens) {
-      const isVariableToken = token.startsWith("$") && !token.startsWith("$(");
-      const isSubshellToken = token[0] === "(";
+      const isVarTok = token.startsWith("$") && !token.startsWith("$(");
+      const isSbshTok = token[0] === "(";
 
-      if (firstToken === null && !isVariableToken && !isSubshellToken) {
+      if (firstToken === null && !isVarTok && !isSbshTok) {
         firstToken = token;
       }
     }
@@ -278,4 +278,5 @@ class CommandManager {
 }
 
 // 2. singleton export ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export const commandManager = new CommandManager();
+export const cmdMgr2 = new CommandManager();
+export const cmdMgr = cmdMgr2;

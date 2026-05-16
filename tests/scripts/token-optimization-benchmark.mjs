@@ -2,12 +2,12 @@
  * Token-oriented output compaction benchmark.
  */
 
-import {configManager} from "../../src/features/config/config-store.ts";
-import {contextIndexService} from "../../src/features/context/context-index-service.ts";
-import {compactStandardToolOutput} from "../../src/features/context/context-output-compactor.ts";
+import {cfgMgr} from "../../src/features/config/config-store.ts";
+import {ctxIdxSvc} from "../../src/features/context/context-index-service.ts";
+import {compactStandardToolOutput as cmpStTlOt} from "../../src/features/context/context-output-compactor.ts";
 
 const TOKEN_CHARS = 4;
-const BENCHMARK_PREFIX = "bench_";
+const BENCH_PRFX = "bench_";
 
 function estimateTokens(value) {
   return Math.ceil(JSON.stringify(value).length / TOKEN_CHARS);
@@ -17,7 +17,7 @@ function measureScenario(name, output) {
   const beforeChars = JSON.stringify(output).length;
   const beforeTokens = estimateTokens(output);
   const startedAt = performance.now();
-  const compacted = compactStandardToolOutput(name, structuredClone(output));
+  const compacted = cmpStTlOt(name, structuredClone(output));
   const durationMs = Math.round((performance.now() - startedAt) * 100) / 100;
   const afterChars = JSON.stringify(compacted).length;
   const afterTokens = estimateTokens(compacted);
@@ -38,21 +38,21 @@ function measureScenario(name, output) {
 }
 
 function clearBenchmarkContexts() {
-  const indexIds = contextIndexService
+  const indexIds = ctxIdxSvc
     .listDocuments()
-    .filter((document) => document.source.startsWith(BENCHMARK_PREFIX) || String(document.toolName ?? "").startsWith(BENCHMARK_PREFIX))
+    .filter((document) => document.source.startsWith(BENCH_PRFX) || String(document.toolName ?? "").startsWith(BENCH_PRFX))
     .map((document) => document.indexId);
 
   if (indexIds.length > 0) {
-    contextIndexService.clearDocuments({indexIds});
+    ctxIdxSvc.clearDocuments({indexIds});
   }
 }
 
-function createBaseOutput(toolName, text, structuredContent) {
+function createBaseOutput(toolName, text, strcCont) {
   return {
     data: {
       content: [{text, type: "text"}],
-      structuredContent,
+      structuredContent: strcCont,
       text,
     },
     durationMs: 1,
@@ -122,9 +122,9 @@ function createBatchResultsScenario() {
   });
 }
 
-const originalConfig = await configManager.getConfig();
-await configManager.updateConfig({
-  ...originalConfig,
+const origCfg = await cfgMgr.getConfig();
+await cfgMgr.updateConfig({
+  ...origCfg,
   contextIndexEnabled: true,
 });
 clearBenchmarkContexts();
@@ -165,7 +165,7 @@ try {
 }
 finally {
   clearBenchmarkContexts();
-  await configManager.updateConfig(originalConfig);
+  await cfgMgr.updateConfig(origCfg);
 }
 
 process.stdout.write(`${JSON.stringify(report, null, 2)}\n`);

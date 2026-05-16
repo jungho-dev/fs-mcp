@@ -7,13 +7,13 @@
 
 import {execFile} from "node:child_process";
 import {promisify} from "node:util";
-import {readFileInternal} from "@features/filesystem/filesystem-service";
-import type {GitCommandError, GitCommandResult} from "@features/git/git-types";
+import {readFileInternal as rdFlInt} from "@features/filesystem/filesystem-service";
+import type {GitCommandError as GtCmdErr, GitCommandResult as GtCmdRes} from "@features/git/git-types";
 
-const execFileAsync = promisify(execFile);
-const GIT_EXEC_MAX_BUFFER = 20 * 1024 * 1024;
+const excFlAsyn = promisify(execFile);
+const GEMB = 20 * 1024 * 1024;
 
-export const AUTO_EXCLUDE_PATTERNS = [
+export const AT_EXCL_PATS = [
   "package-lock.json",
   "yarn.lock",
   "pnpm-lock.yaml",
@@ -33,24 +33,24 @@ export const AUTO_EXCLUDE_PATTERNS = [
   "packages.lock.json",
 ] as const;
 
-export const PROTECTED_BRANCHES = new Set(["main", "master", "production", "prod", "release"]);
-export const CONFLICT_STATUS_CODES = new Set(["DD", "AU", "UD", "UA", "DU", "AA", "UU"]);
+export const PRTC_BRNC = new Set(["main", "master", "production", "prod", "release"]);
+export const CNF_STA_CDS = new Set(["DD", "AU", "UD", "UA", "DU", "AA", "UU"]);
 
 // 1. Run git command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function runGitCommand(args: string[], options: { cwd?: string; allowFailure?: boolean } = {}): Promise<GitCommandResult> {
-  let commandResult: GitCommandResult;
+export async function runGitCommand(args: string[], options: { cwd?: string; allowFailure?: boolean } = {}): Promise<GtCmdRes> {
+  let cmdRes: GtCmdRes;
 
   try {
-    const {stdout, stderr} = await execFileAsync("git", args, {
+    const {stdout, stderr} = await excFlAsyn("git", args, {
       cwd: options.cwd,
       env: process.env,
-      maxBuffer: GIT_EXEC_MAX_BUFFER,
+      maxBuffer: GEMB,
       windowsHide: true,
     });
-    commandResult = { stdout, stderr, exitCode: 0 };
+    cmdRes = { stdout, stderr, exitCode: 0 };
   }
   catch (error) {
-    const commandError = error as GitCommandError;
+    const commandError = error as GtCmdErr;
     const failedResult = {
       stdout: commandError.stdout ?? "",
       stderr: commandError.stderr ?? commandError.message,
@@ -58,7 +58,7 @@ export async function runGitCommand(args: string[], options: { cwd?: string; all
     };
 
     if (options.allowFailure) {
-      commandResult = failedResult;
+      cmdRes = failedResult;
     }
     else {
       const errorMessage = [failedResult.stderr.trim(), failedResult.stdout.trim()].filter((value) => value.length > 0).join("\n");
@@ -66,7 +66,7 @@ export async function runGitCommand(args: string[], options: { cwd?: string; all
     }
   }
 
-  return commandResult;
+  return cmdRes;
 }
 
 // 2. Resolve git text argument ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -77,7 +77,7 @@ export async function resolveGitTextArgument(value: string | undefined, filePath
   if (filePath === undefined) {
     return undefined;
   }
-  const text = await readFileInternal(filePath, offset, length);
+  const text = await rdFlInt(filePath, offset, length);
   if (text.length === 0) {
     throw new Error(`${label} file is empty: ${filePath}`);
   }
@@ -101,6 +101,6 @@ export function splitLines(text: string): string[] {
 
 // 5. Normalize commit message ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function normalizeCommitMessage(message: string): string {
-  const normalizedMessage = message.replace(/\\n/g, "\n").replace(/\\r/g, "\r").replace(/\\t/g, "\t");
-  return normalizedMessage;
+  const normMsg = message.replace(/\\n/g, "\n").replace(/\\r/g, "\r").replace(/\\t/g, "\t");
+  return normMsg;
 }

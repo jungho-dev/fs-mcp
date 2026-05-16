@@ -5,21 +5,21 @@
  * @since 2026-05-03
  */
 
-import { withArgsPathSchema } from "@schemas/schemas-args-ref";
-import { GetConfigsArgsSchema, SetConfigValuesArgsSchema } from "@schemas/schemas-config";
-import { BATCH_GUIDANCE, CMD_PREFIX_DESCRIPTION, createToolCatalogEntry, type ToolCatalogEntry, type ToolCatalogEntryConfig } from "@tools/tools-const";
+import { withArgsPathSchema as wthArPtSc } from "@schemas/schemas-args-ref";
+import { GtCnArSc, StCfVaArSc } from "@schemas/schemas-config";
+import { BTCH_GDNC, CMD_PRF_DSC, createToolCatalogEntry as crtTlCtEn, type ToolCatalogEntry as TlCtlgEntr, type ToolCatalogEntryConfig as TlCtEnCf } from "@tools/tools-const";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-const CONFIG_TOOL_DEFINITIONS = [
+const CFG_TL_DFNT = [
   {
     name: "get_configs",
     description: (`
       Get configuration values by key.
       Omit items to return the full supported config surface.
-      ${BATCH_GUIDANCE}
-      ${CMD_PREFIX_DESCRIPTION}
+      ${BTCH_GDNC}
+      ${CMD_PRF_DSC}
     `),
-    inputSchema: withArgsPathSchema(GetConfigsArgsSchema),
+    inputSchema: wthArPtSc(GtCnArSc),
     annotations: {
       title: "Get Configurations",
       readOnlyHint: true,
@@ -30,10 +30,10 @@ const CONFIG_TOOL_DEFINITIONS = [
     description: (`
       Set one or many configuration values in parallel.
       Use value_path for large values.
-      ${BATCH_GUIDANCE}
-      ${CMD_PREFIX_DESCRIPTION}
+      ${BTCH_GDNC}
+      ${CMD_PRF_DSC}
     `),
-    inputSchema: withArgsPathSchema(SetConfigValuesArgsSchema),
+    inputSchema: wthArPtSc(StCfVaArSc),
     annotations: {
       title: "Set Configuration Values",
       readOnlyHint: false,
@@ -41,7 +41,9 @@ const CONFIG_TOOL_DEFINITIONS = [
       openWorldHint: false,
     },
   },
-] satisfies ToolCatalogEntryConfig[];
+] satisfies TlCtEnCf[];
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export const CONFIG_TOOL_CATALOG: ToolCatalogEntry[] = CONFIG_TOOL_DEFINITIONS.map((entry) => createToolCatalogEntry(entry));
+export const CFG_TL_CTLG: TlCtlgEntr[] = CFG_TL_DFNT.map((entry) => crtTlCtEn(entry));
+
+export const CFG_TL_CTLG2 = CFG_TL_CTLG;

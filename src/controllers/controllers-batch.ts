@@ -6,7 +6,7 @@
  */
 
 import type { ServerResult } from "@assets/type/common";
-import { createErrorResponse } from "@cores/responses/responses-error";
+import { createErrorResponse as crtErrRes } from "@cores/responses/responses-error";
 
 export interface BatchToolItemResult<T> {
   index: number;
@@ -16,6 +16,9 @@ export interface BatchToolItemResult<T> {
 }
 interface BatchToolResponseOptions {
   resultMode?: "compact" | "full";
+}
+interface BatchResultCompactionOptions {
+  preserveLargeStructuredPayloads?: boolean;
 }
 
 interface CompactedStringPayload {
@@ -30,14 +33,15 @@ interface PreservedTextPayload extends Record<string, unknown> {
   textContent: string;
 }
 
-const BATCH_INPUT_PREVIEW_LENGTH = 160;
-const BATCH_RESULT_PREVIEW_LENGTH = 160;
-const BATCH_LARGE_INPUT_FIELDS = new Set(["blob", "content", "data", "imageData", "listing", "new_string", "old_string", "textContent"]);
-const BATCH_SUMMARY_INPUT_KEYS = ["path", "file_path", "source", "destination", "args_path", "sessionId", "pid", "key", "name"];
-const BATCH_SUMMARY_INPUT_PREVIEW_LENGTH = 80;
-const BATCH_STRUCTURED_PAYLOAD_FIELDS = ["imageData", "listing", "textContent"];
-const LINE_SPLIT_PATTERN = /\r\n|\r|\n/;
-const WHITESPACE_PATTERN = /\s+/g;
+const BIPL = 160;
+const BRPL = 160;
+const BLIF = new Set(["blob", "content", "data", "imageData", "listing", "new_string", "old_string", "textContent"]);
+const BSIK = ["path", "file_path", "source", "destination", "args_path", "sessionId", "pid", "key", "name"];
+const BSIPL = 80;
+const BSPF = ["imageData", "listing", "textContent"];
+const BSTPF = new Set(["listing", "textContent"]);
+const LN_SPLT_PAT = /\r\n|\r|\n/;
+const WHTS_PAT = /\s+/g;
 
 // 1. Is record ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -46,12 +50,12 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 
 // 2. Count lines ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function countLines(value: string): number {
-  return value.length === 0 ? 0 : value.split(LINE_SPLIT_PATTERN).length;
+  return value.length === 0 ? 0 : value.split(LN_SPLT_PAT).length;
 }
 
 // 3. Create compacted string payload ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function createCompactedStringPayload(value: string, previewLength: number): CompactedStringPayload {
-  const preview = value.length <= previewLength ? value : `${value.slice(0, previewLength)}...`;
+function createCompactedStringPayload(value: string, prvwLen: number): CompactedStringPayload {
+  const preview = value.length <= prvwLen ? value : `${value.slice(0, prvwLen)}...`;
 
   return {
     lineCount: countLines(value),
@@ -61,11 +65,28 @@ function createCompactedStringPayload(value: string, previewLength: number): Com
   };
 }
 
+// 3-1. Compact structured text payloads ――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function compactStructuredTextPayloads(value: ServerResult["structuredContent"]): ServerResult["structuredContent"] {
+  if (!isRecord(value)) {
+    return value;
+  }
+  let changed = false;
+  const compacted = Object.fromEntries(Object.entries(value).map(([key, item]) => {
+    if (BSTPF.has(key) && typeof item === "string" && item.length > BRPL) {
+      changed = true;
+      return [key, createCompactedStringPayload(item, BRPL)];
+    }
+    return [key, item];
+  }));
+
+  return changed ? compacted : value;
+}
+
 // 4. Compact batch input ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function compactBatchInput(value: unknown, fieldName: string | null = null): unknown {
   if (typeof value === "string") {
-    if (fieldName !== null && BATCH_LARGE_INPUT_FIELDS.has(fieldName) && value.length > BATCH_INPUT_PREVIEW_LENGTH) {
-      return createCompactedStringPayload(value, BATCH_INPUT_PREVIEW_LENGTH);
+    if (fieldName !== null && BLIF.has(fieldName) && value.length > BIPL) {
+      return createCompactedStringPayload(value, BIPL);
     }
     return value;
   }
@@ -80,11 +101,11 @@ function compactBatchInput(value: unknown, fieldName: string | null = null): unk
 
 // 4-1. Create summary text preview ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createSummaryTextPreview(value: string, maxLength: number): string {
-  const compactedValue = value.replace(WHITESPACE_PATTERN, " ").trim();
-  let preview = compactedValue;
+  const cmpcVal = value.replace(WHTS_PAT, " ").trim();
+  let preview = cmpcVal;
 
-  if (compactedValue.length > maxLength) {
-    preview = `${compactedValue.slice(0, Math.max(0, maxLength - 3))}...`;
+  if (cmpcVal.length > maxLength) {
+    preview = `${cmpcVal.slice(0, Math.max(0, maxLength - 3))}...`;
   }
   return preview;
 }
@@ -107,11 +128,11 @@ function createSummaryInputPreview(input: unknown): string {
       inputPreview = `${source} -> ${destination}`;
     }
     else {
-      const summaryKey = BATCH_SUMMARY_INPUT_KEYS.find((key) => input[key] !== undefined);
+      const summaryKey = BSIK.find((key) => input[key] !== undefined);
       inputPreview = summaryKey !== undefined ? String(input[summaryKey]) : JSON.stringify(compactBatchInput(input));
     }
   }
-  return createSummaryTextPreview(inputPreview, BATCH_SUMMARY_INPUT_PREVIEW_LENGTH);
+  return createSummaryTextPreview(inputPreview, BSIPL);
 }
 
 // 5. Extract primary text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -123,7 +144,7 @@ function extractPrimaryText(result: ServerResult): string {
   let primaryText = "";
 
   if (textChunks.length > 0) {
-    primaryText = textChunks.join(" ").replace(WHITESPACE_PATTERN, " ").trim();
+    primaryText = textChunks.join(" ").replace(WHTS_PAT, " ").trim();
   }
   return primaryText;
 }
@@ -148,7 +169,7 @@ function createPreservedTextPayload(text: string): PreservedTextPayload {
 
 // 8. Preserve unstructured result text ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function preserveUnstructuredResultText(result: ServerResult, text: string): ServerResult {
-  if (result.structuredContent !== undefined || text.length <= BATCH_RESULT_PREVIEW_LENGTH) {
+  if (result.structuredContent !== undefined || text.length <= BRPL) {
     return result;
   }
   return {
@@ -159,14 +180,14 @@ function preserveUnstructuredResultText(result: ServerResult, text: string): Ser
 
 // 9. Has large structured payload ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function hasLargeStructuredPayload(result: ServerResult): boolean {
-  const structuredContent = result.structuredContent;
+  const strcCont = result.structuredContent;
   let hasPayload = false;
 
-  if (isRecord(structuredContent)) {
-    hasPayload = BATCH_STRUCTURED_PAYLOAD_FIELDS.some((fieldName) => {
-      const value = structuredContent[fieldName];
+  if (isRecord(strcCont)) {
+    hasPayload = BSPF.some((fieldName) => {
+      const value = strcCont[fieldName];
 
-      return typeof value === "string" && value.length > BATCH_RESULT_PREVIEW_LENGTH;
+      return typeof value === "string" && value.length > BRPL;
     });
   }
   return hasPayload;
@@ -174,29 +195,31 @@ function hasLargeStructuredPayload(result: ServerResult): boolean {
 
 // 10. Create result text preview ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createResultTextPreview(text: string): string {
-  const compactedText = text.replace(WHITESPACE_PATTERN, " ").trim();
+  const cmpcTxt = text.replace(WHTS_PAT, " ").trim();
   const suffix = " ... (preview)";
-  let preview = compactedText;
+  let preview = cmpcTxt;
 
-  if (compactedText.length > BATCH_RESULT_PREVIEW_LENGTH) {
-    const previewLength = Math.max(0, BATCH_RESULT_PREVIEW_LENGTH - suffix.length);
-    preview = `${compactedText.slice(0, previewLength)}${suffix}`;
+  if (cmpcTxt.length > BRPL) {
+    const prvwLen = Math.max(0, BRPL - suffix.length);
+    preview = `${cmpcTxt.slice(0, prvwLen)}${suffix}`;
   }
   return preview;
 }
 
 // 11. Compact batch result ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function compactBatchResult(result: ServerResult): ServerResult {
+function compactBatchResult(result: ServerResult, options: BatchResultCompactionOptions = {}): ServerResult {
+  const prsLrStPy = options.preserveLargeStructuredPayloads ?? true;
   const primaryText = extractPrimaryText(result);
   const originalText = extractTextContent(result);
-  const preservedResult = preserveUnstructuredResultText(result, originalText);
+  const prsrRes = preserveUnstructuredResultText(result, originalText);
+  const strcCont = prsLrStPy ? prsrRes.structuredContent : compactStructuredTextPayloads(prsrRes.structuredContent);
 
-  if (!hasLargeStructuredPayload(preservedResult) && primaryText.length <= BATCH_RESULT_PREVIEW_LENGTH) {
-    return preservedResult;
+  if (!hasLargeStructuredPayload(prsrRes) && primaryText.length <= BRPL) {
+    return strcCont === prsrRes.structuredContent ? prsrRes : {...prsrRes, structuredContent: strcCont};
   }
   return {
-    ...preservedResult,
-    content: preservedResult.content.map((item) => {
+    ...prsrRes,
+    content: prsrRes.content.map((item) => {
       if (item.type === "text" && typeof item.text === "string") {
         return {
           ...item,
@@ -205,6 +228,7 @@ function compactBatchResult(result: ServerResult): ServerResult {
       }
       return item;
     }),
+    structuredContent: strcCont,
   };
 }
 
@@ -239,7 +263,7 @@ export async function runParallelBatch<T>(items: T[], runItem: (item: T) => Prom
         itemResult = await runItem(item);
       }
       catch (error) {
-        itemResult = createErrorResponse(error instanceof Error ? error.message : String(error));
+        itemResult = crtErrRes(error instanceof Error ? error.message : String(error));
       }
 
       return {
@@ -257,8 +281,8 @@ export async function runParallelBatch<T>(items: T[], runItem: (item: T) => Prom
 // 12-1. Run limited parallel batch ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function runLimitedParallelBatch<T>(items: T[], concurrency: number, runItem: (item: T) => Promise<ServerResult>): Promise<BatchToolItemResult<T>[]> {
   const results: BatchToolItemResult<T>[] = new Array(items.length);
-  const normalizedConcurrency = Number.isFinite(concurrency) ? Math.floor(concurrency) : 1;
-  const workerCount = Math.max(1, Math.min(items.length, normalizedConcurrency));
+  const normCncr = Number.isFinite(concurrency) ? Math.floor(concurrency) : 1;
+  const workerCount = Math.max(1, Math.min(items.length, normCncr));
   let nextIndex = 0;
 
   async function runItemAtIndex(index: number): Promise<void> {
@@ -269,7 +293,7 @@ export async function runLimitedParallelBatch<T>(items: T[], concurrency: number
       itemResult = await runItem(item);
     }
     catch (error) {
-      itemResult = createErrorResponse(error instanceof Error ? error.message : String(error));
+      itemResult = crtErrRes(error instanceof Error ? error.message : String(error));
     }
 
     results[index] = {
@@ -297,11 +321,11 @@ export async function runLimitedParallelBatch<T>(items: T[], concurrency: number
 export function createBatchToolResponse<T>(toolName: string, items: BatchToolItemResult<T>[], options: BatchToolResponseOptions = {}): ServerResult {
   const totalCount = items.length;
   const failedCount = items.filter((item) => !item.ok).length;
-  const succeededCount = totalCount - failedCount;
+  const sccdCnt = totalCount - failedCount;
   const summaryLines = items.map((item) => createBatchSummaryLine(item));
-  const summaryHeader = `${toolName}: ${succeededCount}/${totalCount} succeeded${failedCount > 0 ? `, ${failedCount} failed` : ""}`;
+  const smmrHdr = `${toolName}: ${sccdCnt}/${totalCount} succeeded${failedCount > 0 ? `, ${failedCount} failed` : ""}`;
   const resultMode = options.resultMode ?? "compact";
-  const resultText = resultMode === "full" ? `${summaryHeader}\n\n${items.map((item) => createFullBatchDetailBlock(item)).join("\n\n")}` : `${summaryHeader}\n\n${summaryLines.join("\n")}`;
+  const resultText = resultMode === "full" ? `${smmrHdr}\n\n${items.map((item) => createFullBatchDetailBlock(item)).join("\n\n")}` : `${smmrHdr}\n\n${summaryLines.join("\n")}`;
   const response: ServerResult = {
     content: [
       {
@@ -315,9 +339,9 @@ export function createBatchToolResponse<T>(toolName: string, items: BatchToolIte
         index: item.index,
         input: compactBatchInput(item.input),
         ok: item.ok,
-        result: resultMode === "full" ? item.result : compactBatchResult(item.result),
+        result: compactBatchResult(item.result, { preserveLargeStructuredPayloads: resultMode === "full" }),
       })),
-      succeededCount: succeededCount,
+      succeededCount: sccdCnt,
       toolName: toolName,
       totalCount: totalCount,
     },

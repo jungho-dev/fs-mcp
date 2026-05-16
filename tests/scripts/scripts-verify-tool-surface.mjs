@@ -5,13 +5,14 @@
  * @since 2026-05-02
  */
 
-import { CONFIG_TOOL_CATALOG } from "../../out/tools/tools-config.js";
-import { getDispatchableToolNames } from "../../out/tools/tools-dispatcher.js";
-import { FILESYSTEM_TOOL_CATALOG } from "../../out/tools/tools-filesystem.js";
-import { GIT_TOOL_CATALOG } from "../../out/tools/tools-git.js";
-import { PROCESS_TOOL_CATALOG } from "../../out/tools/tools-process.js";
+import { CONFIG_TOOL_CATALOG as CFG_TL_CTLG } from "../../out/tools/tools-config.js";
+import { CONTEXT_TOOL_CATALOG as CTX_TL_CTLG } from "../../out/tools/tools-context.js";
+import { getDispatchableToolNames as gtDsptTlNms } from "../../out/tools/tools-dispatcher.js";
+import { FILESYSTEM_TOOL_CATALOG as FLSY_TL_CTLG } from "../../out/tools/tools-filesystem.js";
+import { GIT_TOOL_CATALOG as GT_TL_CTLG } from "../../out/tools/tools-git.js";
+import { PROCESS_TOOL_CATALOG as PROC_TL_CTLG } from "../../out/tools/tools-process.js";
 
-const EXPECTED_GIT_TOOL_NAMES = [
+const EGTN2 = [
   "git_add",
   "git_commit",
   "git_diff",
@@ -45,40 +46,40 @@ function difference(left, right) {
 
 // 2. tool surface check ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function verifyToolSurface() {
-  const catalogNames = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...GIT_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG]
+  const catalogNames = [...CFG_TL_CTLG, ...CTX_TL_CTLG, ...FLSY_TL_CTLG, ...GT_TL_CTLG, ...PROC_TL_CTLG]
     .map((tool) => tool.name)
     .sort();
-  const dispatchableNames = getDispatchableToolNames().sort();
+  const dsptNms = gtDsptTlNms().sort();
   const failures = [];
 
-  const duplicateCatalogNames = findDuplicates(catalogNames);
-  if (duplicateCatalogNames.length > 0) {
-    failures.push(`Duplicate catalog tool names: ${duplicateCatalogNames.join(", ")}`);
+  const dplcCtlgNms = findDuplicates(catalogNames);
+  if (dplcCtlgNms.length > 0) {
+    failures.push(`Duplicate catalog tool names: ${dplcCtlgNms.join(", ")}`);
   }
 
-  const missingDispatchers = difference(catalogNames, dispatchableNames);
-  if (missingDispatchers.length > 0) {
-    failures.push(`Catalog tools without dispatchers: ${missingDispatchers.join(", ")}`);
+  const mssnDspt = difference(catalogNames, dsptNms);
+  if (mssnDspt.length > 0) {
+    failures.push(`Catalog tools without dispatchers: ${mssnDspt.join(", ")}`);
   }
 
-  const staleDispatchers = difference(dispatchableNames, catalogNames);
-  if (staleDispatchers.length > 0) {
-    failures.push(`Dispatchers missing from catalog: ${staleDispatchers.join(", ")}`);
+  const stlDspt = difference(dsptNms, catalogNames);
+  if (stlDspt.length > 0) {
+    failures.push(`Dispatchers missing from catalog: ${stlDspt.join(", ")}`);
   }
 
-  const gitToolNames = GIT_TOOL_CATALOG.map((tool) => tool.name).sort();
-  const missingGitTools = difference(EXPECTED_GIT_TOOL_NAMES, gitToolNames);
-  const extraGitTools = difference(gitToolNames, EXPECTED_GIT_TOOL_NAMES);
-  if (missingGitTools.length > 0 || extraGitTools.length > 0) {
-    failures.push(`Git tool surface mismatch. Missing: ${missingGitTools.join(", ") || "none"}; Extra: ${extraGitTools.join(", ") || "none"}`);
+  const gitToolNames = GT_TL_CTLG.map((tool) => tool.name).sort();
+  const mssnGtTls = difference(EGTN2, gitToolNames);
+  const extrGtTls = difference(gitToolNames, EGTN2);
+  if (mssnGtTls.length > 0 || extrGtTls.length > 0) {
+    failures.push(`Git tool surface mismatch. Missing: ${mssnGtTls.join(", ") || "none"}; Extra: ${extrGtTls.join(", ") || "none"}`);
   }
 
-  const toolsMissingArgsPath = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...GIT_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG]
+  const tlsMsArPt = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...GT_TL_CTLG, ...PROC_TL_CTLG]
     .filter((tool) => !JSON.stringify(tool.inputSchema).includes("args_path"))
     .map((tool) => tool.name)
     .sort();
-  if (toolsMissingArgsPath.length > 0) {
-    failures.push(`Tools missing args_path schema: ${toolsMissingArgsPath.join(", ")}`);
+  if (tlsMsArPt.length > 0) {
+    failures.push(`Tools missing args_path schema: ${tlsMsArPt.join(", ")}`);
   }
 
   if (failures.length > 0) {

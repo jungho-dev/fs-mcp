@@ -6,13 +6,14 @@
  */
 
 import assert from "node:assert/strict";
-import { CONFIG_TOOL_CATALOG } from "../../out/tools/tools-config.js";
-import { getDispatchableToolNames } from "../../out/tools/tools-dispatcher.js";
-import { FILESYSTEM_TOOL_CATALOG } from "../../out/tools/tools-filesystem.js";
-import { GIT_TOOL_CATALOG } from "../../out/tools/tools-git.js";
-import { PROCESS_TOOL_CATALOG } from "../../out/tools/tools-process.js";
+import { CONFIG_TOOL_CATALOG as CFG_TL_CTLG } from "../../out/tools/tools-config.js";
+import { CONTEXT_TOOL_CATALOG as CTX_TL_CTLG } from "../../out/tools/tools-context.js";
+import { getDispatchableToolNames as gtDsptTlNms } from "../../out/tools/tools-dispatcher.js";
+import { FILESYSTEM_TOOL_CATALOG as FLSY_TL_CTLG } from "../../out/tools/tools-filesystem.js";
+import { GIT_TOOL_CATALOG as GT_TL_CTLG } from "../../out/tools/tools-git.js";
+import { PROCESS_TOOL_CATALOG as PROC_TL_CTLG } from "../../out/tools/tools-process.js";
 
-const EXPECTED_GIT_TOOL_NAMES = [
+const EGTN2 = [
   "git_add",
   "git_commit",
   "git_diff",
@@ -29,19 +30,19 @@ function sortedDifference(left, right) {
 
 // 1. catalog and dispatcher alignment ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testCatalogAndDispatcherAlignment() {
-  const catalogNames = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG, ...GIT_TOOL_CATALOG]
+  const catalogNames = [...CFG_TL_CTLG, ...CTX_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG, ...GT_TL_CTLG]
     .map((tool) => tool.name)
     .sort();
-  const dispatchableNames = getDispatchableToolNames().sort();
+  const dsptNms = gtDsptTlNms().sort();
 
-  assert.deepEqual(sortedDifference(catalogNames, dispatchableNames), []);
-  assert.deepEqual(sortedDifference(dispatchableNames, catalogNames), []);
+  assert.deepEqual(sortedDifference(catalogNames, dsptNms), []);
+  assert.deepEqual(sortedDifference(dsptNms, catalogNames), []);
   assert.equal(new Set(catalogNames).size, catalogNames.length);
 }
 
 // 2. shared args_path schema exposure ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testArgsPathSchemaExposure() {
-  const tools = [...CONFIG_TOOL_CATALOG, ...FILESYSTEM_TOOL_CATALOG, ...PROCESS_TOOL_CATALOG, ...GIT_TOOL_CATALOG];
+  const tools = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG, ...GT_TL_CTLG];
 
   for (const tool of tools) {
     assert.equal(JSON.stringify(tool.inputSchema).includes("args_path"), true, `${tool.name} must expose args_path`);
@@ -50,9 +51,9 @@ function testArgsPathSchemaExposure() {
 
 // 3. essential git surface ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testEssentialGitSurface() {
-  const gitToolNames = GIT_TOOL_CATALOG.map((tool) => tool.name).sort();
+  const gitToolNames = GT_TL_CTLG.map((tool) => tool.name).sort();
 
-  assert.deepEqual(gitToolNames, EXPECTED_GIT_TOOL_NAMES.toSorted());
+  assert.deepEqual(gitToolNames, EGTN2.toSorted());
 }
 
 // 4. test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――

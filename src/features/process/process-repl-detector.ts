@@ -30,7 +30,7 @@ const REPL_PROMPTS = {
 };
 
 // Error patterns that indicate completion (even with errors)
-const ERROR_COMPLETION_PATTERNS = [
+const ERR_CMP_PAT = [
   /Error:/i,
   /Exception:/i,
   /Traceback/i,
@@ -45,13 +45,13 @@ const ERROR_COMPLETION_PATTERNS = [
 ];
 
 // Process completion indicators
-const COMPLETION_INDICATORS = [/Process finished/i, /Command completed/i, /Process completed/i, /Program terminated/i, /Exit code:/i];
+const CMPL_INDC = [/Process finished/i, /Command completed/i, /Process completed/i, /Program terminated/i, /Exit code:/i];
 
-const OUTPUT_LINE_SEPARATOR = "\n";
-const INPUT_ECHO_SUFFIX_PATTERN = "\\s*\\n?";
-const PROMPT_CLEANUP_PATTERNS = [/^>>>\s*/gm, /^>\s*/gm, /^\.{3}\s*/gm, /^\+\s*/gm];
-const TRAILING_PROMPT_PATTERNS = [/\n>>>\s*$/, /\n>\s*$/, /\n\+\s*$/];
-const REGEXP_SPECIAL_CHAR_PATTERN = /[.*+?^${}()|[\]\\]/g;
+const OTPT_LN_SPRT = "\n";
+const IESP = "\\s*\\n?";
+const PRM_CLN_PAT = [/^>>>\s*/gm, /^>\s*/gm, /^\.{3}\s*/gm, /^\+\s*/gm];
+const TRL_PRM_PAT = [/\n>>>\s*$/, /\n>\s*$/, /\n\+\s*$/];
+const RSCP = /[.*+?^${}()|[\]\\]/g;
 
 // 1. Analyze process state ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function analyzeProcessState(output: string, _pid?: number): ProcessState {
@@ -63,17 +63,17 @@ export function analyzeProcessState(output: string, _pid?: number): ProcessState
       lastOutput: output,
     };
   }
-  const lines = output.split(OUTPUT_LINE_SEPARATOR);
+  const lines = output.split(OTPT_LN_SPRT);
   const lastLine = lines.at(-1) || "";
-  const lastFewLines = lines.slice(-3).join(OUTPUT_LINE_SEPARATOR);
+  const lastFewLines = lines.slice(-3).join(OTPT_LN_SPRT);
 
   // Check for REPL prompts (waiting for input)
   const allPrompts = Object.values(REPL_PROMPTS).flat();
-  const detectedPrompt = allPrompts.find((prompt) => lastLine.endsWith(prompt) || lastLine.includes(prompt));
+  const dtctPrmp = allPrompts.find((prompt) => lastLine.endsWith(prompt) || lastLine.includes(prompt));
 
-  if (detectedPrompt) {
+  if (dtctPrmp) {
     return {
-      detectedPrompt,
+      detectedPrompt: dtctPrmp,
       isFinished: false,
       isRunning: true,
       isWaitingForInput: true,
@@ -81,9 +81,9 @@ export function analyzeProcessState(output: string, _pid?: number): ProcessState
     };
   }
   // Check for completion indicators
-  const hasCompletionIndicator = COMPLETION_INDICATORS.some((pattern) => pattern.test(output));
+  const hsCmplIndc = CMPL_INDC.some((pattern) => pattern.test(output));
 
-  if (hasCompletionIndicator) {
+  if (hsCmplIndc) {
     return {
       isFinished: true,
       isRunning: false,
@@ -92,9 +92,9 @@ export function analyzeProcessState(output: string, _pid?: number): ProcessState
     };
   }
   // Check for error completion (errors usually end with prompts, but let's be thorough)
-  const hasErrorCompletion = ERROR_COMPLETION_PATTERNS.some((pattern) => pattern.test(lastFewLines));
+  const hsErrCmpl = ERR_CMP_PAT.some((pattern) => pattern.test(lastFewLines));
 
-  if (hasErrorCompletion) {
+  if (hsErrCmpl) {
     // Prompted errors have already returned from the REPL prompt branch above.
     return {
       isFinished: true,
@@ -117,18 +117,18 @@ export function cleanProcessOutput(output: string, inputSent?: string): string {
   let cleaned = output;
 
   if (inputSent) {
-    for (const line of inputSent.split(OUTPUT_LINE_SEPARATOR)) {
+    for (const line of inputSent.split(OTPT_LN_SPRT)) {
       const trimmedLine = line.trim();
       if (!trimmedLine) {
         continue;
       }
-      cleaned = cleaned.replace(new RegExp(`^${escapeRegExp(trimmedLine)}${INPUT_ECHO_SUFFIX_PATTERN}`, "m"), "");
+      cleaned = cleaned.replace(new RegExp(`^${escapeRegExp(trimmedLine)}${IESP}`, "m"), "");
     }
   }
-  for (const pattern of PROMPT_CLEANUP_PATTERNS) {
+  for (const pattern of PRM_CLN_PAT) {
     cleaned = cleaned.replace(pattern, "");
   }
-  for (const pattern of TRAILING_PROMPT_PATTERNS) {
+  for (const pattern of TRL_PRM_PAT) {
     cleaned = cleaned.replace(pattern, "");
   }
   return cleaned.trim();
@@ -136,7 +136,7 @@ export function cleanProcessOutput(output: string, inputSent?: string): string {
 
 // 3. Escape reg exp ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function escapeRegExp(string: string): string {
-  return string.replace(REGEXP_SPECIAL_CHAR_PATTERN, "\\$&");
+  return string.replace(RSCP, "\\$&");
 }
 
 // 4. Format process state message ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――

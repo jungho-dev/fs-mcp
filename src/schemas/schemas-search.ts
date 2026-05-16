@@ -7,11 +7,11 @@
 
 import {z} from "zod";
 
-const INLINE_TEXT_ARGUMENT_MAX_LENGTH = 50_000;
+const ITAML = 50_000;
 
-export const StartSearchArgsSchema = z.object({
+export const StrSrArSc = z.object({
   path: z.string(),
-  pattern: z.string().max(INLINE_TEXT_ARGUMENT_MAX_LENGTH, "Use pattern_path for large patterns").optional(),
+  pattern: z.string().max(ITAML, "Use pattern_path for large patterns").optional(),
   pattern_path: z.string().optional(),
   pattern_offset: z.number().optional().default(0),
   pattern_length: z.number().optional(),
@@ -28,24 +28,24 @@ export const StartSearchArgsSchema = z.object({
   message: "Either pattern or pattern_path is required",
 });
 
-export const StartSearchesArgsSchema = z.object({
-  items: z.array(StartSearchArgsSchema).min(1),
+export const StrSrArSc2 = z.object({
+  items: z.array(StrSrArSc).min(1),
 });
 
-export const GetMoreSearchResultsArgsSchema = z.object({
+export const GtMrSrReArSc = z.object({
   sessionId: z.string(),
   offset: z.number().optional().default(0),
   length: z.number().optional(),
 });
 
-export const GetFullSearchResultsArgsSchema = z.object({
-  items: z.array(GetMoreSearchResultsArgsSchema).min(1),
+export const GtFlSrReArSc = z.object({
+  items: z.array(GtMrSrReArSc).min(1),
 });
 
-export const StopSearchArgsSchema = z.object({
+export const StpSrArSc = z.object({
   sessionId: z.string(),
 });
 
-export const StopSearchesArgsSchema = z.object({
+export const StpSrArSc2 = z.object({
   sessionIds: z.array(z.string()).min(1),
 });

@@ -8,17 +8,17 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { configManager, PACKAGE_VERSION } from "../../out/features/config/config-store.js";
+import { fileURLToPath as flUrlTPth2 } from "node:url";
+import { configManager as cfgMgr, PACKAGE_VERSION as PCKG_VRSN } from "../../out/features/config/config-store.js";
 
-const __filename = fileURLToPath(import.meta.url);
+const __filename = flUrlTPth2(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..", "..");
 
 // 1. Read package version ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function readPackageVersion() {
-  const packageJsonPath = path.join(projectRoot, "package.json");
-  const packageJson = JSON.parse(await readFile(packageJsonPath, "utf8"));
+  const pckgJsnPth2 = path.join(projectRoot, "package.json");
+  const packageJson = JSON.parse(await readFile(pckgJsnPth2, "utf8"));
 
   assert.equal(typeof packageJson.version, "string");
   return packageJson.version;
@@ -26,17 +26,17 @@ async function readPackageVersion() {
 
 // 2. Runtime version contract ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testRuntimeVersionMatchesPackage() {
-  const packageVersion = await readPackageVersion();
+  const pckgVrsn = await readPackageVersion();
 
-  assert.equal(PACKAGE_VERSION, packageVersion);
+  assert.equal(PCKG_VRSN, pckgVrsn);
 }
 
 // 3. Config version contract ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testConfigVersionMatchesPackage() {
-  const packageVersion = await readPackageVersion();
-  const config = await configManager.getConfig();
+  const pckgVrsn = await readPackageVersion();
+  const config = await cfgMgr.getConfig();
 
-  assert.equal(config.version, packageVersion);
+  assert.equal(config.version, pckgVrsn);
 }
 
 // 4. Test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――

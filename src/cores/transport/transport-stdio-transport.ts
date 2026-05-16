@@ -6,9 +6,9 @@
  */
 
 import process from "node:process";
-import {StdioServerTransport} from "@modelcontextprotocol/sdk/server/stdio.js";
+import {StdioServerTransport as StdSrvrTrns} from "@modelcontextprotocol/sdk/server/stdio.js";
 
-const TRAILING_NEWLINE_REGEX = /\n$/;
+const TRLN_NWLN_RE = /\n$/;
 type LogLevel = LogNotification["params"]["level"];
 type StdoutWriteCallback = (error?: Error | null) => void;
 
@@ -52,15 +52,15 @@ function formatLogArgument(value: unknown): string {
 }
 
 // 4. Write to stdout ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function writeToStdout(write: typeof process.stdout.write, chunk: string | Uint8Array, encodingOrCallback?: BufferEncoding | StdoutWriteCallback, callback?: StdoutWriteCallback): boolean {
-  const writeArgs = callback !== undefined ? [chunk, encodingOrCallback, callback] : encodingOrCallback !== undefined ? [chunk, encodingOrCallback] : [chunk];
+function writeToStdout(write: typeof process.stdout.write, chunk: string | Uint8Array, encdOrCllb?: BufferEncoding | StdoutWriteCallback, callback?: StdoutWriteCallback): boolean {
+  const writeArgs = callback !== undefined ? [chunk, encdOrCllb, callback] : encdOrCllb !== undefined ? [chunk, encdOrCllb] : [chunk];
   return Reflect.apply(write, process.stdout, writeArgs) as boolean;
 }
 
 // 1. JSON-RPC console wrapping transport ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // instead of filtering them out. This prevents crashes while maintaining debug visibility.
 // 5. Filtered stdio server transport ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export class FilteredStdioServerTransport extends StdioServerTransport {
+export class FilteredStdioServerTransport extends StdSrvrTrns {
   private readonly originalConsole: {
     log: typeof console.log;
     warn: typeof console.warn;
@@ -231,9 +231,9 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
 
   // 12. Setup stdout filtering ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private setupStdoutFiltering(): void {
-    process.stdout.write = (buffer: string | Uint8Array, encodingOrCallback?: BufferEncoding | StdoutWriteCallback, callback?: StdoutWriteCallback): boolean => {
-      const encoding = typeof encodingOrCallback === "string" ? encodingOrCallback : undefined;
-      const resolvedCallback = typeof encodingOrCallback === "function" ? encodingOrCallback : callback;
+    process.stdout.write = (buffer: string | Uint8Array, encdOrCllb?: BufferEncoding | StdoutWriteCallback, callback?: StdoutWriteCallback): boolean => {
+      const encoding = typeof encdOrCllb === "string" ? encdOrCllb : undefined;
+      const rslvCllb = typeof encdOrCllb === "function" ? encdOrCllb : callback;
 
       // Handle different call signatures
       if (typeof buffer === "string") {
@@ -242,29 +242,29 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
         // Check if this looks like a valid JSON-RPC message
         if (trimmed.startsWith("{") && (trimmed.includes('"jsonrpc"') || trimmed.includes('"method"') || trimmed.includes('"id"'))) {
           // This looks like a valid JSON-RPC message, allow it
-          return writeToStdout(this.originalStdoutWrite, buffer, encoding, resolvedCallback);
+          return writeToStdout(this.originalStdoutWrite, buffer, encoding, rslvCllb);
         }
         else if (trimmed.length > 0) {
           // Non-JSON-RPC output, wrap it in a log notification
           if (this.isInitialized) {
-            this.sendLogNotification("info", [buffer.replace(TRAILING_NEWLINE_REGEX, "")]);
+            this.sendLogNotification("info", [buffer.replace(TRLN_NWLN_RE, "")]);
           }
           else {
             // Buffer for later replay to client
             this.messageBuffer.push({
-              args: [buffer.replace(TRAILING_NEWLINE_REGEX, "")],
+              args: [buffer.replace(TRLN_NWLN_RE, "")],
               level: "info",
               timestamp: Date.now(),
             });
           }
-          if (resolvedCallback) {
-            resolvedCallback();
+          if (rslvCllb) {
+            rslvCllb();
           }
           return true;
         }
       }
       // For non-string buffers or empty strings, let them through
-      return writeToStdout(this.originalStdoutWrite, buffer, encoding, resolvedCallback);
+      return writeToStdout(this.originalStdoutWrite, buffer, encoding, rslvCllb);
     };
   }
 
@@ -300,7 +300,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
     }
     catch (_error) {
       // Fallback to a simple JSON-RPC error notification if JSON serialization fails
-      const fallbackNotification = {
+      const fbNtfc = {
         jsonrpc: "2.0" as const,
         method: "notifications/message",
         params: {
@@ -309,7 +309,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
           logger: "fs-mcp",
         },
       };
-      writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fallbackNotification)}\n`);
+      writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fbNtfc)}\n`);
     }
   }
 
@@ -346,7 +346,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
     }
     catch (_error) {
       // Fallback to basic JSON-RPC notification
-      const fallbackNotification = {
+      const fbNtfc = {
         jsonrpc: "2.0" as const,
         method: "notifications/message",
         params: {
@@ -355,7 +355,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
           logger: "fs-mcp",
         },
       };
-      writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fallbackNotification)}\n`);
+      writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fbNtfc)}\n`);
     }
   }
 
@@ -380,7 +380,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
     }
     catch (_error) {
       // Fallback to basic JSON-RPC notification for progress
-      const fallbackNotification = {
+      const fbNtfc = {
         jsonrpc: "2.0" as const,
         method: "notifications/message",
         params: {
@@ -389,7 +389,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
           logger: "fs-mcp",
         },
       };
-      writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fallbackNotification)}\n`);
+      writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fbNtfc)}\n`);
     }
   }
 
@@ -410,7 +410,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
     }
     catch (_error) {
       // Fallback to basic JSON-RPC notification for custom notifications
-      const fallbackNotification = {
+      const fbNtfc = {
         jsonrpc: "2.0" as const,
         method: "notifications/message",
         params: {
@@ -419,7 +419,7 @@ export class FilteredStdioServerTransport extends StdioServerTransport {
           logger: "fs-mcp",
         },
       };
-      writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fallbackNotification)}\n`);
+      writeToStdout(this.originalStdoutWrite, `${JSON.stringify(fbNtfc)}\n`);
     }
   }
 

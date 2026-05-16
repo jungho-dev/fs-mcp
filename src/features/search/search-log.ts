@@ -120,4 +120,4 @@ class FuzzySearchLogger {
 }
 
 // Singleton instance
-export const fuzzySearchLogger = new FuzzySearchLogger();
+export const fzzySrchLggr = new FuzzySearchLogger();

@@ -10,20 +10,20 @@ import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import type { FileInfo, FileResult, ReadOptions } from "@assets/readers/readers-base";
-import { getFileHandler } from "@assets/readers/readers-factory";
-import { resolvePreviewFileType } from "@assets/readers/readers-filetypes";
-import { TextFileHandler } from "@assets/readers/readers-text";
+import { getFileHandler as gtFlHdl } from "@assets/readers/readers-factory";
+import { resolvePreviewFileType as rslPrFlTy } from "@assets/readers/readers-filetypes";
+import { TextFileHandler as TxtFlHdl } from "@assets/readers/readers-text";
 import { withTimeout } from "@assets/utils/utils-timeout";
-import { configManager } from "@features/config/config-store";
-import { FILE_OPERATION_TIMEOUTS } from "@features/filesystem/filesystem-limits";
+import { cfgMgr } from "@features/config/config-store";
+import { FL_OP_TMTS } from "@features/filesystem/filesystem-limits";
 
-const DIRECTORY_WILDCARD_SUFFIX = `${path.sep}*`;
-const GLOB_REGEX_ESCAPE_PATTERN = /[.+^${}()|[\]\\]/g;
-const GLOB_ASTERISK_PATTERN = /\*/g;
-const VALIDATED_PARENT_DIRECTORY_CACHE_MAX_SIZE = 4096;
-const TEXT_FILE_TYPES = new Set(["html", "markdown", "text"]);
-const TEXT_FILE_HANDLER = new TextFileHandler();
-const validatedParentDirectoryCache = new Set<string>();
+const DIR_WLD_SFF = `${path.sep}*`;
+const GREP = /[.+^${}()|[\]\\]/g;
+const GLB_ASTR_PAT = /\*/g;
+const VPDCMS = 4096;
+const TXT_FL_TYPS = new Set(["html", "markdown", "text"]);
+const TXT_FL_HDL = new TxtFlHdl();
+const vldPrDiCc = new Set<string>();
 
 type LegacyFileInfo = {
   size: number;
@@ -49,7 +49,7 @@ export interface ListDirectoryOptions {
 
 // 1. Build glob pattern reg exp ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function buildGlobPatternRegExp(pattern: string): RegExp {
-  const regexPattern = pattern.replace(GLOB_REGEX_ESCAPE_PATTERN, "\\$&").replace(GLOB_ASTERISK_PATTERN, ".*");
+  const regexPattern = pattern.replace(GREP, "\\$&").replace(GLB_ASTR_PAT, ".*");
   return new RegExp(`^${regexPattern}$`, "i");
 }
 
@@ -113,7 +113,7 @@ function buildPermissionError(filePath: string, errCode: string | undefined): Er
 // 5. Get allowed dirs ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function getAllowedDirs(): Promise<string[]> {
   try {
-    const config = await configManager.getConfig();
+    const config = await cfgMgr.getConfig();
     if (config.allowedDirectories && Array.isArray(config.allowedDirectories)) {
     	return config.allowedDirectories;
     }
@@ -141,8 +141,8 @@ function expandHome(filepath: string): string {
 }
 
 // 7-1. Resolve requested path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function resolveRequestedPath(requestedPath: string): string {
-  const expandedPath = expandHome(requestedPath);
+function resolveRequestedPath(rqstPth: string): string {
+  const expandedPath = expandHome(rqstPth);
 
   return path.isAbsolute(expandedPath) ? path.resolve(expandedPath) : path.resolve(process.cwd(), expandedPath);
 }
@@ -154,23 +154,23 @@ function resolveRequestedPath(requestedPath: string): string {
 // @returns Promise<boolean> True if a valid parent directory was found
 
 // 8. Validate parent directories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function validateParentDirectories(directoryPath: string): Promise<boolean> {
-  const parentDir = path.dirname(directoryPath);
+async function validateParentDirectories(dirPth2: string): Promise<boolean> {
+  const parentDir = path.dirname(dirPth2);
 
   // Base case: we've reached the root or the same directory (shouldn't happen normally)
-  if (parentDir === directoryPath || parentDir === path.dirname(parentDir)) {
+  if (parentDir === dirPth2 || parentDir === path.dirname(parentDir)) {
   	return false;
   }
-  if (validatedParentDirectoryCache.has(parentDir)) {
+  if (vldPrDiCc.has(parentDir)) {
   	return true;
   }
   try {
     // Check if the parent directory exists
-    const realParentDir = await fs.realpath(parentDir);
-    validatedParentDirectoryCache.add(parentDir);
-    validatedParentDirectoryCache.add(realParentDir);
-    if (validatedParentDirectoryCache.size > VALIDATED_PARENT_DIRECTORY_CACHE_MAX_SIZE) {
-    	validatedParentDirectoryCache.clear();
+    const rlPrntDr = await fs.realpath(parentDir);
+    vldPrDiCc.add(parentDir);
+    vldPrDiCc.add(rlPrntDr);
+    if (vldPrDiCc.size > VPDCMS) {
+    	vldPrDiCc.clear();
     }
     return true;
   }
@@ -187,37 +187,37 @@ async function validateParentDirectories(directoryPath: string): Promise<boolean
 // 9. Is path allowed ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function isPathAllowed(pathToCheck: string): Promise<boolean> {
   // If root directory is allowed, all paths are allowed
-  const allowedDirectories = await getAllowedDirs();
-  if (allowedDirectories.includes("/") || allowedDirectories.length === 0) {
+  const allwDrct = await getAllowedDirs();
+  if (allwDrct.includes("/") || allwDrct.length === 0) {
   	return true;
   }
-  let normalizedPathToCheck = normalizePath(pathToCheck);
-  if (normalizedPathToCheck.slice(-1) === path.sep) {
-  	normalizedPathToCheck = normalizedPathToCheck.slice(0, -1);
+  let normPthTChck = normalizePath(pathToCheck);
+  if (normPthTChck.slice(-1) === path.sep) {
+  	normPthTChck = normPthTChck.slice(0, -1);
   }
   // Check if the path is within any allowed directory
-  const isAllowed = allowedDirectories.some((allowedDir) => {
-    let normalizedAllowedDir = normalizePath(allowedDir);
-    if (normalizedAllowedDir.endsWith(DIRECTORY_WILDCARD_SUFFIX)) {
-    	normalizedAllowedDir = normalizedAllowedDir.slice(0, -1);
+  const isAllowed = allwDrct.some((allowedDir) => {
+    let normAllwDr = normalizePath(allowedDir);
+    if (normAllwDr.endsWith(DIR_WLD_SFF)) {
+    	normAllwDr = normAllwDr.slice(0, -1);
     }
-    if (normalizedAllowedDir.slice(-1) === path.sep) {
-    	normalizedAllowedDir = normalizedAllowedDir.slice(0, -1);
+    if (normAllwDr.slice(-1) === path.sep) {
+    	normAllwDr = normAllwDr.slice(0, -1);
     }
     // Check if path is exactly the allowed directory
-    if (normalizedPathToCheck === normalizedAllowedDir) {
+    if (normPthTChck === normAllwDr) {
     	return true;
     }
     // Check if path is a subdirectory of the allowed directory
     // Make sure to add a separator to prevent partial directory name matches
     // e.g. /home/user vs /home/username
-    const subdirCheck = normalizedPathToCheck.startsWith(normalizedAllowedDir + path.sep);
+    const subdirCheck = normPthTChck.startsWith(normAllwDr + path.sep);
     if (subdirCheck) {
     	return true;
     }
     // If allowed directory is the drive root on Windows, allow access to the entire drive
-    if (normalizedAllowedDir === "c:" && process.platform === "win32") {
-    	return normalizedPathToCheck.startsWith("c:");
+    if (normAllwDr === "c:" && process.platform === "win32") {
+    	return normPthTChck.startsWith("c:");
     }
     return false;
   });
@@ -226,9 +226,9 @@ async function isPathAllowed(pathToCheck: string): Promise<boolean> {
 }
 
 // 9-1. Assert allowed path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function assertAllowedPath(pathToCheck: string, requestedPath: string): Promise<void> {
+async function assertAllowedPath(pathToCheck: string, rqstPth: string): Promise<void> {
   if (!(await isPathAllowed(pathToCheck))) {
-    throw new Error(`Path not allowed: ${requestedPath}. Must be within one of these directories: ${(await getAllowedDirs()).join(", ")}`);
+    throw new Error(`Path not allowed: ${rqstPth}. Must be within one of these directories: ${(await getAllowedDirs()).join(", ")}`);
   }
 }
 
@@ -240,87 +240,87 @@ async function assertAllowedPath(pathToCheck: string, requestedPath: string): Pr
 // @throws Error if the path or its parent directories don't exist or if the path is not allowed
 
 // 10. Validate path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function validatePath(requestedPath: string): Promise<string> {
-  const validationOperation = async (): Promise<string> => {
-    const absoluteOriginal = resolveRequestedPath(requestedPath);
+export async function validatePath(rqstPth: string): Promise<string> {
+  const valOp = async (): Promise<string> => {
+    const abslOrig = resolveRequestedPath(rqstPth);
 
     // Attempt to resolve symlinks to get the real path
     // This will succeed if the path exists and all symlinks in the chain are valid
     // It will fail with ENOENT if:
     //   - The path itself doesn't exist, OR
     //   - A symlink exists but points to a non-existent target (broken symlink)
-    let resolvedRealPath: string | null = null;
+    let rslvRlPth: string | null = null;
     try {
-      resolvedRealPath = await fs.realpath(absoluteOriginal, { encoding: "utf8" });
+      rslvRlPth = await fs.realpath(abslOrig, { encoding: "utf8" });
     }
     catch (error) {
       const err = error as NodeJS.ErrnoException;
       // Only throw for non-ENOENT errors (e.g., permission denied, I/O errors)
       if (!err.code || err.code !== "ENOENT") {
-        throw new Error(`Failed to resolve symlink for path: ${absoluteOriginal}. Error: ${err.message}`);
+        throw new Error(`Failed to resolve symlink for path: ${abslOrig}. Error: ${err.message}`);
       }
     }
-    const pathForNextCheck = resolvedRealPath ?? absoluteOriginal;
+    const pthFrNxtChck = rslvRlPth ?? abslOrig;
 
     // Check if path is allowed
-    await assertAllowedPath(pathForNextCheck, requestedPath);
+    await assertAllowedPath(pthFrNxtChck, rqstPth);
     // Check if path exists
     try {
       // fs.stat() will automatically follow symlinks, so we get existence info
-      await fs.stat(absoluteOriginal);
+      await fs.stat(abslOrig);
       // If path exists, resolve any symlinks
-      if (resolvedRealPath) {
-      	return resolvedRealPath;
+      if (rslvRlPth) {
+      	return rslvRlPth;
       }
-      return absoluteOriginal;
+      return abslOrig;
     }
     catch (_error) {
       // Path doesn't exist - validate parent directories
-      if (await validateParentDirectories(absoluteOriginal)) {
+      if (await validateParentDirectories(abslOrig)) {
       	// Return the path if a valid parent exists
         // This will be used for folder creation and many other file operations
-        return absoluteOriginal;
+        return abslOrig;
       }
       // If no valid parent found, return the absolute path anyway
-      return absoluteOriginal;
+      return abslOrig;
     }
   };
 
   // Execute with timeout
-  const result = await withTimeout(validationOperation(), FILE_OPERATION_TIMEOUTS.PATH_VALIDATION, `Path validation operation`, null);
+  const result = await withTimeout(valOp(), FL_OP_TMTS.PATH_VALIDATION, `Path validation operation`, null);
 
   if (result === null) {
     // Keep original path in error for AI while using a generic operation name.
 
-    throw new Error(`Path validation failed for path: ${requestedPath}`);
+    throw new Error(`Path validation failed for path: ${rqstPth}`);
   }
   return result;
 }
 
 // 10-1. Validate target path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function validateTargetPath(requestedPath: string): Promise<string> {
-  const validationOperation = async (): Promise<string> => {
-    const absoluteOriginal = resolveRequestedPath(requestedPath);
+async function validateTargetPath(rqstPth: string): Promise<string> {
+  const valOp = async (): Promise<string> => {
+    const abslOrig = resolveRequestedPath(rqstPth);
 
     try {
-      await fs.lstat(absoluteOriginal);
-      return validatePath(requestedPath);
+      await fs.lstat(abslOrig);
+      return validatePath(rqstPth);
     }
     catch (error) {
       const err = error as NodeJS.ErrnoException;
       if (!err.code || err.code !== "ENOENT") {
-        throw new Error(`Failed to inspect target path: ${absoluteOriginal}. Error: ${err.message}`);
+        throw new Error(`Failed to inspect target path: ${abslOrig}. Error: ${err.message}`);
       }
     }
-    await assertAllowedPath(absoluteOriginal, requestedPath);
-    await validateParentDirectories(absoluteOriginal);
-    return absoluteOriginal;
+    await assertAllowedPath(abslOrig, rqstPth);
+    await validateParentDirectories(abslOrig);
+    return abslOrig;
   };
 
-  const result = await withTimeout(validationOperation(), FILE_OPERATION_TIMEOUTS.PATH_VALIDATION, `Target path validation operation`, null);
+  const result = await withTimeout(valOp(), FL_OP_TMTS.PATH_VALIDATION, `Target path validation operation`, null);
 
   if (result === null) {
-    throw new Error(`Target path validation failed for path: ${requestedPath}`);
+    throw new Error(`Target path validation failed for path: ${rqstPth}`);
   }
   return result;
 }
@@ -339,7 +339,7 @@ export async function readFileFromUrl(url: string): Promise<FileResult> {
 
   // Set up fetch with timeout
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), FILE_OPERATION_TIMEOUTS.URL_FETCH);
+  const timeoutId = setTimeout(() => controller.abort(), FL_OP_TMTS.URL_FETCH);
 
   try {
     const response = await fetch(url, {
@@ -381,7 +381,7 @@ export async function readFileFromUrl(url: string): Promise<FileResult> {
     clearTimeout(timeoutId);
 
     // Return error information instead of throwing
-    const errorMessage = error instanceof DOMException && error.name === "AbortError" ? `URL fetch timed out after ${FILE_OPERATION_TIMEOUTS.URL_FETCH}ms: ${url}` : `Failed to fetch URL: ${error instanceof Error ? error.message : String(error)}`;
+    const errorMessage = error instanceof DOMException && error.name === "AbortError" ? `URL fetch timed out after ${FL_OP_TMTS.URL_FETCH}ms: ${url}` : `Failed to fetch URL: ${error instanceof Error ? error.message : String(error)}`;
 
     throw new Error(errorMessage);
   }
@@ -416,7 +416,7 @@ export async function readFileFromDisk(filePath: string, options?: ReadOptions):
           metadata: { isImage: false, isDirectory: true },
         } as FileResult;
       };
-      const dirResult = await withTimeout(dirListOp(), FILE_OPERATION_TIMEOUTS.FILE_READ, "Directory listing fallback", null);
+      const dirResult = await withTimeout(dirListOp(), FL_OP_TMTS.FILE_READ, "Directory listing fallback", null);
       if (dirResult === null) {
         throw new Error(`Directory listing timed out for: ${filePath}`);
       }
@@ -433,9 +433,9 @@ export async function readFileFromDisk(filePath: string, options?: ReadOptions):
     // stat() failed (e.g. ENOENT) — fall through to the read path below
   }
   // Use withTimeout to handle potential hangs
-  const readOperation = async () => {
+  const rdOp = async () => {
     // Get appropriate handler for this file type (async - includes binary detection)
-    const handler = shouldUseTextFileFastPath(validPath) ? TEXT_FILE_HANDLER : await getFileHandler(validPath);
+    const handler = shouldUseTextFileFastPath(validPath) ? TXT_FL_HDL : await gtFlHdl(validPath);
 
     // Use handler to read the file
     const result = await handler.read(validPath, {
@@ -468,15 +468,15 @@ export async function readFileFromDisk(filePath: string, options?: ReadOptions):
   // Execute with timeout
   let result: FileResult | null;
   try {
-    result = await withTimeout(readOperation(), FILE_OPERATION_TIMEOUTS.FILE_READ, `Read file operation for ${filePath}`, null);
+    result = await withTimeout(rdOp(), FL_OP_TMTS.FILE_READ, `Read file operation for ${filePath}`, null);
   }
   catch (error) {
     const err = error as NodeJS.ErrnoException;
     // withTimeout rejects with a plain string "__ERROR__: ... timed out after N seconds"
     // when defaultValue is null — it has no .code property, so check for that too.
-    const isWithTimeoutString = typeof error === "string" && (error as string).startsWith("__ERROR__:");
-    if (isWithTimeoutString || err.code === "EPERM" || err.code === "EACCES" || err.code === "ETIMEDOUT") {
-    	throw buildPermissionError(filePath, isWithTimeoutString ? "ETIMEDOUT" : err.code);
+    const isWthTmtStr = typeof error === "string" && (error as string).startsWith("__ERROR__:");
+    if (isWthTmtStr || err.code === "EPERM" || err.code === "EACCES" || err.code === "ETIMEDOUT") {
+    	throw buildPermissionError(filePath, isWthTmtStr ? "ETIMEDOUT" : err.code);
     }
     throw error;
   }
@@ -529,13 +529,13 @@ export async function readFileInternal(filePath: string, offset: number=0, lengt
     return content;
   }
   // Handle offset/length by splitting on line boundaries while preserving line endings
-  const lines = TextFileHandler.splitLinesPreservingEndings(content);
+  const lines = TxtFlHdl.splitLinesPreservingEndings(content);
 
   // Apply offset and length
-  const selectedLines = length === undefined ? lines.slice(offset) : lines.slice(offset, offset + length);
+  const selLns = length === undefined ? lines.slice(offset) : lines.slice(offset, offset + length);
 
   // Join back together (this preserves the original line endings)
-  return selectedLines.join("");
+  return selLns.join("");
 }
 
 // 15. Read text slice internal ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -562,7 +562,7 @@ export async function readTextSliceInternal(filePath: string, offset: number=0, 
 
 // 16. Should use text file fast path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function shouldUseTextFileFastPath(filePath: string): boolean {
-  return TEXT_FILE_TYPES.has(resolvePreviewFileType(filePath));
+  return TXT_FL_TYPS.has(rslPrFlTy(filePath));
 }
 
 // 17. Write file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -570,11 +570,11 @@ export async function writeFile(filePath: string, content: string, mode: "rewrit
   const validPath = await validateTargetPath(filePath);
 
   if (shouldUseTextFileFastPath(validPath)) {
-  	await TEXT_FILE_HANDLER.write(validPath, content, mode);
+  	await TXT_FL_HDL.write(validPath, content, mode);
     return;
   }
   // Get appropriate handler for binary and format-specific writes.
-  const handler = await getFileHandler(validPath);
+  const handler = await gtFlHdl(validPath);
 
   await handler.write(validPath, content, mode);
 }
@@ -590,9 +590,9 @@ export async function listDirectory(dirPath: string, depth: number=2, options: L
   const validPath = await validatePath(dirPath);
   const results: string[] = [];
 
-  const MAX_NESTED_ITEMS = 100; // Maximum items to show per nested directory
+  const MX_NSTD_ITMS = 100; // Maximum items to show per nested directory
   const maxEntries = options.maxEntries;
-  const excludePatterns = options.excludePatterns?.map((pattern) => buildGlobPatternRegExp(pattern)) ?? [];
+  const exclPats2 = options.excludePatterns?.map((pattern) => buildGlobPatternRegExp(pattern)) ?? [];
   const includeFiles = options.includeFiles !== false;
 
   // 19. Should skip directory entry ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -600,7 +600,7 @@ export async function listDirectory(dirPath: string, depth: number=2, options: L
     if (!includeFiles && !entry.isDirectory()) {
     	return true;
     }
-    return excludePatterns.some((pattern) => pattern.test(entry.name) || pattern.test(displayPath));
+    return exclPats2.some((pattern) => pattern.test(entry.name) || pattern.test(displayPath));
   }
   // 19. List recursive ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   async function listRecursive(currentPath: string, currentDepth: number, relativePath: string="", isTopLevel: boolean=true): Promise<void> {
@@ -626,19 +626,19 @@ export async function listDirectory(dirPath: string, depth: number=2, options: L
     }
     // Apply filtering for nested directories (not top level)
     const totalEntries = entries.length;
-    const visibleEntries = entries.filter((entry) => {
+    const visEntr = entries.filter((entry) => {
       const displayPath = relativePath ? path.join(relativePath, entry.name) : entry.name;
       return !shouldSkipEntry(entry, displayPath);
     });
-    let entriesToShow = visibleEntries;
-    let filteredCount = 0;
-    const itemLimit = isTopLevel ? maxEntries : (maxEntries ?? MAX_NESTED_ITEMS);
+    let entrTShw = visEntr;
+    let fltrCnt = 0;
+    const itemLimit = isTopLevel ? maxEntries : (maxEntries ?? MX_NSTD_ITMS);
 
-    if (itemLimit !== undefined && visibleEntries.length > itemLimit) {
-    	entriesToShow = visibleEntries.slice(0, itemLimit);
-      filteredCount = visibleEntries.length - itemLimit;
+    if (itemLimit !== undefined && visEntr.length > itemLimit) {
+    	entrTShw = visEntr.slice(0, itemLimit);
+      fltrCnt = visEntr.length - itemLimit;
     }
-    for (const entry of entriesToShow) {
+    for (const entry of entrTShw) {
       const fullPath = path.join(currentPath, entry.name);
       const displayPath = relativePath ? path.join(relativePath, entry.name) : entry.name;
 
@@ -659,9 +659,9 @@ export async function listDirectory(dirPath: string, depth: number=2, options: L
       }
     }
     // Add warning message if items were filtered
-    if (filteredCount > 0) {
+    if (fltrCnt > 0) {
       const displayPath = relativePath || path.basename(currentPath);
-      results.push(`${displayPath}: ${filteredCount} items hidden (showing first ${itemLimit} of ${visibleEntries.length} visible, ${totalEntries} total)`);
+      results.push(`${displayPath}: ${fltrCnt} items hidden (showing first ${itemLimit} of ${visEntr.length} visible, ${totalEntries} total)`);
     }
   }
   await listRecursive(validPath, depth, "", true);
@@ -669,10 +669,10 @@ export async function listDirectory(dirPath: string, depth: number=2, options: L
 }
 
 // 20. Copy file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function copyFile(sourcePath: string, destinationPath: string, recursive: boolean=false, force: boolean=false): Promise<void> {
-  const validSourcePath = await validatePath(sourcePath);
-  const validDestPath = await validateTargetPath(destinationPath);
-  await fs.cp(validSourcePath, validDestPath, {
+export async function copyFile(sourcePath: string, dstPth: string, recursive: boolean=false, force: boolean=false): Promise<void> {
+  const vldSrcPth = await validatePath(sourcePath);
+  const vldDstPth = await validateTargetPath(dstPth);
+  await fs.cp(vldSrcPth, vldDstPth, {
     errorOnExist: !force,
     force,
     recursive,
@@ -680,10 +680,10 @@ export async function copyFile(sourcePath: string, destinationPath: string, recu
 }
 
 // 21. Move file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function moveFile(sourcePath: string, destinationPath: string): Promise<void> {
-  const validSourcePath = await validatePath(sourcePath);
-  const validDestPath = await validateTargetPath(destinationPath);
-  await fs.rename(validSourcePath, validDestPath);
+export async function moveFile(sourcePath: string, dstPth: string): Promise<void> {
+  const vldSrcPth = await validatePath(sourcePath);
+  const vldDstPth = await validateTargetPath(dstPth);
+  await fs.rename(vldSrcPth, vldDstPth);
 }
 
 // 22. Remove path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -716,7 +716,7 @@ export async function getFileInfo(filePath: string): Promise<LegacyFileInfo> {
   const validPath = await validatePath(filePath);
 
   // Get appropriate handler for this file type (async - includes binary detection)
-  const handler = shouldUseTextFileFastPath(validPath) ? TEXT_FILE_HANDLER : await getFileHandler(validPath);
+  const handler = shouldUseTextFileFastPath(validPath) ? TXT_FL_HDL : await gtFlHdl(validPath);
 
   // Use handler to get file info, with fallback
   let fileInfo: FileInfo;

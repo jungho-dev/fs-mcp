@@ -6,12 +6,12 @@
 import { spawn } from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
+import { fileURLToPath as flUrlTPth2 } from "node:url";
 
-const __filename = fileURLToPath(import.meta.url);
+const __filename = flUrlTPth2(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
-const shouldSkipBuild = process.env.FS_MCP_SKIP_BUILD === "1";
+const shldSkpBld = process.env.FS_MCP_SKIP_BUILD === "1";
 
 const colors = {
   reset: "\x1b[0m",
@@ -25,6 +25,7 @@ const colors = {
 const TEST_GROUPS = {
   contracts: [
     "./contracts/batch-tool.contract.test.js",
+    "./contracts/context-index.contract.test.js",
     "./contracts/server-instructions.contract.test.js",
     "./contracts/tool-catalog.contract.test.js",
     "./contracts/tool-result-response.contract.test.js",
@@ -46,7 +47,7 @@ const TEST_GROUPS = {
     "./smoke/security/symlink-security.test.js",
   ],
 };
-const RUNNABLE_TESTS = Object.values(TEST_GROUPS).flat();
+const RNNB_TSTS = Object.values(TEST_GROUPS).flat();
 
 // 1. Write stdout ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function writeStdout(message) {
@@ -123,25 +124,25 @@ async function buildProject() {
 
 // 6. Run smoke tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runSmokeTests() {
-  if (RUNNABLE_TESTS.length === 0) {
+  if (RNNB_TSTS.length === 0) {
     writeStderr(`${colors.yellow}Warning: No runnable tests configured${colors.reset}`);
     return { success: true, results: [], summary: { total: 0, passed: 0, failed: 0, duration: 0 } };
   }
 
   const results = [];
-  let totalDuration = 0;
+  let ttlDrtn = 0;
 
-  for (const testFile of RUNNABLE_TESTS) {
+  for (const testFile of RNNB_TSTS) {
     // biome-ignore lint/performance/noAwaitInLoops: Smoke tests mutate config and process state, so they must run sequentially.
     const result = await runTestFile(testFile);
     results.push(result);
-    totalDuration += result.duration ?? 0;
+    ttlDrtn += result.duration ?? 0;
   }
 
   const passed = results.filter((result) => result.success).length;
   const failedTests = results.filter((result) => !result.success);
 
-  writeStdout(`\n${colors.bold}Runnable suite:${colors.reset} ${passed}/${results.length} passed in ${totalDuration}ms`);
+  writeStdout(`\n${colors.bold}Runnable suite:${colors.reset} ${passed}/${results.length} passed in ${ttlDrtn}ms`);
 
   if (failedTests.length > 0) {
     for (const failedTest of failedTests) {
@@ -156,7 +157,7 @@ async function runSmokeTests() {
       total: results.length,
       passed,
       failed: failedTests.length,
-      duration: totalDuration,
+      duration: ttlDrtn,
     },
   };
 }
@@ -164,7 +165,7 @@ async function runSmokeTests() {
 // 7. Main ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function main() {
   try {
-    if (shouldSkipBuild) {
+    if (shldSkpBld) {
       writeStderr(`${colors.yellow}Skipping build because FS_MCP_SKIP_BUILD=1${colors.reset}`);
     }
     else {

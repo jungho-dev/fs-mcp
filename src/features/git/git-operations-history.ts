@@ -5,43 +5,43 @@
  * @since 2026-05-03
  */
 
-import { runGitCommand, splitLines } from "@features/git/git-runtime";
-import { resolveRepositoryPath } from "@features/git/git-session";
-import { getRecentTags, parseRefs } from "@features/git/git-status-support";
-import type { GitArgsMap, GitToolOutput } from "@features/git/git-types";
+import { runGitCommand as rnGtCmd, splitLines } from "@features/git/git-runtime";
+import { resolveRepositoryPath as rslvRepoPth } from "@features/git/git-session";
+import { getRecentTags as gtRcntTgs, parseRefs } from "@features/git/git-status-support";
+import type { GitArgsMap, GitToolOutput as GtTlOtpt } from "@features/git/git-types";
 
-const BLAME_HEADER_PATTERN = /^[0-9a-f]{40}\\s+\\d+\\s+\\d+/;
-const REFLOG_FORMAT = "%gD%x1f%H%x1f%gs%x1f%ct";
-const CHANGELOG_COMMIT_FORMAT = "%h%x1f%an%x1f%ct%x1f%d%x1f%s%x1e";
+const BLM_HDR_PAT = /^[0-9a-f]{40}\\s+\\d+\\s+\\d+/;
+const RFLG_FRMT = "%gD%x1f%H%x1f%gs%x1f%ct";
+const CHN_CMM_FRM = "%h%x1f%an%x1f%ct%x1f%d%x1f%s%x1e";
 
 // 1. Run git blame ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function runGitBlame(input: GitArgsMap["git_blame"]): Promise<GitToolOutput> {
-  const cwd = await resolveRepositoryPath(input.path);
-  const blameResult = await runGitCommand(["blame", "--line-porcelain", ...(input.ignoreWhitespace ? ["-w"] : []), ...(input.startLine && input.endLine ? ["-L", `${String(input.startLine)},${String(input.endLine)}`] : []), input.filePath], { cwd });
+export async function runGitBlame(input: GitArgsMap["git_blame"]): Promise<GtTlOtpt> {
+  const cwd = await rslvRepoPth(input.path);
+  const blameResult = await rnGtCmd(["blame", "--line-porcelain", ...(input.ignoreWhitespace ? ["-w"] : []), ...(input.startLine && input.endLine ? ["-L", `${String(input.startLine)},${String(input.endLine)}`] : []), input.filePath], { cwd });
   const lines: Record<string, unknown>[] = [];
   let currentHash = "";
-  let currentAuthor = "unknown";
-  let currentTimestamp = 0;
-  let currentLineNumber = 0;
+  let curAthr = "unknown";
+  let curTs2 = 0;
+  let curLnNmbr = 0;
 
   splitLines(blameResult.stdout).forEach((line) => {
-    if (BLAME_HEADER_PATTERN.test(line)) {
+    if (BLM_HDR_PAT.test(line)) {
       const parts = line.split(" ");
       currentHash = parts[0];
-      currentLineNumber = Number.parseInt(parts[2], 10);
+      curLnNmbr = Number.parseInt(parts[2], 10);
     }
     else if (line.startsWith("author ")) {
-      currentAuthor = line.slice(7);
+      curAthr = line.slice(7);
     }
     else if (line.startsWith("author-time ")) {
-      currentTimestamp = Number.parseInt(line.slice(12), 10);
+      curTs2 = Number.parseInt(line.slice(12), 10);
     }
     else if (line.startsWith("\t")) {
       lines.push({
         commitHash: currentHash,
-        author: currentAuthor,
-        timestamp: currentTimestamp,
-        lineNumber: currentLineNumber,
+        author: curAthr,
+        timestamp: curTs2,
+        lineNumber: curLnNmbr,
         content: line.slice(1),
       });
     }
@@ -56,11 +56,11 @@ export async function runGitBlame(input: GitArgsMap["git_blame"]): Promise<GitTo
 }
 
 // 2. Run git reflog ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function runGitReflog(input: GitArgsMap["git_reflog"]): Promise<GitToolOutput> {
-  const cwd = await resolveRepositoryPath(input.path);
+export async function runGitReflog(input: GitArgsMap["git_reflog"]): Promise<GtTlOtpt> {
+  const cwd = await rslvRepoPth(input.path);
   const ref = input.ref ?? "HEAD";
   const maxCount = input.maxCount ?? 20;
-  const reflogResult = await runGitCommand(["reflog", "show", ref, `--max-count=${String(maxCount)}`, `--format=${REFLOG_FORMAT}`], { cwd, allowFailure: true });
+  const reflogResult = await rnGtCmd(["reflog", "show", ref, `--max-count=${String(maxCount)}`, `--format=${RFLG_FRMT}`], { cwd, allowFailure: true });
   const entries = splitLines(reflogResult.stdout).map((line) => {
     const parts = line.split("\x1f");
     return {
@@ -81,13 +81,13 @@ export async function runGitReflog(input: GitArgsMap["git_reflog"]): Promise<Git
 }
 
 // 3. Run git changelog analyze ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function runGitChangelogAnalyze(input: GitArgsMap["git_changelog_analyze"]): Promise<GitToolOutput> {
-  const cwd = await resolveRepositoryPath(input.path);
+export async function runGitChangelogAnalyze(input: GitArgsMap["git_changelog_analyze"]): Promise<GtTlOtpt> {
+  const cwd = await rslvRepoPth(input.path);
   const branch = input.branch ?? "HEAD";
   const maxCommits = input.maxCommits ?? 20;
   const maxTags = input.maxTags ?? 20;
   const historyRange = input.sinceTag ? `${input.sinceTag}..${branch}` : branch;
-  const commitResult = await runGitCommand(["log", historyRange, `--max-count=${String(maxCommits)}`, `--pretty=format:${CHANGELOG_COMMIT_FORMAT}`], { cwd, allowFailure: true });
+  const commitResult = await rnGtCmd(["log", historyRange, `--max-count=${String(maxCommits)}`, `--pretty=format:${CHN_CMM_FRM}`], { cwd, allowFailure: true });
   const commits = commitResult.stdout
     .split("\x1e")
     .map((entry) => entry.trim())
@@ -102,13 +102,13 @@ export async function runGitChangelogAnalyze(input: GitArgsMap["git_changelog_an
         subject: parts[4],
       };
     });
-  const tags = await getRecentTags(cwd, maxTags);
-  const reviewInstructions = input.reviewTypes.map((reviewType) => `[${reviewType}] review recent commits and tag context for that dimension.`).join("\n");
+  const tags = await gtRcntTgs(cwd, maxTags);
+  const rvwInst = input.reviewTypes.map((reviewType) => `[${reviewType}] review recent commits and tag context for that dimension.`).join("\n");
 
   return {
     success: true,
     reviewTypes: input.reviewTypes,
-    reviewInstructions,
+    reviewInstructions: rvwInst,
     gitContext: {
       currentBranch: branch,
       commits,

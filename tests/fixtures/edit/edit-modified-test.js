@@ -5,8 +5,8 @@
 
 // 1. Test large file performance ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function _testLargeFilePerformance() {
-  const LARGE_FILE_LF = path.join(TEST_DIR, "large_lf.txt");
-  const LARGE_FILE_CRLF = path.join(TEST_DIR, "large_crlf.txt");
+  const LRG_FL_LF = path.join(TEST_DIR, "large_lf.txt");
+  const LRG_FL_CRLF = path.join(TEST_DIR, "large_crlf.txt");
 
   try {
     // Create large test files (but stay within 100-line limit)
@@ -15,16 +15,16 @@ async function _testLargeFilePerformance() {
 
     // LF version - write in smaller chunks to respect line limit
     // First chunk
-    await fs.writeFile(LARGE_FILE_LF, lines.join(""));
+    await fs.writeFile(LRG_FL_LF, lines.join(""));
 
     // CRLF version - also respect line limit
     const crlfLines = lines.map((line) => line.replace("\n", "\r\n"));
-    await fs.writeFile(LARGE_FILE_CRLF, crlfLines.join(""));
+    await fs.writeFile(LRG_FL_CRLF, crlfLines.join(""));
 
     // Test LF file
     const startLF = Date.now();
     let result = await handleEditBlock({
-      file_path: LARGE_FILE_LF,
+      file_path: LRG_FL_LF,
       old_string: "TARGET LINE TO FIND AND REPLACE",
       new_string: "REPLACED TARGET LINE IN LF FILE",
       expected_replacements: 1,
@@ -36,7 +36,7 @@ async function _testLargeFilePerformance() {
     // Test CRLF file
     const startCRLF = Date.now();
     result = await handleEditBlock({
-      file_path: LARGE_FILE_CRLF,
+      file_path: LRG_FL_CRLF,
       old_string: "TARGET LINE TO FIND AND REPLACE",
       new_string: "REPLACED TARGET LINE IN CRLF FILE",
       expected_replacements: 1,

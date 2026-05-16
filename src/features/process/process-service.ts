@@ -9,15 +9,15 @@ import {exec} from "node:child_process";
 import os from "node:os";
 import {promisify} from "node:util";
 import type {ProcessInfo, ServerResult} from "@assets/type/common";
-import {KillProcessArgsSchema} from "@schemas/schemas-process";
+import {KllPrArSc} from "@schemas/schemas-process";
 
 const execAsync = promisify(exec);
-const PROCESS_COLUMN_SPLIT_PATTERN = /\s+/;
-const WINDOWS_TASKLIST_LINE_PATTERN = /^(.+?)\s+(\d+)\s+(.+?)\s+(\d+)\s+(.+)$/;
+const PCSP = /\s+/;
+const WTLP = /^(.+?)\s+(\d+)\s+(.+?)\s+(\d+)\s+(.+)$/;
 
 // 1. Parse Unix process line ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function parseUnixProcessLine(line: string): ProcessInfo | null {
-  const parts = line.trim().split(PROCESS_COLUMN_SPLIT_PATTERN);
+  const parts = line.trim().split(PCSP);
   if (parts.length < 11) {
     return null;
   }
@@ -35,7 +35,7 @@ function parseUnixProcessLine(line: string): ProcessInfo | null {
 
 // 2. Parse Windows process line ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function parseWindowsProcessLine(line: string): ProcessInfo | null {
-  const match = line.trim().match(WINDOWS_TASKLIST_LINE_PATTERN);
+  const match = line.trim().match(WTLP);
   if (!match) {
     return null;
   }
@@ -53,19 +53,19 @@ function parseWindowsProcessLine(line: string): ProcessInfo | null {
 
 // 3. Parse process line ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function parseProcessLine(line: string, platform: NodeJS.Platform): ProcessInfo | null {
-  const parsedProcess = platform === "win32" ? parseWindowsProcessLine(line) : parseUnixProcessLine(line);
-  return parsedProcess;
+  const prsdProc = platform === "win32" ? parseWindowsProcessLine(line) : parseUnixProcessLine(line);
+  return prsdProc;
 }
 
 // 4. List processes ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function listProcesses(): Promise<ServerResult> {
-  const lineSeparatorPattern = /\r?\n/;
+  const lnSprtPat = /\r?\n/;
   const platform = os.platform();
   const command = platform === "win32" ? "tasklist" : "ps aux";
   try {
     const {stdout} = await execAsync(command);
     const processes = stdout
-      .split(lineSeparatorPattern)
+      .split(lnSprtPat)
       .slice(1)
       .filter(Boolean)
       .map((line) => parseProcessLine(line, platform))
@@ -90,7 +90,7 @@ export async function listProcesses(): Promise<ServerResult> {
 
 // 5. Kill process ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function killProcess(args: unknown): Promise<ServerResult> {
-  const parsed = KillProcessArgsSchema.safeParse(args);
+  const parsed = KllPrArSc.safeParse(args);
   if (!parsed.success) {
     return {
       content: [{text: `Error: Invalid arguments for kill_process: ${parsed.error}`, type: "text" }],

@@ -7,20 +7,20 @@
 
 import assert from "node:assert/strict";
 import {readFileSync} from "node:fs";
-import {SERVER_INSTRUCTIONS} from "../../out/cores/server/server-instructions.js";
+import {SERVER_INSTRUCTIONS as SRVR_INST} from "../../out/cores/server/server-instructions.js";
 
 // 1. Server initialize instructions wiring ―――――――――――――――――――――――――――――――――――――――――――――――――――
 function testServerInitializeInstructionsWiring() {
-  const serverCreateSource = readFileSync(new URL("../../out/cores/server/server-create-mcp-server.js", import.meta.url), "utf8");
+  const srvrCrtSrc = readFileSync(new URL("../../out/cores/server/server-create-mcp-server.js", import.meta.url), "utf8");
 
-  assert.match(serverCreateSource, /server-instructions/);
-  assert.ok((serverCreateSource.match(/instructions:/g) ?? []).length >= 2);
+  assert.match(srvrCrtSrc, /server-instructions/);
+  assert.ok((srvrCrtSrc.match(/instructions:/g) ?? []).length >= 2);
 }
 
 // 2. Test batch first guidance ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testBatchFirstGuidance() {
-  assert.match(SERVER_INSTRUCTIONS, /Batch-first rule:/);
-  assert.match(SERVER_INSTRUCTIONS, /instead of calling the same tool repeatedly/);
+  assert.match(SRVR_INST, /Batch-first rule:/);
+  assert.match(SRVR_INST, /instead of calling the same tool repeatedly/);
 }
 
 // 3. Test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――

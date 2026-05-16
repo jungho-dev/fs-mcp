@@ -6,17 +6,18 @@
  */
 
 import type {ServerResult} from "@assets/type/common";
-import {handleGetConfigs, handleSetConfigValues} from "@controllers/controllers-config";
-import {handleEditBlocks} from "@controllers/controllers-edit";
-import {handleCopyFiles, handleCreateDirectories, handleGetFileInfos, handleListDirectories, handleMoveFiles, handleReadFiles, handleRemoveFiles, handleWriteFiles} from "@controllers/controllers-filesystem";
-import {handleGitTool} from "@controllers/controllers-git";
-import {handleKillProcesses} from "@controllers/controllers-process";
-import {handleGetFullSearchResults, handleStartSearches, handleStopSearches} from "@controllers/controllers-search";
-import {handleInteractWithProcesses, handleListSessions, handleReadProcessOutputs, handleStartProcesses} from "@controllers/controllers-terminal";
-import {createErrorResponse} from "@cores/responses/responses-error";
-import {normalizeToolResult} from "@cores/responses/responses-tool-result";
-import {readTextSliceInternal} from "@features/filesystem/filesystem-service";
-import {ESSENTIAL_GIT_TOOL_NAMES} from "@schemas/schemas-git";
+import {handleGetConfigs as hndlGtCnfg, handleSetConfigValues as hndStCfVa} from "@controllers/controllers-config";
+import {handleClearContextIndex as hndlClrCtIx, handleListContextIndex as hndlLstCtIx, handleSearchContextIndex as hndlSrchCtIx} from "@controllers/controllers-context";
+import {handleEditBlocks as hndlEdtBlck2} from "@controllers/controllers-edit";
+import {handleCopyFiles as hndlCpyFls, handleCreateDirectories as hndlCrtDrct, handleGetFileInfos as hndlGtFlInfs, handleListDirectories as hndlLstDrct, handleMoveFiles as hndlMvFls, handleReadFiles as hndlRdFls, handleRemoveFiles as hndlRmvFls, handleWriteFiles as hndlWrtFls} from "@controllers/controllers-filesystem";
+import {handleGitTool as hndlGtTl} from "@controllers/controllers-git";
+import {handleKillProcesses as hndlKllPrcs} from "@controllers/controllers-process";
+import {handleGetFullSearchResults as hndGtFlSrRe, handleStartSearches as hndlStrtSrch, handleStopSearches as hndlStpSrch} from "@controllers/controllers-search";
+import {handleInteractWithProcesses as hndInWtPr, handleListSessions as hndlLstSssn, handleReadProcessOutputs as hndRdPrOt, handleStartProcesses as hndlStrtPrcs} from "@controllers/controllers-terminal";
+import {createErrorResponse as crtErrRes} from "@cores/responses/responses-error";
+import {normalizeToolResult as nrmlTlRes} from "@cores/responses/responses-tool-result";
+import {readTextSliceInternal as rdTxtSlcInt} from "@features/filesystem/filesystem-service";
+import {EGTN} from "@schemas/schemas-git";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export type ToolDispatchHandler = (args: unknown) => Promise<ServerResult> | ServerResult;
@@ -33,9 +34,9 @@ type ResolvedToolArgs = {
   value: unknown;
 };
 
-const ARGS_PATH_FIELD_NAMES = new Set(["args_path", "args_offset", "args_length"]);
-const ARGS_SOURCE_METADATA_FIELD = "__fs_mcp_args_source";
-const ARGS_PATH_INLINE_PAYLOAD_TOOL_NAMES = new Set(["write_files"]);
+const APFN = new Set(["args_path", "args_offset", "args_length"]);
+const ASMF = "__fs_mcp_args_source";
+const APIPTN = new Set(["write_files"]);
 
 // 1. Is record ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -75,7 +76,7 @@ async function resolveToolArgsReference(args: unknown): Promise<ResolvedToolArgs
   }
   const offset = resolveArgsPathNumber(reference.args_offset, "args_offset") ?? 0;
   const length = resolveArgsPathNumber(reference.args_length, "args_length");
-  const argsText = await readTextSliceInternal(reference.args_path, offset, length);
+  const argsText = await rdTxtSlcInt(reference.args_path, offset, length);
   let parsedArgs: unknown;
 
   try {
@@ -85,10 +86,10 @@ async function resolveToolArgsReference(args: unknown): Promise<ResolvedToolArgs
     const message = error instanceof Error ? error.message : String(error);
     throw new Error(`args_path must contain valid JSON: ${message}`);
   }
-  const inlineOverrides = Object.fromEntries(Object.entries(args).filter(([key]) => !ARGS_PATH_FIELD_NAMES.has(key)));
-  const usedInlineOverrides = Object.keys(inlineOverrides).length > 0;
+  const inlnOvrr = Object.fromEntries(Object.entries(args).filter(([key]) => !APFN.has(key)));
+  const usdInlnOvrr = Object.keys(inlnOvrr).length > 0;
 
-  if (!usedInlineOverrides) {
+  if (!usdInlnOvrr) {
     return {
       source: "args_path",
       usedInlineOverrides: false,
@@ -103,7 +104,7 @@ async function resolveToolArgsReference(args: unknown): Promise<ResolvedToolArgs
     usedInlineOverrides: true,
     value: {
       ...parsedArgs,
-      ...inlineOverrides,
+      ...inlnOvrr,
     },
   };
 }
@@ -113,69 +114,72 @@ function decorateResolvedArgsForDispatch(name: string, resolvedArgs: ResolvedToo
   if (
     resolvedArgs.source !== "args_path"
     || resolvedArgs.usedInlineOverrides
-    || !ARGS_PATH_INLINE_PAYLOAD_TOOL_NAMES.has(name)
+    || !APIPTN.has(name)
     || !isRecord(resolvedArgs.value)
   ) {
     return resolvedArgs.value;
   }
   return {
     ...resolvedArgs.value,
-    [ARGS_SOURCE_METADATA_FIELD]: "args_path",
+    [ASMF]: "args_path",
   };
 }
 
-const GIT_TOOL_DISPATCHERS = Object.fromEntries(
-  ESSENTIAL_GIT_TOOL_NAMES.map((toolName) => [toolName, (args: unknown) => handleGitTool(toolName, args)]),
-) as Record<(typeof ESSENTIAL_GIT_TOOL_NAMES)[number], ToolDispatchHandler>;
+const GT_TL_DSPT = Object.fromEntries(
+  EGTN.map((toolName) => [toolName, (args: unknown) => hndlGtTl(toolName, args)]),
+) as Record<(typeof EGTN)[number], ToolDispatchHandler>;
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export const TOOL_DISPATCHERS: Readonly<Record<string, ToolDispatchHandler>> = {
-  get_configs: (args: unknown) => handleGetConfigs(args),
-  set_config_values: (args: unknown) => handleSetConfigValues(args),
-  start_processes: (args: unknown) => handleStartProcesses(args),
-  read_process_outputs: (args: unknown) => handleReadProcessOutputs(args),
-  interact_with_processes: (args: unknown) => handleInteractWithProcesses(args),
-  list_sessions: () => handleListSessions(),
-  kill_processes: (args: unknown) => handleKillProcesses(args),
-  read_files: (args: unknown) => handleReadFiles(args),
-  write_files: (args: unknown) => handleWriteFiles(args),
-  create_directories: (args: unknown) => handleCreateDirectories(args),
-  list_directories: (args: unknown) => handleListDirectories(args),
-  copy_files: (args: unknown) => handleCopyFiles(args),
-  move_files: (args: unknown) => handleMoveFiles(args),
-  remove_files: (args: unknown) => handleRemoveFiles(args),
-  get_file_infos: (args: unknown) => handleGetFileInfos(args),
-  edit_blocks: (args: unknown) => handleEditBlocks(args),
-  start_searches: (args: unknown) => handleStartSearches(args),
-  get_full_search: (args: unknown) => handleGetFullSearchResults(args),
-  stop_searches: (args: unknown) => handleStopSearches(args),
-  ...GIT_TOOL_DISPATCHERS,
+export const TL_DSPT: Readonly<Record<string, ToolDispatchHandler>> = {
+  get_configs: (args: unknown) => hndlGtCnfg(args),
+  set_config_values: (args: unknown) => hndStCfVa(args),
+  list_context_index: (args: unknown) => hndlLstCtIx(args),
+  search_context_index: (args: unknown) => hndlSrchCtIx(args),
+  clear_context_index: (args: unknown) => hndlClrCtIx(args),
+  start_processes: (args: unknown) => hndlStrtPrcs(args),
+  read_process_outputs: (args: unknown) => hndRdPrOt(args),
+  interact_with_processes: (args: unknown) => hndInWtPr(args),
+  list_sessions: (args: unknown) => hndlLstSssn(args),
+  kill_processes: (args: unknown) => hndlKllPrcs(args),
+  read_files: (args: unknown) => hndlRdFls(args),
+  write_files: (args: unknown) => hndlWrtFls(args),
+  create_directories: (args: unknown) => hndlCrtDrct(args),
+  list_directories: (args: unknown) => hndlLstDrct(args),
+  copy_files: (args: unknown) => hndlCpyFls(args),
+  move_files: (args: unknown) => hndlMvFls(args),
+  remove_files: (args: unknown) => hndlRmvFls(args),
+  get_file_infos: (args: unknown) => hndlGtFlInfs(args),
+  edit_blocks: (args: unknown) => hndlEdtBlck2(args),
+  start_searches: (args: unknown) => hndlStrtSrch(args),
+  get_full_search: (args: unknown) => hndGtFlSrRe(args),
+  stop_searches: (args: unknown) => hndlStpSrch(args),
+  ...GT_TL_DSPT,
 };
 
 // 1. Get dispatchable tool names ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function getDispatchableToolNames(): string[] {
-  return Object.keys(TOOL_DISPATCHERS);
+  return Object.keys(TL_DSPT);
 }
 
 // 2. Dispatch tool call ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function dispatchToolCall(name: string, args: unknown): Promise<ServerResult> {
   const startTime = Date.now();
-  const normalizeDispatchResult = (result: ServerResult): ServerResult => normalizeToolResult(name, result, Date.now() - startTime);
+  const nrmlDsptRes = (result: ServerResult): ServerResult => nrmlTlRes(name, result, Date.now() - startTime);
 
-  const dispatcher = TOOL_DISPATCHERS[name];
+  const dispatcher = TL_DSPT[name];
   if (!dispatcher) {
-    return normalizeDispatchResult(createErrorResponse(`Unknown tool: ${name}`));
+    return nrmlDsptRes(crtErrRes(`Unknown tool: ${name}`));
   }
   try {
     const resolvedArgs = await resolveToolArgsReference(args);
     const dispatchArgs = decorateResolvedArgsForDispatch(name, resolvedArgs);
     const result = await dispatcher(dispatchArgs);
 
-    return normalizeDispatchResult(result);
+    return nrmlDsptRes(result);
   }
   catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
 
-    return normalizeDispatchResult(createErrorResponse(errorMessage));
+    return nrmlDsptRes(crtErrRes(errorMessage));
   }
 }

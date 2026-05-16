@@ -8,11 +8,11 @@
 // Centralized logging utility for fs-mcp
 // Ensures all logging goes through proper channels based on initialization state
 
-import type { FilteredStdioServerTransport } from "@cores/transport/transport-stdio-transport";
+import type { FilteredStdioServerTransport as FltStSrTr } from "@cores/transport/transport-stdio-transport";
 
 // Global reference to the MCP transport (set in bootstrap.ts)
 declare global {
-  var mcpTransport: FilteredStdioServerTransport | undefined;
+  var mcpTransport: FltStSrTr | undefined;
 }
 
 export type LogLevel = "emergency" | "alert" | "critical" | "error" | "warning" | "notice" | "info" | "debug";

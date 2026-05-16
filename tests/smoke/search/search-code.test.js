@@ -4,11 +4,11 @@
 
 import fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
-import { handleGetFullSearchResults, handleGetMoreSearchResults, handleStartSearch, handleStopSearch } from "../../../out/controllers/controllers-search.js";
-import { configManager } from "../../../out/features/config/config-store.js";
+import { fileURLToPath as flUrlTPth2 } from "node:url";
+import { handleGetFullSearchResults as hndGtFlSrRe, handleGetMoreSearchResults as hndGtMrSrRe, handleStartSearch as hndlStrtSrc2, handleStopSearch as hndlStpSrch2 } from "../../../out/controllers/controllers-search.js";
+import { configManager as cfgMgr } from "../../../out/features/config/config-store.js";
 
-const __filename = fileURLToPath(import.meta.url);
+const __filename = flUrlTPth2(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Test directory and files
@@ -29,22 +29,22 @@ const colors = {
 
 // 1. Helper function to wait for search completion and get all results ――――――――――――――――――――――――――――
 async function searchAndWaitForCompletion(searchArgs, timeout = 10_000) {
-  const startedSessionPattern = /Started .+ session: (.+)/;
-  const result = await handleStartSearch(searchArgs);
+  const strtSessPat = /Started .+ session: (.+)/;
+  const result = await hndlStrtSrc2(searchArgs);
 
   // Extract session ID from result
-  const sessionIdMatch = result.content[0].text.match(startedSessionPattern);
-  if (!sessionIdMatch) {
+  const sessIdMtch = result.content[0].text.match(strtSessPat);
+  if (!sessIdMtch) {
     throw new Error("Could not extract session ID from search result");
   }
-  const sessionId = sessionIdMatch[1];
+  const sessionId = sessIdMtch[1];
 
   try {
     // Wait for completion by polling
     const startTime = Date.now();
     while (Date.now() - startTime < timeout) {
       // biome-ignore lint/performance/noAwaitInLoops: Polling requires sequential reads.
-      const moreResults = await handleGetMoreSearchResults({ sessionId });
+      const moreResults = await hndGtMrSrRe({ sessionId });
 
       if (moreResults.content[0].text.includes("Search completed")) {
         return { initialResult: result, finalResult: moreResults, sessionId };
@@ -63,7 +63,7 @@ async function searchAndWaitForCompletion(searchArgs, timeout = 10_000) {
   finally {
     // Always stop the search session to prevent hanging
     try {
-      await handleStopSearch({ sessionId });
+      await hndlStpSrch2({ sessionId });
     }
     catch (_e) {
       // Ignore errors when stopping - session might already be completed
@@ -74,10 +74,10 @@ async function searchAndWaitForCompletion(searchArgs, timeout = 10_000) {
 // 2. Setup function to prepare test environment ―――――――――――――――――――――――――――――――――――――――――――――――――――
 async function setup() {
   // Save original config
-  const originalConfig = await configManager.getConfig();
+  const origCfg = await cfgMgr.getConfig();
 
   // Set allowed directories to include test directory
-  await configManager.setValue("allowedDirectories", [TEST_DIR]);
+  await cfgMgr.setValue("allowedDirectories", [TEST_DIR]);
 
   // Create test directory structure
   await fs.mkdir(TEST_DIR, { recursive: true });
@@ -150,17 +150,17 @@ class TestClass:
         return self.pattern
 `,
   );
-  return originalConfig;
+  return origCfg;
 }
 
 // 3. Teardown function to clean up after tests ――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function teardown(originalConfig) {
+async function teardown(origCfg) {
   // Clean up any remaining search sessions
   try {
-    const { searchManager } = await import("../../../out/features/search/search-service.js");
-    const sessions = searchManager.listSearchSessions();
+    const { searchManager: srchMgr } = await import("../../../out/features/search/search-service.js");
+    const sessions = srchMgr.listSearchSessions();
     for (const session of sessions) {
-      await handleStopSearch({ sessionId: session.id });
+      await hndlStpSrch2({ sessionId: session.id });
     }
   }
   catch (_e) {
@@ -171,7 +171,7 @@ async function teardown(originalConfig) {
   await fs.rm(TEST_DIR, { force: true, recursive: true });
 
   // Restore original config
-  await configManager.updateConfig(originalConfig);
+  await cfgMgr.updateConfig(origCfg);
 }
 
 // 4. Assert function for test validation ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -200,7 +200,7 @@ async function testBasicSearch() {
 
 // 6. Test search pagination hints ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testSearchPaginationHints() {
-  const result = await handleStartSearch({
+  const result = await hndlStrtSrc2({
     path: TEST_DIR,
     pattern: "pattern",
     searchType: "content",
@@ -213,17 +213,17 @@ async function testSearchPaginationHints() {
     assert(!result.content[0].text.includes("get_compressed_search"), "Start search should not recommend removed compact result tool");
     assert(!result.content[0].text.includes("get_more_search_results"), "Start search should not recommend legacy result tool");
 
-    const moreResults = await handleGetMoreSearchResults({ sessionId, offset: 0, length: 1 });
+    const moreResults = await hndGtMrSrRe({ sessionId, offset: 0, length: 1 });
     assert(moreResults.structuredContent, "Search result read should expose pagination structuredContent");
     assert(Object.hasOwn(moreResults.structuredContent, "nextOffset"), "Search result read should expose nextOffset");
 
-    const fullResults = await handleGetFullSearchResults({ items: [{ sessionId, offset: 0, length: 20 }] });
+    const fullResults = await hndGtFlSrRe({ items: [{ sessionId, offset: 0, length: 20 }] });
     assert(fullResults.content[0].text.includes("Search session:"), "Full search result tool should include item result details");
     assert(!fullResults.content[0].text.includes("... (omitted)"), "Full search result tool should not omit item result details");
   }
   finally {
     if (typeof sessionId === "string") {
-      await handleStopSearch({ sessionId });
+      await hndlStpSrch2({ sessionId });
     }
   }
 }
@@ -326,8 +326,8 @@ async function testIncludeHidden() {
     });
 
     const text = finalResult.content[0].text;
-    const hasHiddenResults = text.includes(".hidden-file.txt") || text.includes("No matches found");
-    assert(hasHiddenResults, "Should handle hidden files when includeHidden is true");
+    const hsHddnRess = text.includes(".hidden-file.txt") || text.includes("No matches found");
+    assert(hsHddnRess, "Should handle hidden files when includeHidden is true");
   }
   finally {
     // Clean up hidden file
@@ -350,8 +350,8 @@ async function testTimeout() {
 
   const text = finalResult.content[0].text;
   // Should have results or indicate completion
-  const hasValidResult = text.includes("pattern") || text.includes("No matches found") || text.includes("completed");
-  assert(hasValidResult, "Should handle timeout gracefully");
+  const hsVldRes = text.includes("pattern") || text.includes("No matches found") || text.includes("completed");
+  assert(hsVldRes, "Should handle timeout gracefully");
 }
 
 // 14. Test no matches found scenario ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -372,7 +372,7 @@ async function testNoMatches() {
 // 15. Test invalid path handling ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testInvalidPath() {
   try {
-    const result = await handleStartSearch({
+    const result = await hndlStrtSrc2({
       path: "/nonexistent/path/that/does/not/exist",
       pattern: "pattern",
       searchType: "content",
@@ -381,8 +381,8 @@ async function testInvalidPath() {
     // Should handle gracefully
     assert(result.content, "Result should have content");
     const text = result.content[0].text;
-    const isValidResponse = text.includes("Error") || text.includes("session:") || text.includes("not allowed");
-    assert(isValidResponse, "Should handle invalid path gracefully");
+    const isVldRes = text.includes("Error") || text.includes("session:") || text.includes("not allowed");
+    assert(isVldRes, "Should handle invalid path gracefully");
   }
   catch (_error) {
     // Invalid-path behavior is allowed to surface as an error response or a thrown error.
@@ -393,7 +393,7 @@ async function testInvalidPath() {
 async function testInvalidArguments() {
   // Test missing required path
   try {
-    const result = await handleStartSearch({
+    const result = await hndlStrtSrc2({
       pattern: "test",
       // Missing path
     });
@@ -407,7 +407,7 @@ async function testInvalidArguments() {
 
   // Test missing required pattern
   try {
-    const result = await handleStartSearch({
+    const result = await hndlStrtSrc2({
       path: TEST_DIR,
       // Missing pattern
     });
@@ -434,11 +434,11 @@ async function testFileSearch() {
 
 // 18. Main test runner function ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function testSearchCode() {
-  let originalConfig;
+  let origCfg;
 
   try {
     // Setup
-    originalConfig = await setup();
+    origCfg = await setup();
 
     // Run all tests
     await testBasicSearch();
@@ -463,25 +463,25 @@ export async function testSearchCode() {
   }
   finally {
     // Cleanup
-    if (originalConfig) {
-      await teardown(originalConfig);
+    if (origCfg) {
+      await teardown(origCfg);
     }
 
     // Force cleanup of search manager to ensure process can exit
     try {
-      const { searchManager, stopSearchManagerCleanup } = await import("../../../out/features/search/search-service.js");
+      const { searchManager: srchMgr, stopSearchManagerCleanup: stpSrMgCl } = await import("../../../out/features/search/search-service.js");
 
       // Terminate all active sessions
-      const activeSessions = searchManager.listSearchSessions();
-      for (const session of activeSessions) {
-        searchManager.terminateSearch(session.id);
+      const actvSssn = srchMgr.listSearchSessions();
+      for (const session of actvSssn) {
+        srchMgr.terminateSearch(session.id);
       }
 
       // Stop the cleanup interval
-      stopSearchManagerCleanup();
+      stpSrMgCl();
 
       // Clear the sessions map
-      searchManager.sessions?.clear?.();
+      srchMgr.sessions?.clear?.();
     }
     catch (_e) {
       // Ignore import errors

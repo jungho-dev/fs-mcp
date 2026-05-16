@@ -9,30 +9,30 @@ import {type ChildProcess, spawn} from "node:child_process";
 import fs from "node:fs/promises";
 import path from "node:path";
 import {validatePath} from "@features/filesystem/filesystem-service";
-import {getRipgrepPath} from "@features/search/search-ripgrep-adapter";
+import {getRipgrepPath as gtRpgrPth} from "@features/search/search-ripgrep-adapter";
 import PizZip from "pizzip";
 
-const FIRST_CHUNK_WAIT_MS = 40;
-const DEFAULT_MAX_SEARCH_RESULTS = 5000;
-const EXACT_FILENAME_TIMEOUT_MS = 1500;
-const SEARCH_CLEANUP_INTERVAL_MS = 60 * 1000;
-const SEARCH_CLEANUP_INITIAL_DELAY_MS = 1000;
-const EARLY_TERMINATION_DELAY_MS = 100;
-const SEARCH_PREVIEW_RESULT_COUNT = 10;
-const MATCH_CONTEXT_CHARS = 1000;
-const SEARCH_LINE_SEPARATOR = "\n";
-const GLOB_PATTERN_SEPARATOR = "|";
-const LAST_READ_MARKER_FILE = "__LAST_READ_MARKER__";
-const RIPGREP_CONTEXT_TYPE_TOKEN = '"type":"context"';
-const RIPGREP_ERROR_PREFIX = "rg:";
-const ERROR_NOISE_LINE_PATTERN = /^[)(\s\d:]*$/;
-const EXACT_FILENAME_PATTERN = /\.[a-zA-Z0-9]+$/;
-const GLOB_META_CHARS = ["*", "?", "[", "{", "]", "}"];
-const DOCX_EXTENSIONS = [".docx"];
-const DOCX_TEXT_XML_PARTS = ["word/document.xml", "word/header1.xml", "word/header2.xml", "word/header3.xml", "word/footer1.xml", "word/footer2.xml", "word/footer3.xml"] as const;
-const WORD_TEXT_PATTERN = /<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>/g;
-const GLOB_REGEX_ESCAPE_PATTERN = /[.+^${}()|[\]\\]/g;
-const GLOB_ASTERISK_PATTERN = /\*/g;
+const FCWM = 40;
+const DMSR = 5000;
+const EFTM = 1500;
+const SCIM = 60 * 1000;
+const SCIDM = 1000;
+const ETDM = 100;
+const SPRC = 10;
+const MTC_CTX_CHR = 1000;
+const SRCH_LN_SPRT = "\n";
+const GLB_PAT_SPRT = "|";
+const LRMF = "__LAST_READ_MARKER__";
+const RCTT = '"type":"context"';
+const RPG_ERR_PRF = "rg:";
+const ENLP = /^[)(\s\d:]*$/;
+const EXC_FLN_PAT = /\.[a-zA-Z0-9]+$/;
+const GLB_MT_CHRS = ["*", "?", "[", "{", "]", "}"];
+const DCX_EXTS = [".docx"];
+const DTXP = ["word/document.xml", "word/header1.xml", "word/header2.xml", "word/header3.xml", "word/footer1.xml", "word/footer2.xml", "word/footer3.xml"] as const;
+const WRD_TXT_PAT = /<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>/g;
+const GREP = /[.+^${}()|[\]\\]/g;
+const GLB_ASTR_PAT = /\*/g;
 
 export interface SearchResult {
   file: string;
@@ -92,23 +92,23 @@ export class SearchManager {
     wasLimited?: boolean;
   }> {
     const sessionId = `search_${++this.sessionCounter}_${Date.now()}`;
-    const effectiveMaxResults = options.maxResults ?? DEFAULT_MAX_SEARCH_RESULTS;
+    const effcMxRess = options.maxResults ?? DMSR;
 
     // Validate path first
     const validPath = await validatePath(options.rootPath);
-    const normalizedOptions: SearchSessionOptions = {
+    const normOpts: SearchSessionOptions = {
       ...options,
-      maxResults: effectiveMaxResults,
+      maxResults: effcMxRess,
       rootPath: validPath,
     };
 
     // Build ripgrep arguments
-    const args = this.buildRipgrepArgs(normalizedOptions);
+    const args = this.buildRipgrepArgs(normOpts);
 
     // Get ripgrep path with fallback resolution
     let rgPath: string;
     try {
-      rgPath = await getRipgrepPath();
+      rgPath = await gtRpgrPth();
     }
     catch (err) {
       throw new Error(`Failed to locate ripgrep binary: ${err instanceof Error ? err.message : String(err)}`);
@@ -126,9 +126,9 @@ export class SearchManager {
       isComplete: false,
       isError: false,
       lastReadTime: Date.now(),
-      options: normalizedOptions,
+      options: normOpts,
       process: rgProcess,
-      resultLimit: effectiveMaxResults,
+      resultLimit: effcMxRess,
       results: [],
       startTime: Date.now(),
       totalContextLines: 0,
@@ -145,7 +145,7 @@ export class SearchManager {
 
     // Set up timeout if specified and auto-terminate
     // For exact filename searches, use a shorter default timeout
-    const timeoutMs = normalizedOptions.timeout ?? (this.isExactFilename(normalizedOptions.pattern) ? EXACT_FILENAME_TIMEOUT_MS : undefined);
+    const timeoutMs = normOpts.timeout ?? (this.isExactFilename(normOpts.pattern) ? EFTM : undefined);
 
     let killTimer: NodeJS.Timeout | null = null;
     if (timeoutMs) {
@@ -172,10 +172,10 @@ export class SearchManager {
 
 
     // For content searches, also search DOCX files
-    const shouldSearchDocx = normalizedOptions.searchType === "content" && this.shouldIncludeDocxSearch(normalizedOptions.filePattern, validPath);
+    const shldSrchDcx = normOpts.searchType === "content" && this.shouldIncludeDocxSearch(normOpts.filePattern, validPath);
 
-    if (shouldSearchDocx) {
-      this.searchDocxFiles(validPath, normalizedOptions.pattern, normalizedOptions.ignoreCase !== false, normalizedOptions.maxResults, normalizedOptions.filePattern, normalizedOptions.literalSearch)
+    if (shldSrchDcx) {
+      this.searchDocxFiles(validPath, normOpts.pattern, normOpts.ignoreCase !== false, normOpts.maxResults, normOpts.filePattern, normOpts.literalSearch)
         .then((docxResults) => {
           for (const result of docxResults) {
             if (session.totalMatches >= session.resultLimit) {
@@ -196,7 +196,7 @@ export class SearchManager {
         resolve();
       };
       session.process.stdout?.once("data", onData);
-      setTimeout(resolve, FIRST_CHUNK_WAIT_MS);
+      setTimeout(resolve, FCWM);
     });
 
     // Only wait for ripgrep first chunk; DOCX results merge asynchronously
@@ -205,7 +205,7 @@ export class SearchManager {
     return {
       isComplete: session.isComplete,
       isError: session.isError,
-      results: session.results.slice(0, SEARCH_PREVIEW_RESULT_COUNT),
+      results: session.results.slice(0, SPRC),
       runtime: Date.now() - session.startTime,
       sessionId,
       totalResults: session.totalMatches,
@@ -239,7 +239,7 @@ export class SearchManager {
       throw new Error(`Search session ${sessionId} not found`);
     }
     // Get all results (excluding internal markers)
-    const allResults = session.results.filter((r) => r.file !== LAST_READ_MARKER_FILE);
+    const allResults = session.results.filter((r) => r.file !== LRMF);
 
     // Handle negative offsets (tail behavior) - like file reading
     if (offset < 0) {
@@ -260,18 +260,18 @@ export class SearchManager {
       };
     }
     // Handle positive offsets (range behavior) - like file reading
-    const slicedResults = length === undefined ? allResults.slice(offset) : allResults.slice(offset, offset + length);
-    const hasMoreResults = length === undefined ? !session.isComplete : offset + length < allResults.length || !session.isComplete;
+    const slcdRess = length === undefined ? allResults.slice(offset) : allResults.slice(offset, offset + length);
+    const hsMrRess = length === undefined ? !session.isComplete : offset + length < allResults.length || !session.isComplete;
 
     session.lastReadTime = Date.now();
 
     return {
       error: session.error?.trim() || undefined,
-      hasMoreResults,
+      hasMoreResults: hsMrRess,
       isComplete: session.isComplete,
       isError: session.isError && !!session.error?.trim(), // Only error if we have actual errors
-      results: slicedResults,
-      returnedCount: slicedResults.length,
+      results: slcdRess,
+      returnedCount: slcdRess.length,
       runtime: Date.now() - session.startTime,
       totalMatches: session.totalMatches, // Actual matches only
       totalResults: session.totalMatches + session.totalContextLines,
@@ -321,13 +321,13 @@ export class SearchManager {
   private shouldIncludeDocxSearch(filePattern?: string, rootPath?: string): boolean {
     if (rootPath) {
       const lowerPath = rootPath.toLowerCase();
-      if (DOCX_EXTENSIONS.some((ext) => lowerPath.endsWith(ext))) {
+      if (DCX_EXTS.some((ext) => lowerPath.endsWith(ext))) {
         return true;
       }
     }
     if (filePattern) {
       const lowerPattern = filePattern.toLowerCase();
-      if (DOCX_EXTENSIONS.some((ext) => lowerPattern.includes(`*${ext}`) || lowerPattern.endsWith(ext))) {
+      if (DCX_EXTS.some((ext) => lowerPattern.includes(`*${ext}`) || lowerPattern.endsWith(ext))) {
         return true;
       }
     }
@@ -337,7 +337,7 @@ export class SearchManager {
   // 6. Search DOCX files for content matches ――――――――――――――――――――――――――――――――――――――――――――――――――――――
   // Extracts <w:t> text from document.xml and searches it
   // 3. Search docx files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  private async searchDocxFiles(rootPath: string, pattern: string, ignoreCase: boolean, maxResults?: number, filePattern?: string, _literalSearch?: boolean): Promise<SearchResult[]> {
+  private async searchDocxFiles(rootPath: string, pattern: string, ignoreCase: boolean, maxResults?: number, filePattern?: string, _ltrlSrch?: boolean): Promise<SearchResult[]> {
     const results: SearchResult[] = [];
 
     // DOCX search always uses literal matching to prevent ReDoS.
@@ -348,7 +348,7 @@ export class SearchManager {
 
     if (filePattern) {
       const patterns = filePattern
-        .split(GLOB_PATTERN_SEPARATOR)
+        .split(GLB_PAT_SPRT)
         .map((p) => p.trim())
         .filter(Boolean);
       docxFiles = docxFiles.filter((filePath) => {
@@ -370,7 +370,7 @@ export class SearchManager {
         const buf = await fs.readFile(filePath);
         const zip = new PizZip(buf);
 
-        for (const xmlPath of DOCX_TEXT_XML_PARTS) {
+        for (const xmlPath of DTXP) {
           if (maxResults && results.length >= maxResults) {
             break;
           }
@@ -381,7 +381,7 @@ export class SearchManager {
           const xml = file.asText();
           let lineNum = 0;
 
-          for (const m of xml.matchAll(WORD_TEXT_PATTERN)) {
+          for (const m of xml.matchAll(WRD_TXT_PAT)) {
             if (maxResults && results.length >= maxResults) {
               break;
             }
@@ -455,8 +455,8 @@ export class SearchManager {
 
   // 6. Get match context ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private getMatchContext(text: string, matchStart: number, matchLength: number): string {
-    const start = Math.max(0, matchStart - MATCH_CONTEXT_CHARS);
-    const end = Math.min(text.length, matchStart + matchLength + MATCH_CONTEXT_CHARS);
+    const start = Math.max(0, matchStart - MTC_CTX_CHR);
+    const end = Math.min(text.length, matchStart + matchLength + MTC_CTX_CHR);
 
     let context = text.slice(start, end);
 
@@ -474,7 +474,7 @@ export class SearchManager {
   // Called automatically by cleanup interval
 
   // 11. Cleanup sessions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-  cleanupSessions(maxAge: number = SEARCH_CLEANUP_INTERVAL_MS): void {
+  cleanupSessions(maxAge: number = SCIM): void {
     const cutoffTime = Date.now() - maxAge;
 
     for (const [sessionId, session] of this.sessions) {
@@ -493,12 +493,12 @@ export class SearchManager {
   // (has file extension and no glob wildcards)
   // 7. Is exact filename ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private isExactFilename(pattern: string): boolean {
-    return EXACT_FILENAME_PATTERN.test(pattern) && !this.isGlobPattern(pattern);
+    return EXC_FLN_PAT.test(pattern) && !this.isGlobPattern(pattern);
   }
 
   // 8. Is glob pattern ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private isGlobPattern(pattern: string): boolean {
-    return GLOB_META_CHARS.some((char) => pattern.includes(char));
+    return GLB_MT_CHRS.some((char) => pattern.includes(char));
   }
 
   // 9. Build ripgrep args ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -534,7 +534,7 @@ export class SearchManager {
     // File pattern filtering (for file type restrictions like *.js, *.d.ts)
     if (options.filePattern) {
       const patterns = options.filePattern
-        .split(GLOB_PATTERN_SEPARATOR)
+        .split(GLB_PAT_SPRT)
         .map((p) => p.trim())
         .filter(Boolean);
 
@@ -598,25 +598,25 @@ export class SearchManager {
       session.error = (session.error || "") + errorText;
 
       // Filter meaningful errors
-      const filteredErrors = errorText.split(SEARCH_LINE_SEPARATOR).filter((line) => {
+      const fltrErrs = errorText.split(SRCH_LN_SPRT).filter((line) => {
         const trimmed = line.trim();
 
         // Skip empty lines and lines with just symbols/numbers/colons
-        if (!trimmed || ERROR_NOISE_LINE_PATTERN.test(trimmed)) {
+        if (!trimmed || ENLP.test(trimmed)) {
           return false;
         }
         // Skip all ripgrep system errors that start with "rg:"
-        if (trimmed.startsWith(RIPGREP_ERROR_PREFIX)) {
+        if (trimmed.startsWith(RPG_ERR_PRF)) {
           return false;
         }
         return true;
       });
 
       // Only add to session.error if there are actual meaningful errors after filtering
-      if (filteredErrors.length > 0) {
-        const meaningfulErrors = filteredErrors.join(SEARCH_LINE_SEPARATOR).trim();
-        if (meaningfulErrors) {
-          session.error = `${(session.error || "") + meaningfulErrors}\n`;
+      if (fltrErrs.length > 0) {
+        const mnngErrs = fltrErrs.join(SRCH_LN_SPRT).trim();
+        if (mnngErrs) {
+          session.error = `${(session.error || "") + mnngErrs}\n`;
         }
       }
     });
@@ -661,7 +661,7 @@ export class SearchManager {
 
   // 11. Process buffered output ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private processBufferedOutput(session: SearchSession, isFinal: boolean = false): void {
-    const lines = session.buffer.split(SEARCH_LINE_SEPARATOR);
+    const lines = session.buffer.split(SRCH_LN_SPRT);
 
     // Keep the last incomplete line in the buffer unless this is final processing
     if (!isFinal) {
@@ -678,7 +678,7 @@ export class SearchManager {
       if (result) {
         session.results.push(result);
         // Separate counting of matches vs context lines
-        if (result.type === "content" && line.includes(RIPGREP_CONTEXT_TYPE_TOKEN)) {
+        if (result.type === "content" && line.includes(RCTT)) {
           session.totalContextLines++;
         }
         else {
@@ -702,7 +702,7 @@ export class SearchManager {
               if (!session.process.killed) {
                 session.process.kill("SIGTERM");
               }
-            }, EARLY_TERMINATION_DELAY_MS);
+            }, ETDM);
             break;
           }
         }
@@ -759,26 +759,26 @@ export class SearchManager {
 
 // 13. Build glob pattern reg exp ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function buildGlobPatternRegExp(pattern: string): RegExp {
-  const regexPattern = pattern.replace(GLOB_REGEX_ESCAPE_PATTERN, "\\$&").replace(GLOB_ASTERISK_PATTERN, ".*");
+  const regexPattern = pattern.replace(GREP, "\\$&").replace(GLB_ASTR_PAT, ".*");
   return new RegExp(`^${regexPattern}$`, "i");
 }
 
 // Global search manager instance
-export const searchManager = new SearchManager();
+export const srchMgr = new SearchManager();
 
 // Cleanup management - run on fixed schedule
-let cleanupInterval: NodeJS.Timeout | null = null;
+let clnpIntr: NodeJS.Timeout | null = null;
 
 // 14. Start cleanup if needed ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function startCleanupIfNeeded(): void {
-  if (!cleanupInterval) {
-    cleanupInterval = setInterval(() => {
-      searchManager.cleanupSessions();
-    }, SEARCH_CLEANUP_INTERVAL_MS);
+  if (!clnpIntr) {
+    clnpIntr = setInterval(() => {
+      srchMgr.cleanupSessions();
+    }, SCIM);
 
     // Also check immediately after a short delay (let search process finish)
     setTimeout(() => {
-      searchManager.cleanupSessions();
-    }, SEARCH_CLEANUP_INITIAL_DELAY_MS);
+      srchMgr.cleanupSessions();
+    }, SCIDM);
   }
 }

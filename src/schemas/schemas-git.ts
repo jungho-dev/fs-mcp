@@ -7,16 +7,16 @@
 
 import { z } from "zod";
 
-const OptionalRepoPathSchema = z.string().optional();
-const CommitRefSchema = z.string();
-const ConfirmSchema = z.enum(["Y", "y", "Yes", "yes"]);
-const ReviewTypeSchema = z.enum(["security", "features", "storyline", "gaps", "breaking_changes", "quality"]);
-const INLINE_TEXT_ARGUMENT_MAX_LENGTH = 50_000;
+const OptnRpPthSch = z.string().optional();
+const CmmtRfSch = z.string();
+const CnfrSch = z.enum(["Y", "y", "Yes", "yes"]);
+const RvwTypSch = z.enum(["security", "features", "storyline", "gaps", "breaking_changes", "quality"]);
+const ITAML = 50_000;
 
-export const GIT_INPUT_SCHEMAS = {
+export const GT_INPT_SCHS = {
   git_add: z
     .object({
-      path: OptionalRepoPathSchema,
+      path: OptnRpPthSch,
       paths: z.array(z.string()).optional(),
       all: z.boolean().optional(),
       update: z.boolean().optional(),
@@ -25,7 +25,7 @@ export const GIT_INPUT_SCHEMAS = {
     .strict(),
   git_blame: z
     .object({
-      path: OptionalRepoPathSchema,
+      path: OptnRpPthSch,
       filePath: z.string(),
       startLine: z.number().int().positive().optional(),
       endLine: z.number().int().positive().optional(),
@@ -34,7 +34,7 @@ export const GIT_INPUT_SCHEMAS = {
     .strict(),
   git_branch: z
     .object({
-      path: OptionalRepoPathSchema,
+      path: OptnRpPthSch,
       mode: z.enum(["list", "create", "delete", "rename", "show-current"]).optional(),
       branchName: z.string().optional(),
       startPoint: z.string().optional(),
@@ -49,17 +49,17 @@ export const GIT_INPUT_SCHEMAS = {
     .strict(),
   git_changelog_analyze: z
     .object({
-      path: OptionalRepoPathSchema,
+      path: OptnRpPthSch,
       branch: z.string().optional(),
       sinceTag: z.string().optional(),
       maxCommits: z.number().int().positive().max(1000).optional(),
       maxTags: z.number().int().positive().max(1000).optional(),
-      reviewTypes: z.array(ReviewTypeSchema).min(1),
+      reviewTypes: z.array(RvwTypSch).min(1),
     })
     .strict(),
   git_checkout: z
     .object({
-      path: OptionalRepoPathSchema,
+      path: OptnRpPthSch,
       target: z.string(),
       paths: z.array(z.string()).optional(),
       createBranch: z.boolean().optional(),
@@ -69,7 +69,7 @@ export const GIT_INPUT_SCHEMAS = {
     .strict(),
   git_cherry_pick: z
     .object({
-      path: OptionalRepoPathSchema,
+      path: OptnRpPthSch,
       commits: z.array(z.string()).optional(),
       abort: z.boolean().optional(),
       continueOperation: z.boolean().optional(),
@@ -81,7 +81,7 @@ export const GIT_INPUT_SCHEMAS = {
     .strict(),
   git_clean: z
     .object({
-      path: OptionalRepoPathSchema,
+      path: OptnRpPthSch,
       dryRun: z.boolean().optional(),
       force: z.boolean().optional(),
       directories: z.boolean().optional(),
@@ -100,8 +100,8 @@ export const GIT_INPUT_SCHEMAS = {
     .strict(),
   git_commit: z
     .object({
-      path: OptionalRepoPathSchema,
-      message: z.string().max(INLINE_TEXT_ARGUMENT_MAX_LENGTH, "Use messagePath for long commit messages").optional(),
+      path: OptnRpPthSch,
+      message: z.string().max(ITAML, "Use messagePath for long commit messages").optional(),
       messagePath: z.string().optional(),
       messageOffset: z.number().optional().default(0),
       messageLength: z.number().optional(),
@@ -122,9 +122,9 @@ export const GIT_INPUT_SCHEMAS = {
     }),
   git_diff: z
     .object({
-      path: OptionalRepoPathSchema,
-      target: CommitRefSchema.optional(),
-      source: CommitRefSchema.optional(),
+      path: OptnRpPthSch,
+      target: CmmtRfSch.optional(),
+      source: CmmtRfSch.optional(),
       paths: z.array(z.string()).optional(),
       staged: z.boolean().optional(),
       includeUntracked: z.boolean().optional(),
@@ -136,7 +136,7 @@ export const GIT_INPUT_SCHEMAS = {
     .strict(),
   git_fetch: z
     .object({
-      path: OptionalRepoPathSchema,
+      path: OptnRpPthSch,
       remote: z.string().optional(),
       depth: z.number().int().positive().optional(),
       prune: z.boolean().optional(),
@@ -145,16 +145,16 @@ export const GIT_INPUT_SCHEMAS = {
     .strict(),
   git_init: z
     .object({
-      path: OptionalRepoPathSchema,
+      path: OptnRpPthSch,
       initialBranch: z.string().optional(),
       bare: z.boolean().optional(),
     })
     .strict(),
   git_merge: z
     .object({
-      path: OptionalRepoPathSchema,
+      path: OptnRpPthSch,
       branch: z.string(),
-      message: z.string().max(INLINE_TEXT_ARGUMENT_MAX_LENGTH, "Use messagePath for long merge messages").optional(),
+      message: z.string().max(ITAML, "Use messagePath for long merge messages").optional(),
       messagePath: z.string().optional(),
       messageOffset: z.number().optional().default(0),
       messageLength: z.number().optional(),
@@ -165,7 +165,7 @@ export const GIT_INPUT_SCHEMAS = {
     .strict(),
   git_pull: z
     .object({
-      path: OptionalRepoPathSchema,
+      path: OptnRpPthSch,
       remote: z.string().optional(),
       branch: z.string().optional(),
       fastForwardOnly: z.boolean().optional(),
@@ -174,7 +174,7 @@ export const GIT_INPUT_SCHEMAS = {
     .strict(),
   git_push: z
     .object({
-      path: OptionalRepoPathSchema,
+      path: OptnRpPthSch,
       remote: z.string().optional(),
       branch: z.string().optional(),
       remoteBranch: z.string().optional(),
@@ -189,7 +189,7 @@ export const GIT_INPUT_SCHEMAS = {
     .strict(),
   git_rebase: z
     .object({
-      path: OptionalRepoPathSchema,
+      path: OptnRpPthSch,
       mode: z.enum(["start", "continue", "abort", "skip"]).optional(),
       branch: z.string().optional(),
       upstream: z.string().optional(),
@@ -200,14 +200,14 @@ export const GIT_INPUT_SCHEMAS = {
     .strict(),
   git_reflog: z
     .object({
-      path: OptionalRepoPathSchema,
+      path: OptnRpPthSch,
       ref: z.string().optional(),
       maxCount: z.number().int().positive().max(1000).optional(),
     })
     .strict(),
   git_remote: z
     .object({
-      path: OptionalRepoPathSchema,
+      path: OptnRpPthSch,
       mode: z.enum(["list", "add", "remove", "rename", "get-url", "set-url"]).optional(),
       name: z.string().optional(),
       newName: z.string().optional(),
@@ -217,7 +217,7 @@ export const GIT_INPUT_SCHEMAS = {
     .strict(),
   git_reset: z
     .object({
-      path: OptionalRepoPathSchema,
+      path: OptnRpPthSch,
       mode: z.enum(["soft", "mixed", "hard", "merge", "keep"]).optional(),
       target: z.string().optional(),
       paths: z.array(z.string()).optional(),
@@ -233,7 +233,7 @@ export const GIT_INPUT_SCHEMAS = {
     .strict(),
   git_show: z
     .object({
-      path: OptionalRepoPathSchema,
+      path: OptnRpPthSch,
       object: z.string(),
       filePath: z.string().optional(),
       format: z.enum(["raw"]).optional(),
@@ -242,10 +242,10 @@ export const GIT_INPUT_SCHEMAS = {
     .strict(),
   git_stash: z
     .object({
-      path: OptionalRepoPathSchema,
+      path: OptnRpPthSch,
       mode: z.enum(["list", "push", "pop", "apply", "drop", "clear"]).optional(),
       stashRef: z.string().optional(),
-      message: z.string().max(INLINE_TEXT_ARGUMENT_MAX_LENGTH, "Use messagePath for long stash messages").optional(),
+      message: z.string().max(ITAML, "Use messagePath for long stash messages").optional(),
       messagePath: z.string().optional(),
       messageOffset: z.number().optional().default(0),
       messageLength: z.number().optional(),
@@ -256,20 +256,20 @@ export const GIT_INPUT_SCHEMAS = {
     .strict(),
   git_status: z
     .object({
-      path: OptionalRepoPathSchema,
+      path: OptnRpPthSch,
       includeUntracked: z.boolean().optional(),
     })
     .strict(),
   git_tag: z
     .object({
-      path: OptionalRepoPathSchema,
+      path: OptnRpPthSch,
       mode: z.enum(["list", "create", "delete", "verify"]).optional(),
       tagName: z.string().optional(),
       commit: z.string().optional(),
       annotated: z.boolean().optional(),
       force: z.boolean().optional(),
       limit: z.number().int().positive().max(1000).optional(),
-      message: z.string().max(INLINE_TEXT_ARGUMENT_MAX_LENGTH, "Use messagePath for long tag messages").optional(),
+      message: z.string().max(ITAML, "Use messagePath for long tag messages").optional(),
       messagePath: z.string().optional(),
       messageOffset: z.number().optional().default(0),
       messageLength: z.number().optional(),
@@ -277,7 +277,7 @@ export const GIT_INPUT_SCHEMAS = {
     .strict(),
   git_worktree: z
     .object({
-      path: OptionalRepoPathSchema,
+      path: OptnRpPthSch,
       mode: z.enum(["list", "add", "remove", "move", "prune"]).optional(),
       worktreePath: z.string().optional(),
       newPath: z.string().optional(),
@@ -291,9 +291,9 @@ export const GIT_INPUT_SCHEMAS = {
     .strict(),
 } as const;
 
-export type GitToolName = keyof typeof GIT_INPUT_SCHEMAS;
+export type GitToolName = keyof typeof GT_INPT_SCHS;
 
-export const ESSENTIAL_GIT_TOOL_NAMES = [
+export const EGTN = [
   "git_set_working_dir",
   "git_status",
   "git_diff",
