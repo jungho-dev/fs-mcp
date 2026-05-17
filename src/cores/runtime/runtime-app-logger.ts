@@ -15,7 +15,7 @@ declare global {
   var mcpTransport: FltStSrTr | undefined;
 }
 
-export type LogLevel = "emergency" | "alert" | "critical" | "error" | "warning" | "notice" | "info" | "debug";
+export declare type LogLevel = "emergency" | "alert" | "critical" | "error" | "warning" | "notice" | "info" | "debug";
 
 // 1. Is structured log data ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isStructuredLogData(value: unknown): value is Record<string, unknown> {

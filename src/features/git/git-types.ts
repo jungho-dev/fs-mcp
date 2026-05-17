@@ -8,23 +8,23 @@
 import type {GT_INPT_SCHS, GitToolName} from "@schemas/schemas-git";
 import type {z} from "zod";
 
-export type GitArgsMap = {
+export declare type GitArgsMap = {
   [K in GitToolName]: z.infer<(typeof GT_INPT_SCHS)[K]>;
 };
 
-export type GitCommandError = Error & {
+export declare type GitCommandError = Error & {
   code?: number | string | null;
   stdout?: string;
   stderr?: string;
 };
 
-export type GitCommandResult = {
+export declare type GitCommandResult = {
   stdout: string;
   stderr: string;
   exitCode: number;
 };
 
-export type GitStatusBucket = {
+export declare type GitStatusBucket = {
   added?: string[];
   modified?: string[];
   deleted?: string[];
@@ -32,13 +32,13 @@ export type GitStatusBucket = {
   copied?: string[];
 };
 
-export type GitWorkingTreeBucket = {
+export declare type GitWorkingTreeBucket = {
   added?: string[];
   modified?: string[];
   deleted?: string[];
 };
 
-export type GitStatusSummary = {
+export declare type GitStatusSummary = {
   currentBranch: string | null;
   upstream?: string;
   ahead?: number;
@@ -50,4 +50,4 @@ export type GitStatusSummary = {
   conflictedFiles: string[];
 };
 
-export type GitToolOutput = Record<string, unknown>;
+export declare type GitToolOutput = Record<string, unknown>;

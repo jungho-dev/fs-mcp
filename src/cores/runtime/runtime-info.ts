@@ -12,7 +12,7 @@ import path from "node:path";
 
 const DCCIR = /docker\/([a-f0-9]{64})/;
 
-export interface DockerMount {
+export declare interface DockerMount {
   containerPath: string;
   description: string;
   hostPath: string;
@@ -20,7 +20,7 @@ export interface DockerMount {
   type: "bind" | "volume";
 }
 
-export interface ContainerInfo {
+export declare interface ContainerInfo {
   containerEnvironment?: {
     dockerImage?: string;
     containerName?: string;
@@ -38,7 +38,7 @@ export interface ContainerInfo {
   orchestrator: "kubernetes" | "docker-compose" | "docker-swarm" | "podman-compose" | null;
 }
 
-export interface SystemInfo {
+export declare interface SystemInfo {
   defaultShell: string;
   docker: ContainerInfo;
   examplePaths: {

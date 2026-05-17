@@ -323,7 +323,7 @@ export async function getConfigValue(args: unknown): Promise<ServerResult> {
 }
 
 // 8. Prepared config value update \u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015
-export interface PreparedConfigValueUpdate {
+export declare interface PreparedConfigValueUpdate {
   key: string;
   value: unknown;
 }

@@ -32,7 +32,7 @@ interface CompletedSession {
 }
 
 // Result type for paginated output reading
-export interface PaginatedOutputResult {
+export declare interface PaginatedOutputResult {
   discardedLineCount: number;
   exitCode?: number | null; // Exit code if completed
   isComplete: boolean; // Whether process has finished

@@ -34,13 +34,13 @@ const WRD_TXT_PAT = /<w:t(?:\s[^>]*)?>([^<]*)<\/w:t>/g;
 const GREP = /[.+^${}()|[\]\\]/g;
 const GLB_ASTR_PAT = /\*/g;
 
-export interface SearchResult {
+export declare interface SearchResult {
   file: string;
   line?: number;
   match?: string;
   type: "file" | "content";
 }
-export interface SearchSession {
+export declare interface SearchSession {
   buffer: string; // For processing incomplete JSON lines
   error?: string;
   id: string;
@@ -57,7 +57,7 @@ export interface SearchSession {
   wasLimited?: boolean;
   wasIncomplete?: boolean; // NEW: Track if search was incomplete due to permissions/access issues
 }
-export interface SearchSessionOptions {
+export declare interface SearchSessionOptions {
   contextLines?: number;
   earlyTermination?: boolean; // Stop search early when exact filename match is found
   filePattern?: string;

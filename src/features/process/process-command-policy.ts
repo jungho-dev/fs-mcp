@@ -280,3 +280,4 @@ class CommandManager {
 // 2. singleton export ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export const cmdMgr2 = new CommandManager();
 export const cmdMgr = cmdMgr2;
+export {cmdMgr2 as commandManager};

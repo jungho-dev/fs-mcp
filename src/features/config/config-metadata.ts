@@ -5,17 +5,17 @@
  * @since 2026-05-02
  */
 
-export type ConfigFieldValueType = "string" | "number" | "boolean" | "array" | "null";
+export declare type ConfigFieldValueType = "string" | "number" | "boolean" | "array" | "null";
 
-export type ConfigFieldDefinition = {
+export declare type ConfigFieldDefinition = {
   label: string;
   description: string;
   valueType: ConfigFieldValueType;
 };
 
-export type ConfigQueryValueType = ConfigFieldValueType | "object";
+export declare type ConfigQueryValueType = ConfigFieldValueType | "object";
 
-export type ConfigQueryDefinition = {
+export declare type ConfigQueryDefinition = {
   label: string;
   description: string;
   valueType: ConfigQueryValueType;
@@ -91,7 +91,7 @@ export const CFG_FLD_DFNT = {
   },
 } as const satisfies Record<string, ConfigFieldDefinition>;
 
-export type ConfigFieldKey = keyof typeof CFG_FLD_DFNT;
+export declare type ConfigFieldKey = keyof typeof CFG_FLD_DFNT;
 
 export const CFG_FLD_KYS = Object.keys(CFG_FLD_DFNT) as ConfigFieldKey[];
 
@@ -174,7 +174,7 @@ export const CFG_QRY_DFNT = {
   },
 } as const satisfies Record<string, ConfigQueryDefinition>;
 
-export type ConfigQueryKey = keyof typeof CFG_QRY_DFNT;
+export declare type ConfigQueryKey = keyof typeof CFG_QRY_DFNT;
 
 export const CFG_QRY_KYS = Object.keys(CFG_QRY_DFNT) as ConfigQueryKey[];
 

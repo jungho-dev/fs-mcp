@@ -12,7 +12,7 @@ import {zodToJsonSchema as zdTJsnSch} from "zod-to-json-schema";
 const systemInfo = gtSystInf();
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export type ToolCatalogAnnotations = {
+export declare type ToolCatalogAnnotations = {
   title: string;
   readOnlyHint: boolean;
   destructiveHint?: boolean;
@@ -20,7 +20,7 @@ export type ToolCatalogAnnotations = {
 };
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export type ToolCatalogEntry = {
+export declare type ToolCatalogEntry = {
   name: string;
   description: string;
   inputSchema: Record<string, unknown>;
@@ -28,7 +28,7 @@ export type ToolCatalogEntry = {
 };
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export type ToolCatalogEntryConfig = {
+export declare type ToolCatalogEntryConfig = {
   name: string;
   description: string;
   inputSchema: ZodTypeAny;

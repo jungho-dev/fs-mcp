@@ -14,7 +14,7 @@ import path from "node:path";
 import {getDefaultContextIndexDbPath as gtDeCtIdDbPt} from "@features/config/config-client";
 import {cfgMgr} from "@features/config/config-store";
 
-export interface ContextIndexDocument extends Record<string, unknown> {
+export declare interface ContextIndexDocument extends Record<string, unknown> {
   createdAt: string;
   indexId: string;
   indexedLength?: number;
@@ -25,11 +25,11 @@ export interface ContextIndexDocument extends Record<string, unknown> {
   toolName?: string;
   truncated?: boolean;
 }
-export interface ContextIndexReference extends ContextIndexDocument {
+export declare interface ContextIndexReference extends ContextIndexDocument {
   indexed: true;
   preview: string;
 }
-export interface ContextSearchResult extends Record<string, unknown> {
+export declare interface ContextSearchResult extends Record<string, unknown> {
   chunkIndex: number;
   indexId: string;
   lineEnd: number;
@@ -38,18 +38,18 @@ export interface ContextSearchResult extends Record<string, unknown> {
   source: string;
   text: string;
 }
-export interface ContextListOptions {
+export declare interface ContextListOptions {
   limit?: number;
   source?: string;
 }
-export interface ContextClearOptions {
+export declare interface ContextClearOptions {
   all?: boolean;
   before?: string;
   indexIds?: string[];
   source?: string;
   vacuum?: boolean;
 }
-export interface ContextIndexConfig {
+export declare interface ContextIndexConfig {
   allowedDirectories: string[];
   autoMinChars: number;
   autoMinLines: number;

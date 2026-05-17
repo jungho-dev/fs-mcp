@@ -5,12 +5,12 @@
  * @since 2026-05-08
  */
 
-export type CurrentClient = {
+export declare type CurrentClient = {
   name: string;
   version: string;
 };
 
-export type ClientInfoUpdate = {
+export declare type ClientInfoUpdate = {
   name?: string;
   version?: string;
 };

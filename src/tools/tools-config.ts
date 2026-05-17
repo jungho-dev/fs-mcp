@@ -47,3 +47,4 @@ const CFG_TL_DFNT = [
 export const CFG_TL_CTLG: TlCtlgEntr[] = CFG_TL_DFNT.map((entry) => crtTlCtEn(entry));
 
 export const CFG_TL_CTLG2 = CFG_TL_CTLG;
+export {CFG_TL_CTLG as CONFIG_TOOL_CATALOG};

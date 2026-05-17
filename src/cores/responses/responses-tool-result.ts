@@ -9,9 +9,9 @@ import type { ServerResponseContent as SrvrResCont, ServerResult } from "@assets
 import {createToolDisplayText as crtTlDsplTxt} from "@cores/responses/responses-tool-display";
 import {compactStandardToolOutput as cmpStTlOt} from "@features/context/context-output-compactor";
 
-export type ToolResultStatus = "success" | "error";
+export declare type ToolResultStatus = "success" | "error";
 
-export interface ToolResultMetadata {
+export declare interface ToolResultMetadata {
   contentTypes: string[];
   durationMs: number | null;
   errorMessage: string | null;
@@ -20,10 +20,10 @@ export interface ToolResultMetadata {
   status: ToolResultStatus;
   toolName: string;
 }
-export interface ToolResultError {
+export declare interface ToolResultError {
   message: string;
 }
-export interface StandardToolOutput {
+export declare interface StandardToolOutput {
   contextIndexError?: string;
   contextIndexes?: unknown[];
   data: {
@@ -38,7 +38,7 @@ export interface StandardToolOutput {
   toolName: string;
   [key: string]: unknown;
 }
-export interface ToolResponseOptions {
+export declare interface ToolResponseOptions {
   meta?: Record<string, unknown>;
   structuredContent?: ServerResult["structuredContent"];
 }

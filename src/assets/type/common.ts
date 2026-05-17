@@ -18,7 +18,7 @@ export declare interface ProcessInfo {
   memory: string;
   pid: number;
 }
-export interface TerminalSession {
+export declare interface TerminalSession {
   discardedLineCount: number;
   isBlocked: boolean;
   lastReadIndex: number;
@@ -27,13 +27,13 @@ export interface TerminalSession {
   process: ChildProcess;
   startTime: Date;
 }
-export interface CommandExecutionResult {
+export declare interface CommandExecutionResult {
   isBlocked: boolean;
   output: string;
   pid: number;
   timingInfo?: TimingInfo;
 }
-export interface TimingInfo {
+export declare interface TimingInfo {
   endTime: number;
   exitReason: "early_exit_quick_pattern" | "early_exit_periodic_check" | "process_exit" | "timeout";
   firstOutputTime?: number;
@@ -43,7 +43,7 @@ export interface TimingInfo {
   timeToFirstOutputMs?: number;
   totalDurationMs: number;
 }
-export interface OutputEvent {
+export declare interface OutputEvent {
   deltaMs: number;
   length: number;
   matchedPattern?: string;
@@ -51,25 +51,25 @@ export interface OutputEvent {
   source: "stdout" | "stderr" | "periodic_poll";
   timestamp: number;
 }
-export interface ActiveSession {
+export declare interface ActiveSession {
   isBlocked: boolean;
   pid: number;
   runtime: number;
 }
-export interface ServerResponseContent {
+export declare interface ServerResponseContent {
   data?: string;
   mimeType?: string;
   text?: string;
   type: string;
 }
-export type DirectoryListingEntryType = "file" | "dir" | "warning" | "denied" | "unknown";
+export declare type DirectoryListingEntryType = "file" | "dir" | "warning" | "denied" | "unknown";
 
-export interface FilePreviewDirectoryEntry {
+export declare interface FilePreviewDirectoryEntry {
   path: string;
   text: string;
   type: DirectoryListingEntryType;
 }
-export interface FilePreviewStructuredContent {
+export declare interface FilePreviewStructuredContent {
   entries?: FilePreviewDirectoryEntry[];
   fileName: string;
   filePath: string;
@@ -79,7 +79,7 @@ export interface FilePreviewStructuredContent {
   mimeType?: string;
   textContent?: string;
 }
-export interface ServerResult {
+export declare interface ServerResult {
   _meta?: Record<string, unknown>;
   content: ServerResponseContent[];
   isError?: boolean;

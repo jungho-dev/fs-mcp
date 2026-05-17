@@ -6,7 +6,7 @@
  */
 
 // 1. Line ending types ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export type LineEndingStyle = "\r\n" | "\n" | "\r";
+export declare type LineEndingStyle = "\r\n" | "\n" | "\r";
 
 // 1. Detect line ending ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function detectLineEnding(content: string): LineEndingStyle {

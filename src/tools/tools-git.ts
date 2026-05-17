@@ -72,3 +72,4 @@ export const GT_TL_CTLG: TlCtlgEntr[] = GT_TL_DSCR
   }));
 
 export const GT_TL_CTLG2 = GT_TL_CTLG;
+export {GT_TL_CTLG as GIT_TOOL_CATALOG};

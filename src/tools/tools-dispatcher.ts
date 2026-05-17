@@ -20,7 +20,7 @@ import {readTextSliceInternal as rdTxtSlcInt} from "@features/filesystem/filesys
 import {EGTN} from "@schemas/schemas-git";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export type ToolDispatchHandler = (args: unknown) => Promise<ServerResult> | ServerResult;
+export declare type ToolDispatchHandler = (args: unknown) => Promise<ServerResult> | ServerResult;
 
 type ToolArgsReference = {
   args_path?: unknown;

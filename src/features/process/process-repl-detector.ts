@@ -8,7 +8,7 @@
 // 1. REPL and Process State Detection Utilities ―――――――――――――――――――――――――――――――――――――――――――――――――――
 // Detects when processes are waiting for input vs finished vs running
 
-export interface ProcessState {
+export declare interface ProcessState {
   detectedPrompt?: string;
   isFinished: boolean;
   isRunning: boolean;

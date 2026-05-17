@@ -41,7 +41,7 @@ type LegacyFileInfo = {
   isBinary?: boolean;
 };
 
-export interface ListDirectoryOptions {
+export declare interface ListDirectoryOptions {
   excludePatterns?: string[];
   includeFiles?: boolean;
   maxEntries?: number;

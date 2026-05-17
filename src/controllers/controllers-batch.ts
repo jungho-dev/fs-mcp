@@ -8,13 +8,14 @@
 import type { ServerResult } from "@assets/type/common";
 import { createErrorResponse as crtErrRes } from "@cores/responses/responses-error";
 
-export interface BatchToolItemResult<T> {
+export declare interface BatchToolItemResult<T> {
   index: number;
   input: T;
   ok: boolean;
   result: ServerResult;
 }
 interface BatchToolResponseOptions {
+  preserveLargeStructuredPayloads?: boolean;
   resultMode?: "compact" | "full";
 }
 interface BatchResultCompactionOptions {
@@ -65,9 +66,14 @@ function createCompactedStringPayload(value: string, prvwLen: number): Compacted
   };
 }
 
-// 3-1. Compact structured text payloads ――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3-1. Is preserved text payload ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function isPresTextPayload(value: Record<string, unknown>): value is PreservedTextPayload {
+  return typeof value.textContent === "string" && typeof value.lineCount === "number" && typeof value.originalLength === "number" && !Object.hasOwn(value, "filePath");
+}
+
+// 3-2. Compact structured text payloads ――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function compactStructuredTextPayloads(value: ServerResult["structuredContent"]): ServerResult["structuredContent"] {
-  if (!isRecord(value)) {
+  if (!isRecord(value) || isPresTextPayload(value)) {
     return value;
   }
   let changed = false;
@@ -325,6 +331,7 @@ export function createBatchToolResponse<T>(toolName: string, items: BatchToolIte
   const summaryLines = items.map((item) => createBatchSummaryLine(item));
   const smmrHdr = `${toolName}: ${sccdCnt}/${totalCount} succeeded${failedCount > 0 ? `, ${failedCount} failed` : ""}`;
   const resultMode = options.resultMode ?? "compact";
+  const prsLrStPy = options.preserveLargeStructuredPayloads ?? resultMode === "full";
   const resultText = resultMode === "full" ? `${smmrHdr}\n\n${items.map((item) => createFullBatchDetailBlock(item)).join("\n\n")}` : `${smmrHdr}\n\n${summaryLines.join("\n")}`;
   const response: ServerResult = {
     content: [
@@ -339,7 +346,7 @@ export function createBatchToolResponse<T>(toolName: string, items: BatchToolIte
         index: item.index,
         input: compactBatchInput(item.input),
         ok: item.ok,
-        result: compactBatchResult(item.result, { preserveLargeStructuredPayloads: resultMode === "full" }),
+        result: compactBatchResult(item.result, { preserveLargeStructuredPayloads: prsLrStPy }),
       })),
       succeededCount: sccdCnt,
       toolName: toolName,

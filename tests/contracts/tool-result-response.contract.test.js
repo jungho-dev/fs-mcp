@@ -34,6 +34,7 @@ function testTemplateLiteralDisplayFormat() {
   const mssnPlch = `${"$"}{missing}`;
 
   assert.equal(crtTlDsplTxt(output, `name=\${toolName}; result=\${status}; time=\${durationMs}; bytes=\${contents}`), "name=template_tool; result=success; time=0.001 s; bytes=2 chars");
+  assert.equal(crtTlDsplTxt(output, `tokens=\${tokens}`), "tokens=2");
   assert.equal(crtTlDsplTxt(output, `unknown=${mssnPlch}`), `unknown=${mssnPlch}`);
 }
 
@@ -50,7 +51,18 @@ function testDisplayFormatsUnitsAndCommas() {
     durationMs: 4000,
     status: "success",
     toolName: "format_tool",
-  }, `time=\${durationMs}; contents=\${contents}; structured=\${structuredText}`), `time=4 s; contents=9,045 chars; structured=${strcChrs.toLocaleString("en-US")} chars`);
+  }, `time=\${durationMs}; contents=\${contents}; structured=\${structuredText}; tokens=\${tokens}`), `time=4 s; contents=9,045 chars; structured=${strcChrs.toLocaleString("en-US")} chars; tokens=2,268`);
+}
+
+function testDefaultDisplayPlacesTokensLast() {
+  const normalized = nrmlTlRes("tokens_tool", crtTlTxtRes("abcd"), 1);
+  const summary = normalized.content[0].text;
+  const strcIdx = summary.indexOf("structuredText =");
+  const tokenIdx = summary.indexOf("tokens =");
+  const lineIdx = summary.lastIndexOf("――――");
+
+  assert.equal(tokenIdx > strcIdx, true);
+  assert.equal(lineIdx > tokenIdx, true);
 }
 
 function testDisplayCountsBatchStructuredItems() {
@@ -288,6 +300,7 @@ async function main() {
     testNormalizedResultRestoresDisplay();
     testTemplateLiteralDisplayFormat();
     testDisplayFormatsUnitsAndCommas();
+    testDefaultDisplayPlacesTokensLast();
     testDisplayCountsBatchStructuredItems();
     testDisplayPreservesStructuredText();
     testLongTextStructuredDataPreserved();

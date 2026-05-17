@@ -291,7 +291,7 @@ export const GT_INPT_SCHS = {
     .strict(),
 } as const;
 
-export type GitToolName = keyof typeof GT_INPT_SCHS;
+export declare type GitToolName = keyof typeof GT_INPT_SCHS;
 
 export const EGTN = [
   "git_set_working_dir",

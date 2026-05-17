@@ -6,12 +6,13 @@
  */
 
 import type { ServerResponseContent as SrvrResCont, ServerResult } from "@assets/type/common";
+import {countTokens as cntTkns} from "gpt-tokenizer";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 type ToolDisplayStatus = "success" | "error";
 type ToolDisplayValue = number | string;
 
-export interface ToolDisplayOutput {
+export declare interface ToolDisplayOutput {
   data: {
     content: SrvrResCont[];
     structuredContent: ServerResult["structuredContent"] | null;
@@ -22,13 +23,14 @@ export interface ToolDisplayOutput {
   toolName: string;
 }
 
-export interface ToolDisplayTemplateValues {
+export declare interface ToolDisplayTemplateValues {
   count: number;
   items: number;
   contents: string;
   durationMs: string;
   status: ToolDisplayStatus;
   structuredText: string;
+  tokens: string;
   tool: string;
   toolName: string;
 }
@@ -65,6 +67,7 @@ export const TL_DSPL_TMPL = [
   renderRow(`duration`, `\${durationMs}`),
   renderRow(`contents`, `\${contents}`),
   renderRow(`structuredText`, `\${structuredText}`),
+  renderRow(`tokens`, `\${tokens}`),
   renderLine(),
 ].join(``);
 
@@ -118,9 +121,15 @@ function formatDisplayDuration(durationMs?: number | null): string {
   return `${scndFrmt.format(durationMs / 1000)} s`;
 }
 
-// 5. Create tool display values ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Count display tokens ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function countDisplayTokens(value: string): number {
+  return cntTkns(value);
+}
+
+// 6. Create tool display values ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createToolDisplayValues(output: ToolDisplayOutput): ToolDisplayTemplateValues {
   const strcTxt = stringifyDisplayStructuredContent(output.data.structuredContent);
+  const tokenCount = countDisplayTokens(`${output.data.text}\n${strcTxt}`);
 
   return {
     count: itemsDisplayItems(output),
@@ -129,12 +138,13 @@ function createToolDisplayValues(output: ToolDisplayOutput): ToolDisplayTemplate
     durationMs: formatDisplayDuration(output.durationMs),
     status: output.status,
     structuredText: formatDisplayNumber(strcTxt.length, `chars`),
+    tokens: intgFrmt.format(tokenCount),
     tool: output.toolName,
     toolName: output.toolName,
   };
 }
 
-// 6. Render tool display template ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Render tool display template ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function renderToolDisplayTemplate(template: string, values: ToolDisplayTemplateValues): string {
   const plchPat = /\$\{([A-Za-z][A-Za-z0-9]*)\}/g;
 
@@ -148,7 +158,7 @@ function renderToolDisplayTemplate(template: string, values: ToolDisplayTemplate
   });
 }
 
-// 7. Create tool display text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Create tool display text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function createToolDisplayText(output: ToolDisplayOutput, template = TL_DSPL_TMPL): string {
   return renderToolDisplayTemplate(template, createToolDisplayValues(output));
 }

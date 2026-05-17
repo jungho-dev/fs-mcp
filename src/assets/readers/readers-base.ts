@@ -9,7 +9,7 @@
 // All file handlers implement the FileHandler interface
 
 // 1. Base interface that all file handlers must implement ―――――――――――――――――――――――――――――――――――――――――
-export interface FileHandler {
+export declare interface FileHandler {
 
   // Check if this handler can handle the given file
   // @param path File path
@@ -44,7 +44,7 @@ export interface FileHandler {
 }
 
 // 2. Options for reading files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export interface ReadOptions {
+export declare interface ReadOptions {
 
   // Whether to include status messages (default: true)
   includeStatusMessage?: boolean;
@@ -59,7 +59,7 @@ export interface ReadOptions {
 }
 
 // 3. Result from reading a file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export interface FileResult {
+export declare interface FileResult {
   // File content (string for text, Buffer for binary, base64 string for images)
   content: string | Buffer;
 
@@ -71,7 +71,7 @@ export interface FileResult {
 }
 
 // 4. File-type specific metadata ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export interface FileMetadata {
+export declare interface FileMetadata {
 
   // Error information if operation failed
   error?: boolean;
@@ -97,7 +97,7 @@ export interface FileMetadata {
 }
 
 // 5. Result from edit operation (used by editRange) ―――――――――――――――――――――――――――――――――――――――――――――――
-export interface EditResult {
+export declare interface EditResult {
 
   // Number of edits successfully applied
   editsApplied: number;
@@ -112,7 +112,7 @@ export interface EditResult {
 }
 
 // 6. File information and metadata ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export interface FileInfo {
+export declare interface FileInfo {
 
   // Last access time
   accessed: Date;

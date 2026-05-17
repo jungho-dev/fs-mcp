@@ -11,3 +11,4 @@ export const SRVR_INST = [
 ].join("\n");
 
 export const SRVR_INST2 = SRVR_INST;
+export { SRVR_INST as SERVER_INSTRUCTIONS };

@@ -7,7 +7,7 @@
 
 import path from "node:path";
 
-export type PreviewFileType = "markdown" | "text" | "html" | "image" | "directory" | "unsupported";
+export declare type PreviewFileType = "markdown" | "text" | "html" | "image" | "directory" | "unsupported";
 
 export const MRK_PRV_EXT = new Set([".md", ".markdown", ".mdx"]);
 export const HTM_PRV_EXT = new Set([".html", ".htm"]);

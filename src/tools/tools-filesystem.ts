@@ -210,3 +210,4 @@ const FLSY_TL_DFNT = [
 export const FLSY_TL_CTLG: TlCtlgEntr[] = FLSY_TL_DFNT.map((entry) => crtTlCtEn(entry));
 
 export const FLSY_TL_CTL2 = FLSY_TL_CTLG;
+export {FLSY_TL_CTLG as FILESYSTEM_TOOL_CATALOG};

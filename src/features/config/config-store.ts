@@ -11,7 +11,7 @@ import path from "node:path";
 import {fileURLToPath as flUrlTPth2} from "node:url";
 import {getDefaultContextIndexDbPath as gtDeCtIdDbPt} from "@features/config/config-client";
 
-export interface ServerConfig {
+export declare interface ServerConfig {
   allowedDirectories?: string[];
   blockedCommands?: string[];
   contextIndexAutoMinChars?: number;
@@ -28,7 +28,7 @@ export interface ServerConfig {
   fileWriteLineLimit?: number; // Large write/edit warning threshold
   [key: string]: unknown; // Allow for arbitrary configuration keys
 }
-export interface ClientInfo {
+export declare interface ClientInfo {
   name: string;
   version: string;
 }
@@ -47,6 +47,7 @@ function readPackageVersion(): string {
 }
 
 export const PCKG_VRSN = readPackageVersion();
+export {PCKG_VRSN as PACKAGE_VERSION};
 
 // 1. Get configured allowed directories ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function getConfiguredAllowedDirectories(): string[] | undefined {
@@ -273,6 +274,7 @@ class ConfigManager {
 
 // Export singleton instance
 export const cfgMgr = new ConfigManager();
+export const configManager = cfgMgr;
 export const cfgMgr2 = cfgMgr;
 export const PCKG_VRSN2 = PCKG_VRSN;
 export const cfgMgr3 = cfgMgr;

@@ -164,7 +164,9 @@ project root/
 모든 dispatched tool result는 `src/cores/responses/responses-tool-result.ts`에서 정규화됩니다.
 
 - 표시용 `content[0].text`는 `src/cores/responses/responses-tool-display.ts`의 template을 사용하며
-  `tool`, `count`, `status`, `duration`, `contents`, `structuredText` label을 출력합니다.
+  `tool`, `count`, `status`, `duration`, `contents`, `structuredText`, `tokens` label을 출력합니다.
+  `tokens`는 summary 최하단 row이며, visible combined text와 serialized structured content를 `o200k_base`
+  tokenizer로 계산한 숫자만 출력합니다.
 - `structuredContent`는 원본 content, combined text, 원본 structured payload, status, duration, error detail,
   schema version, tool name, optional context-index reference를 포함하는 machine-readable envelope입니다.
   일부 대용량 조회 도구는 context-index reference 대신 inline preview payload를 포함합니다.

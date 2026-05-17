@@ -167,7 +167,9 @@ Every dispatched tool result is normalized by `src/cores/responses/responses-too
 
 - Visible `content[0].text` uses the display template from
   `src/cores/responses/responses-tool-display.ts`, with `tool`, `count`, `status`, `duration`,
-  `contents`, and `structuredText` labels.
+  `contents`, `structuredText`, and `tokens` labels. `tokens` is displayed as the final summary row, uses
+  the `o200k_base` tokenizer for the visible combined text plus serialized structured content, and keeps
+  the output value numeric-only.
 - `structuredContent` stores the standard machine-readable envelope: original content, combined text, original
   structured payload, status, duration, error details, schema version, tool name, and optional context-index
   references or inline preview payloads.

@@ -92,3 +92,4 @@ const PROC_TL_DFNT = [
 export const PROC_TL_CTLG: TlCtlgEntr[] = PROC_TL_DFNT.map((entry) => crtTlCtEn(entry));
 
 export const PROC_TL_CTL2 = PROC_TL_CTLG;
+export {PROC_TL_CTLG as PROCESS_TOOL_CATALOG};
