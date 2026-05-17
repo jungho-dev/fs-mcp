@@ -183,6 +183,22 @@ function testLongTextStructuredDataPreserved() {
   assert.equal(normalized.content[0].text, createExpectedDisplaySummary("write_files", "success", fullText, null, 1, 9));
 }
 
+// 9-1. Test special token sanitized ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function testSpecialTokenSanitized() {
+  const rawToken = "<|" + "endoftext" + "|>";
+  const safeToken = "<|endoftext |>";
+  const fullText = "alpha " + rawToken + " omega";
+  const normalized = nrmlTlRes("read_files", crtTlTxtRes(fullText, {
+    structuredContent: { textContent: fullText },
+  }), 9);
+  const output = parseStandardOutput(normalized);
+  const serialized = JSON.stringify(normalized);
+
+  assert.equal(output.data.text, "alpha " + safeToken + " omega");
+  assert.equal(output.data.structuredContent.textContent, "alpha " + safeToken + " omega");
+  assert.equal(serialized.includes(rawToken), false);
+}
+
 // 10. Test existing summary preserved ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testExistingSummaryPreserved() {
   const batchText = [
@@ -306,6 +322,7 @@ async function main() {
     testDisplayCountsBatchStructuredItems();
     testDisplayPreservesStructuredText();
     testLongTextStructuredDataPreserved();
+    testSpecialTokenSanitized();
     testExistingSummaryPreserved();
 
     await cfgMgr.resetConfig();

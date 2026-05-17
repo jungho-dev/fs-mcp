@@ -45,6 +45,8 @@ export declare interface ToolResponseOptions {
 const DTCML = 512;
 const DTCPL = 160;
 const DTCS = "\n... (preview; full text in data.text)";
+const DSTP = /<\|endoftext\|>/g;
+const DSTR = "<|endoftext |>";
 
 // 1. Normalize content item ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function normalizeContentItem(item: SrvrResCont): SrvrResCont {
@@ -56,6 +58,9 @@ function normalizeContentItem(item: SrvrResCont): SrvrResCont {
 
   if (itemType === "text" && typeof normItm.text !== "string") {
     normItm.text = "";
+  }
+  if (itemType === "text") {
+    normItm.text = sanitizeText(normItm.text ?? "");
   }
   return normItm;
 }
@@ -73,6 +78,25 @@ function normalizeContent(content: SrvrResCont[]): SrvrResCont[] {
 // 3. Create combined text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createCombinedText(content: SrvrResCont[]): string {
   return content.map((item) => item.text ?? "").join("\n");
+}
+
+// 3-1. Sanitize text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function sanitizeText(value: string): string {
+  return value.replace(DSTP, DSTR);
+}
+
+// 3-2. Sanitize JSON value ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function sanitizeJson(value: unknown): unknown {
+  if (typeof value === "string") {
+    return sanitizeText(value);
+  }
+  if (Array.isArray(value)) {
+    return value.map((item) => sanitizeJson(item));
+  }
+  if (typeof value === "object" && value !== null) {
+    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, sanitizeJson(item)]));
+  }
+  return value;
 }
 
 // 4. Create error details ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -105,7 +129,7 @@ function createResultMetadata(toolName: string, result: ServerResult, content: S
 // 6. Create standard output ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createStandardOutput(toolName: string, result: ServerResult, content: SrvrResCont[], durationMs?: number): StandardToolOutput {
   const status: ToolResultStatus = result.isError === true ? "error" : "success";
-  const strcCont = result.structuredContent ?? null;
+  const strcCont = sanitizeJson(result.structuredContent ?? null) as ServerResult["structuredContent"] | null;
   const text = createCombinedText(content);
   const stndOtpt: StandardToolOutput = {
     data: {
@@ -195,11 +219,11 @@ export function isNormalizedToolResult(result: ServerResult): boolean {
 // 9. Create tool text response ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function createToolTextResponse(text: string, options: ToolResponseOptions = {}): ServerResult {
   const response: ServerResult = {
-    content: [{ text, type: "text" }],
+    content: [{ text: sanitizeText(text), type: "text" }],
   };
 
   if (options.structuredContent !== undefined) {
-    response.structuredContent = options.structuredContent;
+    response.structuredContent = sanitizeJson(options.structuredContent) as ServerResult["structuredContent"];
   }
   if (options.meta !== undefined) {
     response._meta = options.meta;
@@ -219,10 +243,10 @@ export function createToolErrorResponse(message: string, options: ToolResponseOp
 export function normalizeToolResult(toolName: string, result: ServerResult, durationMs?: number): ServerResult {
   if (isNormalizedToolResult(result)) {
     const prevOutput = result.structuredContent as StandardToolOutput;
-    const output = compactDuplicateTextContent({
+    const output = sanitizeJson(compactDuplicateTextContent({
       ...prevOutput,
       durationMs: durationMs ?? prevOutput.durationMs,
-    });
+    })) as StandardToolOutput;
     const fsMcpResult = result._meta?.fsMcpResult;
     const nextMeta = typeof fsMcpResult === "object" && fsMcpResult !== null
       ? {
@@ -244,7 +268,7 @@ export function normalizeToolResult(toolName: string, result: ServerResult, dura
   const origCont = normalizeContent(result.content);
   const fsMcpResult = createResultMetadata(toolName, result, origCont, durationMs);
   const origOtpt = createStandardOutput(toolName, result, origCont, durationMs);
-  const stndOtpt = compactDuplicateTextContent(cmpStTlOt(toolName, origOtpt));
+  const stndOtpt = sanitizeJson(compactDuplicateTextContent(cmpStTlOt(toolName, origOtpt))) as StandardToolOutput;
   const normRes: ServerResult = {
     _meta: {
       ...result._meta,

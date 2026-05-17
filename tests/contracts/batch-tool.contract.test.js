@@ -162,11 +162,10 @@ async function testReadFilesSurface() {
   assert.equal(lrgBtchRess[0].ok, true);
   assert.match(lrgBtchRess[0].result.content[0].text, PRVW_PAT);
   assert.ok(lrgBtchRess[0].result.content[0].text.length <= BRPMC);
-  assert.equal(lrgBtchRess[0].result.structuredContent.textContent.previewOnly, true);
-  assert.match(lrgBtchRess[0].result.structuredContent.textContent.preview, RTLP);
+  assert.match(lrgBtchRess[0].result.structuredContent.textContent, RTLP);
   assert.match(largeOutput.data.text, THXP);
   assert.match(largeOutput.data.text, THYP);
-  assert.doesNotMatch(JSON.stringify(lrgBtchRess[0].result), THYP);
+  assert.match(JSON.stringify(lrgBtchRess[0].result), THYP);
 
   const missingFile = path.join(TEST_DIR, "missing.txt");
   const defMssnRes = await dsptTlCll("read_files", {
@@ -245,7 +244,8 @@ async function testCreateAndListDirectorySurface() {
 
   assert.equal(lstBtchRess.length, 1);
   assert.equal(lstBtchRess[0].ok, true);
-  assert.equal(lstBtchRess[0].result.structuredContent.listing.previewOnly, true);
+  assert.equal(typeof lstBtchRess[0].result.structuredContent.listing, "string");
+  assert.match(lstBtchRess[0].result.structuredContent.listing, CRTD_DR_PAT);
   assert.match(listOutput.data.text, CRTD_DR_PAT);
 }
 
@@ -470,8 +470,8 @@ async function testWriteMoveInfoAndEditSurface() {
   assert.equal(lrgRdBtRe[0].ok, true);
   assert.match(lrgRdBtRe[0].result.content[0].text, PRVW_PAT);
   assert.ok(lrgRdOtpt.data.text.includes(TN_THSN_B));
-  assert.equal(lrgRdBtRe[0].result.structuredContent.textContent.previewOnly, true);
-  assert.equal(JSON.stringify(lrgRdBtRe[0].result).includes(TN_THSN_B), false);
+  assert.equal(lrgRdBtRe[0].result.structuredContent.textContent.includes(TN_THSN_B), true);
+  assert.equal(JSON.stringify(lrgRdBtRe[0].result).includes("previewOnly"), false);
 
   const renameResult = await dsptTlCll("move_files", {
     items: [
