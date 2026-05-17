@@ -8,8 +8,8 @@
 import { withArgsPathSchema as wthArPtSc } from "@schemas/schemas-args-ref";
 import { EdtBlArSc } from "@schemas/schemas-edit";
 import { CpyFlArSc, CrtDrArSc, GtFlInArSc2, LstDrArSc, MvFlsArgsSch, RdFlsArgsSch, RmvFlArSc, WrtFlArSc } from "@schemas/schemas-filesystem";
-import { GtFlSrReArSc, StrSrArSc2, StpSrArSc2 } from "@schemas/schemas-search";
-import { APPG, BTCH_GDNC, CMD_PRF_DSC, PTH_GDNC, createToolCatalogEntry as crtTlCtEn, type ToolCatalogEntry as TlCtlgEntr, type ToolCatalogEntryConfig as TlCtEnCf } from "@tools/tools-const";
+import { GtFlSrReArSc, RgxSrArSc2, StpSrArSc2, StrSrArSc2 } from "@schemas/schemas-search";
+import { APPG, BTCH_GDNC, CMD_PRF_DSC, createToolCatalogEntry as crtTlCtEn, PTH_GDNC, type ToolCatalogEntryConfig as TlCtEnCf, type ToolCatalogEntry as TlCtlgEntr } from "@tools/tools-const";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 const FLSY_TL_DFNT = [
@@ -140,6 +140,22 @@ const FLSY_TL_DFNT = [
     inputSchema: wthArPtSc(StrSrArSc2),
     annotations: {
       title: "Start Searches",
+      readOnlyHint: true,
+    },
+  },
+  {
+    name: "regex_searches",
+    description: (`
+      Run ripgrep-compatible regular-expression content searches directly.
+      Prefer this over shell rg when regex search is needed.
+      Use pattern_path for large patterns and filePattern to narrow the target set.
+      ${BTCH_GDNC}
+      ${PTH_GDNC}
+      ${CMD_PRF_DSC}
+    `),
+    inputSchema: wthArPtSc(RgxSrArSc2),
+    annotations: {
+      title: "Regex Searches",
       readOnlyHint: true,
     },
   },

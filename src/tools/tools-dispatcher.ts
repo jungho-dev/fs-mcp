@@ -12,8 +12,8 @@ import {handleEditBlocks as hndlEdtBlck2} from "@controllers/controllers-edit";
 import {handleCopyFiles as hndlCpyFls, handleCreateDirectories as hndlCrtDrct, handleGetFileInfos as hndlGtFlInfs, handleListDirectories as hndlLstDrct, handleMoveFiles as hndlMvFls, handleReadFiles as hndlRdFls, handleRemoveFiles as hndlRmvFls, handleWriteFiles as hndlWrtFls} from "@controllers/controllers-filesystem";
 import {handleGitTool as hndlGtTl} from "@controllers/controllers-git";
 import {handleKillProcesses as hndlKllPrcs} from "@controllers/controllers-process";
-import {handleGetFullSearchResults as hndGtFlSrRe, handleStartSearches as hndlStrtSrch, handleStopSearches as hndlStpSrch} from "@controllers/controllers-search";
-import {handleInteractWithProcesses as hndInWtPr, handleListSessions as hndlLstSssn, handleReadProcessOutputs as hndRdPrOt, handleStartProcesses as hndlStrtPrcs} from "@controllers/controllers-terminal";
+import {handleGetFullSearchResults as hndGtFlSrRe, handleRegexSearches as hndlRgxSrch, handleStopSearches as hndlStpSrch, handleStartSearches as hndlStrtSrch} from "@controllers/controllers-search";
+import {handleInteractWithProcesses as hndInWtPr, handleListSessions as hndlLstSssn, handleStartProcesses as hndlStrtPrcs, handleReadProcessOutputs as hndRdPrOt} from "@controllers/controllers-terminal";
 import {createErrorResponse as crtErrRes} from "@cores/responses/responses-error";
 import {normalizeToolResult as nrmlTlRes} from "@cores/responses/responses-tool-result";
 import {readTextSliceInternal as rdTxtSlcInt} from "@features/filesystem/filesystem-service";
@@ -151,6 +151,7 @@ export const TL_DSPT: Readonly<Record<string, ToolDispatchHandler>> = {
   get_file_infos: (args: unknown) => hndlGtFlInfs(args),
   edit_blocks: (args: unknown) => hndlEdtBlck2(args),
   start_searches: (args: unknown) => hndlStrtSrch(args),
+  regex_searches: (args: unknown) => hndlRgxSrch(args),
   get_full_search: (args: unknown) => hndGtFlSrRe(args),
   stop_searches: (args: unknown) => hndlStpSrch(args),
   ...GT_TL_DSPT,

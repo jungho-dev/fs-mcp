@@ -79,11 +79,11 @@ tests -> out
 
 ## 도구 표면
 
-Tool catalog module은 runtime domain별로 나뉩니다. 현재 catalog는 28개 도구를 export합니다.
+Tool catalog module은 runtime domain별로 나뉩니다. 현재 catalog는 29개 도구를 export합니다.
 
 - `tools-config.ts`: configuration 도구 2개.
 - `tools-context.ts`: context-index 관리 도구 3개.
-- `tools-filesystem.ts`: filesystem, search-session, metadata, exact block edit 도구 12개.
+- `tools-filesystem.ts`: filesystem, search-session, direct regex search, metadata, exact block edit 도구 13개.
 - `tools-process.ts`: process 및 terminal-session 도구 5개.
 - `tools-git.ts`: essential git session 도구 6개.
 
@@ -129,8 +129,8 @@ Tool catalog module은 runtime domain별로 나뉩니다. 현재 catalog는 28�
 - `contextIndexMaxDocuments` 또는 `contextIndexMaxBytes`를 넘으면 오래된 row와 chunk를 삭제합니다.
 - `context-output-compactor.ts`는 큰 text field와 structured collection을 index하되, 기본적으로 원본 response
   payload를 유지합니다. Reference replacement는 `contextIndexReplaceLargeOutputs=true`로 명시할 때만 동작합니다.
-- `read_files`, `list_directories`, `get_full_search`, context-index 관리 도구는 response marker replacement를
-  우회하고 oversized result를 inline payload로 유지합니다.
+- `read_files`, `list_directories`, `regex_searches`, `get_full_search`, context-index 관리 도구는
+  response marker replacement를 우회하고 oversized result를 inline payload로 유지합니다.
 - 수동 context-index tool surface는 `list_context_index`, `search_context_index`, `clear_context_index`입니다.
 
 ## Runtime Configuration
@@ -156,9 +156,10 @@ Tool catalog module은 runtime domain별로 나뉩니다. 현재 catalog는 28�
 
 ## 성능 및 안전 설계
 
-- `list_tools` payload는 `48,129`자에서 `28,002`자로 줄어 `41.8%` 감소했습니다.
-- Tool description은 `23,121`자에서 `6,173`자로 줄어 `73.3%` 감소했습니다.
-- Tool schema는 `20,334`자에서 `18,128`자로 줄어 `10.9%` 감소했습니다.
+- 현재 compiled catalog는 `29`개 도구를 노출합니다.
+- 현재 `list_tools` payload는 `33,134`자입니다.
+- 현재 tool description 총량은 `7,497`자입니다.
+- 현재 tool schema 총량은 `21,344`자입니다.
 - Tool catalog는 한 번만 조립하고 input schema JSON은 lazy cache로 생성합니다.
 - 파일 작업은 filesystem feature layer의 timeout boundary와 path resolver를 사용합니다.
 - Text read는 offset/length 입력을 사용해 전체 파일 대신 bounded slice 요청을 지원합니다.
@@ -166,8 +167,9 @@ Tool catalog module은 runtime domain별로 나뉩니다. 현재 catalog는 28�
   하나의 request로 줄입니다.
 - 큰 inline tool argument는 `content_path`, `old_string_path`, `new_string_path`, `pattern_path`,
   `input_path`, 공통 `args_path` field로 전달할 수 있습니다.
-- 검색 실행은 bundled `@vscode/ripgrep`에 위임하고 필요 시 system ripgrep로 fallback합니다. Search session은
-  기본 `maxResults=5000`을 사용하고 start response는 전체 결과 배열 대신 preview를 반환합니다.
+- 검색 실행은 bundled `@vscode/ripgrep`에 위임하고 필요 시 system ripgrep로 fallback합니다.
+  `regex_searches`는 direct regex content scan을 노출하고, search session은 기본 `maxResults=5000`을
+  사용하며 start response는 전체 결과 배열 대신 preview를 반환합니다.
 - Process 실행은 command policy blocklist, configured shell selection, explicit session tracking, bounded
   active output window, completed-session retention limit을 사용합니다.
 - Stdio transport는 stdout/stderr write가 MCP JSON output을 손상하기 전에 capture합니다.
@@ -175,12 +177,13 @@ Tool catalog module은 runtime domain별로 나뉩니다. 현재 catalog는 28�
 
 ## 검증 경계
 
-- `package.json`은 compiled runtime output build용 `bun run swc`를 제공합니다.
-- 이번 버전의 `package.json`에는 top-level `verify` script가 없습니다.
+- `package.json`은 type-check, `out` rebuild, alias rewrite를 수행하는 `bun run build`를 제공합니다.
+- `package.json`은 source, release shape, tool surface, optimization report check를 실행하는
+  `bun run verify`를 제공합니다.
 - `tests/run-all-tests.js`는 `FS_MCP_SKIP_BUILD=1`이 없으면 `out`을 rebuild한 뒤 contract/smoke test를
   실행합니다.
 - `tests/scripts/scripts-verify-release-shape.mjs`는 release artifact shape와 binary shebang을 확인합니다.
-- `tests/scripts/scripts-verify-source-boundaries.mjs`는 source/test root boundary를 보호합니다.
+- `tests/scripts/scripts-verify-source-boundaries.mjs`는 source/test root boundary 확인에 사용할 수 있습니다.
 - `tests/scripts/scripts-verify-tool-surface.mjs`는 compiled tool catalog와 dispatcher registry를 비교합니다.
 - `tests/scripts/scripts-verify-optimization-reports.mjs`는 `.docs`에 누적된 optimization report를 확인합니다.
 

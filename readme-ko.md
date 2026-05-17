@@ -56,7 +56,7 @@ stdio를 사용하며 network listener를 열지 않습니다.
 
 - Batched read, write, listing, metadata, directory create, move, remove 파일시스템 도구.
 - Path-backed large string input을 지원하는 one-or-many exact block edit 도구.
-- Bundled `@vscode/ripgrep` 기반 검색, active search session, pagination, stop control.
+- Bundled `@vscode/ripgrep` 기반 검색, direct regex search, active search session, pagination, stop control.
 - Command session, process output, interactive input, session listing, process termination 도구.
 - Pinned repository state, status, diff, show, staging, commit 중심의 git session 도구.
 - 큰 tool output을 공유 SQLite context DB에 자동 index하고 수동 list/search/clear를 수행하는 context 도구.
@@ -65,15 +65,15 @@ stdio를 사용하며 network listener를 열지 않습니다.
 
 ## 도구 표면
 
-현재 source와 compiled runtime은 28개 도구를 노출합니다. Batch-capable 도구는 batch-first surface로
+현재 source와 compiled runtime은 29개 도구를 노출합니다. Batch-capable 도구는 batch-first surface로
 문서화됩니다. 같은 종류의 filesystem, search, process, config 작업이 여러 개 필요하면 client는
 같은 도구를 반복 호출하지 않고 하나의 multi-item call로 묶어야 합니다.
 
 - Config: `get_configs`, `set_config_values`.
 - Context index: `list_context_index`, `search_context_index`, `clear_context_index`.
 - Filesystem/search/edit: `read_files`, `write_files`, `create_directories`, `list_directories`,
-  `copy_files`, `move_files`, `remove_files`, `start_searches`, `get_full_search`, `stop_searches`,
-  `get_file_infos`, `edit_blocks`.
+  `copy_files`, `move_files`, `remove_files`, `start_searches`, `regex_searches`, `get_full_search`,
+  `stop_searches`, `get_file_infos`, `edit_blocks`.
 - Process: `start_processes`, `read_process_outputs`, `interact_with_processes`, `list_sessions`,
   `kill_processes`.
 - Git: `git_set_working_dir`, `git_status`, `git_diff`, `git_show`, `git_add`, `git_commit`.
@@ -83,13 +83,12 @@ stdio를 사용하며 network listener를 열지 않습니다.
 
 ## 성능 개선
 
-현재 측정된 tool definition payload 개선 수치입니다.
+현재 compiled catalog metric입니다.
 
-- Tool count: `29 -> 28`, surface 축소 전 baseline 대비 `3.4%` 감소.
-- `list_tools` payload: `48,129 -> 28,002 chars`, `41.8%` 감소.
-- Tool description: `23,121 -> 6,173 chars`, `73.3%` 감소.
-- Tool schema: `20,334 -> 18,128 chars`, `10.9%` 감소.
-- 1차 compact 이후 추가 감소: `31,775 -> 28,002 chars`, `11.9%` 감소.
+- Tool count: `29`.
+- `list_tools` payload: `33,134 chars`.
+- Tool description: `7,497 chars`.
+- Tool schema: `21,344 chars`.
 
 Runtime default도 large-output 부담을 줄입니다.
 
@@ -104,7 +103,8 @@ Runtime default도 large-output 부담을 줄입니다.
 적용 대상:
 
 - `paths` 또는 `items` 배열을 쓰는 file/directory 작업.
-- `items` 또는 `sessionIds`를 쓰는 search session 작업.
+- `regex_searches.items`, `start_searches.items`, `get_full_search.items`,
+  `stop_searches.sessionIds`를 쓰는 search 작업.
 - `items` 또는 `pids`를 쓰는 process 작업.
 - `items`를 쓰는 config 작업.
 
@@ -132,8 +132,8 @@ local path를 실패가 아닌 missing 결과로 반환할 수 있습니다.
 - 수동 관리 도구는 `list_context_index`, `search_context_index`, `clear_context_index`입니다.
 - Output compaction은 기본적으로 큰 auto-indexed payload를 대체하지 않습니다.
   `contextIndexReplaceLargeOutputs=true`는 client가 context-index reference marker를 처리할 수 있을 때만 사용합니다.
-- `read_files`, `list_directories`, `get_full_search`, context-index 관리 도구는 oversized response에
-  context-index reference marker를 노출하지 않고 inline payload를 유지합니다.
+- `read_files`, `list_directories`, `regex_searches`, `get_full_search`, context-index 관리 도구는
+  oversized response에 context-index reference marker를 노출하지 않고 inline payload를 유지합니다.
 
 ## Client 호환성
 
@@ -164,9 +164,9 @@ project root/
 모든 dispatched tool result는 `src/cores/responses/responses-tool-result.ts`에서 정규화됩니다.
 
 - 표시용 `content[0].text`는 `src/cores/responses/responses-tool-display.ts`의 template을 사용하며
-  `tool`, `count`, `status`, `duration`, `contents`, `structuredText`, `tokens` label을 출력합니다.
-  `tokens`는 summary 최하단 row이며, visible combined text와 serialized structured content를 `o200k_base`
-  tokenizer로 계산한 숫자만 출력합니다.
+  기본 row는 `tool`, `items`, `status`, `tokens`, `duration`, `contents`, `structuredText`입니다.
+  `tokens`는 visible combined text와 serialized structured content를 `o200k_base` tokenizer로 계산하고
+  `token` 단위를 함께 출력합니다.
 - `structuredContent`는 원본 content, combined text, 원본 structured payload, status, duration, error detail,
   schema version, tool name, optional context-index reference를 포함하는 machine-readable envelope입니다.
   일부 대용량 조회 도구는 context-index reference 대신 inline preview payload를 포함합니다.
@@ -175,14 +175,16 @@ project root/
 
 ## 개발
 
-현재 package script는 의도적으로 작게 유지됩니다.
+현재 package script는 build, test, verification을 명시적으로 분리합니다.
 
 ```bash
-bun run swc
+bun run build
+bun run test
+bun run verify
 ```
 
-`bun run swc`는 `src`를 `out`으로 build하고, `tsc-alias`로 alias를 rewrite한 뒤 `out/index.js`를
-`out/index.mjs`로 rename합니다. 이번 버전의 `package.json`에는 top-level `verify` script가 없습니다.
+`bun run build`는 source type-check, SWC 기반 `out` rebuild, `tsc-alias` alias rewrite를 수행합니다.
+`bun run verify`는 source, release shape, tool surface, optimization report check를 실행합니다.
 
 Contract 및 smoke test suite는 Bun으로 직접 실행합니다.
 

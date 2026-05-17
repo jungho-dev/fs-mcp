@@ -80,11 +80,11 @@ are MCP adapters and not reusable domain services.
 
 ## Tool Surface
 
-Tool catalog modules are grouped by runtime domain. The current catalog has 28 exported tools.
+Tool catalog modules are grouped by runtime domain. The current catalog has 29 exported tools.
 
 - `tools-config.ts`: 2 configuration tools.
 - `tools-context.ts`: 3 context-index maintenance tools.
-- `tools-filesystem.ts`: 12 filesystem, search-session, metadata, and exact block edit tools.
+- `tools-filesystem.ts`: 13 filesystem, search-session, direct regex search, metadata, and exact block edit tools.
 - `tools-process.ts`: 5 process and terminal-session tools.
 - `tools-git.ts`: 6 essential git session tools.
 
@@ -131,8 +131,8 @@ support.
 - Retention deletes older rows and chunks when `contextIndexMaxDocuments` or `contextIndexMaxBytes` is exceeded.
 - `context-output-compactor.ts` indexes large text fields and structured collections while preserving original
   response payloads by default. Reference replacement is opt-in through `contextIndexReplaceLargeOutputs=true`.
-- `read_files`, `list_directories`, `get_full_search`, and context-index maintenance tools bypass response marker
-  replacement and keep inline payloads for oversized results.
+- `read_files`, `list_directories`, `regex_searches`, `get_full_search`, and context-index maintenance tools
+  bypass response marker replacement and keep inline payloads for oversized results.
 - Manual context-index tool surface is exposed through `list_context_index`, `search_context_index`, and
   `clear_context_index`.
 
@@ -158,9 +158,10 @@ support.
 
 ## Performance And Safety Design
 
-- `list_tools` payload was reduced from `48,129` to `28,002` characters, a `41.8%` reduction.
-- Tool descriptions were reduced from `23,121` to `6,173` characters, a `73.3%` reduction.
-- Tool schemas were reduced from `20,334` to `18,128` characters, a `10.9%` reduction.
+- Current compiled catalog exposes `29` tools.
+- Current `list_tools` payload is `33,134` characters.
+- Current tool descriptions total `7,497` characters.
+- Current tool schemas total `21,344` characters.
 - Tool catalogs are assembled once and input schema JSON is generated through lazy cache.
 - File operations use configured timeout boundaries and path resolution through the filesystem feature layer.
 - Text reading uses offset and length inputs so clients can request bounded slices instead of whole files.
@@ -168,8 +169,9 @@ support.
   collapse repeated same-tool work into one request.
 - Large inline tool arguments can be passed through path-backed fields such as `content_path`,
   `old_string_path`, `new_string_path`, `pattern_path`, `input_path`, and the shared `args_path` fields.
-- Search execution is delegated to bundled `@vscode/ripgrep`, with system ripgrep as a fallback. Search sessions
-  default to `maxResults=5000` and start responses return previews instead of full result arrays.
+- Search execution is delegated to bundled `@vscode/ripgrep`, with system ripgrep as a fallback. `regex_searches`
+  exposes direct regex content scans, while search sessions default to `maxResults=5000` and start responses return
+  previews instead of full result arrays.
 - Process execution uses a command policy blocklist, configured shell selection, explicit session tracking,
   bounded active output windows, and completed-session retention limits.
 - Stdio transport captures accidental stdout and stderr writes before they can corrupt MCP JSON output.
@@ -177,11 +179,11 @@ support.
 
 ## Verification Boundary
 
-- `package.json` currently exposes `bun run swc` for building compiled runtime output.
-- There is no top-level `verify` script in `package.json` in this version.
+- `package.json` exposes `bun run build` for type-checking, rebuilding `out`, and rewriting aliases.
+- `package.json` exposes `bun run verify` for source, release-shape, tool-surface, and optimization-report checks.
 - `tests/run-all-tests.js` rebuilds `out` unless `FS_MCP_SKIP_BUILD=1` is set, then runs contract and smoke tests.
 - `tests/scripts/scripts-verify-release-shape.mjs` checks release artifact shape and binary shebang.
-- `tests/scripts/scripts-verify-source-boundaries.mjs` protects source and test root boundaries.
+- `tests/scripts/scripts-verify-source-boundaries.mjs` is available for source and test root boundary checks.
 - `tests/scripts/scripts-verify-tool-surface.mjs` compares the compiled tool catalog and dispatcher registry.
 - `tests/scripts/scripts-verify-optimization-reports.mjs` checks optimization reports accumulated under `.docs`.
 

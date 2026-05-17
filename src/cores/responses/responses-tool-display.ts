@@ -5,7 +5,7 @@
  * @since 2026-05-10
  */
 
-import type { ServerResponseContent as SrvrResCont, ServerResult } from "@assets/type/common";
+import type { ServerResult, ServerResponseContent as SrvrResCont } from "@assets/type/common";
 import {countTokens as cntTkns} from "gpt-tokenizer";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -24,15 +24,16 @@ export declare interface ToolDisplayOutput {
 }
 
 export declare interface ToolDisplayTemplateValues {
-  count: number;
-  items: number;
-  contents: string;
-  durationMs: string;
-  status: ToolDisplayStatus;
-  structuredText: string;
-  tokens: string;
   tool: string;
   toolName: string;
+  items: number;
+  count: number;
+  status: ToolDisplayStatus;
+  duration: string;
+  durationMs: string;
+  tokens: string;
+  contents: string;
+  structuredText: string;
 }
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -64,10 +65,10 @@ export const TL_DSPL_TMPL = [
   renderRow(`tool`, `\${tool}`),
   renderRow(`items`, `\${items}`),
   renderRow(`status`, `\${status}`),
-  renderRow(`duration`, `\${durationMs}`),
+  renderRow(`tokens`, `\${tokens}`),
+  renderRow(`duration`, `\${duration}`),
   renderRow(`contents`, `\${contents}`),
   renderRow(`structuredText`, `\${structuredText}`),
-  renderRow(`tokens`, `\${tokens}`),
   renderLine(),
 ].join(``);
 
@@ -114,11 +115,11 @@ function formatDisplayNumber(value: number, unit: string): string {
 }
 
 // 4. Format display duration ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function formatDisplayDuration(durationMs?: number | null): string {
-  if (durationMs === null || durationMs === undefined) {
+function formatDisplayDuration(duration: number | null | undefined, unit: string): string {
+  if (duration === null || duration === undefined) {
     return `null`;
   }
-  return `${scndFrmt.format(durationMs / 1000)} s`;
+  return `${scndFrmt.format(duration / 1000)} ${unit}`;
 }
 
 // 5. Count display tokens ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -132,15 +133,16 @@ function createToolDisplayValues(output: ToolDisplayOutput): ToolDisplayTemplate
   const tokenCount = countDisplayTokens(`${output.data.text}\n${strcTxt}`);
 
   return {
-    count: itemsDisplayItems(output),
-    items: itemsDisplayItems(output),
-    contents: formatDisplayNumber(output.data.text.length, `chars`),
-    durationMs: formatDisplayDuration(output.durationMs),
-    status: output.status,
-    structuredText: formatDisplayNumber(strcTxt.length, `chars`),
-    tokens: intgFrmt.format(tokenCount),
     tool: output.toolName,
     toolName: output.toolName,
+    items: itemsDisplayItems(output),
+    count: itemsDisplayItems(output),
+    status: output.status,
+    duration: formatDisplayDuration(output.durationMs, `sec`),
+    durationMs: formatDisplayDuration(output.durationMs, `sec`),
+    tokens: formatDisplayNumber(tokenCount, `token`),
+    contents: formatDisplayNumber(output.data.text.length, `chars`),
+    structuredText: formatDisplayNumber(strcTxt.length, `chars`),
   };
 }
 

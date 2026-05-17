@@ -33,8 +33,8 @@ function testTemplateLiteralDisplayFormat() {
   const output = parseStandardOutput(normalized);
   const mssnPlch = `${"$"}{missing}`;
 
-  assert.equal(crtTlDsplTxt(output, `name=\${toolName}; result=\${status}; time=\${durationMs}; bytes=\${contents}`), "name=template_tool; result=success; time=0.001 s; bytes=2 chars");
-  assert.equal(crtTlDsplTxt(output, `tokens=\${tokens}`), "tokens=2");
+  assert.equal(crtTlDsplTxt(output, `name=\${toolName}; result=\${status}; time=\${durationMs}; bytes=\${contents}`), "name=template_tool; result=success; time=0.001 sec; bytes=2 chars");
+  assert.equal(crtTlDsplTxt(output, `tokens=\${tokens}`), "tokens=2 token");
   assert.equal(crtTlDsplTxt(output, `unknown=${mssnPlch}`), `unknown=${mssnPlch}`);
 }
 
@@ -51,18 +51,18 @@ function testDisplayFormatsUnitsAndCommas() {
     durationMs: 4000,
     status: "success",
     toolName: "format_tool",
-  }, `time=\${durationMs}; contents=\${contents}; structured=\${structuredText}; tokens=\${tokens}`), `time=4 s; contents=9,045 chars; structured=${strcChrs.toLocaleString("en-US")} chars; tokens=2,268`);
+  }, `time=\${durationMs}; contents=\${contents}; structured=\${structuredText}; tokens=\${tokens}`), `time=4 sec; contents=9,045 chars; structured=${strcChrs.toLocaleString("en-US")} chars; tokens=2,268 token`);
 }
 
-function testDefaultDisplayPlacesTokensLast() {
+function testDefaultDisplayPlacesMetricsInTemplateOrder() {
   const normalized = nrmlTlRes("tokens_tool", crtTlTxtRes("abcd"), 1);
   const summary = normalized.content[0].text;
   const strcIdx = summary.indexOf("structuredText =");
   const tokenIdx = summary.indexOf("tokens =");
   const lineIdx = summary.lastIndexOf("――――");
 
-  assert.equal(tokenIdx > strcIdx, true);
-  assert.equal(lineIdx > tokenIdx, true);
+  assert.equal(tokenIdx < strcIdx, true);
+  assert.equal(lineIdx > strcIdx, true);
 }
 
 function testDisplayCountsBatchStructuredItems() {
@@ -157,7 +157,9 @@ function testNormalizedResultRestoresDisplay() {
   const renormalized = nrmlTlRes("already_normalized_tool", normalized, 3);
   const output = parseStandardOutput(renormalized);
 
-  assert.equal(renormalized.content[0].text, createExpectedDisplaySummary("already_normalized_tool", "success", "visible data", null, 1, 2));
+  assert.equal(renormalized.content[0].text, createExpectedDisplaySummary("already_normalized_tool", "success", "visible data", null, 1, 3));
+  assert.equal(output.durationMs, 3);
+  assert.equal(renormalized._meta.fsMcpResult.durationMs, 3);
   assert.equal(output.data.text, "visible data");
 }
 
@@ -249,7 +251,7 @@ function testDisplayReplacesLargeOutputWhenEnabled() {
 // 12-1. Tracked tools bypass output compaction ―――――――――――――――――――――――――――――――――――――――――――――――――――
 function testTrackedToolBypassesOutputCompaction() {
   const fullText = Array.from({ length: 180 }, (_value, index) => `line${index + 1} ${"x".repeat(640)}`).join("\n");
-  const trackedTools = ["read_files", "list_directories", "get_full_search"];
+  const trackedTools = ["read_files", "list_directories", "get_full_search", "regex_searches"];
 
   for (const toolName of trackedTools) {
     const normalized = nrmlTlRes(toolName, crtTlTxtRes(fullText, {
@@ -300,7 +302,7 @@ async function main() {
     testNormalizedResultRestoresDisplay();
     testTemplateLiteralDisplayFormat();
     testDisplayFormatsUnitsAndCommas();
-    testDefaultDisplayPlacesTokensLast();
+    testDefaultDisplayPlacesMetricsInTemplateOrder();
     testDisplayCountsBatchStructuredItems();
     testDisplayPreservesStructuredText();
     testLongTextStructuredDataPreserved();

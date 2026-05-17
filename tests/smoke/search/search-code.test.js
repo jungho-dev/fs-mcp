@@ -5,7 +5,7 @@
 import fs from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath as flUrlTPth2 } from "node:url";
-import { handleGetFullSearchResults as hndGtFlSrRe, handleGetMoreSearchResults as hndGtMrSrRe, handleStartSearch as hndlStrtSrc2, handleStopSearch as hndlStpSrch2 } from "../../../out/controllers/controllers-search.js";
+import { handleGetFullSearchResults as hndGtFlSrRe, handleGetMoreSearchResults as hndGtMrSrRe, handleRegexSearches as hndlRgxSrchs, handleStopSearch as hndlStpSrch2, handleStartSearch as hndlStrtSrc2 } from "../../../out/controllers/controllers-search.js";
 import { configManager as cfgMgr } from "../../../out/features/config/config-store.js";
 
 const __filename = flUrlTPth2(import.meta.url);
@@ -159,9 +159,7 @@ async function teardown(origCfg) {
   try {
     const { searchManager: srchMgr } = await import("../../../out/features/search/search-service.js");
     const sessions = srchMgr.listSearchSessions();
-    for (const session of sessions) {
-      await hndlStpSrch2({ sessionId: session.id });
-    }
+    await Promise.all(sessions.map((session) => hndlStpSrch2({ sessionId: session.id })));
   }
   catch (_e) {
     // Ignore errors in cleanup
@@ -226,6 +224,30 @@ async function testSearchPaginationHints() {
       await hndlStpSrch2({ sessionId });
     }
   }
+}
+
+// 7-1. Test regex searches tool ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function testRegexSearchesTool() {
+  const result = await hndlRgxSrchs({
+    items: [
+      {
+        path: TEST_DIR,
+        pattern: "search.*",
+        filePattern: "*.js",
+        ignoreCase: false,
+        contextLines: 0,
+        maxResults: 10,
+        timeout_ms: 5000,
+      },
+    ],
+  });
+  const strcCont = result.structuredContent;
+  const itemResult = strcCont?.results?.[0]?.result?.structuredContent;
+
+  assert(result.content[0].text.includes("Regex search session:"), "Regex searches should include full item details");
+  assert(strcCont?.succeededCount === 1, "Regex searches should report one successful item");
+  assert(itemResult?.totalMatches >= 1, "Regex searches should find regex matches");
+  assert(itemResult?.results?.some((item) => item.file.endsWith("test1.js")), "Regex searches should return matching files");
 }
 
 // 7. Test case-sensitive search ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -443,6 +465,7 @@ export async function testSearchCode() {
     // Run all tests
     await testBasicSearch();
     await testSearchPaginationHints();
+    await testRegexSearchesTool();
     await testCaseSensitiveSearch();
     await testCaseInsensitiveSearch();
     await testFilePatternFiltering();

@@ -218,10 +218,25 @@ export function createToolErrorResponse(message: string, options: ToolResponseOp
 // 11. Normalize tool result ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function normalizeToolResult(toolName: string, result: ServerResult, durationMs?: number): ServerResult {
   if (isNormalizedToolResult(result)) {
-    const output = compactDuplicateTextContent(result.structuredContent as StandardToolOutput);
+    const prevOutput = result.structuredContent as StandardToolOutput;
+    const output = compactDuplicateTextContent({
+      ...prevOutput,
+      durationMs: durationMs ?? prevOutput.durationMs,
+    });
+    const fsMcpResult = result._meta?.fsMcpResult;
+    const nextMeta = typeof fsMcpResult === "object" && fsMcpResult !== null
+      ? {
+        ...result._meta,
+        fsMcpResult: {
+          ...fsMcpResult,
+          durationMs: output.durationMs,
+        },
+      }
+      : result._meta;
 
     return {
       ...result,
+      _meta: nextMeta,
       content: [{ text: crtTlDsplTxt(output), type: "text" }],
       structuredContent: output,
     };

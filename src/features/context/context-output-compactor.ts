@@ -19,7 +19,7 @@ interface CompactionState {
 
 const STR_CTX_FLD = new Set(["diff", "listing", "output", "stderr", "stdout", "textContent"]);
 const STR_CLL_FLD = new Set(["batchResults", "branches", "commits", "contexts", "documents", "entries", "files", "items", "matches", "processes", "resources", "results", "sessions", "stashes", "tags", "tools"]);
-const CBTN = new Set(["get_full_search", "list_directories", "read_files"]);
+const CBTN = new Set(["get_full_search", "list_directories", "read_files", "regex_searches"]);
 
 // 1. Is record ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isRecord(value: unknown): value is Record<string, unknown> {
