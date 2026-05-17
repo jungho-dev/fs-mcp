@@ -52,7 +52,7 @@
     "file-operations"
   ],
   "scripts": {
-    "publish": "npm publish --access public",
+    "release:publish": "npm publish --access public --ignore-scripts",
     "git": "bun ~/.bootstrap/bootstrap-sync.ts --git",
     "swc": "bun ~/.bootstrap/bootstrap-sync.ts --swc",
     "sync": "bun ~/.bootstrap/bootstrap-sync.ts --sync",
