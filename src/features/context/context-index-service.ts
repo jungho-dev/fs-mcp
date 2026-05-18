@@ -32,11 +32,14 @@ export declare interface ContextIndexReference extends ContextIndexDocument {
 export declare interface ContextSearchResult extends Record<string, unknown> {
   chunkIndex: number;
   indexId: string;
+  indexedLength?: number;
   lineEnd: number;
   lineStart: number;
+  originalLength?: number;
   rank: number;
   source: string;
   text: string;
+  truncated?: boolean;
 }
 export declare interface ContextListOptions {
   limit?: number;
@@ -72,10 +75,15 @@ const CDBS = 500;
 const CLDL = 500;
 const CLML = 500;
 const CTX_PRVW_LEN = 160;
-const CTX_SCH_VRSN = 3;
+const CTX_SCH_VRSN = 4;
 const LN_SPLT_PAT = /\r\n|\r|\n/;
 const TOK_PAT = /[\p{L}\p{N}_]+/gu;
 const LIKE_ESC_PAT = /[~%_]/g;
+const CJK_RUN_PAT = /[\p{Script=Han}\p{Script=Hangul}\p{Script=Hiragana}\p{Script=Katakana}]+/gu;
+const CJK_PAT = /[\p{Script=Han}\p{Script=Hangul}\p{Script=Hiragana}\p{Script=Katakana}]/u;
+const CJK_TOK_LMT = 4096;
+const CJK_QRY_LMT = 12;
+const CJK_EMPTY_TOK = "__fs_mcp_no_cjk__";
 
 type ContextDocumentRow = {
   content_hash: string | null;
@@ -106,13 +114,27 @@ type RetentionDocumentRow = {
 
 type ContextChunkRow = {
   chunk_index: number;
+  indexed_length: number | null;
   index_id: string;
   line_end: number;
   line_start: number;
+  original_length: number | null;
   rank: number;
   source: string;
   text: string;
+  truncated: number | null;
 };
+
+type ContextChunkTextRow = {
+  chunk_id: string;
+  index_id: string;
+  source: string;
+  text: string;
+};
+
+interface CjkInsertStatement {
+  run: (chunkId: string, indexId: string, source: string, token: string) => unknown;
+}
 
 // 1. Count lines ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function countLines(value: string): number {
@@ -150,7 +172,7 @@ function expandHomePath(value: string): string {
 
 // 3. Create preview ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createPreview(value: string): string {
-  return value.length <= CTX_PRVW_LEN ? value : value.slice(0, CTX_PRVW_LEN) + "... (omitted)";
+  return value.length <= CTX_PRVW_LEN ? value : sliceText(value, CTX_PRVW_LEN) + "... (omitted)";
 }
 
 // 4. Create index id ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -166,6 +188,16 @@ function createContentHash(value: string): string {
 // 6. Count UTF-8 bytes ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function countUtf8Bytes(value: string): number {
   return Buffer.byteLength(value, "utf8");
+}
+
+// 6-1. Slice text safely ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function sliceText(value: string, maxChars: number): string {
+  if (maxChars <= 0) {
+    return "";
+  }
+  const chars = Array.from(value);
+
+  return chars.length <= maxChars ? value : chars.slice(0, maxChars).join("");
 }
 
 // 7. Get row byte count ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -212,6 +244,63 @@ function createFtsQuery(query: string): string | null {
     return null;
   }
   return tokens.map((token) => "\"" + token.replace(/"/g, "\"\"") + "\"").join(" AND ");
+}
+
+// 10-1. Has CJK text ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function hasCjkText(value: string): boolean {
+  return CJK_PAT.test(value);
+}
+
+// 10-2. Create CJK tokens ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function createCjkTokens(value: string, limit: number = CJK_TOK_LMT): string[] {
+  const tokens = new Set<string>();
+
+  for (const match of value.matchAll(CJK_RUN_PAT)) {
+    const chars = Array.from(match[0].toLowerCase());
+
+    for (let index = 0; index < chars.length && tokens.size < limit; index++) {
+      tokens.add(chars[index]);
+      if (index + 2 <= chars.length) {
+        tokens.add(chars.slice(index, index + 2).join(""));
+      }
+      if (index + 3 <= chars.length) {
+        tokens.add(chars.slice(index, index + 3).join(""));
+      }
+    }
+    if (tokens.size >= limit) {
+      break;
+    }
+  }
+  return [...tokens];
+}
+
+// 10-3. Create CJK query tokens ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function createCjkQueryTokens(query: string): string[] {
+  return createCjkTokens(query, CJK_QRY_LMT).filter((token) => token.length > 0);
+}
+
+// 10-4. Normalize search row ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function normalizeSearchRow(row: ContextChunkRow): ContextSearchResult {
+  const result: ContextSearchResult = {
+    chunkIndex: row.chunk_index,
+    indexId: row.index_id,
+    lineEnd: row.line_end,
+    lineStart: row.line_start,
+    rank: row.rank,
+    source: row.source,
+    text: row.text,
+  };
+
+  if (row.indexed_length !== null) {
+    result.indexedLength = row.indexed_length;
+  }
+  if (row.original_length !== null) {
+    result.originalLength = row.original_length;
+  }
+  if (row.truncated !== null) {
+    result.truncated = row.truncated === 1;
+  }
+  return result;
 }
 
 // 11. Ensure table column ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -384,6 +473,14 @@ class ContextIndexService {
       "  source,",
       "  text",
       ");",
+      "CREATE TABLE IF NOT EXISTS context_chunks_cjk (",
+      "  chunk_id TEXT NOT NULL,",
+      "  index_id TEXT NOT NULL,",
+      "  source TEXT NOT NULL,",
+      "  token TEXT NOT NULL,",
+      "  PRIMARY KEY(chunk_id, token),",
+      "  FOREIGN KEY(index_id) REFERENCES context_documents(index_id) ON DELETE CASCADE",
+      ");",
     ].join("\n"));
     ensureTableColumn(db, "context_documents", "content_hash", "ALTER TABLE context_documents ADD COLUMN content_hash TEXT");
     ensureTableColumn(db, "context_documents", "indexed_length", "ALTER TABLE context_documents ADD COLUMN indexed_length INTEGER");
@@ -393,7 +490,10 @@ class ContextIndexService {
     db.exec("CREATE INDEX IF NOT EXISTS idx_context_documents_created_at ON context_documents(created_at DESC)");
     db.exec("CREATE INDEX IF NOT EXISTS idx_context_documents_content_hash ON context_documents(content_hash)");
     db.exec("CREATE INDEX IF NOT EXISTS idx_context_chunks_index_id ON context_chunks(index_id)");
+    db.exec("CREATE INDEX IF NOT EXISTS idx_context_chunks_cjk_token ON context_chunks_cjk(token)");
+    db.exec("CREATE INDEX IF NOT EXISTS idx_context_chunks_cjk_index_id ON context_chunks_cjk(index_id)");
     this.rebuildFtsIfNeeded(db);
+    this.syncCjkTokens(db);
     db.exec("PRAGMA user_version = " + CTX_SCH_VRSN);
   }
 
@@ -408,6 +508,38 @@ class ContextIndexService {
       db.exec("DELETE FROM context_chunks_fts");
       db.exec("INSERT INTO context_chunks_fts (chunk_id, index_id, source, text) SELECT chunk_id, index_id, source, text FROM context_chunks");
     })();
+  }
+
+  private syncCjkTokens(db: Database): void {
+    const rows = db.query<ContextChunkTextRow, []>([
+      "SELECT c.chunk_id, c.index_id, c.source, c.text",
+      "FROM context_chunks c",
+      "LEFT JOIN context_chunks_cjk t ON t.chunk_id = c.chunk_id",
+      "WHERE t.chunk_id IS NULL",
+    ].join("\n")).all();
+
+    if (rows.length === 0) {
+      return;
+    }
+    const insrCjk = db.prepare("INSERT OR IGNORE INTO context_chunks_cjk (chunk_id, index_id, source, token) VALUES (?, ?, ?, ?)") as CjkInsertStatement;
+
+    db.transaction(() => {
+      for (const row of rows) {
+        this.insertCjkTokens(insrCjk, row.chunk_id, row.index_id, row.source, row.text);
+      }
+    })();
+  }
+
+  private insertCjkTokens(statement: CjkInsertStatement, chunkId: string, indexId: string, source: string, text: string): void {
+    const tokens = createCjkTokens(text);
+
+    if (tokens.length === 0) {
+      statement.run(chunkId, indexId, source, CJK_EMPTY_TOK);
+      return;
+    }
+    for (const token of tokens) {
+      statement.run(chunkId, indexId, source, token);
+    }
   }
 
   private findReusableIndex(db: Database, contentHash: string, source: string, toolName: string | undefined, content: string, origLen: number, origBytes: number, indxLen: number): ContextIndexReference | null {
@@ -459,6 +591,7 @@ class ContextIndexService {
         const placeholders = batchIds.map(() => "?").join(", ");
 
         db.query("DELETE FROM context_chunks_fts WHERE index_id IN (" + placeholders + ")").run(...batchIds);
+        db.query("DELETE FROM context_chunks_cjk WHERE index_id IN (" + placeholders + ")").run(...batchIds);
         db.query("DELETE FROM context_chunks WHERE index_id IN (" + placeholders + ")").run(...batchIds);
         db.query("DELETE FROM context_documents WHERE index_id IN (" + placeholders + ")").run(...batchIds);
       }
@@ -512,7 +645,7 @@ class ContextIndexService {
     const createdAt = new Date().toISOString();
     const origLen = content.length;
     const origBytes = countUtf8Bytes(content);
-    const indexedText = content.slice(0, config.maxEntryChars);
+    const indexedText = sliceText(content, config.maxEntryChars);
     const indxLen = indexedText.length;
     const truncated = indxLen < origLen;
     const contentHash = createContentHash(content);
@@ -530,6 +663,7 @@ class ContextIndexService {
     ].join(" "));
     const insertChunk = db.prepare("INSERT INTO context_chunks (chunk_id, index_id, chunk_index, source, text, line_start, line_end) VALUES (?, ?, ?, ?, ?, ?, ?)");
     const insertFts = db.prepare("INSERT INTO context_chunks_fts (chunk_id, index_id, source, text) VALUES (?, ?, ?, ?)");
+    const insrCjk = db.prepare("INSERT OR IGNORE INTO context_chunks_cjk (chunk_id, index_id, source, token) VALUES (?, ?, ?, ?)") as CjkInsertStatement;
     const insertAll = db.transaction(() => {
       insrDoc.run(indexId, source, toolName ?? null, createdAt, origLen, origBytes, indxLen, lineCount, truncated ? 1 : 0, contentHash);
 
@@ -546,6 +680,7 @@ class ContextIndexService {
 
         insertChunk.run(chunkId, indexId, chunkIndex, source, chunkText, lineStart, lineEnd);
         insertFts.run(chunkId, indexId, source, chunkText);
+        this.insertCjkTokens(insrCjk, chunkId, indexId, source, chunkText);
         if (start + CCLC >= lines.length) {
           break;
         }
@@ -569,6 +704,38 @@ class ContextIndexService {
     };
   }
 
+  private searchCjk(query: string, limit: number, source?: string): ContextSearchResult[] {
+    const tokens = createCjkQueryTokens(query);
+
+    if (tokens.length === 0) {
+      return [];
+    }
+    const db = this.getDatabase();
+    const placeholders = tokens.map(() => "?").join(", ");
+    const params: Array<number | string> = [...tokens];
+    const srcFilter = source !== undefined ? "AND c.source LIKE ? ESCAPE '~'" : "";
+
+    if (source !== undefined) {
+      params.push(createLikeContainsPattern(source));
+    }
+    params.push(tokens.length, limit);
+    const rows = db.query<ContextChunkRow, Array<number | string>>([
+      "SELECT c.index_id, c.chunk_index, c.source, c.text, c.line_start, c.line_end,",
+      "       d.original_length, d.indexed_length, d.truncated, -COUNT(DISTINCT t.token) AS rank",
+      "FROM context_chunks_cjk t",
+      "JOIN context_chunks c ON c.chunk_id = t.chunk_id",
+      "JOIN context_documents d ON d.index_id = c.index_id",
+      "WHERE t.token IN (" + placeholders + ")",
+      srcFilter,
+      "GROUP BY c.chunk_id",
+      "HAVING COUNT(DISTINCT t.token) >= ?",
+      "ORDER BY rank",
+      "LIMIT ?",
+    ].filter((line) => line.length > 0).join("\n")).all(...params);
+
+    return rows.map(normalizeSearchRow);
+  }
+
   search(query: string, limit: number = 5, source?: string): ContextSearchResult[] {
     const ftsQuery = createFtsQuery(query);
 
@@ -579,31 +746,42 @@ class ContextIndexService {
     const boundedLimit = Math.max(1, Math.min(limit, 50));
     const rows = source
       ? db.query<ContextChunkRow, [string, string, number]>([
-          "SELECT c.index_id, c.chunk_index, c.source, c.text, c.line_start, c.line_end, bm25(context_chunks_fts) AS rank",
+          "SELECT c.index_id, c.chunk_index, c.source, c.text, c.line_start, c.line_end,",
+          "       d.original_length, d.indexed_length, d.truncated, bm25(context_chunks_fts) AS rank",
           "FROM context_chunks_fts",
           "JOIN context_chunks c ON c.chunk_id = context_chunks_fts.chunk_id",
+          "JOIN context_documents d ON d.index_id = c.index_id",
           "WHERE context_chunks_fts MATCH ? AND c.source LIKE ? ESCAPE '~'",
           "ORDER BY rank",
           "LIMIT ?",
         ].join("\n")).all(ftsQuery, createLikeContainsPattern(source), boundedLimit)
       : db.query<ContextChunkRow, [string, number]>([
-          "SELECT c.index_id, c.chunk_index, c.source, c.text, c.line_start, c.line_end, bm25(context_chunks_fts) AS rank",
+          "SELECT c.index_id, c.chunk_index, c.source, c.text, c.line_start, c.line_end,",
+          "       d.original_length, d.indexed_length, d.truncated, bm25(context_chunks_fts) AS rank",
           "FROM context_chunks_fts",
           "JOIN context_chunks c ON c.chunk_id = context_chunks_fts.chunk_id",
+          "JOIN context_documents d ON d.index_id = c.index_id",
           "WHERE context_chunks_fts MATCH ?",
           "ORDER BY rank",
           "LIMIT ?",
         ].join("\n")).all(ftsQuery, boundedLimit);
 
-    return rows.map((row) => ({
-      chunkIndex: row.chunk_index,
-      indexId: row.index_id,
-      lineEnd: row.line_end,
-      lineStart: row.line_start,
-      rank: row.rank,
-      source: row.source,
-      text: row.text,
-    }));
+    const results = rows.map(normalizeSearchRow);
+
+    if (!hasCjkText(query) || results.length >= boundedLimit) {
+      return results;
+    }
+    const seen = new Set(results.map((result) => result.indexId + ":" + result.chunkIndex));
+
+    for (const result of this.searchCjk(query, boundedLimit - results.length, source)) {
+      const key = result.indexId + ":" + result.chunkIndex;
+
+      if (!seen.has(key)) {
+        results.push(result);
+        seen.add(key);
+      }
+    }
+    return results;
   }
 
   listDocuments(options: ContextListOptions = {}): ContextIndexDocument[] {
@@ -646,6 +824,7 @@ class ContextIndexService {
 
       db.transaction(() => {
         db.exec("DELETE FROM context_chunks_fts");
+        db.exec("DELETE FROM context_chunks_cjk");
         db.exec("DELETE FROM context_chunks");
         db.exec("DELETE FROM context_documents");
       })();

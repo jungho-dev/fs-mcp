@@ -44,7 +44,7 @@ export declare interface ToolResponseOptions {
 }
 const DTCML = 512;
 const DTCPL = 160;
-const DTCS = "\n... (preview; full text in data.text)";
+const DTCS = "\n...\nFull text in data.text";
 const DSTP = /<\|endoftext\|>/g;
 const DSTR = "<|endoftext |>";
 

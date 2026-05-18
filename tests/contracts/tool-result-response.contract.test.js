@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { createToolDisplayText as crtTlDsplTxt } from "../../out/cores/responses/responses-tool-display.js";
 import { createToolErrorResponse as crtTlErrRes, createToolTextResponse as crtTlTxtRes, normalizeToolResult as nrmlTlRes } from "../../out/cores/responses/responses-tool-result.js";
+import { getCurrentClient as getCurClnt, updateCurrentClient as updtCurClnt } from "../../out/features/config/config-client.js";
 import { configManager as cfgMgr } from "../../out/features/config/config-store.js";
 import { contextIndexService as ctxIdxSvc } from "../../out/features/context/context-index-service.js";
 
@@ -63,6 +64,24 @@ function testDefaultDisplayPlacesMetricsInTemplateOrder() {
 
   assert.equal(tokenIdx < strcIdx, true);
   assert.equal(lineIdx > strcIdx, true);
+}
+
+function testGeminiDisplayStripsAnsi() {
+  const origClnt = getCurClnt();
+
+  try {
+    updtCurClnt({ name: "Gemini CLI", version: "1.0.0" });
+
+    const normalized = nrmlTlRes("gemini_tool", crtTlTxtRes("ok"), 1);
+    const summary = normalized.content[0].text;
+
+    assert.equal(/\u001B\[[0-?]*[ -/]*[@-~]/.test(summary), false);
+    assert.equal(summary.includes("tool = gemini_tool"), true);
+    assert.equal(summary.includes("status = success"), true);
+  }
+  finally {
+    updtCurClnt(origClnt);
+  }
 }
 
 function testDisplayCountsBatchStructuredItems() {
@@ -227,7 +246,7 @@ function testDefaultContextIndexKeepsOriginalOutput() {
 
   assert.equal(output.data.text, fullText);
   assert.equal(output.data.content[0].text.includes(fullText), false);
-  assert.equal(output.data.content[0].text.includes("preview; full text in data.text"), true);
+  assert.equal(output.data.content[0].text.includes("Full text in data.text"), true);
   assert.equal(output.data.structuredContent.textContent, fullText);
   assert.equal(Array.isArray(output.contextIndexes), true);
   assert.equal(srlzDt.includes("[context-index:"), false);
@@ -279,12 +298,13 @@ function testTrackedToolBypassesOutputCompaction() {
     assert.equal(output.contextIndexes, undefined);
     assert.equal(output.data.text, fullText);
     assert.equal(output.data.content[0].text.includes(fullText), false);
-    assert.equal(output.data.content[0].text.includes("preview; full text in data.text"), true);
+    assert.equal(output.data.content[0].text.includes("Full text in data.text"), true);
     assert.equal(output.data.structuredContent.textContent, fullText);
     assert.equal(srlzOtpt.includes("contextIndex"), false);
     assert.equal(srlzOtpt.includes("omitted"), false);
     assert.equal(srlzOtpt.includes("previewOnly"), false);
-    assert.equal(srlzOtpt.includes("preview; full text in data.text"), true);
+    assert.equal(srlzOtpt.includes("Full text in data.text"), true);
+    assert.equal(srlzOtpt.includes("preview"), false);
     assert.equal(srlzOtpt.includes("(preview)"), false);
   }
 }
@@ -319,6 +339,7 @@ async function main() {
     testTemplateLiteralDisplayFormat();
     testDisplayFormatsUnitsAndCommas();
     testDefaultDisplayPlacesMetricsInTemplateOrder();
+    testGeminiDisplayStripsAnsi();
     testDisplayCountsBatchStructuredItems();
     testDisplayPreservesStructuredText();
     testLongTextStructuredDataPreserved();

@@ -25,6 +25,7 @@ const colors = {
 const TEST_GROUPS = {
   contracts: [
     "./contracts/batch-tool.contract.test.js",
+    "./contracts/client-compat.contract.test.js",
     "./contracts/context-index.contract.test.js",
     "./contracts/server-instructions.contract.test.js",
     "./contracts/tool-catalog.contract.test.js",

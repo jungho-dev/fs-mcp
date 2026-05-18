@@ -189,9 +189,11 @@ export async function handleGetMoreSearchResults(args: unknown): Promise<ServerR
         isComplete: results.isComplete,
         nextOffset,
         returnedCount: results.returnedCount,
+        results: results.results,
         sessionId: parsed.data.sessionId,
         totalMatches: results.totalMatches,
         totalResults: results.totalResults,
+        wasIncomplete: results.wasIncomplete === true,
         wasLimited: results.wasLimited === true,
       },
     };

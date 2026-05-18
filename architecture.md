@@ -151,8 +151,8 @@ support.
   and context-index work, and prefer one batch call for multiple same-kind operations.
 - Client metadata is captured during initialization and exposed as `currentClient` through configuration tools.
 - `FilteredStdioServerTransport` captures accidental console output so MCP JSON-RPC stays isolated on stdio.
-- Notifications are disabled for clients with known notification sensitivity, currently Cline, VS Code, and
-  Claude Dev.
+- Compatibility profiles cover Claude, Codex, Gemini CLI, and GitHub Copilot only. Gemini CLI and Copilot disable
+  server-side JSON-RPC notifications; Claude and Codex use the standard notification flow.
 - The server registers no-op resource and resource-template handlers so clients that probe resources during
   initialization can complete even when the package has no MCP resources to expose.
 

@@ -50,7 +50,7 @@ const BRPMC = 160;
 const OLD_VAL_PAT = /old value/;
 const EXTR_VAL_PAT = /extra value/;
 const CRTD_DR_PAT = /created-dir/;
-const PRVW_PAT = /preview/;
+const CMPT_PAT = / \.\.\./;
 const UNST_LN_PAT = /unstructured line 79/;
 const RTLP = /Reading 2 lines/;
 const THXP = /x{300}/;
@@ -160,11 +160,13 @@ async function testReadFilesSurface() {
   const lrgBtchRess = largeOutput.data.structuredContent.results;
 
   assert.equal(lrgBtchRess[0].ok, true);
-  assert.match(lrgBtchRess[0].result.content[0].text, PRVW_PAT);
+  assert.match(lrgBtchRess[0].result.content[0].text, CMPT_PAT);
   assert.ok(lrgBtchRess[0].result.content[0].text.length <= BRPMC);
   assert.match(lrgBtchRess[0].result.structuredContent.textContent, RTLP);
-  assert.match(largeOutput.data.text, THXP);
-  assert.match(largeOutput.data.text, THYP);
+  assert.doesNotMatch(largeOutput.data.text, THXP);
+  assert.doesNotMatch(largeOutput.data.text, THYP);
+  assert.match(lrgBtchRess[0].result.structuredContent.textContent, THXP);
+  assert.match(lrgBtchRess[0].result.structuredContent.textContent, THYP);
   assert.match(JSON.stringify(lrgBtchRess[0].result), THYP);
 
   const missingFile = path.join(TEST_DIR, "missing.txt");
@@ -216,7 +218,7 @@ function testLargeUnstructuredResultPreview() {
   ]);
   const batchResult = result.structuredContent.results[0].result;
 
-  assert.match(batchResult.content[0].text, PRVW_PAT);
+  assert.match(batchResult.content[0].text, CMPT_PAT);
   assert.ok(batchResult.content[0].text.length <= BRPMC);
   assert.match(batchResult.content[0].text, unstLnZrPat);
   assert.doesNotMatch(batchResult.content[0].text, UNST_LN_PAT);
@@ -468,8 +470,8 @@ async function testWriteMoveInfoAndEditSurface() {
   const lrgRdOtpt = parseToolOutput(lrgRdRes);
   const lrgRdBtRe = lrgRdOtpt.data.structuredContent.results;
   assert.equal(lrgRdBtRe[0].ok, true);
-  assert.match(lrgRdBtRe[0].result.content[0].text, PRVW_PAT);
-  assert.ok(lrgRdOtpt.data.text.includes(TN_THSN_B));
+  assert.match(lrgRdBtRe[0].result.content[0].text, CMPT_PAT);
+  assert.equal(lrgRdOtpt.data.text.includes(TN_THSN_B), false);
   assert.equal(lrgRdBtRe[0].result.structuredContent.textContent.includes(TN_THSN_B), true);
   assert.equal(JSON.stringify(lrgRdBtRe[0].result).includes("previewOnly"), false);
 

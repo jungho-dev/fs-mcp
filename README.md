@@ -142,8 +142,8 @@ payload in every transcript.
 
 - Client metadata is captured during initialization and exposed through `get_configs` as `currentClient`.
 - Console and stdout filtering protect MCP JSON-RPC stdio from accidental process output.
-- Notifications are suppressed for clients known to be sensitive to server-side JSON-RPC notifications, including
-  Cline, VS Code, and Claude Dev.
+- Agent compatibility is scoped to Claude, Codex, Gemini CLI, and GitHub Copilot. Gemini CLI and Copilot suppress
+  server-side JSON-RPC notifications; Claude and Codex keep the standard notification flow.
 - Resource and resource-template list handlers return empty lists so clients that probe resources during
   initialization can complete cleanly.
 

@@ -6,6 +6,7 @@
  */
 
 import type { ServerResult, ServerResponseContent as SrvrResCont } from "@assets/type/common";
+import {curClnt} from "@features/config/config-client";
 import {countTokens as cntTkns} from "gpt-tokenizer";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -77,6 +78,7 @@ const scndFrmt = new Intl.NumberFormat(`en-US`, {
   maximumFractionDigits: 3,
   minimumFractionDigits: 0,
 });
+const ANSI_ESC_PAT = /\u001B\[[0-?]*[ -/]*[@-~]/g;
 
 // 1. Stringify display structured content ―――――――――――――――――――――――――――――――――――――――――――――――――――――
 function stringifyDisplayStructuredContent(value: ServerResult["structuredContent"] | null): string {
@@ -160,7 +162,22 @@ function renderToolDisplayTemplate(template: string, values: ToolDisplayTemplate
   });
 }
 
-// 8. Create tool display text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Strip ANSI escape sequences ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function stripAnsiEscapes(value: string): string {
+  return value.replace(ANSI_ESC_PAT, ``);
+}
+
+// 9. Check Gemini client display ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function isGeminiClientDisplay(): boolean {
+  return curClnt.name.toLowerCase().includes(`gemini`);
+}
+
+// 10. Create tool display text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function createToolDisplayText(output: ToolDisplayOutput, template = TL_DSPL_TMPL): string {
-  return renderToolDisplayTemplate(template, createToolDisplayValues(output));
+  const displayText = renderToolDisplayTemplate(template, createToolDisplayValues(output));
+
+  if (isGeminiClientDisplay()) {
+    return stripAnsiEscapes(displayText);
+  }
+  return displayText;
 }

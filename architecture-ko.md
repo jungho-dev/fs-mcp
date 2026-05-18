@@ -150,7 +150,9 @@ Tool catalog module은 runtime domain별로 나뉩니다. 현재 catalog는 29�
 - 초기화 시 client metadata를 수집하고 configuration tool에서 `currentClient`로 노출합니다.
 - `FilteredStdioServerTransport`는 우발적 console output을 capture해 MCP JSON-RPC가 stdio에서 격리되게
   합니다.
-- Cline, VS Code, Claude Dev처럼 notification sensitivity가 알려진 client에는 notification을 비활성화합니다.
+- Compatibility profile은 Claude, Codex, Gemini CLI, GitHub Copilot 4개만 대상으로 합니다. Gemini CLI와
+  Copilot은 server-side JSON-RPC notification을 비활성화하고 Claude와 Codex는 standard notification flow를
+  사용합니다.
 - 서버는 no-op resource/resource-template handler를 등록해 MCP resource가 없어도 resource probe client가
   초기화를 완료하게 합니다.
 

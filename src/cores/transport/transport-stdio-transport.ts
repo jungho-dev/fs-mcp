@@ -12,6 +12,14 @@ const TRLN_NWLN_RE = /\n$/;
 type LogLevel = LogNotification["params"]["level"];
 type StdoutWriteCallback = (error?: Error | null) => void;
 
+export declare type AgentId = "claude" | "codex" | "copilot" | "gemini" | "unknown";
+
+interface AgentProfile {
+  disableNotifications: boolean;
+  id: AgentId;
+  markers: string[];
+}
+
 interface LogNotification {
   jsonrpc: "2.0";
   method: "notifications/message";
@@ -21,6 +29,13 @@ interface LogNotification {
     data: unknown;
   };
 }
+
+const AGNT_PRFLS: AgentProfile[] = [
+  {disableNotifications: false, id: "claude", markers: ["claude"]},
+  {disableNotifications: false, id: "codex", markers: ["codex"]},
+  {disableNotifications: true, id: "gemini", markers: ["gemini"]},
+  {disableNotifications: true, id: "copilot", markers: ["copilot"]},
+];
 
 // 1. Is structured log data ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isStructuredLogData(value: unknown): value is Record<string, unknown> {
@@ -55,6 +70,27 @@ function formatLogArgument(value: unknown): string {
 function writeToStdout(write: typeof process.stdout.write, chunk: string | Uint8Array, encdOrCllb?: BufferEncoding | StdoutWriteCallback, callback?: StdoutWriteCallback): boolean {
   const writeArgs = callback !== undefined ? [chunk, encdOrCllb, callback] : encdOrCllb !== undefined ? [chunk, encdOrCllb] : [chunk];
   return Reflect.apply(write, process.stdout, writeArgs) as boolean;
+}
+
+// 5. Should disable notifications ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export function shouldDisableNotifications(clientName: string): boolean {
+  const profile = getAgentProfile(clientName);
+
+  return profile?.disableNotifications ?? false;
+}
+
+// 5-1. Detect agent id ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export function detectAgentId(clientName: string): AgentId {
+  const profile = getAgentProfile(clientName);
+
+  return profile?.id ?? "unknown";
+}
+
+// 5-2. Get agent profile ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function getAgentProfile(clientName: string): AgentProfile | undefined {
+  const normName = clientName.trim().toLowerCase();
+
+  return AGNT_PRFLS.find((profile) => profile.markers.some((marker) => normName.includes(marker)));
 }
 
 // 1. JSON-RPC console wrapping transport ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -139,11 +175,10 @@ export class FilteredStdioServerTransport extends StdSrvrTrns {
   // Call this BEFORE enableNotifications()
   // 8. Configure for client ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public configureForClient(clientName: string): void {
-    this.clientName = clientName.toLowerCase();
+    this.clientName = detectAgentId(clientName);
+    this.disableNotifications = shouldDisableNotifications(this.clientName);
 
-    // Detect Cline and disable notifications
-    if (this.clientName.includes("cline") || this.clientName.includes("vscode") || this.clientName === "claude-dev") {
-      this.disableNotifications = true;
+    if (this.disableNotifications) {
       process.stderr.write(`fs-mcp: Notifications disabled for ${clientName}\n`);
     }
   }
@@ -270,7 +305,7 @@ export class FilteredStdioServerTransport extends StdSrvrTrns {
 
   // 13. Send log notification ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   private sendLogNotification(level: LogLevel, args: unknown[]): void {
-    // Skip if notifications are disabled (e.g., for Cline)
+    // Skip if notifications are disabled for the active MCP client.
     if (this.disableNotifications) {
       return;
     }
@@ -317,7 +352,7 @@ export class FilteredStdioServerTransport extends StdSrvrTrns {
   // Now properly buffers messages before MCP initialization to avoid breaking stdio protocol
   // 14. Send log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   public sendLog(level: LogLevel, message: string, data?: unknown): void {
-    // Skip if notifications are disabled (e.g., for Cline)
+    // Skip if notifications are disabled for the active MCP client.
     if (this.disableNotifications) {
       return;
     }

@@ -65,10 +65,23 @@ function readDbSnapshot(dbPath) {
   try {
     return {
       chunkCount: db.query("SELECT COUNT(*) AS count FROM context_chunks").get().count,
+      cjkCount: db.query("SELECT COUNT(*) AS count FROM context_chunks_cjk").get().count,
       columns: db.query("PRAGMA table_info(context_documents)").all().map((row) => row.name),
       ftsCount: db.query("SELECT COUNT(*) AS count FROM context_chunks_fts").get().count,
       userVersion: db.query("PRAGMA user_version").get().user_version,
     };
+  }
+  finally {
+    db.close();
+  }
+}
+
+// 3-1. Read chunk text values ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function readChunkTexts(dbPath) {
+  const db = new Database(dbPath, {readonly: true});
+
+  try {
+    return db.query("SELECT text FROM context_chunks ORDER BY chunk_index").all().map((row) => row.text);
   }
   finally {
     db.close();
@@ -93,12 +106,60 @@ async function testFullHashSeparatesSamePrefixPayloads() {
     assert.equal(second.indexedLength, 10);
     assert.equal(second.truncated, true);
     assert.equal(docs.length, 2);
-    assert.ok(snapshot.userVersion >= 3);
+    assert.ok(snapshot.userVersion >= 4);
     assert.equal(snapshot.columns.includes("indexed_length"), true);
     assert.equal(snapshot.columns.includes("original_bytes"), true);
     assert.equal(snapshot.columns.includes("truncated"), true);
     assert.equal(snapshot.chunkCount, 2);
     assert.equal(snapshot.ftsCount, 2);
+  }
+  finally {
+    ctxIdxSvc.close();
+    await removeTempDir(dir);
+  }
+}
+
+// 10. CJK no-space text remains searchable ―――――――――――――――――――――――――――――――――――――――――――――――――――
+async function testCjkNoSpaceTextRemainsSearchable() {
+  const dir = mkdtempSync(join(tmpdir(), "fs-mcp-context-cjk-"));
+
+  try {
+    await useIsolatedContextConfig(dir, {
+      contextIndexMaxEntryChars: 1_000,
+    });
+    const noSpace = ctxIdxSvc.indexText("ko-nospace", "한국어언어압축손실테스트 코드ABC123", "lang_tool");
+    const spaced = ctxIdxSvc.indexText("ko-space", "한국어 언어 압축 손실 테스트 코드 ABC123", "lang_tool");
+    const broadHits = ctxIdxSvc.search("압축", 10);
+    const joinedHits = ctxIdxSvc.search("언어압축손실", 10);
+    const filteredHits = ctxIdxSvc.search("압축", 10, "ko-nospace");
+
+    assert.equal(broadHits.some((hit) => hit.indexId === noSpace.indexId), true);
+    assert.equal(broadHits.some((hit) => hit.indexId === spaced.indexId), true);
+    assert.equal(joinedHits.some((hit) => hit.indexId === noSpace.indexId), true);
+    assert.equal(filteredHits.length, 1);
+    assert.equal(filteredHits[0].indexId, noSpace.indexId);
+  }
+  finally {
+    ctxIdxSvc.close();
+    await removeTempDir(dir);
+  }
+}
+
+// 11. Unicode-safe truncation keeps complete code points ―――――――――――――――――――――――――――――――――――――――
+async function testUnicodeSafeTruncationKeepsCodePoint() {
+  const dir = mkdtempSync(join(tmpdir(), "fs-mcp-context-unicode-"));
+  const dbPath = join(dir, "fs-mcp.sqlite");
+
+  try {
+    await useIsolatedContextConfig(dir, {
+      contextIndexMaxEntryChars: 1,
+    });
+    const reference = ctxIdxSvc.indexText("unicode-source", "😀abc", "unicode_tool");
+    const chunkTexts = readChunkTexts(dbPath);
+
+    assert.equal(reference.truncated, true);
+    assert.equal(chunkTexts.length, 1);
+    assert.equal(chunkTexts[0], "😀");
   }
   finally {
     ctxIdxSvc.close();
@@ -277,6 +338,8 @@ async function main() {
     await testSetConfigValuesUsesProjectedConfig();
     await testContextIndexToolsExposeMaintenanceSurface();
     await testCustomDbPathMustStayAllowed();
+    await testCjkNoSpaceTextRemainsSearchable();
+    await testUnicodeSafeTruncationKeepsCodePoint();
   }
   finally {
     ctxIdxSvc.close();

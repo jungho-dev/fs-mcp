@@ -216,7 +216,10 @@ async function testSearchPaginationHints() {
     assert(Object.hasOwn(moreResults.structuredContent, "nextOffset"), "Search result read should expose nextOffset");
 
     const fullResults = await hndGtFlSrRe({ items: [{ sessionId, offset: 0, length: 20 }] });
-    assert(fullResults.content[0].text.includes("Search session:"), "Full search result tool should include item result details");
+    const fullItem = fullResults.structuredContent?.results?.[0]?.result?.structuredContent;
+
+    assert(fullResults.content[0].text.includes("\nResults:\n"), "Full search result tool should include multiline item details");
+    assert(fullItem?.results?.some((item) => item.file.endsWith("test1.js")), "Full search result tool should expose matching result rows");
     assert(!fullResults.content[0].text.includes("... (omitted)"), "Full search result tool should not omit item result details");
   }
   finally {

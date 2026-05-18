@@ -202,7 +202,7 @@ function hasLargeStructuredPayload(result: ServerResult): boolean {
 // 10. Create result text preview ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createResultTextPreview(text: string): string {
   const cmpcTxt = text.replace(WHTS_PAT, " ").trim();
-  const suffix = " ... (preview)";
+  const suffix = " ...";
   let preview = cmpcTxt;
 
   if (cmpcTxt.length > BRPL) {
