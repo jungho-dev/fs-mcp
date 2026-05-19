@@ -4,7 +4,7 @@
   "description": "MCP server for file system operations",
   "publisher": "JUNGHO",
   "license": "Apache-2.0",
-  "version": "1.6.1",
+  "version": "1.6.2",
   "type": "module",
   "main": "./out/index.mjs",
   "exports": {
@@ -53,6 +53,7 @@
   ],
   "scripts": {
     "publish": "npm publish --access public",
+    "publish:npm": "npm publish --access public",
     "git": "bun ~/.bootstrap/bootstrap-sync.ts --git",
     "swc": "bun ~/.bootstrap/bootstrap-sync.ts --swc",
     "sync": "bun ~/.bootstrap/bootstrap-sync.ts --sync",
