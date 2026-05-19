@@ -1,6 +1,6 @@
 /**
  * @file src/features/config/config-client.ts
- * @description Current MCP client state and context index path helpers.
+ * @description Current MCP client state.
  * @author JUNGHO
  * @since 2026-05-08
  */
@@ -28,12 +28,7 @@ export function buildCurrentClientSessionKey(): string {
   return `${curClnt.name}@${curClnt.version}`;
 }
 
-// 3. Get default context index DB path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export function getDefaultContextIndexDbPath(): string {
-  return "~/.mcp/fs-mcp.sqlite";
-}
-
-// 4. Update current client ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Update current client ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function updateCurrentClient(clientInfo: ClientInfoUpdate): {changed: boolean; nameChanged: boolean} {
   const nextClient: CurrentClient = {
     name: clientInfo.name ?? curClnt.name,

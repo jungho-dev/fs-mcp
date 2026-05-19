@@ -46,7 +46,7 @@ const PROC_TL_DFNT = [
     name: "interact_with_processes",
     description: (`
       Send input to running processes in parallel.
-      Use input_path for large stdin payloads.
+      input_path can reduce transport overhead for stdin payloads.
       ${BTCH_GDNC}
       ${CMD_PRF_DSC}
     `),

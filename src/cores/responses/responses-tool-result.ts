@@ -7,7 +7,6 @@
 
 import type { ServerResponseContent as SrvrResCont, ServerResult } from "@assets/type/common";
 import {createToolDisplayText as crtTlDsplTxt} from "@cores/responses/responses-tool-display";
-import {compactStandardToolOutput as cmpStTlOt} from "@features/context/context-output-compactor";
 
 export declare type ToolResultStatus = "success" | "error";
 
@@ -24,8 +23,6 @@ export declare interface ToolResultError {
   message: string;
 }
 export declare interface StandardToolOutput {
-  contextIndexError?: string;
-  contextIndexes?: unknown[];
   data: {
     content: SrvrResCont[];
     structuredContent: ServerResult["structuredContent"] | null;
@@ -42,9 +39,6 @@ export declare interface ToolResponseOptions {
   meta?: Record<string, unknown>;
   structuredContent?: ServerResult["structuredContent"];
 }
-const DTCML = 512;
-const DTCPL = 160;
-const DTCS = "\n...\nFull text in data.text";
 const DSTP = /<\|endoftext\|>/g;
 const DSTR = "<|endoftext |>";
 
@@ -147,48 +141,6 @@ function createStandardOutput(toolName: string, result: ServerResult, content: S
   return stndOtpt;
 }
 
-// 6-1. Create duplicate text content preview ――――――――――――――――――――――――――――――――――――――――――――――――
-function createDuplicateTextContentPreview(value: string): string {
-  const preview = value.slice(0, DTCPL);
-
-  return `${preview}${DTCS}`;
-}
-
-// 6-2. Compact duplicate text content ―――――――――――――――――――――――――――――――――――――――――――――――――――――
-function compactDuplicateTextContent(output: StandardToolOutput): StandardToolOutput {
-  const dataText = output.data.text;
-
-  if (dataText.length <= DTCML) {
-    return output;
-  }
-  let compacted = false;
-  const content = output.data.content.map((item) => {
-    if (item.type !== "text" || typeof item.text !== "string") {
-      return item;
-    }
-    if (item.text.length <= DTCML || !dataText.includes(item.text)) {
-      return item;
-    }
-    compacted = true;
-
-    return {
-      ...item,
-      text: createDuplicateTextContentPreview(item.text),
-    };
-  });
-
-  if (!compacted) {
-    return output;
-  }
-  return {
-    ...output,
-    data: {
-      ...output.data,
-      content,
-    },
-  };
-}
-
 // 7. Is standard tool output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export function isStandardToolOutput(value: unknown): value is StandardToolOutput {
   if (typeof value !== "object" || value === null) {
@@ -243,10 +195,10 @@ export function createToolErrorResponse(message: string, options: ToolResponseOp
 export function normalizeToolResult(toolName: string, result: ServerResult, durationMs?: number): ServerResult {
   if (isNormalizedToolResult(result)) {
     const prevOutput = result.structuredContent as StandardToolOutput;
-    const output = sanitizeJson(compactDuplicateTextContent({
+    const output = sanitizeJson({
       ...prevOutput,
       durationMs: durationMs ?? prevOutput.durationMs,
-    })) as StandardToolOutput;
+    }) as StandardToolOutput;
     const fsMcpResult = result._meta?.fsMcpResult;
     const nextMeta = typeof fsMcpResult === "object" && fsMcpResult !== null
       ? {
@@ -268,7 +220,7 @@ export function normalizeToolResult(toolName: string, result: ServerResult, dura
   const origCont = normalizeContent(result.content);
   const fsMcpResult = createResultMetadata(toolName, result, origCont, durationMs);
   const origOtpt = createStandardOutput(toolName, result, origCont, durationMs);
-  const stndOtpt = sanitizeJson(compactDuplicateTextContent(cmpStTlOt(toolName, origOtpt))) as StandardToolOutput;
+  const stndOtpt = sanitizeJson(origOtpt) as StandardToolOutput;
   const normRes: ServerResult = {
     _meta: {
       ...result._meta,

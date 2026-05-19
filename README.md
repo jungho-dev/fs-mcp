@@ -3,12 +3,13 @@
 ## Overview
 
 `@jungho-dev/fs-mcp` is a stdio-based Model Context Protocol server for local filesystem work,
-process sessions, ripgrep-backed search, SQLite context indexing, runtime configuration, git session workflows,
-and exact block editing.
+process sessions, ripgrep-backed search, runtime configuration, git session workflows, and exact block editing.
 
 This package is the MCP server runtime. It is not a VS Code extension bundle and does not depend on one
 specific AI client. Codex, Claude, Cline, Roo, Cursor, Windsurf, VS Code MCP clients, and other MCP-capable
 clients can launch it through stdio.
+
+The current runtime does not include a SQLite sidecar, context-index store, or MCP resource catalog.
 
 ## Installation
 
@@ -59,21 +60,19 @@ uses stdio and does not open a network listener.
 - Filesystem tools for batched read, write, listing, metadata, directory creation, move, and removal.
 - Exact edit tools for one or many block replacements with optional path-backed large string inputs.
 - Search tools backed by bundled `@vscode/ripgrep`, direct regex searches, active search sessions, pagination,
-  and stop controls.
+  stop controls, and optional DOCX text extraction for content searches.
 - Process tools for command sessions, process output, interactive input, session listing, and process termination.
 - Git session tools for pinned repository state, status, diff, show, staging, and commit.
-- Automatic context indexing plus manual context-index list, search, and clear tools for the shared SQLite database.
-- Runtime configuration tools for command policy, shell selection, allowed directories, context-index thresholds and retention,
-  client metadata, version data, and system information.
+- Runtime configuration tools for command policy, shell selection, allowed directories, client metadata, version data,
+  and system information.
 
 ## Tool Surface
 
-The current source and compiled runtime expose 29 tools. Batch-capable tools are documented as batch-first
+The current source and compiled runtime expose 26 tools. Batch-capable tools are documented as batch-first
 surfaces: when a task needs multiple same-kind filesystem, search, process, or config operations,
 clients should put all items into one tool call instead of repeatedly calling the same tool.
 
 - Config: `get_configs`, `set_config_values`.
-- Context index: `list_context_index`, `search_context_index`, `clear_context_index`.
 - Filesystem/search/edit: `read_files`, `write_files`, `create_directories`, `list_directories`,
   `copy_files`, `move_files`, `remove_files`, `start_searches`, `regex_searches`, `get_full_search`,
   `stop_searches`, `get_file_infos`, `edit_blocks`.
@@ -84,21 +83,30 @@ clients should put all items into one tool call instead of repeatedly calling th
 `src/schemas/schemas-git.ts` defines schemas for additional git operations, but `src/tools/tools-git.ts`
 exports only `ESSENTIAL_GIT_TOOL_NAMES` in this version.
 
-## Performance Improvements
+The public tool catalog is assembled from config, filesystem, process, and git modules only.
+
+## Runtime Notes
 
 Current compiled catalog metrics:
 
-- Tool count: `29`.
-- `list_tools` payload: `33,134 chars`.
-- Tool descriptions: `7,497 chars`.
-- Tool schemas: `21,344 chars`.
+- Tool count: `26`.
+- `list_tools` payload: measured by the tool-surface verification script.
+- Tool descriptions: measured by the tool-surface verification script.
+- Tool schemas: measured by the tool-surface verification script.
 
-Runtime defaults also reduce large-output pressure:
+Runtime behavior keeps tool results faithful to handler output:
 
 - Tool catalogs are built once and schema conversion is lazy-cached.
-- Large outputs are indexed by default, while response payloads keep original data unless replacement is explicitly enabled.
-- Search sessions default to `maxResults=5000` and return preview-only start responses.
-- Process sessions keep bounded output windows: active output `4000` lines and completed session budget `25`.
+- Large duplicate text is no longer automatically compacted; clients receive the full normalized payload.
+- Search sessions have no implicit `maxResults` cap. Set `maxResults` explicitly when a bounded scan is required.
+- Process sessions keep larger in-memory output windows for active and completed sessions.
+
+## Runtime Configuration
+
+- Runtime configuration is in-memory only; the current server does not create a first-run config file.
+- Editable keys are `allowedDirectories`, `blockedCommands`, and `defaultShell`.
+- Read-only query keys exposed by `get_configs` are `availableShells`, `currentClient`, `systemInfo`,
+  and `version`.
 
 ## Batch-First Tool Use
 
@@ -117,27 +125,6 @@ preview compact while preserving one batch request. Inline overrides are merged 
 `read_files`, `list_directories`, and `get_file_infos` also accept `allowMissing=true` to return missing local paths
 as non-error missing results during exploratory candidate reads.
 
-## Context Indexing
-
-Large tool outputs can be indexed into SQLite so clients can search or recall them without repeating the full
-payload in every transcript.
-
-- Automatic indexing is controlled by `contextIndexEnabled`, `contextIndexAutoMinChars`,
-  `contextIndexAutoMinLines`, `contextIndexMaxEntryChars`, `contextIndexMaxBytes`,
-  `contextIndexMaxDocuments`, and `contextIndexReplaceLargeOutputs`.
-- The default database path is `~/.mcp/fs-mcp.sqlite`.
-- Custom `contextIndexDbPath` values must stay under `~/.mcp` or an `allowedDirectories` entry; custom parent
-  directories must already exist.
-- Text is chunked into 80-line chunks with 20-line overlap and searched through SQLite FTS.
-- Full original payload hashes are used for reuse, while `indexedLength` and `truncated` record indexed slices.
-- Retention deletes older documents when `contextIndexMaxDocuments` or `contextIndexMaxBytes` is exceeded.
-- Manual maintenance tools are exposed as `list_context_index`, `search_context_index`, and
-  `clear_context_index`.
-- Output compaction does not replace large auto-indexed payloads by default. Set
-  `contextIndexReplaceLargeOutputs=true` only when the client can tolerate context-index reference markers.
-- `read_files`, `list_directories`, `regex_searches`, `get_full_search`, and context-index maintenance tools
-  keep oversized responses inline instead of exposing context-index reference markers.
-
 ## Client Compatibility
 
 - Client metadata is captured during initialization and exposed through `get_configs` as `currentClient`.
@@ -155,7 +142,7 @@ project root/
 |   |-- assets/       shared readers, type declarations, and cross-domain utilities
 |   |-- controllers/  MCP request handlers and batch response helpers
 |   |-- cores/        runtime, transport, server assembly, and response normalization
-|   |-- features/     config, context, edit, filesystem, git, process, and search behavior
+|   |-- features/     config, edit, filesystem, git, process, and search behavior
 |   |-- schemas/      request argument validation schemas
 |   `-- tools/        tool catalog entries and dispatcher
 |-- tests/            contract tests, smoke tests, fixtures, and verification scripts
@@ -171,24 +158,23 @@ Every dispatched tool result is normalized by `src/cores/responses/responses-too
   `tokens`, `duration`, `contents`, and `structuredText`. `tokens` uses the `o200k_base` tokenizer for
   the visible combined text plus serialized structured content and includes a `token` unit.
 - `structuredContent` stores the standard machine-readable envelope: original content, combined text, original
-  structured payload, status, duration, error details, schema version, tool name, and optional context-index
-  references or inline preview payloads.
+  structured payload, status, duration, error details, schema version, and tool name.
 - `_meta.fsMcpResult` stores compact metadata for clients that only need status, duration, content types, and
   error text.
 - Already normalized results are not wrapped again; only the visible display text is regenerated.
 
+Search session responses can also report pagination and scan state such as `nextOffset`, `wasLimited`, and
+`wasIncomplete` when the underlying scan hit access restrictions.
+
 ## Development
 
-Current package scripts keep build, tests, and verification explicit:
+Current package scripts route through the local bootstrap helper:
 
 ```bash
-bun run build
-bun run test
-bun run verify
+bun run swc
+bun run sync
+bun run tools
 ```
-
-`bun run build` type-checks source, rebuilds `out` with SWC, and rewrites aliases with `tsc-alias`.
-`bun run verify` runs source, release-shape, tool-surface, and optimization-report checks.
 
 Contract and smoke tests live under `tests/` and can be run directly with Bun:
 
@@ -197,8 +183,7 @@ bun tests/run-all-tests.js
 ```
 
 `tests/run-all-tests.js` rebuilds `out` unless `FS_MCP_SKIP_BUILD=1` is set. Verification helper scripts under
-`tests/scripts/` check release shape, source boundaries, tool surface, and optimization reports when invoked
-directly.
+`tests/scripts/` check release shape, source boundaries, and tool surface when invoked directly.
 
 ## Documentation
 

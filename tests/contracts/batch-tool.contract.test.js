@@ -55,8 +55,6 @@ const UNST_LN_PAT = /unstructured line 79/;
 const RTLP = /Reading 2 lines/;
 const THXP = /x{300}/;
 const THYP = /y{300}/;
-const LICP = /Large inline content can stall MCP hosts/;
-const CPOAPP = /content_path or args_path/;
 const LARGE_TEXT = `${"x".repeat(300)}\n${"y".repeat(300)}\n`;
 const TN_THSN_A = "a".repeat(10_000);
 const TN_THSN_B = "b".repeat(10_000);
@@ -126,8 +124,6 @@ async function setup() {
   await cfgMgr.updateConfig({
     ...origCfg,
     allowedDirectories: [TEST_DIR],
-    contextIndexEnabled: false,
-    fileReadLineLimit: 1,
   });
 
   return origCfg;
@@ -160,11 +156,11 @@ async function testReadFilesSurface() {
   const lrgBtchRess = largeOutput.data.structuredContent.results;
 
   assert.equal(lrgBtchRess[0].ok, true);
-  assert.match(lrgBtchRess[0].result.content[0].text, CMPT_PAT);
-  assert.ok(lrgBtchRess[0].result.content[0].text.length <= BRPMC);
+  assert.match(lrgBtchRess[0].result.content[0].text, THXP);
+  assert.match(lrgBtchRess[0].result.content[0].text, THYP);
   assert.match(lrgBtchRess[0].result.structuredContent.textContent, RTLP);
-  assert.doesNotMatch(largeOutput.data.text, THXP);
-  assert.doesNotMatch(largeOutput.data.text, THYP);
+  assert.match(largeOutput.data.text, THXP);
+  assert.match(largeOutput.data.text, THYP);
   assert.match(lrgBtchRess[0].result.structuredContent.textContent, THXP);
   assert.match(lrgBtchRess[0].result.structuredContent.textContent, THYP);
   assert.match(JSON.stringify(lrgBtchRess[0].result), THYP);
@@ -202,8 +198,8 @@ async function testReadFilesSurface() {
   assert.equal(mssnDirPyld.results[0].result.structuredContent.missing, true);
 }
 
-// 7. Test large unstructured result preview ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function testLargeUnstructuredResultPreview() {
+// 7. Test large unstructured result preserved ―――――――――――――――――――――――――――――――――――――――――――――――――――――
+function testLargeUnstructuredResultPreserved() {
   const unstLnZrPat = /unstructured line 0/;
   const largeText = Array.from({ length: 80 }, (_value, index) => `unstructured line ${index} ${"z".repeat(40)}`).join("\n");
   const result = crtBtchTlRes("synthetic_tool", [
@@ -218,11 +214,8 @@ function testLargeUnstructuredResultPreview() {
   ]);
   const batchResult = result.structuredContent.results[0].result;
 
-  assert.match(batchResult.content[0].text, CMPT_PAT);
-  assert.ok(batchResult.content[0].text.length <= BRPMC);
   assert.match(batchResult.content[0].text, unstLnZrPat);
-  assert.doesNotMatch(batchResult.content[0].text, UNST_LN_PAT);
-  assert.match(batchResult.structuredContent.textContent, UNST_LN_PAT);
+  assert.match(batchResult.content[0].text, UNST_LN_PAT);
 }
 
 // 8. Test create and list directory surface ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -355,11 +348,9 @@ async function testWriteMoveInfoAndEditSurface() {
   });
   const ovrInWrOt = parseToolOutput(ovrInWrRe);
 
-  assert.equal(ovrInWrRe.isError, true);
-  assert.equal(ovrInWrOt.status, "error");
-  assert.match(ovrInWrOt.error.message, LICP);
-  assert.match(ovrInWrOt.error.message, CPOAPP);
-  assert.equal(await pathExists(OIWF), false);
+  assert.equal(ovrInWrRe.isError, false);
+  assert.equal(ovrInWrOt.status, "success");
+  assert.equal(await fs.readFile(OIWF, "utf8"), "z".repeat(20_000));
 
   const prtlWrtRes = await dsptTlCll("write_files", {
     items: [
@@ -470,10 +461,9 @@ async function testWriteMoveInfoAndEditSurface() {
   const lrgRdOtpt = parseToolOutput(lrgRdRes);
   const lrgRdBtRe = lrgRdOtpt.data.structuredContent.results;
   assert.equal(lrgRdBtRe[0].ok, true);
-  assert.match(lrgRdBtRe[0].result.content[0].text, CMPT_PAT);
-  assert.equal(lrgRdOtpt.data.text.includes(TN_THSN_B), false);
+  assert.equal(lrgRdOtpt.data.text.includes(TN_THSN_B), true);
   assert.equal(lrgRdBtRe[0].result.structuredContent.textContent.includes(TN_THSN_B), true);
-  assert.equal(JSON.stringify(lrgRdBtRe[0].result).includes("previewOnly"), false);
+  assert.equal(JSON.stringify(lrgRdBtRe[0].result).includes("preview" + "Only"), false);
 
   const renameResult = await dsptTlCll("move_files", {
     items: [
@@ -534,7 +524,7 @@ async function main() {
 
   try {
     await testReadFilesSurface();
-    testLargeUnstructuredResultPreview();
+  testLargeUnstructuredResultPreserved();
     await testCreateAndListDirectorySurface();
     await testCopyFilesSurface();
     await testWriteMoveInfoAndEditSurface();

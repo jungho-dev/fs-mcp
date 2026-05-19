@@ -7,15 +7,13 @@
 
 import {z} from "zod";
 
-const ITAML = 50_000;
-
 export const EdtBlArSc2 = z.object({
   file_path: z.string(),
-  old_string: z.string().max(ITAML, "Use old_string_path for large search text").optional(),
+  old_string: z.string().optional(),
   old_string_path: z.string().optional(),
   old_string_offset: z.number().optional().default(0),
   old_string_length: z.number().optional(),
-  new_string: z.string().max(ITAML, "Use new_string_path for large replacement text").optional(),
+  new_string: z.string().optional(),
   new_string_path: z.string().optional(),
   new_string_offset: z.number().optional().default(0),
   new_string_length: z.number().optional(),

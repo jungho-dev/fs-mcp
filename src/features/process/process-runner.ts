@@ -19,8 +19,8 @@ type DiagnosticExitReason = TimingInfo["exitReason"] | "process_finished" | "no_
 type DiagnosticTimingInfo = Omit<TimingInfo, "exitReason"> & {
   exitReason: DiagnosticExitReason;
 };
-const PSAWC = 12_000;
-const PSAWL = 200;
+const PSAWC = 120_000;
+const PSAWL = 5000;
 
 // 1. Resolve process text argument ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function resolveProcessTextArgument(value: string | undefined, filePath: string | undefined, offset: number, length: number | undefined, label: string): Promise<string> {

@@ -6,8 +6,8 @@
  */
 
 export const SRVR_INST = [
-  "Use fs-mcp for local filesystem, process, git, config, and context-index work.",
-  "Batch-first rule: when one task needs multiple file, directory, search, process, config, or context operations of the same kind, put every item into one fs-mcp tool call instead of calling the same tool repeatedly.",
+  "Use fs-mcp for local filesystem, process, git, and config work.",
+  "Batch-first rule: when one task needs multiple file, directory, search, process, or config operations of the same kind, put every item into one fs-mcp tool call instead of calling the same tool repeatedly.",
 ].join("\n");
 
 export const SRVR_INST2 = SRVR_INST;

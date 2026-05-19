@@ -7,11 +7,9 @@
 
 import {z} from "zod";
 
-const ITAML = 50_000;
-
 export const StrSrArSc = z.object({
   path: z.string(),
-  pattern: z.string().max(ITAML, "Use pattern_path for large patterns").optional(),
+  pattern: z.string().optional(),
   pattern_path: z.string().optional(),
   pattern_offset: z.number().optional().default(0),
   pattern_length: z.number().optional(),
@@ -34,7 +32,7 @@ export const StrSrArSc2 = z.object({
 
 export const RgxSrArSc = z.object({
   path: z.string(),
-  pattern: z.string().max(ITAML, "Use pattern_path for large patterns").optional(),
+  pattern: z.string().optional(),
   pattern_path: z.string().optional(),
   pattern_offset: z.number().optional().default(0),
   pattern_length: z.number().optional(),

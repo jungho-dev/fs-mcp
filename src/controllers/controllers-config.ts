@@ -52,19 +52,12 @@ export async function handleSetConfigValues(args: unknown): Promise<ServerResult
   const parsed = StCfVaArSc.parse(args);
   const baseConfig = await cfgMgr.getConfig();
   const draft: SrvrCfg = {...baseConfig};
-  const orderedItems = parsed.items
-    .map((item, index) => ({index, item}))
-    .sort((left, right) => {
-      const leftDb = left.item.key === "contextIndexDbPath" ? 1 : 0;
-      const rightDb = right.item.key === "contextIndexDbPath" ? 1 : 0;
-
-      return leftDb - rightDb;
-    });
+  const orderedItems = parsed.items.map((item, index) => ({index, item}));
   const planned = new Map<number, Awaited<ReturnType<typeof prpCfgVlUpd>>>();
 
   try {
     for (const entry of orderedItems) {
-      const update = await prpCfgVlUpd(entry.item, draft);
+      const update = await prpCfgVlUpd(entry.item);
 
       draft[update.key] = update.value;
       planned.set(entry.index, update);

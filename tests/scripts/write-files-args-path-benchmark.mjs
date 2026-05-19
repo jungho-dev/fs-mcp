@@ -17,7 +17,6 @@ const __dirname = path.dirname(__filename);
 const TEST_DIR = path.join(os.tmpdir(), "fs-mcp-write-files-benchmark");
 const TOKEN_CHARS = 4;
 const RUN_COUNT = 7;
-const INL_RJC_PAT = /Large inline content can stall MCP hosts/;
 const BENCH_SCNR = {
   contentLength: 4_000,
   itemCount: 20,
@@ -67,11 +66,6 @@ function parseToolOutput(result) {
 function extractBatchResults(result) {
   const output = parseToolOutput(result);
   return output.data.structuredContent.results;
-}
-
-function extractErrorMessage(result) {
-  const output = parseToolOutput(result);
-  return output.error.message;
 }
 
 async function prepareScenario(payload) {
@@ -151,7 +145,7 @@ async function runBenchmarkScenario() {
   };
 }
 
-async function runGuardScenario() {
+async function runLargeInlineScenario() {
   const payload = buildPayload(GRD_SCNR.name, GRD_SCNR.itemCount, GRD_SCNR.contentLength);
   const payloadBody = { items: payload.items };
   const payloadText = JSON.stringify(payloadBody);
@@ -162,9 +156,12 @@ async function runGuardScenario() {
   await prepareScenario(payload);
 
   const inlineResult = await dsptTlCll("write_files", payloadBody);
+  const inlineResults = extractBatchResults(inlineResult);
 
-  assert.equal(inlineResult.isError, true);
-  assert.match(extractErrorMessage(inlineResult), INL_RJC_PAT);
+  assert.equal(inlineResult.isError, false);
+  assert.equal(inlineResults.length, 1);
+  assert.equal(inlineResults[0].ok, true);
+  await verifyFiles(payload.items);
 
   await prepareScenario(payload);
   const argsPthRes = await dsptTlCll("write_files", {
@@ -180,11 +177,10 @@ async function runGuardScenario() {
 
   return {
     argsPathTransportChars: JSON.stringify({ args_length: payloadText.length, args_path: argsFilePath }).length,
-    inlineRejected: true,
+    inlineAccepted: true,
     inlineTransportChars: JSON.stringify(payloadBody).length,
     itemCount: GRD_SCNR.itemCount,
     name: GRD_SCNR.name,
-    rejectionPattern: INL_RJC_PAT.source,
   };
 }
 
@@ -192,11 +188,11 @@ async function main() {
   await fs.mkdir(TEST_DIR, { recursive: true });
 
   const benchmark = await runBenchmarkScenario();
-  const guard = await runGuardScenario();
+  const largeInline = await runLargeInlineScenario();
   const report = {
     benchmark,
     generatedAt: new Date().toISOString(),
-    guard,
+    largeInline,
     script: path.relative(path.join(__dirname, "..", ".."), __filename).replaceAll("\\", "/"),
   };
 

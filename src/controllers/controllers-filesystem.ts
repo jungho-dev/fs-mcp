@@ -12,7 +12,6 @@ import type { DirectoryListingEntryType as DirLsEnTy, ServerResult } from "@asse
 import { withTimeout } from "@assets/utils/utils-timeout";
 import { type BatchToolItemResult as BtchTlItmRes, createBatchToolResponse as crtBtchTlRes, runLimitedParallelBatch as rnLmPrBt, runParallelBatch as rnPrllBtch } from "@controllers/controllers-batch";
 import { createErrorResponse as crtErrRes } from "@cores/responses/responses-error";
-import { cfgMgr } from "@features/config/config-store";
 import { resolveAbsolutePath as rslvAbslPth } from "@features/filesystem/filesystem-path-resolver";
 import { copyFile, createDirectory as crtDir, getFileInfo, listDirectory as lstDir, moveFile, readTextSliceInternal as rdTxtSlcInt, readFile, removePath, writeFile } from "@features/filesystem/filesystem-service";
 import { CpyFlArgsSch, CpyFlArSc, CrtDiArSc, CrtDrArSc, GtFlInArSc, GtFlInArSc2, LstDiArSc, LstDrArSc, MvFlArgsSch, MvFlsArgsSch, RdFlArgsSch, RdFlsArgsSch, RmvFlArSc, RmvPtArSc, WrtFlArFrAr2, WrtFlArFrArP, WrtFlArgsSch, WrtFlArSc } from "@schemas/schemas-filesystem";
@@ -239,20 +238,10 @@ async function resolveWriteContent(parsed: ParsedWriteFileArgs): Promise<string>
 function countWriteLines(content: string): number {
   return content.split("\n").length;
 }
-// 5. Build write warning message ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function buildWriteWarningMessage(lineCount: number, wrnnLnLmt: number): string {
-  if (lineCount <= wrnnLnLmt) {
-  	return "";
-  }
-  return `File written successfully! (${lineCount} lines)
-
-Performance tip: For optimal speed, consider chunking files into ≤30 line pieces in future operations.`;
-}
 // 6. Handle parsed write file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function handleParsedWriteFile(parsed: ParsedWriteFileArgs, wrnnLnLmt: number): Promise<ServerResult> {
+async function handleParsedWriteFile(parsed: ParsedWriteFileArgs): Promise<ServerResult> {
   const content = await resolveWriteContent(parsed);
   const lineCount = countWriteLines(content);
-  const wrnnMsg = buildWriteWarningMessage(lineCount, wrnnLnLmt);
 
   await writeFile(parsed.path, content, parsed.mode);
 
@@ -263,7 +252,7 @@ async function handleParsedWriteFile(parsed: ParsedWriteFileArgs, wrnnLnLmt: num
     content: [
       {
         type: "text",
-        text: `Successfully ${modeMessage} ${parsed.path} (${lineCount} lines) ${wrnnMsg}`,
+        text: `Successfully ${modeMessage} ${parsed.path} (${lineCount} lines)`,
       },
     ],
     structuredContent: {
@@ -279,10 +268,8 @@ export async function handleWriteFile(args: unknown): Promise<ServerResult> {
     const argsSource = resolveToolArgsSource(args);
     const rawArgs = stripToolArgsMetadata(args);
     const parsed = argsSource === "args_path" ? WrtFlArFrArP.parse(rawArgs) : WrtFlArgsSch.parse(rawArgs);
-    const config = await cfgMgr.getConfig();
-    const wrnnLnLmt = config.fileWriteLineLimit ?? 50;
 
-    return await handleParsedWriteFile(parsed, wrnnLnLmt);
+    return await handleParsedWriteFile(parsed);
   }
   catch (error) {
     const errorMessage = error instanceof Error ? error.message : String(error);
@@ -578,9 +565,7 @@ export async function handleWriteFiles(args: unknown): Promise<ServerResult> {
   const argsSource = resolveToolArgsSource(args);
   const rawArgs = stripToolArgsMetadata(args);
   const parsed = argsSource === "args_path" ? WrtFlArFrAr2.parse(rawArgs) : WrtFlArSc.parse(rawArgs);
-  const config = await cfgMgr.getConfig();
-  const wrnnLnLmt = config.fileWriteLineLimit ?? 50;
-  const results = await rnPrllBtch(parsed.items, (item) => handleParsedWriteFile(item, wrnnLnLmt));
+  const results = await rnPrllBtch(parsed.items, (item) => handleParsedWriteFile(item));
 
   return createWriteFilesBatchResponse(results);
 }

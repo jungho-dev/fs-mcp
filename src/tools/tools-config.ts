@@ -29,7 +29,7 @@ const CFG_TL_DFNT = [
     name: "set_config_values",
     description: (`
       Set one or many configuration values in parallel.
-      Use value_path for large values.
+      value_path can reduce transport overhead for values.
       ${BTCH_GDNC}
       ${CMD_PRF_DSC}
     `),

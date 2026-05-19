@@ -11,7 +11,6 @@ const OptnRpPthSch = z.string().optional();
 const CmmtRfSch = z.string();
 const CnfrSch = z.enum(["Y", "y", "Yes", "yes"]);
 const RvwTypSch = z.enum(["security", "features", "storyline", "gaps", "breaking_changes", "quality"]);
-const ITAML = 50_000;
 
 export const GT_INPT_SCHS = {
   git_add: z
@@ -44,7 +43,7 @@ export const GT_INPT_SCHS = {
       remote: z.boolean().optional(),
       merged: z.union([z.boolean(), z.string()]).optional(),
       noMerged: z.union([z.boolean(), z.string()]).optional(),
-      limit: z.number().int().positive().max(1000).optional(),
+      limit: z.number().int().positive().optional(),
     })
     .strict(),
   git_changelog_analyze: z
@@ -52,8 +51,8 @@ export const GT_INPT_SCHS = {
       path: OptnRpPthSch,
       branch: z.string().optional(),
       sinceTag: z.string().optional(),
-      maxCommits: z.number().int().positive().max(1000).optional(),
-      maxTags: z.number().int().positive().max(1000).optional(),
+      maxCommits: z.number().int().positive().optional(),
+      maxTags: z.number().int().positive().optional(),
       reviewTypes: z.array(RvwTypSch).min(1),
     })
     .strict(),
@@ -101,7 +100,7 @@ export const GT_INPT_SCHS = {
   git_commit: z
     .object({
       path: OptnRpPthSch,
-      message: z.string().max(ITAML, "Use messagePath for long commit messages").optional(),
+      message: z.string().optional(),
       messagePath: z.string().optional(),
       messageOffset: z.number().optional().default(0),
       messageLength: z.number().optional(),
@@ -130,7 +129,7 @@ export const GT_INPT_SCHS = {
       includeUntracked: z.boolean().optional(),
       nameOnly: z.boolean().optional(),
       stat: z.boolean().optional(),
-      contextLines: z.number().int().min(0).max(100).optional(),
+      contextLines: z.number().int().min(0).optional(),
       autoExclude: z.boolean().optional(),
     })
     .strict(),
@@ -154,7 +153,7 @@ export const GT_INPT_SCHS = {
     .object({
       path: OptnRpPthSch,
       branch: z.string(),
-      message: z.string().max(ITAML, "Use messagePath for long merge messages").optional(),
+      message: z.string().optional(),
       messagePath: z.string().optional(),
       messageOffset: z.number().optional().default(0),
       messageLength: z.number().optional(),
@@ -202,7 +201,7 @@ export const GT_INPT_SCHS = {
     .object({
       path: OptnRpPthSch,
       ref: z.string().optional(),
-      maxCount: z.number().int().positive().max(1000).optional(),
+      maxCount: z.number().int().positive().optional(),
     })
     .strict(),
   git_remote: z
@@ -245,13 +244,13 @@ export const GT_INPT_SCHS = {
       path: OptnRpPthSch,
       mode: z.enum(["list", "push", "pop", "apply", "drop", "clear"]).optional(),
       stashRef: z.string().optional(),
-      message: z.string().max(ITAML, "Use messagePath for long stash messages").optional(),
+      message: z.string().optional(),
       messagePath: z.string().optional(),
       messageOffset: z.number().optional().default(0),
       messageLength: z.number().optional(),
       includeUntracked: z.boolean().optional(),
       keepIndex: z.boolean().optional(),
-      limit: z.number().int().positive().max(1000).optional(),
+      limit: z.number().int().positive().optional(),
     })
     .strict(),
   git_status: z
@@ -268,8 +267,8 @@ export const GT_INPT_SCHS = {
       commit: z.string().optional(),
       annotated: z.boolean().optional(),
       force: z.boolean().optional(),
-      limit: z.number().int().positive().max(1000).optional(),
-      message: z.string().max(ITAML, "Use messagePath for long tag messages").optional(),
+      limit: z.number().int().positive().optional(),
+      message: z.string().optional(),
       messagePath: z.string().optional(),
       messageOffset: z.number().optional().default(0),
       messageLength: z.number().optional(),

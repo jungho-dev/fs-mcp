@@ -13,11 +13,11 @@ import {cfgMgr} from "@features/config/config-store";
 import {analyzeProcessState as anlyProcSt} from "@features/process/process-repl-detector";
 
 const DEF_CMD_TMT = 1000;
-const MAOL = 4000;
-const MCOL = 6000;
-const MX_CMPL_SSSN = 25;
-const MPSC = 12_000;
-const MX_TMNG_EVTS = 200;
+const MAOL = 100_000;
+const MCOL = 100_000;
+const MX_CMPL_SSSN = 200;
+const MPSC = 120_000;
+const MX_TMNG_EVTS = 2_000;
 const SCPP = /^ssh /;
 const QCK_PRMP_PAT = />>>\s*$|>\s*$|\$\s*$|#\s*$/;
 const OSNP = /\n/g;

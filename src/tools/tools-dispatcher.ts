@@ -7,7 +7,6 @@
 
 import type {ServerResult} from "@assets/type/common";
 import {handleGetConfigs as hndlGtCnfg, handleSetConfigValues as hndStCfVa} from "@controllers/controllers-config";
-import {handleClearContextIndex as hndlClrCtIx, handleListContextIndex as hndlLstCtIx, handleSearchContextIndex as hndlSrchCtIx} from "@controllers/controllers-context";
 import {handleEditBlocks as hndlEdtBlck2} from "@controllers/controllers-edit";
 import {handleCopyFiles as hndlCpyFls, handleCreateDirectories as hndlCrtDrct, handleGetFileInfos as hndlGtFlInfs, handleListDirectories as hndlLstDrct, handleMoveFiles as hndlMvFls, handleReadFiles as hndlRdFls, handleRemoveFiles as hndlRmvFls, handleWriteFiles as hndlWrtFls} from "@controllers/controllers-filesystem";
 import {handleGitTool as hndlGtTl} from "@controllers/controllers-git";
@@ -133,9 +132,6 @@ const GT_TL_DSPT = Object.fromEntries(
 export const TL_DSPT: Readonly<Record<string, ToolDispatchHandler>> = {
   get_configs: (args: unknown) => hndlGtCnfg(args),
   set_config_values: (args: unknown) => hndStCfVa(args),
-  list_context_index: (args: unknown) => hndlLstCtIx(args),
-  search_context_index: (args: unknown) => hndlSrchCtIx(args),
-  clear_context_index: (args: unknown) => hndlClrCtIx(args),
   start_processes: (args: unknown) => hndlStrtPrcs(args),
   read_process_outputs: (args: unknown) => hndRdPrOt(args),
   interact_with_processes: (args: unknown) => hndInWtPr(args),

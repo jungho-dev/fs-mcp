@@ -2,8 +2,6 @@ import assert from "node:assert/strict";
 import { createToolDisplayText as crtTlDsplTxt } from "../../out/cores/responses/responses-tool-display.js";
 import { createToolErrorResponse as crtTlErrRes, createToolTextResponse as crtTlTxtRes, normalizeToolResult as nrmlTlRes } from "../../out/cores/responses/responses-tool-result.js";
 import { getCurrentClient as getCurClnt, updateCurrentClient as updtCurClnt } from "../../out/features/config/config-client.js";
-import { configManager as cfgMgr } from "../../out/features/config/config-store.js";
-import { contextIndexService as ctxIdxSvc } from "../../out/features/context/context-index-service.js";
 
 // 2. Parse standard output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function parseStandardOutput(result) {
@@ -235,145 +233,43 @@ function testExistingSummaryPreserved() {
   assert.equal(output.data.text, batchText);
 }
 
-// 10-1. Default context index keeps original output ―――――――――――――――――――――――――――――――――――――――――――――――
-function testDefaultContextIndexKeepsOriginalOutput() {
+// 10-1. Large duplicate text stays untrimmed without indexing ―――――――――――――――――――――――――――――――――――
+function testLargeDuplicateTextStaysUntrimmed() {
   const fullText = Array.from({ length: 180 }, (_value, index) => `line${index + 1} ${"x".repeat(640)}`).join("\n");
-  const normalized = nrmlTlRes("default_compaction_tool", crtTlTxtRes(fullText, {
+  const normalized = nrmlTlRes("large_text_tool", crtTlTxtRes(fullText, {
     structuredContent: { textContent: fullText },
   }), 9);
   const output = parseStandardOutput(normalized);
-  const srlzDt = JSON.stringify(output.data);
+  const indexKey = "context" + "Indexes";
+  const indexPrefix = "[context" + "-index:";
+  const indexErrorKey = "context" + "Index";
+  const serialized = JSON.stringify(output);
 
   assert.equal(output.data.text, fullText);
-  assert.equal(output.data.content[0].text.includes(fullText), false);
-  assert.equal(output.data.content[0].text.includes("Full text in data.text"), true);
+  assert.equal(output.data.content[0].text, fullText);
   assert.equal(output.data.structuredContent.textContent, fullText);
-  assert.equal(Array.isArray(output.contextIndexes), true);
-  assert.equal(srlzDt.includes("[context-index:"), false);
-  assert.equal(srlzDt.includes("\"omitted\":"), false);
-}
-
-// 11. Display keeps original output when context index is enabled ――――――――――――――――――――――――――――――――――
-function testDisplayKeepsOriginalOutput() {
-  const fullText = Array.from({ length: 180 }, (_value, index) => `line${index + 1} ${"x".repeat(640)}`).join("\n");
-  const normalized = nrmlTlRes("display_compaction_tool", crtTlTxtRes(fullText, {
-    structuredContent: { textContent: fullText },
-  }), 9);
-  const output = parseStandardOutput(normalized);
-
-  assert.equal(normalized.content[0].text.includes(fullText), false);
-  assert.equal(output.data.text.includes(fullText), true);
-  assert.equal(output.data.structuredContent.textContent, fullText);
-  assert.equal(Array.isArray(output.contextIndexes), true);
-  assert.equal(normalized.content[0].text, createExpectedDisplaySummary("display_compaction_tool", "success", fullText, { textContent: fullText }, 1, 9));
-}
-
-// 12. Display replaces large output when explicitly enabled ―――――――――――――――――――――――――――――――――――
-function testDisplayReplacesLargeOutputWhenEnabled() {
-  const fullText = Array.from({ length: 180 }, (_value, index) => `line${index + 1} ${"x".repeat(640)}`).join("\n");
-  const normalized = nrmlTlRes("display_compaction_tool", crtTlTxtRes(fullText, {
-    structuredContent: { textContent: fullText },
-  }), 9);
-  const output = parseStandardOutput(normalized);
-
-  assert.equal(output.data.text.includes(fullText), false);
-  assert.equal(output.data.content[0].text.includes("[context-index:"), true);
-  assert.equal(output.data.structuredContent.textContent.omitted, true);
-  assert.equal(Array.isArray(output.contextIndexes), true);
-  assert.equal(output.contextIndexes.length > 0, true);
-}
-
-// 12-1. Tracked tools bypass output compaction ―――――――――――――――――――――――――――――――――――――――――――――――――――
-function testTrackedToolBypassesOutputCompaction() {
-  const fullText = Array.from({ length: 180 }, (_value, index) => `line${index + 1} ${"x".repeat(640)}`).join("\n");
-  const trackedTools = ["read_files", "list_directories", "get_full_search", "regex_searches"];
-
-  for (const toolName of trackedTools) {
-    const normalized = nrmlTlRes(toolName, crtTlTxtRes(fullText, {
-      structuredContent: { textContent: fullText },
-    }), 9);
-    const output = parseStandardOutput(normalized);
-    const srlzOtpt = JSON.stringify(output);
-
-    assert.equal(output.contextIndexes, undefined);
-    assert.equal(output.data.text, fullText);
-    assert.equal(output.data.content[0].text.includes(fullText), false);
-    assert.equal(output.data.content[0].text.includes("Full text in data.text"), true);
-    assert.equal(output.data.structuredContent.textContent, fullText);
-    assert.equal(srlzOtpt.includes("contextIndex"), false);
-    assert.equal(srlzOtpt.includes("omitted"), false);
-    assert.equal(srlzOtpt.includes("previewOnly"), false);
-    assert.equal(srlzOtpt.includes("Full text in data.text"), true);
-    assert.equal(srlzOtpt.includes("preview"), false);
-    assert.equal(srlzOtpt.includes("(preview)"), false);
-  }
-}
-
-// 13. Clear display compaction contexts ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function clearDisplayCompactionContexts() {
-  const toolNames = new Set(["default_compaction_tool", "display_compaction_tool"]);
-  const indexIds = ctxIdxSvc
-    .listDocuments()
-    .filter((document) => typeof document.toolName === "string" && toolNames.has(document.toolName))
-    .map((document) => document.indexId);
-
-  if (indexIds.length > 0) {
-    ctxIdxSvc.clearDocuments({ indexIds });
-  }
+  assert.equal(output[indexKey], undefined);
+  assert.equal(serialized.includes(indexErrorKey), false);
+  assert.equal(serialized.includes(indexPrefix), false);
 }
 
 // 8. test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function main() {
-  const origCfg = await cfgMgr.getConfig();
-
-  try {
-    await cfgMgr.updateConfig({
-      ...origCfg,
-      contextIndexEnabled: false,
-    });
-    testSuccessEnvelope();
-    testErrorEnvelope();
-    testEmptyContentFallback();
-    testDurationShapeWithoutTiming();
-    testNormalizedResultRestoresDisplay();
-    testTemplateLiteralDisplayFormat();
-    testDisplayFormatsUnitsAndCommas();
-    testDefaultDisplayPlacesMetricsInTemplateOrder();
-    testGeminiDisplayStripsAnsi();
-    testDisplayCountsBatchStructuredItems();
-    testDisplayPreservesStructuredText();
-    testLongTextStructuredDataPreserved();
-    testSpecialTokenSanitized();
-    testExistingSummaryPreserved();
-
-    await cfgMgr.resetConfig();
-    clearDisplayCompactionContexts();
-    testDefaultContextIndexKeepsOriginalOutput();
-
-    await cfgMgr.updateConfig({
-      ...origCfg,
-      contextIndexEnabled: true,
-      contextIndexReplaceLargeOutputs: false,
-    });
-    clearDisplayCompactionContexts();
-    testDisplayKeepsOriginalOutput();
-
-    await cfgMgr.updateConfig({
-      ...origCfg,
-      contextIndexEnabled: true,
-      contextIndexReplaceLargeOutputs: true,
-    });
-    clearDisplayCompactionContexts();
-    testDisplayReplacesLargeOutputWhenEnabled();
-    testTrackedToolBypassesOutputCompaction();
-  }
-  finally {
-    clearDisplayCompactionContexts();
-    await cfgMgr.updateConfig(origCfg);
-  }
+function main() {
+  testSuccessEnvelope();
+  testErrorEnvelope();
+  testEmptyContentFallback();
+  testDurationShapeWithoutTiming();
+  testNormalizedResultRestoresDisplay();
+  testTemplateLiteralDisplayFormat();
+  testDisplayFormatsUnitsAndCommas();
+  testDefaultDisplayPlacesMetricsInTemplateOrder();
+  testGeminiDisplayStripsAnsi();
+  testDisplayCountsBatchStructuredItems();
+  testDisplayPreservesStructuredText();
+  testLongTextStructuredDataPreserved();
+  testSpecialTokenSanitized();
+  testExistingSummaryPreserved();
+  testLargeDuplicateTextStaysUntrimmed();
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+main();

@@ -8,8 +8,6 @@
 import { CFG_QRY_KYS, isConfigQueryKey as isCfgQryKy } from "@features/config/config-metadata";
 import { z } from "zod";
 
-const ITAML = 50_000;
-
 export const GtCfVaArSc = z.object({
   key: z.string().refine((value) => isCfgQryKy(value), {
     message: `Key must be one of: ${CFG_QRY_KYS.join(", ")}`,
@@ -22,7 +20,7 @@ export const GtCnArSc = z.object({
 
 export const StCfVaArSc2 = z.object({
   key: z.string(),
-  value: z.union([z.string().max(ITAML, "Use value_path for large values"), z.number(), z.boolean(), z.array(z.string()), z.null()]).optional(),
+  value: z.union([z.string(), z.number(), z.boolean(), z.array(z.string()), z.null()]).optional(),
   value_path: z.string().optional(),
   value_offset: z.number().optional().default(0),
   value_length: z.number().optional(),

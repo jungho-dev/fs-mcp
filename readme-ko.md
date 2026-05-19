@@ -2,12 +2,14 @@
 
 ## 개요
 
-`@jungho-dev/fs-mcp`는 로컬 파일시스템 작업, process session, ripgrep 기반 검색, SQLite context index,
-런타임 설정, git session workflow, exact block edit를 제공하는 stdio 기반 Model Context Protocol 서버입니다.
+`@jungho-dev/fs-mcp`는 로컬 파일시스템 작업, process session, ripgrep 기반 검색, 런타임 설정,
+git session workflow, exact block edit를 제공하는 stdio 기반 Model Context Protocol 서버입니다.
 
 이 패키지는 MCP 서버 런타임입니다. VS Code 확장 번들이 아니며 특정 AI client에 종속되지 않습니다.
 Codex, Claude, Cline, Roo, Cursor, Windsurf, VS Code MCP client 및 MCP 지원 client가 stdio로 실행할 수
 있습니다.
+
+현재 런타임에는 SQLite sidecar, context-index 저장소, MCP resource catalog가 없습니다.
 
 ## 설치
 
@@ -56,21 +58,19 @@ stdio를 사용하며 network listener를 열지 않습니다.
 
 - Batched read, write, listing, metadata, directory create, move, remove 파일시스템 도구.
 - Path-backed large string input을 지원하는 one-or-many exact block edit 도구.
-- Bundled `@vscode/ripgrep` 기반 검색, direct regex search, active search session, pagination, stop control.
+- Bundled `@vscode/ripgrep` 기반 검색, direct regex search, active search session, pagination, stop control,
+  content search 시 선택적으로 병합되는 DOCX text extraction.
 - Command session, process output, interactive input, session listing, process termination 도구.
 - Pinned repository state, status, diff, show, staging, commit 중심의 git session 도구.
-- 큰 tool output을 공유 SQLite context DB에 자동 index하고 수동 list/search/clear를 수행하는 context 도구.
-- Command policy, shell, allowed directory, context-index threshold와 retention, client metadata, version, system 정보를
-  다루는 runtime configuration 도구.
+- Command policy, shell, allowed directory, client metadata, version, system 정보를 다루는 runtime configuration 도구.
 
 ## 도구 표면
 
-현재 source와 compiled runtime은 29개 도구를 노출합니다. Batch-capable 도구는 batch-first surface로
+현재 source와 compiled runtime은 26개 도구를 노출합니다. Batch-capable 도구는 batch-first surface로
 문서화됩니다. 같은 종류의 filesystem, search, process, config 작업이 여러 개 필요하면 client는
 같은 도구를 반복 호출하지 않고 하나의 multi-item call로 묶어야 합니다.
 
 - Config: `get_configs`, `set_config_values`.
-- Context index: `list_context_index`, `search_context_index`, `clear_context_index`.
 - Filesystem/search/edit: `read_files`, `write_files`, `create_directories`, `list_directories`,
   `copy_files`, `move_files`, `remove_files`, `start_searches`, `regex_searches`, `get_full_search`,
   `stop_searches`, `get_file_infos`, `edit_blocks`.
@@ -81,21 +81,30 @@ stdio를 사용하며 network listener를 열지 않습니다.
 `src/schemas/schemas-git.ts`에는 추가 git operation schema가 정의되어 있지만, 이번 버전의
 `src/tools/tools-git.ts`는 `ESSENTIAL_GIT_TOOL_NAMES`만 catalog로 export합니다.
 
-## 성능 개선
+현재 public tool catalog는 config, filesystem, process, git module만 조합합니다.
+
+## 런타임 참고
 
 현재 compiled catalog metric입니다.
 
-- Tool count: `29`.
-- `list_tools` payload: `33,134 chars`.
-- Tool description: `7,497 chars`.
-- Tool schema: `21,344 chars`.
+- Tool count: `26`.
+- `list_tools` payload: tool-surface verification script에서 측정합니다.
+- Tool description: tool-surface verification script에서 측정합니다.
+- Tool schema: tool-surface verification script에서 측정합니다.
 
-Runtime default도 large-output 부담을 줄입니다.
+Runtime 동작은 handler output을 그대로 보존하는 방향입니다.
 
 - Tool catalog는 한 번만 구성하고 schema conversion은 lazy cache합니다.
-- 큰 output은 기본적으로 index하지만, response payload는 replacement를 명시적으로 켠 경우가 아니면 원본 data를 유지합니다.
-- Search session은 기본 `maxResults=5000`이며 start response는 preview만 반환합니다.
-- Process session은 active output `4000`줄, completed session `25개` budget을 적용합니다.
+- 큰 중복 text를 자동으로 축약하지 않으며 client는 full normalized payload를 받습니다.
+- Search session에는 암묵적 `maxResults` cap이 없습니다. 제한된 scan이 필요하면 `maxResults`를 명시합니다.
+- Process session은 active/completed session output을 더 큰 in-memory window로 보관합니다.
+
+## Runtime Configuration
+
+- Runtime configuration은 in-memory only이며 현재 서버는 first-run config file을 만들지 않습니다.
+- 수정 가능한 key는 `allowedDirectories`, `blockedCommands`, `defaultShell`입니다.
+- `get_configs`로 조회되는 read-only key는 `availableShells`, `currentClient`, `systemInfo`,
+  `version`입니다.
 
 ## Batch-First 사용
 
@@ -114,33 +123,13 @@ preview가 작게 유지되며 batch request는 그대로 보존됩니다. Inlin
 `read_files`, `list_directories`, `get_file_infos`는 `allowMissing=true`도 받아 탐색용 후보 경로 중 누락된
 local path를 실패가 아닌 missing 결과로 반환할 수 있습니다.
 
-## Context Indexing
-
-큰 tool output은 SQLite에 index할 수 있어 전체 payload를 transcript에 반복 노출하지 않고 검색하거나 회수할
-수 있습니다.
-
-- 자동 indexing은 `contextIndexEnabled`, `contextIndexAutoMinChars`, `contextIndexAutoMinLines`,
-  `contextIndexMaxEntryChars`, `contextIndexMaxBytes`, `contextIndexMaxDocuments`,
-  `contextIndexReplaceLargeOutputs`로 제어합니다.
-- 기본 DB 경로는 `~/.mcp/fs-mcp.sqlite`입니다.
-- Custom `contextIndexDbPath`는 `~/.mcp` 또는 `allowedDirectories` 내부여야 하며, custom parent directory는
-  미리 존재해야 합니다.
-- Text는 80줄 chunk와 20줄 overlap으로 나뉘며 SQLite FTS로 검색합니다.
-- 재사용 판단은 원본 전체 payload hash를 사용하고, `indexedLength`와 `truncated`로 indexed slice 상태를
-  기록합니다.
-- `contextIndexMaxDocuments` 또는 `contextIndexMaxBytes`를 넘으면 오래된 document를 삭제합니다.
-- 수동 관리 도구는 `list_context_index`, `search_context_index`, `clear_context_index`입니다.
-- Output compaction은 기본적으로 큰 auto-indexed payload를 대체하지 않습니다.
-  `contextIndexReplaceLargeOutputs=true`는 client가 context-index reference marker를 처리할 수 있을 때만 사용합니다.
-- `read_files`, `list_directories`, `regex_searches`, `get_full_search`, context-index 관리 도구는
-  oversized response에 context-index reference marker를 노출하지 않고 inline payload를 유지합니다.
-
 ## Client 호환성
 
 - 초기화 시 client metadata를 수집하고 `get_configs`의 `currentClient`로 노출합니다.
 - Console/stdout filtering은 MCP JSON-RPC stdio가 우발적 process output과 섞이지 않도록 보호합니다.
-- Cline, VS Code, Claude Dev처럼 server-side JSON-RPC notification에 민감한 client에는 notification을
-  억제합니다.
+- Compatibility profile은 Claude, Codex, Gemini CLI, GitHub Copilot을 대상으로 합니다. Gemini CLI와
+  Copilot은 server-side JSON-RPC notification을 억제하고 Claude와 Codex는 standard notification flow를
+  유지합니다.
 - Resource와 resource-template list handler는 빈 목록을 반환해 resource probe를 수행하는 client 초기화를
   완료시킵니다.
 
@@ -152,7 +141,7 @@ project root/
 |   |-- assets/       공용 reader, type declaration, 교차 기능 utility
 |   |-- controllers/  MCP request handler와 batch response helper
 |   |-- cores/        runtime, transport, server assembly, response normalization
-|   |-- features/     config, context, edit, filesystem, git, process, search 동작
+|   |-- features/     config, edit, filesystem, git, process, search 동작
 |   |-- schemas/      request argument validation schema
 |   `-- tools/        tool catalog entry와 dispatcher
 |-- tests/            contract test, smoke test, fixture, verification script
@@ -168,23 +157,22 @@ project root/
   `tokens`는 visible combined text와 serialized structured content를 `o200k_base` tokenizer로 계산하고
   `token` 단위를 함께 출력합니다.
 - `structuredContent`는 원본 content, combined text, 원본 structured payload, status, duration, error detail,
-  schema version, tool name, optional context-index reference를 포함하는 machine-readable envelope입니다.
-  일부 대용량 조회 도구는 context-index reference 대신 inline preview payload를 포함합니다.
+  schema version, tool name을 포함하는 machine-readable envelope입니다.
 - `_meta.fsMcpResult`는 status, duration, content type, error text 중심의 compact metadata를 보관합니다.
 - 이미 정규화된 result는 다시 감싸지 않고 표시 text만 재생성합니다.
 
+Search session 응답은 pagination과 scan 상태를 위해 `nextOffset`, `wasLimited`, `wasIncomplete`
+같은 field도 함께 돌려줄 수 있습니다.
+
 ## 개발
 
-현재 package script는 build, test, verification을 명시적으로 분리합니다.
+현재 package script는 local bootstrap helper를 호출합니다.
 
 ```bash
-bun run build
-bun run test
-bun run verify
+bun run swc
+bun run sync
+bun run tools
 ```
-
-`bun run build`는 source type-check, SWC 기반 `out` rebuild, `tsc-alias` alias rewrite를 수행합니다.
-`bun run verify`는 source, release shape, tool surface, optimization report check를 실행합니다.
 
 Contract 및 smoke test suite는 Bun으로 직접 실행합니다.
 
@@ -193,8 +181,7 @@ bun tests/run-all-tests.js
 ```
 
 `tests/run-all-tests.js`는 `FS_MCP_SKIP_BUILD=1`이 설정되지 않은 경우 `out`을 다시 build합니다.
-`tests/scripts/`의 helper script는 release shape, source boundary, tool surface, optimization report를
-직접 실행할 때 확인합니다.
+`tests/scripts/`의 helper script는 release shape, source boundary, tool surface를 직접 실행할 때 확인합니다.
 
 ## 문서
 

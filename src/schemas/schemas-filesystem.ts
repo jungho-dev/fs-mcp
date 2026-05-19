@@ -7,9 +7,7 @@
 
 import {z} from "zod";
 
-const ITAML = 8_000;
-const LICE = "Large inline content can stall MCP hosts. Use content_path or args_path instead";
-const IWCD = "Small inline text only. For large generated or pasted payloads, prefer top-level args_path or item-level content_path.";
+const IWCD = "Inline text accepted. For very large generated or pasted payloads, content_path or args_path can still reduce transport overhead.";
 const WCPD = "Read UTF-8 content from this file. Preferred for large generated or pasted text.";
 
 export const RdFlArgsSch = z.object({
@@ -31,7 +29,7 @@ export const RdFlsArgsSch = z.object({
 export const WrtFlArgsSch = z.object({
   path: z.string(),
   content_path: z.string().optional().describe(WCPD),
-  content: z.string().max(ITAML, LICE).optional().describe(IWCD),
+  content: z.string().optional().describe(IWCD),
   content_offset: z.number().optional().default(0),
   content_length: z.number().optional(),
   mode: z.enum(["rewrite", "append"]).default("rewrite"),

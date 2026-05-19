@@ -132,7 +132,7 @@ const FLSY_TL_DFNT = [
     name: "start_searches",
     description: (`
       Start searches in parallel.
-      Use pattern_path for large patterns and filePattern to narrow the target set.
+      pattern_path can reduce transport overhead, and filePattern can narrow the target set.
       ${BTCH_GDNC}
       ${PTH_GDNC}
       ${CMD_PRF_DSC}
@@ -148,7 +148,7 @@ const FLSY_TL_DFNT = [
     description: (`
       Run ripgrep-compatible regular-expression content searches directly.
       Prefer this over shell rg when regex search is needed.
-      Use pattern_path for large patterns and filePattern to narrow the target set.
+      pattern_path can reduce transport overhead, and filePattern can narrow the target set.
       ${BTCH_GDNC}
       ${PTH_GDNC}
       ${CMD_PRF_DSC}

@@ -2,10 +2,10 @@
 
 ## [Unreleased]
 
-* add manual context-index list, search, and clear tools with catalog, dispatcher, schema, and contract coverage
-* validate custom contextIndexDbPath values against ~/.mcp or allowedDirectories and add document/byte retention
-* store full payload hashes, indexed lengths, and truncated flags for safer context-index reuse
-* keep context-index maintenance responses out of automatic self-indexing
+* remove SQLite-backed context-index tools, schemas, controllers, services, tests, and catalog routing
+* remove automatic duplicate text compaction and implicit search result caps
+* keep search result caps caller-controlled through explicit `maxResults`
+* remove the package self-dependency from runtime dependency metadata
 
 ## [1.4.2] - 2026-05-12
 
@@ -295,3 +295,7 @@
 ## \[ 1.6.2 \]
 
 - 2026-05-19 (18:18:35)
+
+## \[ 1.6.3 \]
+
+- 2026-05-20 (00:14:13)

@@ -13,7 +13,6 @@ import {getRipgrepPath as gtRpgrPth} from "@features/search/search-ripgrep-adapt
 import PizZip from "pizzip";
 
 const FCWM = 40;
-const DMSR = 5000;
 const EFTM = 1500;
 const SCIM = 60 * 1000;
 const SCIDM = 1000;
@@ -49,7 +48,7 @@ export declare interface SearchSession {
   lastReadTime: number;
   options: SearchSessionOptions;
   process: ChildProcess;
-  resultLimit: number;
+  resultLimit?: number;
   results: SearchResult[];
   startTime: number;
   totalContextLines: number; // Track context lines separately
@@ -92,7 +91,9 @@ export class SearchManager {
     wasLimited?: boolean;
   }> {
     const sessionId = `search_${++this.sessionCounter}_${Date.now()}`;
-    const effcMxRess = options.maxResults ?? DMSR;
+    const effcMxRess = options.maxResults !== undefined && Number.isFinite(options.maxResults) && options.maxResults > 0
+      ? Math.floor(options.maxResults)
+      : undefined;
 
     // Validate path first
     const validPath = await validatePath(options.rootPath);
@@ -178,7 +179,7 @@ export class SearchManager {
       this.searchDocxFiles(validPath, normOpts.pattern, normOpts.ignoreCase !== false, normOpts.maxResults, normOpts.filePattern, normOpts.literalSearch)
         .then((docxResults) => {
           for (const result of docxResults) {
-            if (session.totalMatches >= session.resultLimit) {
+            if (session.resultLimit !== undefined && session.totalMatches >= session.resultLimit) {
               session.wasLimited = true;
               break;
             }
@@ -362,7 +363,7 @@ export class SearchManager {
       });
     }
     for (const filePath of docxFiles) {
-      if (maxResults && results.length >= maxResults) {
+      if (maxResults !== undefined && maxResults > 0 && results.length >= maxResults) {
         break;
       }
       try {
@@ -371,7 +372,7 @@ export class SearchManager {
         const zip = new PizZip(buf);
 
         for (const xmlPath of DTXP) {
-          if (maxResults && results.length >= maxResults) {
+          if (maxResults !== undefined && maxResults > 0 && results.length >= maxResults) {
             break;
           }
           const file = zip.file(xmlPath);
@@ -382,7 +383,7 @@ export class SearchManager {
           let lineNum = 0;
 
           for (const m of xml.matchAll(WRD_TXT_PAT)) {
-            if (maxResults && results.length >= maxResults) {
+            if (maxResults !== undefined && maxResults > 0 && results.length >= maxResults) {
               break;
             }
             const text = m[1];
@@ -683,7 +684,7 @@ export class SearchManager {
         }
         else {
           session.totalMatches++;
-          if (session.totalMatches >= session.resultLimit) {
+          if (session.resultLimit !== undefined && session.totalMatches >= session.resultLimit) {
             session.wasLimited = true;
           }
         }

@@ -5,24 +5,20 @@
  * @since 2026-05-02
  */
 
-import {constants as fsConstants, existsSync, statSync} from "node:fs";
+import {constants as fsConstants} from "node:fs";
 import {access, readFile} from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import type {ServerResult} from "@assets/type/common";
 import {getSystemInfo as gtSystInf} from "@cores/runtime/runtime-info";
-import {getCurrentClient as gtCurClnt, getDefaultContextIndexDbPath as gtDfCtIdDbPt} from "@features/config/config-client";
+import {getCurrentClient as gtCurClnt} from "@features/config/config-client";
 import {CFG_FLD_DFNT, CFG_FLD_KYS, CFG_QRY_DFNT, type ConfigQueryKey as CfgQryKy, isConfigFieldKey as isCfgFldKy} from "@features/config/config-metadata";
-import {cfgMgr, type ServerConfig as SrvrCfg} from "@features/config/config-store";
+import {cfgMgr} from "@features/config/config-store";
 import {readFileInternal as rdFlInt} from "@features/filesystem/filesystem-service";
 import {GtCfVaArSc, StCfVaArSc2} from "@schemas/schemas-config";
 
 const ALLW_CFG_KYS = new Set(CFG_FLD_KYS);
 const CDLO = process.env.FS_MCP_DEBUG_CONFIG === "1";
 const SLSR = /\r?\n/;
-const CTX_BOOL_KYS = new Set(["contextIndexEnabled", "contextIndexReplaceLargeOutputs"]);
-const CTX_ZERO_KYS = new Set(["contextIndexAutoMinChars", "contextIndexAutoMinLines"]);
-const CTX_POS_KYS = new Set(["contextIndexMaxBytes", "contextIndexMaxDocuments", "contextIndexMaxEntryChars"]);
 
 // 1. Log config debug ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function logConfigDebug(message: string): void {
@@ -39,87 +35,6 @@ function normalizeArrayConfigValue(key: string, value: unknown): unknown {
     normVal2 = [];
   }
   return normVal2;
-}
-
-// 2. Expand home path \u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015
-function expandHomePath(value: string): string {
-  if (value === "~") {
-    return os.homedir();
-  }
-  if (value.startsWith("~/") || value.startsWith("~\\")) {
-    return path.join(os.homedir(), value.slice(2));
-  }
-  return value;
-}
-
-// 3. Normalize path for containment \u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015
-function normalizePathForContainment(value: string): string {
-  return path.resolve(expandHomePath(value));
-}
-
-// 4. Is path inside \u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015
-function isPathInside(rootPath: string, targetPath: string): boolean {
-  const relativePath = path.relative(rootPath, targetPath);
-
-  return relativePath === "" || (!relativePath.startsWith("..") && !path.isAbsolute(relativePath));
-}
-
-// 5. Get default context index DB directory \u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015
-function getDefaultContextIndexDbDirectory(): string {
-  return normalizePathForContainment(path.dirname(gtDfCtIdDbPt()));
-}
-
-// 6. Validate context index DB path \u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015
-function validateContextIndexDbPath(value: string, cfgOvrr?: SrvrCfg): void {
-  const resolvedPath = normalizePathForContainment(value.trim());
-  const defaultPath = normalizePathForContainment(gtDfCtIdDbPt());
-
-  if (resolvedPath === defaultPath) {
-    return;
-  }
-  if (existsSync(resolvedPath) && statSync(resolvedPath).isDirectory()) {
-    throw new Error("contextIndexDbPath must point to a SQLite file, not a directory");
-  }
-  const config = cfgOvrr ?? cfgMgr.getConfigSync();
-  const allwDrct = Array.isArray(config.allowedDirectories)
-    ? config.allowedDirectories.filter((directory): directory is string => typeof directory === "string" && directory.trim().length > 0)
-    : [];
-  const allowedRoots = [
-    getDefaultContextIndexDbDirectory(),
-    ...allwDrct.map((directory) => normalizePathForContainment(directory)),
-  ];
-
-  if (!allowedRoots.some((rootPath) => isPathInside(rootPath, resolvedPath))) {
-    throw new Error("contextIndexDbPath must stay under ~/.mcp or an allowedDirectories entry");
-  }
-  const parentDir = path.dirname(resolvedPath);
-
-  if (!existsSync(parentDir)) {
-    throw new Error("contextIndexDbPath parent directory must exist for custom paths");
-  }
-  if (!statSync(parentDir).isDirectory()) {
-    throw new Error("contextIndexDbPath parent must be a directory");
-  }
-}
-
-// 7. Normalize context index config value \u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015
-function normalizeContextIndexConfigValue(key: string, value: unknown, cfgOvrr?: SrvrCfg): unknown {
-  if (CTX_BOOL_KYS.has(key) && typeof value !== "boolean") {
-    throw new Error(key + " must be a boolean");
-  }
-  if (key === "contextIndexDbPath") {
-    if (typeof value !== "string" || value.trim().length === 0) {
-      throw new Error("contextIndexDbPath must be a non-empty string");
-    }
-    validateContextIndexDbPath(value, cfgOvrr);
-  }
-  if (CTX_ZERO_KYS.has(key) && (typeof value !== "number" || !Number.isFinite(value) || value < 0)) {
-    throw new Error(key + " must be a non-negative finite number");
-  }
-  if (CTX_POS_KYS.has(key) && (typeof value !== "number" || !Number.isFinite(value) || value < 1)) {
-    throw new Error(key + " must be a positive finite number");
-  }
-  return value;
 }
 
 // 2. Path exists ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -329,7 +244,7 @@ export declare interface PreparedConfigValueUpdate {
 }
 
 // 9. Prepare config value update \u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015
-export async function prepareConfigValueUpdate(args: unknown, cfgOvrr?: SrvrCfg): Promise<PreparedConfigValueUpdate> {
+export async function prepareConfigValueUpdate(args: unknown): Promise<PreparedConfigValueUpdate> {
   const parsed = StCfVaArSc2.safeParse(args);
 
   if (!parsed.success) {
@@ -374,8 +289,6 @@ export async function prepareConfigValueUpdate(args: unknown, cfgOvrr?: SrvrCfg)
       valueToStore = [String(valueToStore)];
     }
   }
-  valueToStore = normalizeContextIndexConfigValue(parsed.data.key, valueToStore, cfgOvrr);
-
   return {
     key: parsed.data.key,
     value: valueToStore,

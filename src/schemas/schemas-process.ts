@@ -7,10 +7,8 @@
 
 import {z} from "zod";
 
-const ITAML = 50_000;
-
 export const StrPrArSc = z.object({
-  command: z.string().max(ITAML, "Use command_path for long commands").optional(),
+  command: z.string().optional(),
   command_path: z.string().optional(),
   command_offset: z.number().optional().default(0),
   command_length: z.number().optional(),
@@ -53,7 +51,7 @@ export const KllPrArSc2 = z.object({
 
 export const IntWtPrArSc2 = z.object({
   pid: z.number(),
-  input: z.string().max(ITAML, "Use input_path for large input").optional(),
+  input: z.string().optional(),
   input_path: z.string().optional(),
   input_offset: z.number().optional().default(0),
   input_length: z.number().optional(),

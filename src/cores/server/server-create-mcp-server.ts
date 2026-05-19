@@ -16,7 +16,6 @@ import {runWithGitSessionScope as rnWtGtSeSc} from "@features/git/git-session";
 import {Server} from "@modelcontextprotocol/sdk/server/index.js";
 import {type CallToolRequest as CllTlReq, CallToolRequestSchema as CllTlReqSch, type InitializeRequest as IntlReq, InitializeRequestSchema as IntlReqSch, LATEST_PROTOCOL_VERSION as LTS_PRT_VRS, ListResourcesRequestSchema as LstReReSc, ListResourceTemplatesRequestSchema as LstReTmReSc, ListToolsRequestSchema as LstTlsReqSch, SUPPORTED_PROTOCOL_VERSIONS as SUP_PRT_VRS} from "@modelcontextprotocol/sdk/types.js";
 import {CFG_TL_CTLG} from "@tools/tools-config";
-import {CTX_TL_CTLG} from "@tools/tools-context";
 import type {ToolCatalogEntry as TlCtlgEntr} from "@tools/tools-const";
 import {dispatchToolCall as dsptTlCll} from "@tools/tools-dispatcher";
 import {FLSY_TL_CTLG} from "@tools/tools-filesystem";
@@ -41,7 +40,7 @@ function hasRequestMetadata(value: unknown): value is RequestMetadata {
 
 // 3. Create tool catalog ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createToolCatalog(): TlCtlgEntr[] {
-  return [...CFG_TL_CTLG, ...CTX_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG, ...GT_TL_CTLG];
+  return [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG, ...GT_TL_CTLG];
 }
 
 const TOOL_CATALOG = createToolCatalog();
