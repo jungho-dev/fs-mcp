@@ -54,11 +54,11 @@ jobs:
         run: |
           package_name="$(bun -e 'const pkg = await Bun.file("package.json").json(); console.log(pkg.name);')"
           package_version="$(bun -e 'const pkg = await Bun.file("package.json").json(); console.log(pkg.version);')"
-          remote_version="$(bun x npm view "$package_name" version 2>/dev/null || true)"
+          published_version="$(bun x npm view "$package_name@$package_version" version 2>/dev/null || true)"
 
           echo "package_version=$package_version" >> "$GITHUB_OUTPUT"
 
-          if [ "$remote_version" = "$package_version" ]; then
+          if [ "$published_version" = "$package_version" ]; then
             echo "should_publish=false" >> "$GITHUB_OUTPUT"
             echo "npm already has $package_name@$package_version. Skipping publish."
           else
