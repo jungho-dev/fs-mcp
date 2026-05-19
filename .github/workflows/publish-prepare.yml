@@ -39,22 +39,13 @@ jobs:
               ;;
           esac
 
-      - name: Install dependencies
-        run: bun install --frozen-lockfile
-
-      - name: Build package
-        run: bun run build
-
-      - name: Verify package
-        run: bun run verify
-
       - name: Resolve publish state
         id: state
         shell: bash
         run: |
           package_name="$(bun -e 'const pkg = await Bun.file("package.json").json(); console.log(pkg.name);')"
           package_version="$(bun -e 'const pkg = await Bun.file("package.json").json(); console.log(pkg.version);')"
-          published_version="$(bun x npm view "$package_name@$package_version" version 2>/dev/null || true)"
+          published_version="$(npm view "$package_name@$package_version" version 2>/dev/null || true)"
 
           echo "package_version=$package_version" >> "$GITHUB_OUTPUT"
 
@@ -65,3 +56,23 @@ jobs:
             echo "should_publish=true" >> "$GITHUB_OUTPUT"
             echo "Publishing $package_name@$package_version."
           fi
+
+      - name: Install dependencies
+        if: steps.state.outputs.should_publish == 'true'
+        run: bun install --frozen-lockfile
+
+      - name: Build package
+        if: steps.state.outputs.should_publish == 'true'
+        run: |
+          bunx tsc --noEmit
+          bunx shx rm -rf out
+          bunx swc src -d out --config-file ./.server.swcrc --strip-leading-paths
+          bunx tsc-alias -p tsconfig.json --outDir out -f -fe .js
+
+      - name: Verify package
+        if: steps.state.outputs.should_publish == 'true'
+        run: |
+          bunx tsc --noEmit
+          bun tests/scripts/scripts-verify-release-shape.mjs
+          bun tests/scripts/scripts-verify-tool-surface.mjs
+          bun tests/scripts/scripts-verify-optimization-reports.mjs

@@ -40,10 +40,18 @@ jobs:
         run: bun install --frozen-lockfile
 
       - name: Build package
-        run: bun run build
+        run: |
+          bunx tsc --noEmit
+          bunx shx rm -rf out
+          bunx swc src -d out --config-file ./.server.swcrc --strip-leading-paths
+          bunx tsc-alias -p tsconfig.json --outDir out -f -fe .js
 
       - name: Verify package
-        run: bun run verify
+        run: |
+          bunx tsc --noEmit
+          bun tests/scripts/scripts-verify-release-shape.mjs
+          bun tests/scripts/scripts-verify-tool-surface.mjs
+          bun tests/scripts/scripts-verify-optimization-reports.mjs
 
       - name: Publish to npm
         shell: bash
