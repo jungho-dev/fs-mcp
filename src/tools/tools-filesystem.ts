@@ -14,7 +14,7 @@ import { APPG, BTCH_GDNC, CMD_PRF_DSC, createToolCatalogEntry as crtTlCtEn, PTH_
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 const FLSY_TL_DFNT = [
   {
-    name: "read_files",
+    name: "file-read",
     description: `
       Read files in parallel.
       Use paths for simple reads or items for offset, length, headers, or URL reads.
@@ -31,7 +31,7 @@ const FLSY_TL_DFNT = [
     },
   },
   {
-    name: "read_files_with_linenumber",
+    name: "file-lines",
     description: `
       Read text files in parallel with 1-based line numbers.
       Use paths for simple reads or items for offset and length.
@@ -48,7 +48,7 @@ const FLSY_TL_DFNT = [
     },
   },
   {
-    name: "write_files",
+    name: "file-write",
     description: (`
       Write files in parallel.
       Prefer content_path or args_path for large text.
@@ -65,7 +65,7 @@ const FLSY_TL_DFNT = [
     },
   },
   {
-    name: "create_directories",
+    name: "dir-mk",
     description: (`
       Create one or many directories in parallel.
       ${BTCH_GDNC}
@@ -80,7 +80,7 @@ const FLSY_TL_DFNT = [
     },
   },
   {
-    name: "list_directories",
+    name: "dir-list",
     description: (`
       List one or many directories in parallel.
       Use items: [{ path, depth?, maxEntries?, excludePatterns?, includeFiles? }].
@@ -96,7 +96,7 @@ const FLSY_TL_DFNT = [
     },
   },
   {
-    name: "copy_files",
+    name: "file-copy",
     description: (`
       Copy one or many files or directories in parallel.
       Use items: [{ source, destination, recursive?, force? }].
@@ -113,7 +113,7 @@ const FLSY_TL_DFNT = [
     },
   },
   {
-    name: "move_files",
+    name: "file-move",
     description: (`
       Move or rename one or many files in parallel.
       ${BTCH_GDNC}
@@ -129,7 +129,7 @@ const FLSY_TL_DFNT = [
     },
   },
   {
-    name: "remove_files",
+    name: "file-remove",
     description: (`
       Delete one or many files or directories in parallel.
       Use items: [{ path, recursive?, force? }].
@@ -146,7 +146,7 @@ const FLSY_TL_DFNT = [
     },
   },
   {
-    name: "start_searches",
+    name: "search-start",
     description: (`
       Start searches in parallel.
       pattern_path can reduce transport overhead, and filePattern can narrow the target set.
@@ -161,7 +161,7 @@ const FLSY_TL_DFNT = [
     },
   },
   {
-    name: "regex_searches",
+    name: "search-regex",
     description: (`
       Run ripgrep-compatible regular-expression content searches directly.
       Prefer this over shell rg when regex search is needed.
@@ -177,7 +177,7 @@ const FLSY_TL_DFNT = [
     },
   },
   {
-    name: "get_full_search",
+    name: "search-get",
     description: (`
       Read one or many active search sessions in parallel with full per-item result text.
       Use offset or length for pagination.
@@ -191,7 +191,7 @@ const FLSY_TL_DFNT = [
     },
   },
   {
-    name: "stop_searches",
+    name: "search-stop",
     description: (`
       Stop one or many active searches in parallel.
       ${BTCH_GDNC}
@@ -205,7 +205,7 @@ const FLSY_TL_DFNT = [
     },
   },
   {
-    name: "get_file_infos",
+    name: "file-infos",
     description: (`
       Retrieve metadata for one or many files in parallel.
       Set allowMissing true to return missing local paths as non-error missing results.
@@ -220,7 +220,7 @@ const FLSY_TL_DFNT = [
     },
   },
   {
-    name: "edit_blocks",
+    name: "file-edit",
     description: (`
       Apply exact block replacements in parallel.
       Prefer *_path or args_path for large text.

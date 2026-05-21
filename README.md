@@ -2,14 +2,17 @@
 
 ## Overview
 
-`@jungho-dev/fs-mcp` is a stdio-based Model Context Protocol server for local filesystem work,
-process sessions, ripgrep-backed search, runtime configuration, git session workflows, and exact block editing.
+`@jungho-dev/fs-mcp` is a stdio-based Model Context Protocol server for local file work, batched
+search, exact block editing, runtime configuration updates, process stdin interaction, and essential
+git workflows.
 
-This package is the MCP server runtime. It is not a VS Code extension bundle and does not depend on one
-specific AI client. Codex, Claude, Cline, Roo, Cursor, Windsurf, VS Code MCP clients, and other MCP-capable
-clients can launch it through stdio.
+This package is the MCP server runtime. It is not a VS Code extension bundle, does not require a
+specific AI client, and does not open a network listener. Any MCP-capable client that can launch a
+stdio command can use it, including Codex, Claude, Cline, Roo, Cursor, Windsurf, VS Code MCP clients,
+Gemini CLI, and GitHub Copilot.
 
 The current runtime does not include a SQLite sidecar, context-index store, or MCP resource catalog.
+Resource and resource-template handlers intentionally return empty lists for client compatibility.
 
 ## Installation
 
@@ -27,7 +30,7 @@ bun add -g @jungho-dev/fs-mcp
 
 ## MCP Client Configuration
 
-Use the same server command for MCP clients that accept JSON-style `mcpServers` configuration:
+Use this server command for MCP clients that accept JSON-style `mcpServers` configuration:
 
 ```json
 {
@@ -40,8 +43,7 @@ Use the same server command for MCP clients that accept JSON-style `mcpServers` 
 }
 ```
 
-Codex uses TOML instead of JSON. Add the same server command to `~/.codex/config.toml` when the package is
-installed globally:
+Codex uses TOML instead of JSON. Add the same command to `~/.codex/config.toml` after global install:
 
 ```toml
 [mcp_servers.fs-mcp]
@@ -52,140 +54,145 @@ command = "fs-mcp"
 args = []
 ```
 
-If a client cannot resolve global binaries, set `command` to the absolute `fs-mcp` executable path. The server
-uses stdio and does not open a network listener.
+If a client cannot resolve global binaries, set `command` to the absolute `fs-mcp` executable path.
+
+## Current Public Tool Surface
+
+The current source and compiled runtime expose 22 public tools. Tool names are intentionally short,
+hyphenated for filesystem/search/git surfaces, and stable for clients that cache MCP catalogs.
+
+| Domain | Tools | Purpose |
+|--------|-------|---------|
+| Config | `set_config_values` | Update mutable in-memory configuration values. |
+| Filesystem | `file-read`, `file-lines`, `file-write`, `file-infos` | Read, line-read, write, and inspect files. |
+| Directories | `dir-list`, `dir-mk` | List directory trees and create directories. |
+| File operations | `file-copy`, `file-move`, `file-remove`, `file-edit` | Copy, move, remove, and exact-edit files or directories. |
+| Search | `search-regex`, `search-start`, `search-get`, `search-stop` | Run direct regex scans or manage paged search sessions. |
+| Process | `interact_with_processes` | Send stdin to known running process IDs. |
+| Git | `git-cwd`, `git-status`, `git-diff`, `git-show`, `git-add`, `git-commit` | Pin repo state, inspect changes, stage, and commit. |
+
+`src/schemas/schemas-git.ts` contains schemas for additional git operations, but `src/tools/tools-git.ts`
+exports only the essential git set above in this version. Config read tools and process start/read/list/kill
+controls are outside the current public catalog.
 
 ## Main Capabilities
 
-- Filesystem tools for batched read, write, listing, metadata, directory creation, move, and removal.
-- Exact edit tools for one or many block replacements with optional path-backed large string inputs.
-- Search tools backed by bundled `@vscode/ripgrep`, direct regex searches, active search sessions, pagination,
-  stop controls, and optional DOCX text extraction for content searches.
-- Process tools for command sessions, process output, interactive input, session listing, and process termination.
-- Git session tools for pinned repository state, status, diff, show, staging, and commit.
-- Runtime configuration tools for command policy, shell selection, allowed directories, client metadata, version data,
-  and system information.
-
-## Tool Surface
-
-The current source and compiled runtime expose 27 tools. Batch-capable tools are documented as batch-first
-surfaces: when a task needs multiple same-kind filesystem, search, process, or config operations,
-clients should put all items into one tool call instead of repeatedly calling the same tool.
-
-- Config: `get_configs`, `set_config_values`.
-- Filesystem/search/edit: `read_files`, `read_files_with_linenumber`, `write_files`, `create_directories`,
-  `list_directories`,
-  `copy_files`, `move_files`, `remove_files`, `start_searches`, `regex_searches`, `get_full_search`,
-  `stop_searches`, `get_file_infos`, `edit_blocks`.
-- Process: `start_processes`, `read_process_outputs`, `interact_with_processes`, `list_sessions`,
-  `kill_processes`.
-- Git: `git_set_working_dir`, `git_status`, `git_diff`, `git_show`, `git_add`, `git_commit`.
-
-`src/schemas/schemas-git.ts` defines schemas for additional git operations, but `src/tools/tools-git.ts`
-exports only `ESSENTIAL_GIT_TOOL_NAMES` in this version.
-
-The public tool catalog is assembled from config, filesystem, process, and git modules only.
-
-## Runtime Notes
-
-Current compiled catalog metrics:
-
-- Tool count: `27`.
-- `list_tools` payload: measured by the tool-surface verification script.
-- Tool descriptions: measured by the tool-surface verification script.
-- Tool schemas: measured by the tool-surface verification script.
-
-Runtime behavior keeps tool results faithful to handler output:
-
-- Tool catalogs are built once and schema conversion is lazy-cached.
-- Large duplicate text is no longer automatically compacted; clients receive the full normalized payload.
-- Search sessions have no implicit `maxResults` cap. Set `maxResults` explicitly when a bounded scan is required.
-- Process sessions keep larger in-memory output windows for active and completed sessions.
-
-## Runtime Configuration
-
-- Runtime configuration is in-memory only; the current server does not create a first-run config file.
-- Editable keys are `allowedDirectories`, `blockedCommands`, and `defaultShell`.
-- Read-only query keys exposed by `get_configs` are `availableShells`, `currentClient`, `systemInfo`,
-  and `version`.
+- Batch-first filesystem reads, writes, listings, metadata checks, directory creation, copying, moving,
+  deletion, and exact block replacement.
+- Direct ripgrep-compatible regex search and asynchronous search sessions with pagination and stop controls.
+- Optional DOCX text extraction for content searches when the target inputs or patterns include `.docx`.
+- Runtime configuration updates for supported mutable keys.
+- Process stdin interaction for existing running process IDs.
+- Essential git session workflows for repository pinning, status, diff, show, staging, and commit.
+- Normalized tool responses with a visible display block, machine-readable `structuredContent`, and compact
+  `_meta.fsMcpResult` metadata.
 
 ## Batch-First Tool Use
 
-`SERVER_INSTRUCTIONS` and batch-capable tool descriptions both tell clients to prefer one multi-item call over
-repeated same-tool calls. This applies to:
+`SERVER_INSTRUCTIONS` and batch-capable tool descriptions tell clients to collapse repeated same-kind work into
+one multi-item call. This applies to:
 
-- File and directory operations through `paths` or `items` arrays.
-- Search work through `regex_searches.items`, `start_searches.items`, `get_full_search.items`, or
-  `stop_searches.sessionIds`.
-- Process operations through `items` or `pids`.
-- Configuration operations through `items`.
+- File reads through `paths` or `items`.
+- Directory and file operations through `items` or `paths` arrays.
+- Search work through `search-regex.items`, `search-start.items`, `search-get.items`, and `search-stop.sessionIds`.
+- Process input through `interact_with_processes.items`.
+- Configuration updates through `set_config_values.items`.
 
-Large multi-item arguments can be moved into a UTF-8 JSON file and passed with `args_path`, keeping the tool-call
-preview compact while preserving one batch request. Inline overrides are merged on top of the JSON object.
+Large arguments can be moved into a UTF-8 JSON file and passed with `args_path`. Inline fields supplied beside
+`args_path` override fields from the referenced JSON object. Large text payloads can also use path-backed fields
+such as `content_path`, `old_string_path`, `new_string_path`, `pattern_path`, `input_path`, `messagePath`, and
+`value_path`.
 
-`read_files`, `read_files_with_linenumber`, `list_directories`, and `get_file_infos` also accept
-`allowMissing=true` to return missing local paths
-as non-error missing results during exploratory candidate reads.
+`file-read`, `file-lines`, `dir-list`, and `file-infos` accept `allowMissing=true` so exploratory candidate reads
+can return missing local paths as non-error results.
+
+## Runtime Notes
+
+Current compiled catalog metrics from this checkout:
+
+- Tool count: `22`.
+- `list_tools` payload: `24,721` characters.
+- Tool descriptions: `6,088` characters.
+- Tool schemas: `17,266` characters.
+
+Runtime behavior:
+
+- Tool catalogs are assembled once during server creation.
+- Zod-to-JSON-schema conversion is lazy-cached per tool entry.
+- Tool calls resolve `args_path`, `args_offset`, and `args_length` before controller validation.
+- Search sessions have no implicit `maxResults` cap. Set `maxResults` explicitly when a bounded scan is needed.
+- Large duplicate text is not automatically compacted; normalized responses preserve handler output.
+- Stdio filtering captures accidental console output before it can corrupt MCP JSON-RPC frames.
+
+## Runtime Configuration
+
+Runtime configuration is in memory only. The server does not create a first-run config file.
+
+Mutable configuration keys are:
+
+- `allowedDirectories`
+- `blockedCommands`
+- `defaultShell`
+
+`FS_MCP_ALLOWED_DIRECTORIES` can seed allowed directories. On Windows, entries are separated by semicolons.
 
 ## Client Compatibility
 
-- Client metadata is captured during initialization and exposed through `get_configs` as `currentClient`.
-- Console and stdout filtering protect MCP JSON-RPC stdio from accidental process output.
-- Agent compatibility is scoped to Claude, Codex, Gemini CLI, and GitHub Copilot. Gemini CLI and Copilot suppress
-  server-side JSON-RPC notifications; Claude and Codex keep the standard notification flow.
-- Resource and resource-template list handlers return empty lists so clients that probe resources during
-  initialization can complete cleanly.
+- Client metadata is captured during initialization and can also be refreshed from call metadata.
+- Git calls run inside a client-scoped git session key.
+- Claude and Codex keep standard server-side notification behavior.
+- Gemini CLI and GitHub Copilot suppress server-side JSON-RPC notifications for compatibility.
+- Resource and resource-template list handlers return empty lists so probing clients initialize cleanly.
 
 ## Repository Structure
 
 ```text
 project root/
 |-- src/
-|   |-- assets/       shared readers, type declarations, and cross-domain utilities
-|   |-- controllers/  MCP request handlers and batch response helpers
-|   |-- cores/        runtime, transport, server assembly, and response normalization
-|   |-- features/     config, edit, filesystem, git, process, and search behavior
-|   |-- schemas/      request argument validation schemas
-|   `-- tools/        tool catalog entries and dispatcher
-|-- tests/            contract tests, smoke tests, fixtures, and verification scripts
-`-- out/              compiled runtime published to npm
+|   |-- assets/        shared readers, type declarations, and cross-domain utilities
+|   |-- controllers/   MCP request handlers and batch response helpers
+|   |-- cores/         runtime, stdio transport, server assembly, and response normalization
+|   |-- features/      config, edit, filesystem, git, process, and search behavior
+|   |-- schemas/       request argument validation schemas
+|   `-- tools/         tool catalog entries and dispatcher
+|-- tests/             contract tests, smoke tests, fixtures, and verification scripts
+`-- out/               compiled runtime published to npm
 ```
 
 ## Response Shape
 
 Every dispatched tool result is normalized by `src/cores/responses/responses-tool-result.ts`.
 
-- Visible `content[0].text` uses the display template from
-  `src/cores/responses/responses-tool-display.ts`. The default rows are `tool`, `items`, `status`,
-  `tokens`, `duration`, `contents`, and `structuredText`. `tokens` uses the `o200k_base` tokenizer for
-  the visible combined text plus serialized structured content and includes a `token` unit.
-- `structuredContent` stores the standard machine-readable envelope: original content, combined text, original
-  structured payload, status, duration, error details, schema version, and tool name.
-- `_meta.fsMcpResult` stores compact metadata for clients that only need status, duration, content types, and
-  error text.
-- Already normalized results are not wrapped again; only the visible display text is regenerated.
-
-Search session responses can also report pagination and scan state such as `nextOffset`, `wasLimited`, and
-`wasIncomplete` when the underlying scan hit access restrictions.
+- Visible `content[0].text` is generated by `src/cores/responses/responses-tool-display.ts`.
+- The default visible rows are `tool`, `items`, `status`, `duration`, `tokens`, `contents`, and `structuredText`.
+- `tokens` uses `gpt-tokenizer` over the visible combined text plus serialized structured content.
+- `structuredContent` stores schema version, tool name, status, duration, error detail, original normalized content,
+  combined text, and original structured payload.
+- `_meta.fsMcpResult` stores compact status, duration, content type, error, schema, and tool metadata.
+- Already normalized results are not wrapped again; the visible display text is regenerated.
 
 ## Development
 
-Current package scripts route through the local bootstrap helper:
+Current package scripts use Bun:
 
 ```bash
-bun run swc
-bun run sync
-bun run tools
+bun run build
+bun run verify
+bun run test
 ```
 
-Contract and smoke tests live under `tests/` and can be run directly with Bun:
+Useful scoped checks:
 
 ```bash
-bun tests/run-all-tests.js
+bun run verify:source
+bun run verify:shape
+bun run verify:tools
+bun run verify:reports
 ```
 
-`tests/run-all-tests.js` rebuilds `out` unless `FS_MCP_SKIP_BUILD=1` is set. Verification helper scripts under
-`tests/scripts/` check release shape, source boundaries, and tool surface when invoked directly.
+`tests/run-all-tests.js` rebuilds `out` unless `FS_MCP_SKIP_BUILD=1` is set, then runs contract and smoke tests.
+Verification scripts under `tests/scripts/` check release shape, source boundaries, optimization reports, and the
+compiled tool surface.
 
 ## Documentation
 
@@ -198,5 +205,5 @@ bun tests/run-all-tests.js
 ## Packaging Notes
 
 The npm package exposes the `fs-mcp` binary through `out/index.mjs`. Runtime version metadata is read from the
-package root `package.json`. The package file allowlist includes `out`, release documentation, and changelog
-files; source files, tests, fixtures, and local runtime artifacts remain development-only surfaces.
+package root `package.json`. The package file allowlist includes `out`, release documentation, and changelog files.
+Source files, tests, fixtures, and local runtime artifacts remain development-only surfaces.

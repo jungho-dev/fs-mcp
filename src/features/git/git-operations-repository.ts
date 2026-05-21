@@ -12,7 +12,7 @@ import { gatherRepositorySnapshot as gthrRepoSnps, getStatusSummary as gtStatSmm
 import type { GitArgsMap, GitToolOutput as GtTlOtpt } from "@features/git/git-types";
 
 // 1. Run git set working dir ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function runGitSetWorkingDir(input: GitArgsMap["git_set_working_dir"]): Promise<GtTlOtpt> {
+export async function runGitSetWorkingDir(input: GitArgsMap["git-cwd"]): Promise<GtTlOtpt> {
   const resolvedPath = await rslvCrtnPth(input.path);
   const shldValRepo = input.validateGitRepo ?? true;
   const shldIntlRepo = input.initializeIfNotPresent ?? false;
@@ -59,7 +59,7 @@ export async function runGitSetWorkingDir(input: GitArgsMap["git_set_working_dir
 }
 
 // 3. Run git status ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function runGitStatus(input: GitArgsMap["git_status"]): Promise<GtTlOtpt> {
+export async function runGitStatus(input: GitArgsMap["git-status"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
   const incUntr = input.includeUntracked ?? true;
   const status = await gtStatSmmr(cwd, incUntr);

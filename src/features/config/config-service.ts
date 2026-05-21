@@ -163,7 +163,7 @@ export async function getConfigValue(args: unknown): Promise<ServerResult> {
   const parsed = GtCfVaArSc.safeParse(args);
 
   if (!parsed.success) {
-    logConfigDebug(`Invalid arguments for get_configs: ${parsed.error}`);
+    logConfigDebug(`Invalid configuration query arguments: ${parsed.error}`);
     return {
       content: [
         {

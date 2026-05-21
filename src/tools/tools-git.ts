@@ -29,7 +29,7 @@ const CMM_MSG_GDN = [
 const EGTNS = new Set<GitToolName>(EGTN);
 
 const GT_TL_DSCR: GitToolDescription[] = [
-  { name: "git_add", title: "Git Add", description: ["Stage files for commit.", CMD_PRF_DSC].join("\n"), readOnlyHint: false },
+  { name: "git-add", title: "Git Add", description: ["Stage files for commit.", CMD_PRF_DSC].join("\n"), readOnlyHint: false },
   { name: "git_blame", title: "Git Blame", description: ["Show line-by-line authorship for a file.", CMD_PRF_DSC].join("\n"), readOnlyHint: true },
   { name: "git_branch", title: "Git Branch", description: ["List, create, delete, rename, or inspect branches.", CMD_PRF_DSC].join("\n"), readOnlyHint: false },
   { name: "git_changelog_analyze", title: "Git Changelog Analyze", description: ["Collect git history context and changelog review guidance.", CMD_PRF_DSC].join("\n"), readOnlyHint: true },
@@ -37,8 +37,8 @@ const GT_TL_DSCR: GitToolDescription[] = [
   { name: "git_cherry_pick", title: "Git Cherry Pick", description: ["Apply commits from another branch.", CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
   { name: "git_clean", title: "Git Clean", description: ["Remove untracked files or preview cleanup.", CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
   { name: "git_clone", title: "Git Clone", description: ["Clone a repository from a remote or local source.", PTH_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true, openWorldHint: true },
-  { name: "git_commit", title: "Git Commit", description: ["Create a commit from staged changes.", CMM_MSG_GDN, LNG_MSG_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
-  { name: "git_diff", title: "Git Diff", description: ["Show differences between commits, branches, or working tree state.", CMD_PRF_DSC].join("\n"), readOnlyHint: true },
+  { name: "git-commit", title: "Git Commit", description: ["Create a commit from staged changes.", CMM_MSG_GDN, LNG_MSG_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
+  { name: "git-diff", title: "Git Diff", description: ["Show differences between commits, branches, or working tree state.", CMD_PRF_DSC].join("\n"), readOnlyHint: true },
   { name: "git_fetch", title: "Git Fetch", description: ["Fetch updates from a remote repository.", CMD_PRF_DSC].join("\n"), readOnlyHint: false, openWorldHint: true },
   { name: "git_init", title: "Git Init", description: ["Initialize a new git repository.", PTH_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
   { name: "git_merge", title: "Git Merge", description: ["Merge a branch into the current branch.", LNG_MSG_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
@@ -48,10 +48,10 @@ const GT_TL_DSCR: GitToolDescription[] = [
   { name: "git_reflog", title: "Git Reflog", description: ["Inspect reference update history.", CMD_PRF_DSC].join("\n"), readOnlyHint: true },
   { name: "git_remote", title: "Git Remote", description: ["Manage git remotes and remote URLs.", CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true, openWorldHint: true },
   { name: "git_reset", title: "Git Reset", description: ["Reset HEAD or unstage paths.", CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
-  { name: "git_set_working_dir", title: "Git Set Working Directory", description: ["Pin the session git working directory and return a repository snapshot.", PTH_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
-  { name: "git_show", title: "Git Show", description: ["Show a git object or file content at a revision.", CMD_PRF_DSC].join("\n"), readOnlyHint: true },
+  { name: "git-cwd", title: "Git Set Working Directory", description: ["Pin the session git working directory and return a repository snapshot.", PTH_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
+  { name: "git-show", title: "Git Show", description: ["Show a git object or file content at a revision.", CMD_PRF_DSC].join("\n"), readOnlyHint: true },
   { name: "git_stash", title: "Git Stash", description: ["List, save, apply, pop, or drop stashes.", LNG_MSG_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
-  { name: "git_status", title: "Git Status", description: ["Show working tree status, staging, and conflicts.", CMD_PRF_DSC].join("\n"), readOnlyHint: true },
+  { name: "git-status", title: "Git Status", description: ["Show working tree status, staging, and conflicts.", CMD_PRF_DSC].join("\n"), readOnlyHint: true },
   { name: "git_tag", title: "Git Tag", description: ["List, create, delete, or verify tags.", LNG_MSG_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
   { name: "git_worktree", title: "Git Worktree", description: ["Manage additional git worktrees.", PTH_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
 ];

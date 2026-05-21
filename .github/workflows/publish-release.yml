@@ -3,6 +3,9 @@ name: Publish Release
 on:
   workflow_call:
     inputs:
+      package-name:
+        required: true
+        type: string
       package-version:
         required: true
         type: string
@@ -28,35 +31,63 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
+          set -euo pipefail
           if [ -z "$NODE_AUTH_TOKEN" ]; then
             echo "Missing GitHub Actions secret: NPM_TOKEN" >&2
             exit 1
           fi
-          npm config set registry "https://registry.npmjs.org/" --userconfig "$RUNNER_TEMP/.npmrc"
-          npm config set //registry.npmjs.org/:_authToken "$NODE_AUTH_TOKEN" --userconfig "$RUNNER_TEMP/.npmrc"
-          echo "NPM_CONFIG_USERCONFIG=$RUNNER_TEMP/.npmrc" >> "$GITHUB_ENV"
+          npmrc_path="$RUNNER_TEMP/.npmrc"
+          {
+            echo "registry=https://registry.npmjs.org/"
+            echo "//registry.npmjs.org/:_authToken=$NODE_AUTH_TOKEN"
+          } > "$npmrc_path"
+          chmod 0600 "$npmrc_path"
+          echo "NPM_CONFIG_USERCONFIG=$npmrc_path" >> "$GITHUB_ENV"
 
       - name: Install dependencies
         run: bun install --frozen-lockfile
 
       - name: Build package
-        run: |
-          bunx tsc --noEmit
-          bunx shx rm -rf out
-          bunx swc src -d out --config-file ./.server.swcrc --strip-leading-paths
-          bunx tsc-alias -p tsconfig.json --outDir out -f -fe .js
+        run: bun run build
 
       - name: Verify package
+        run: bun run verify
+
+      - name: Preflight npm publish
+        shell: bash
+        env:
+          PACKAGE_NAME: ${{ inputs.package-name }}
+          PACKAGE_VERSION: ${{ inputs.package-version }}
         run: |
-          bunx tsc --noEmit
-          bun tests/scripts/scripts-verify-release-shape.mjs
-          bun tests/scripts/scripts-verify-tool-surface.mjs
-          bun tests/scripts/scripts-verify-optimization-reports.mjs
+          set -euo pipefail
+          actual_name="$(bun -e 'const pkg = await Bun.file("package.json").json(); console.log(pkg.name);')"
+          actual_version="$(bun -e 'const pkg = await Bun.file("package.json").json(); console.log(pkg.version);')"
+          if [ "$actual_name" != "$PACKAGE_NAME" ] || [ "$actual_version" != "$PACKAGE_VERSION" ]; then
+            echo "::error::Workflow package metadata does not match package.json."
+            echo "Expected $PACKAGE_NAME@$PACKAGE_VERSION, got $actual_name@$actual_version."
+            exit 1
+          fi
+          npm_user="$(npm whoami --registry https://registry.npmjs.org/)"
+          echo "Authenticated to npm as $npm_user."
+          published_version="$(npm view "$PACKAGE_NAME@$PACKAGE_VERSION" version --registry https://registry.npmjs.org/ 2>/dev/null || true)"
+          if [ "$published_version" = "$PACKAGE_VERSION" ]; then
+            echo "::error::$PACKAGE_NAME@$PACKAGE_VERSION already exists on npm. Bump package.json version before publishing."
+            exit 1
+          fi
 
       - name: Publish to npm
         shell: bash
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          PACKAGE_NAME: ${{ inputs.package-name }}
+          PACKAGE_VERSION: ${{ inputs.package-version }}
         run: |
-          echo "Publishing version ${{ inputs.package-version }}."
-          npm publish --access public --ignore-scripts
+          set -euo pipefail
+          echo "Publishing $PACKAGE_NAME@$PACKAGE_VERSION."
+          set +e
+          npm publish --access public --ignore-scripts --registry https://registry.npmjs.org/
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            echo "::error::npm publish failed. If the log shows E404 for a scoped package, verify NPM_TOKEN belongs to an npm account or organization that owns the package scope, or change package.json to an owned scope."
+            exit "$status"
+          fi

@@ -13,7 +13,7 @@ const CnfrSch = z.enum(["Y", "y", "Yes", "yes"]);
 const RvwTypSch = z.enum(["security", "features", "storyline", "gaps", "breaking_changes", "quality"]);
 
 export const GT_INPT_SCHS = {
-  git_add: z
+  "git-add": z
     .object({
       path: OptnRpPthSch,
       paths: z.array(z.string()).optional(),
@@ -97,7 +97,7 @@ export const GT_INPT_SCHS = {
       mirror: z.boolean().optional(),
     })
     .strict(),
-  git_commit: z
+  "git-commit": z
     .object({
       path: OptnRpPthSch,
       message: z.string().optional(),
@@ -119,7 +119,7 @@ export const GT_INPT_SCHS = {
     .refine((args) => args.message !== undefined || args.messagePath !== undefined, {
       message: "Either message or messagePath is required",
     }),
-  git_diff: z
+  "git-diff": z
     .object({
       path: OptnRpPthSch,
       target: CmmtRfSch.optional(),
@@ -223,14 +223,14 @@ export const GT_INPT_SCHS = {
       confirmed: z.boolean().optional(),
     })
     .strict(),
-  git_set_working_dir: z
+  "git-cwd": z
     .object({
       path: z.string(),
       validateGitRepo: z.boolean().optional(),
       initializeIfNotPresent: z.boolean().optional(),
     })
     .strict(),
-  git_show: z
+  "git-show": z
     .object({
       path: OptnRpPthSch,
       object: z.string(),
@@ -253,7 +253,7 @@ export const GT_INPT_SCHS = {
       limit: z.number().int().positive().optional(),
     })
     .strict(),
-  git_status: z
+  "git-status": z
     .object({
       path: OptnRpPthSch,
       includeUntracked: z.boolean().optional(),
@@ -293,10 +293,10 @@ export const GT_INPT_SCHS = {
 export declare type GitToolName = keyof typeof GT_INPT_SCHS;
 
 export const EGTN = [
-  "git_set_working_dir",
-  "git_status",
-  "git_diff",
-  "git_show",
-  "git_add",
-  "git_commit",
+  "git-cwd",
+  "git-status",
+  "git-diff",
+  "git-show",
+  "git-add",
+  "git-commit",
 ] as const satisfies readonly GitToolName[];

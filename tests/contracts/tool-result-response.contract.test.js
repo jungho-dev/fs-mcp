@@ -193,11 +193,11 @@ function testDisplayPreservesStructuredText() {
 // 9. Test long text structured data preserved ―――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testLongTextStructuredDataPreserved() {
   const fullText = Array.from({ length: 50 }, (_value, index) => `line${index + 1} ${"x".repeat(640)}`).join("\n");
-  const normalized = nrmlTlRes("write_files", crtTlTxtRes(fullText), 9);
+  const normalized = nrmlTlRes("file-write", crtTlTxtRes(fullText), 9);
   const output = parseStandardOutput(normalized);
 
   assert.equal(output.data.text, fullText);
-  assert.equal(normalized.content[0].text, createExpectedDisplaySummary("write_files", "success", fullText, null, 1, 9));
+  assert.equal(normalized.content[0].text, createExpectedDisplaySummary("file-write", "success", fullText, null, 1, 9));
 }
 
 // 9-1. Test special token sanitized ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -205,7 +205,7 @@ function testSpecialTokenSanitized() {
   const rawToken = "<|" + "endoftext" + "|>";
   const safeToken = "<|endoftext |>";
   const fullText = "alpha " + rawToken + " omega";
-  const normalized = nrmlTlRes("read_files", crtTlTxtRes(fullText, {
+  const normalized = nrmlTlRes("file-read", crtTlTxtRes(fullText, {
     structuredContent: { textContent: fullText },
   }), 9);
   const output = parseStandardOutput(normalized);

@@ -17,7 +17,7 @@ export { hndlEdtBlck as handleEditBlock };
 export async function handleEditBlocks(args: unknown) {
   const parsed = EdtBlArSc.parse(args);
   const results = await rnPrllBtch(parsed.items, (item) => hndlEdtBlck(item));
-  const response = crtBtchTlRes("edit_blocks", results);
+  const response = crtBtchTlRes("file-edit", results);
 
   return response;
 }

@@ -27,8 +27,8 @@ async function testVirtualNodeSessionLifecycle() {
 
     const listBefore = await listSessions();
     assert(!listBefore.isError, "Listing sessions should succeed");
-    assert(listBefore.content[0].text.includes(`PID: ${pid} (node:local)`), "Virtual session should appear in list_sessions");
-    assert(listBefore.content[0].text.includes("Timeout: 4321ms"), "Configured virtual timeout should appear in list_sessions");
+    assert(listBefore.content[0].text.includes(`PID: ${pid} (node:local)`), "Virtual session should appear in session output");
+    assert(listBefore.content[0].text.includes("Timeout: 4321ms"), "Configured virtual timeout should appear in session output");
 
     const runResult = await intrWthProc({
       pid,

@@ -11,9 +11,7 @@ import { interactWithProcess as intrWthProc, listSessions, readProcessOutput as 
 import {
   IntWtPrArSc,
   RdPrOtArSc,
-  RdPrOtArSc2,
   StrPrArSc,
-  StrPrArSc2,
 } from "@schemas/schemas-process";
 
 // 1. Handle start process ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -38,25 +36,7 @@ export async function handleListSessions(args: unknown): Promise<ServerResult> {
   return listSessions(args);
 }
 
-// 5. Handle start processes ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function handleStartProcesses(args: unknown): Promise<ServerResult> {
-  const parsed = StrPrArSc2.parse(args);
-  const results = await rnPrllBtch(parsed.items, (item) => handleStartProcess(item));
-  const response = crtBtchTlRes("start_processes", results);
-
-  return response;
-}
-
-// 6. Handle read process outputs ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function handleReadProcessOutputs(args: unknown): Promise<ServerResult> {
-  const parsed = RdPrOtArSc2.parse(args);
-  const results = await rnPrllBtch(parsed.items, (item) => handleReadProcessOutput(item));
-  const response = crtBtchTlRes("read_process_outputs", results);
-
-  return response;
-}
-
-// 7. Handle interact with processes ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Handle interact with processes ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleInteractWithProcesses(args: unknown): Promise<ServerResult> {
   const parsed = IntWtPrArSc.parse(args);
   const results = await rnPrllBtch(parsed.items, (item) => handleInteractWithProcess(item));

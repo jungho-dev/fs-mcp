@@ -3,9 +3,9 @@ name: Publish Prepare
 on:
   workflow_call:
     outputs:
-      should_publish:
-        description: Whether npm publish is required
-        value: ${{ jobs.prepare.outputs.should_publish }}
+      package_name:
+        description: Package name from package.json
+        value: ${{ jobs.prepare.outputs.package_name }}
       package_version:
         description: Package version from package.json
         value: ${{ jobs.prepare.outputs.package_version }}
@@ -17,8 +17,8 @@ jobs:
   prepare:
     runs-on: ubuntu-latest
     outputs:
-      should_publish: ${{ steps.state.outputs.should_publish }}
-      package_version: ${{ steps.state.outputs.package_version }}
+      package_name: ${{ steps.metadata.outputs.package_name }}
+      package_version: ${{ steps.metadata.outputs.package_version }}
     steps:
       - name: Check out repository
         uses: actions/checkout@v6
@@ -29,6 +29,7 @@ jobs:
       - name: Validate repository
         shell: bash
         run: |
+          set -euo pipefail
           remote_url="$(git remote get-url origin)"
           case "$remote_url" in
             "https://github.com/jungho-dev/fs-mcp" | "https://github.com/jungho-dev/fs-mcp.git")
@@ -39,40 +40,25 @@ jobs:
               ;;
           esac
 
-      - name: Resolve publish state
-        id: state
+      - name: Resolve package metadata
+        id: metadata
         shell: bash
         run: |
+          set -euo pipefail
           package_name="$(bun -e 'const pkg = await Bun.file("package.json").json(); console.log(pkg.name);')"
           package_version="$(bun -e 'const pkg = await Bun.file("package.json").json(); console.log(pkg.version);')"
-          published_version="$(npm view "$package_name@$package_version" version 2>/dev/null || true)"
-
+          echo "package_name=$package_name" >> "$GITHUB_OUTPUT"
           echo "package_version=$package_version" >> "$GITHUB_OUTPUT"
-
-          if [ "$published_version" = "$package_version" ]; then
-            echo "should_publish=false" >> "$GITHUB_OUTPUT"
-            echo "npm already has $package_name@$package_version. Skipping publish."
-          else
-            echo "should_publish=true" >> "$GITHUB_OUTPUT"
-            echo "Publishing $package_name@$package_version."
-          fi
+          echo "Prepared $package_name@$package_version."
 
       - name: Install dependencies
-        if: steps.state.outputs.should_publish == 'true'
         run: bun install --frozen-lockfile
 
       - name: Build package
-        if: steps.state.outputs.should_publish == 'true'
-        run: |
-          bunx tsc --noEmit
-          bunx shx rm -rf out
-          bunx swc src -d out --config-file ./.server.swcrc --strip-leading-paths
-          bunx tsc-alias -p tsconfig.json --outDir out -f -fe .js
+        run: bun run build
 
       - name: Verify package
-        if: steps.state.outputs.should_publish == 'true'
-        run: |
-          bunx tsc --noEmit
-          bun tests/scripts/scripts-verify-release-shape.mjs
-          bun tests/scripts/scripts-verify-tool-surface.mjs
-          bun tests/scripts/scripts-verify-optimization-reports.mjs
+        run: bun run verify
+
+      - name: Pack package dry run
+        run: npm pack --dry-run

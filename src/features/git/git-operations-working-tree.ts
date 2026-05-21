@@ -18,7 +18,7 @@ const MLT_BLL_PAT = /\n\s*\n[\s\S]*^\s*-\s+\S/m;
 const CMM_SMM_FRM = "%H%x1f%an <%ae>%x1f%ct%x1f%s%x1f%G?";
 
 // 1. Run git add ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function runGitAdd(input: GitArgsMap["git_add"]): Promise<GtTlOtpt> {
+export async function runGitAdd(input: GitArgsMap["git-add"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
 
   await rnGtCmd(
@@ -44,7 +44,7 @@ export async function runGitAdd(input: GitArgsMap["git_add"]): Promise<GtTlOtpt>
 }
 
 // 2. Run git commit ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function runGitCommit(input: GitArgsMap["git_commit"]): Promise<GtTlOtpt> {
+export async function runGitCommit(input: GitArgsMap["git-commit"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
   const cmmtMsg2 = await rqrGtTxtArg(input.message, input.messagePath, input.messageOffset, input.messageLength, "message");
   const normCmmtMsg = nrmlCmmtMsg(cmmtMsg2);
@@ -107,7 +107,7 @@ export async function runGitCommit(input: GitArgsMap["git_commit"]): Promise<GtT
 }
 
 // 3. Run git diff ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function runGitDiff(input: GitArgsMap["git_diff"]): Promise<GtTlOtpt> {
+export async function runGitDiff(input: GitArgsMap["git-diff"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
   const contextLines = input.contextLines ?? 3;
   const autoExclude = input.autoExclude ?? true;
@@ -142,7 +142,7 @@ export async function runGitDiff(input: GitArgsMap["git_diff"]): Promise<GtTlOtp
 }
 
 // 5. Run git show ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function runGitShow(input: GitArgsMap["git_show"]): Promise<GtTlOtpt> {
+export async function runGitShow(input: GitArgsMap["git-show"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
   const targetObject = input.filePath ? `${input.object}:${input.filePath}` : input.object;
   const showResult = await rnGtCmd(["show", ...(input.format ? [`--format=${input.format}`] : []), ...(input.stat ? ["--stat"] : []), targetObject], { cwd });

@@ -16,7 +16,7 @@ import type {GitArgsMap, GitToolOutput as GtTlOtpt} from "@features/git/git-type
 import type {GitToolName} from "@schemas/schemas-git";
 
 const GT_TL_HNDL = {
-  "git_add": runGitAdd,
+  "git-add": runGitAdd,
   "git_blame": runGitBlame,
   "git_branch": runGitBranch,
   "git_changelog_analyze": rnGtChngAnly,
@@ -24,8 +24,8 @@ const GT_TL_HNDL = {
   "git_cherry_pick": rnGtChrrPck,
   "git_clean": runGitClean,
   "git_clone": runGitClone,
-  "git_commit": runGitCommit,
-  "git_diff": runGitDiff,
+  "git-commit": runGitCommit,
+  "git-diff": runGitDiff,
   "git_fetch": runGitFetch,
   "git_init": runGitInit,
   "git_merge": runGitMerge,
@@ -35,10 +35,10 @@ const GT_TL_HNDL = {
   "git_reflog": runGitReflog,
   "git_remote": runGitRemote,
   "git_reset": runGitReset,
-  "git_set_working_dir": rnGtStWrknDr,
-  "git_show": runGitShow,
+  "git-cwd": rnGtStWrknDr,
+  "git-show": runGitShow,
   "git_stash": runGitStash,
-  "git_status": runGitStatus,
+  "git-status": runGitStatus,
   "git_tag": runGitTag,
   "git_worktree": rnGtWrkt,
 } satisfies {[K in GitToolName]: (args: GitArgsMap[K]) => Promise<GtTlOtpt>};

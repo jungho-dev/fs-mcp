@@ -40,27 +40,27 @@ async function testGitBasicFlow() {
 - Verify git smoke flow.`;
 
   try {
-    const wrknDrOtpt = parseStandardOutput(await dsptTlCll("git_set_working_dir", {path: repoPath, initializeIfNotPresent: true}));
+    const wrknDrOtpt = parseStandardOutput(await dsptTlCll("git-cwd", {path: repoPath, initializeIfNotPresent: true}));
     assert.equal(wrknDrOtpt.success, true);
 
     await setupRepository(repoPath);
 
-    const rfrWrDrOt = parseStandardOutput(await dsptTlCll("git_set_working_dir", {path: repoPath}));
+    const rfrWrDrOt = parseStandardOutput(await dsptTlCll("git-cwd", {path: repoPath}));
     assert.equal(rfrWrDrOt.success, true);
     assert.equal(rfrWrDrOt.repository.status.branch, "main");
 
-    const clnStatOtpt = parseStandardOutput(await dsptTlCll("git_status", {}));
+    const clnStatOtpt = parseStandardOutput(await dsptTlCll("git-status", {}));
     assert.equal(clnStatOtpt.success, true);
     assert.equal(clnStatOtpt.currentBranch, "main");
     assert.equal(clnStatOtpt.isClean, true);
 
     await fs.writeFile(path.join(repoPath, "demo.txt"), "hello git\n", "utf8");
 
-    const addOutput = parseStandardOutput(await dsptTlCll("git_add", {paths: ["demo.txt"]}));
+    const addOutput = parseStandardOutput(await dsptTlCll("git-add", {paths: ["demo.txt"]}));
     assert.equal(addOutput.success, true);
     assert.equal(addOutput.stagedFiles.includes("demo.txt"), true);
 
-    const commitOutput = parseStandardOutput(await dsptTlCll("git_commit", {message: cmmtMsg2}));
+    const commitOutput = parseStandardOutput(await dsptTlCll("git-commit", {message: cmmtMsg2}));
     assert.equal(commitOutput.success, true);
     assert.equal(commitOutput.message, "feat: add demo file");
     assert.equal(commitOutput.status.is_clean, true);

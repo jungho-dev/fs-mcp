@@ -207,7 +207,7 @@ async function testSearchPaginationHints() {
 
   try {
     assert(typeof sessionId === "string", "Start search should expose sessionId in structuredContent");
-    assert(result.content[0].text.includes("get_full_search"), "Start search should recommend full result tool");
+    assert(result.content[0].text.includes("search-get"), "Start search should recommend full result tool");
     assert(!result.content[0].text.includes("get_compressed_search"), "Start search should not recommend removed compact result tool");
     assert(!result.content[0].text.includes("get_more_search_results"), "Start search should not recommend legacy result tool");
 

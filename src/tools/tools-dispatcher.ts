@@ -6,13 +6,12 @@
  */
 
 import type {ServerResult} from "@assets/type/common";
-import {handleGetConfigs as hndlGtCnfg, handleSetConfigValues as hndStCfVa} from "@controllers/controllers-config";
+import {handleSetConfigValues as hndStCfVa} from "@controllers/controllers-config";
 import {handleEditBlocks as hndlEdtBlck2} from "@controllers/controllers-edit";
 import {handleCopyFiles as hndlCpyFls, handleCreateDirectories as hndlCrtDrct, handleGetFileInfos as hndlGtFlInfs, handleListDirectories as hndlLstDrct, handleMoveFiles as hndlMvFls, handleReadFiles as hndlRdFls, handleRemoveFiles as hndlRmvFls, handleWriteFiles as hndlWrtFls, handleReadFilesWithLineNumber as hndRdFlLn} from "@controllers/controllers-filesystem";
 import {handleGitTool as hndlGtTl} from "@controllers/controllers-git";
-import {handleKillProcesses as hndlKllPrcs} from "@controllers/controllers-process";
 import {handleGetFullSearchResults as hndGtFlSrRe, handleRegexSearches as hndlRgxSrch, handleStopSearches as hndlStpSrch, handleStartSearches as hndlStrtSrch} from "@controllers/controllers-search";
-import {handleInteractWithProcesses as hndInWtPr, handleListSessions as hndlLstSssn, handleStartProcesses as hndlStrtPrcs, handleReadProcessOutputs as hndRdPrOt} from "@controllers/controllers-terminal";
+import {handleInteractWithProcesses as hndInWtPr} from "@controllers/controllers-terminal";
 import {createErrorResponse as crtErrRes} from "@cores/responses/responses-error";
 import {normalizeToolResult as nrmlTlRes} from "@cores/responses/responses-tool-result";
 import {readTextSliceInternal as rdTxtSlcInt} from "@features/filesystem/filesystem-service";
@@ -35,7 +34,7 @@ type ResolvedToolArgs = {
 
 const APFN = new Set(["args_path", "args_offset", "args_length"]);
 const ASMF = "__fs_mcp_args_source";
-const APIPTN = new Set(["write_files"]);
+const APIPTN = new Set(["file-write"]);
 
 // 1. Is record ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -130,27 +129,22 @@ const GT_TL_DSPT = Object.fromEntries(
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export const TL_DSPT: Readonly<Record<string, ToolDispatchHandler>> = {
-  get_configs: (args: unknown) => hndlGtCnfg(args),
   set_config_values: (args: unknown) => hndStCfVa(args),
-  start_processes: (args: unknown) => hndlStrtPrcs(args),
-  read_process_outputs: (args: unknown) => hndRdPrOt(args),
   interact_with_processes: (args: unknown) => hndInWtPr(args),
-  list_sessions: (args: unknown) => hndlLstSssn(args),
-  kill_processes: (args: unknown) => hndlKllPrcs(args),
-  read_files: (args: unknown) => hndlRdFls(args),
-  read_files_with_linenumber: (args: unknown) => hndRdFlLn(args),
-  write_files: (args: unknown) => hndlWrtFls(args),
-  create_directories: (args: unknown) => hndlCrtDrct(args),
-  list_directories: (args: unknown) => hndlLstDrct(args),
-  copy_files: (args: unknown) => hndlCpyFls(args),
-  move_files: (args: unknown) => hndlMvFls(args),
-  remove_files: (args: unknown) => hndlRmvFls(args),
-  get_file_infos: (args: unknown) => hndlGtFlInfs(args),
-  edit_blocks: (args: unknown) => hndlEdtBlck2(args),
-  start_searches: (args: unknown) => hndlStrtSrch(args),
-  regex_searches: (args: unknown) => hndlRgxSrch(args),
-  get_full_search: (args: unknown) => hndGtFlSrRe(args),
-  stop_searches: (args: unknown) => hndlStpSrch(args),
+  "file-read": (args: unknown) => hndlRdFls(args),
+  "file-lines": (args: unknown) => hndRdFlLn(args),
+  "file-write": (args: unknown) => hndlWrtFls(args),
+  "dir-mk": (args: unknown) => hndlCrtDrct(args),
+  "dir-list": (args: unknown) => hndlLstDrct(args),
+  "file-copy": (args: unknown) => hndlCpyFls(args),
+  "file-move": (args: unknown) => hndlMvFls(args),
+  "file-remove": (args: unknown) => hndlRmvFls(args),
+  "file-infos": (args: unknown) => hndlGtFlInfs(args),
+  "file-edit": (args: unknown) => hndlEdtBlck2(args),
+  "search-start": (args: unknown) => hndlStrtSrch(args),
+  "search-regex": (args: unknown) => hndlRgxSrch(args),
+  "search-get": (args: unknown) => hndGtFlSrRe(args),
+  "search-stop": (args: unknown) => hndlStpSrch(args),
   ...GT_TL_DSPT,
 };
 

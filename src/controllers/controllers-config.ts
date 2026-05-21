@@ -6,30 +6,12 @@
  */
 
 import type {ServerResult} from "@assets/type/common";
-import {type BatchToolItemResult as BtchTlItmRe2, createBatchToolResponse as crtBtchTlRes, runParallelBatch as rnPrllBtch} from "@controllers/controllers-batch";
-import {CFG_QRY_KYS, type ConfigQueryKey as CfgQryKy} from "@features/config/config-metadata";
-import {getConfigValue as gtCfgVal, prepareConfigValueUpdate as prpCfgVlUpd} from "@features/config/config-service";
+import {type BatchToolItemResult as BtchTlItmRe2, createBatchToolResponse as crtBtchTlRes} from "@controllers/controllers-batch";
+import {prepareConfigValueUpdate as prpCfgVlUpd} from "@features/config/config-service";
 import {cfgMgr, type ServerConfig as SrvrCfg} from "@features/config/config-store";
-import {GtCnArSc, StCfVaArSc} from "@schemas/schemas-config";
+import {StCfVaArSc} from "@schemas/schemas-config";
 
-// 1. Create default get config items ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function createDefaultGetConfigItems(): Array<{key: CfgQryKy}> {
-  return CFG_QRY_KYS.map((key) => ({key}));
-}
-
-// 2. Handle get configs ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function handleGetConfigs(args: unknown): Promise<ServerResult> {
-  const parsed = GtCnArSc.parse(args ?? {});
-  const items = parsed.items ?? createDefaultGetConfigItems();
-
-  await cfgMgr.init();
-  const results = await rnPrllBtch(items, (item) => gtCfgVal(item));
-  const response = crtBtchTlRes("get_configs", results);
-
-  return response;
-}
-
-// 3. Create set config failure results ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Create set config failure results ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createSetConfigFailureResults<T>(items: T[], message: string): BtchTlItmRe2<T>[] {
   return items.map((item, index) => ({
     index: index + 1,
@@ -47,7 +29,7 @@ function createSetConfigFailureResults<T>(items: T[], message: string): BtchTlIt
   }));
 }
 
-// 4. Handle set config values ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Handle set config values ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleSetConfigValues(args: unknown): Promise<ServerResult> {
   const parsed = StCfVaArSc.parse(args);
   const baseConfig = await cfgMgr.getConfig();

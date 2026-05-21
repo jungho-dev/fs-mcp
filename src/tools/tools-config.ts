@@ -6,25 +6,11 @@
  */
 
 import { withArgsPathSchema as wthArPtSc } from "@schemas/schemas-args-ref";
-import { GtCnArSc, StCfVaArSc } from "@schemas/schemas-config";
+import { StCfVaArSc } from "@schemas/schemas-config";
 import { BTCH_GDNC, CMD_PRF_DSC, createToolCatalogEntry as crtTlCtEn, type ToolCatalogEntry as TlCtlgEntr, type ToolCatalogEntryConfig as TlCtEnCf } from "@tools/tools-const";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 const CFG_TL_DFNT = [
-  {
-    name: "get_configs",
-    description: (`
-      Get configuration values by key.
-      Omit items to return the full supported config surface.
-      ${BTCH_GDNC}
-      ${CMD_PRF_DSC}
-    `),
-    inputSchema: wthArPtSc(GtCnArSc),
-    annotations: {
-      title: "Get Configurations",
-      readOnlyHint: true,
-    },
-  },
   {
     name: "set_config_values",
     description: (`

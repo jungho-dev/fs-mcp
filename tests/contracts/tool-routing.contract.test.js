@@ -11,7 +11,6 @@ import { normalizeToolResult as nrmlTlRes } from "../../out/cores/responses/resp
 import { dispatchToolCall as dsptTlCll, getDispatchableToolNames as gtDsptTlNms } from "../../out/tools/tools-dispatcher.js";
 
 const UNKN_TL_PAT = /Unknown tool: missing_tool_for_contract_test/;
-
 // 1. standard output parser ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function parseStandardOutput(result) {
   assert.equal(result.content.length, 1);
@@ -52,19 +51,15 @@ async function testUnknownToolResponse() {
 
 // 3. dispatcher output contract ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testDispatcherNormalizesKnownToolResponse() {
-  const result = await dsptTlCll("get_configs", {
-    items: [
-      { key: "version" },
-      { key: "defaultShell" },
-    ],
+  const result = await dsptTlCll("git-status", {
+    path: process.cwd(),
   });
-  const output = assertStandardToolResult(result, "get_configs", "success");
+  const output = assertStandardToolResult(result, "git-status", "success");
 
   assert.equal(output.error, null);
   assert.equal(result.content[0].text, crtTlDsplTxt(output));
   assert.doesNotMatch(result.content[0].text, /succeeded/);
-  assert.equal(output.data.structuredContent.totalCount, 2);
-  assert.equal(output.data.structuredContent.succeededCount, 2);
+  assert.equal(output.data.structuredContent.success, true);
 }
 
 // 4. display data preservation ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -78,15 +73,6 @@ function testDisplayPreservesStructuredData() {
   assert.equal(result.content[0].text, crtTlDsplTxt(output));
   assert.doesNotMatch(result.content[0].text, /synthetic output line/);
   assert.equal(output.data.text, longText);
-}
-
-// 6. Test get configs supports default batch ――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function testGetConfigsSupportsDefaultBatch() {
-  const result = await dsptTlCll("get_configs", {});
-  const output = assertStandardToolResult(result, "get_configs", "success");
-
-  assert.equal(output.error, null);
-  assert.ok(output.data.structuredContent.totalCount > 2);
 }
 
 // 7. Test every dispatchable tool returns display text ―――――――――――――――――――――――――――――――――――――――――
@@ -109,7 +95,6 @@ async function main() {
   await testUnknownToolResponse();
   await testDispatcherNormalizesKnownToolResponse();
   testDisplayPreservesStructuredData();
-  await testGetConfigsSupportsDefaultBatch();
   await testEveryDispatchableToolReturnsDisplayText();
 }
 

@@ -1,10 +1,16 @@
 name: Publish npm Package
 
 on:
-  push:
-    branches:
-      - public/main
   workflow_dispatch:
+    inputs:
+      publish_to_npm:
+        description: "Publish package to npm? Choose y or n."
+        required: true
+        default: "n"
+        type: choice
+        options:
+          - "n"
+          - "y"
 
 concurrency:
   group: npm-publish-${{ github.ref }}
@@ -20,16 +26,17 @@ jobs:
 
   publish:
     needs: prepare
-    if: needs.prepare.outputs.should_publish == 'true'
+    if: github.event.inputs.publish_to_npm == 'y'
     uses: ./.github/workflows/publish-release.yml
     with:
+      package-name: ${{ needs.prepare.outputs.package_name }}
       package-version: ${{ needs.prepare.outputs.package_version }}
     secrets: inherit
 
   skipped:
     needs: prepare
-    if: needs.prepare.outputs.should_publish != 'true'
+    if: github.event.inputs.publish_to_npm != 'y'
     runs-on: ubuntu-latest
     steps:
       - name: Report skipped publish
-        run: echo "No npm publish needed for version ${{ needs.prepare.outputs.package_version }}."
+        run: echo "npm publish skipped. Selected publish_to_npm=${{ github.event.inputs.publish_to_npm }}."

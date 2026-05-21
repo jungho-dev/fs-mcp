@@ -297,7 +297,7 @@ export class SearchManager {
     return true;
   }
 
-  // 4. Get list of active search sessions (like list_sessions) ――――――――――――――――――――――――――――――――――――
+  // 4. Get list of active search sessions ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
   listSearchSessions(): Array<{
     id: string;
     searchType: string;

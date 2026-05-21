@@ -138,7 +138,7 @@ async function teardown(origCfg) {
 
 // 6. Test read files surface ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testReadFilesSurface() {
-  const result = await dsptTlCll("read_files", {
+  const result = await dsptTlCll("file-read", {
     paths: [SOURCE_FILE, EXTRA_FILE],
   });
   const batchResults = extractBatchResults(result);
@@ -150,7 +150,7 @@ async function testReadFilesSurface() {
   assert.match(batchResults[0].result.structuredContent.textContent, OLD_VAL_PAT);
   assert.match(batchResults[1].result.structuredContent.textContent, EXTR_VAL_PAT);
 
-  const largeResult = await dsptTlCll("read_files", {
+  const largeResult = await dsptTlCll("file-read", {
     paths: [LARGE_FILE],
   });
   const largeOutput = parseToolOutput(largeResult);
@@ -167,13 +167,13 @@ async function testReadFilesSurface() {
   assert.match(JSON.stringify(lrgBtchRess[0].result), THYP);
 
   const missingFile = path.join(TEST_DIR, "missing.txt");
-  const defMssnRes = await dsptTlCll("read_files", {
+  const defMssnRes = await dsptTlCll("file-read", {
     paths: [missingFile],
   });
   const defMssnPyld = parseToolOutput(defMssnRes).data.structuredContent;
   assert.equal(defMssnPyld.failedCount, 1);
 
-  const allwMssnRes = await dsptTlCll("read_files", {
+  const allwMssnRes = await dsptTlCll("file-read", {
     allowMissing: true,
     paths: [SOURCE_FILE, missingFile],
   });
@@ -182,7 +182,7 @@ async function testReadFilesSurface() {
   assert.equal(allwMssnPyld.results[1].ok, true);
   assert.equal(allwMssnPyld.results[1].result.structuredContent.missing, true);
 
-  const mssnInfRes = await dsptTlCll("get_file_infos", {
+  const mssnInfRes = await dsptTlCll("file-infos", {
     allowMissing: true,
     paths: [missingFile],
   });
@@ -190,7 +190,7 @@ async function testReadFilesSurface() {
   assert.equal(mssnInfPyld.failedCount, 0);
   assert.equal(mssnInfPyld.results[0].result.structuredContent.missing, true);
 
-  const mssnDirRes = await dsptTlCll("list_directories", {
+  const mssnDirRes = await dsptTlCll("dir-list", {
     allowMissing: true,
     items: [{ path: path.join(TEST_DIR, "missing-dir") }],
   });
@@ -198,17 +198,17 @@ async function testReadFilesSurface() {
   assert.equal(mssnDirPyld.failedCount, 0);
   assert.equal(mssnDirPyld.results[0].result.structuredContent.missing, true);
 
-  const lnNumRes = await dsptTlCll("read_files_with_linenumber", {
+  const lnNumRes = await dsptTlCll("file-lines", {
     items: [{ length: 2, offset: 1, path: LINE_FILE }],
   });
   const lnNumPyld = parseToolOutput(lnNumRes).data.structuredContent;
-  assert.equal(lnNumPyld.toolName, "read_files_with_linenumber");
+  assert.equal(lnNumPyld.toolName, "file-lines");
   assert.equal(lnNumPyld.results[0].ok, true);
   assert.equal(lnNumPyld.results[0].result.structuredContent.startLine, 2);
   assert.equal(lnNumPyld.results[0].result.structuredContent.endLine, 3);
   assert.equal(lnNumPyld.results[0].result.structuredContent.textContent, "2: second\n3: third");
 
-  const lnMssnRes = await dsptTlCll("read_files_with_linenumber", {
+  const lnMssnRes = await dsptTlCll("file-lines", {
     allowMissing: true,
     paths: [missingFile],
   });
@@ -239,13 +239,13 @@ function testLargeUnstructuredResultPreserved() {
 
 // 8. Test create and list directory surface ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testCreateAndListDirectorySurface() {
-  const createResult = await dsptTlCll("create_directories", {
+  const createResult = await dsptTlCll("dir-mk", {
     paths: [CREATED_DIR],
   });
   const crtBtchRess = extractBatchResults(createResult);
   assert.equal(crtBtchRess[0].ok, true);
 
-  const listResult = await dsptTlCll("list_directories", {
+  const listResult = await dsptTlCll("dir-list", {
     items: [
       {
         depth: 2,
@@ -265,7 +265,7 @@ async function testCreateAndListDirectorySurface() {
 
 // 9. Test copy files surface ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testCopyFilesSurface() {
-  const copyResult = await dsptTlCll("copy_files", {
+  const copyResult = await dsptTlCll("file-copy", {
     items: [
       {
         destination: COPIED_FILE,
@@ -294,7 +294,7 @@ async function testCopyFilesSurface() {
   assert.equal(await fs.readFile(path.join(COPIED_DIR, "nested.txt"), "utf8"), "nested copy\n");
   assert.equal(await fs.readFile(CPY_SRC_FL, "utf8"), "copy value\n");
 
-  const ovrwRes = await dsptTlCll("copy_files", {
+  const ovrwRes = await dsptTlCll("file-copy", {
     items: [
       {
         destination: COPIED_FILE,
@@ -308,7 +308,7 @@ async function testCopyFilesSurface() {
 
 // 10. Test write move info and edit surface ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testWriteMoveInfoAndEditSurface() {
-  const writeResult = await dsptTlCll("write_files", {
+  const writeResult = await dsptTlCll("file-write", {
     items: [
       {
         content: "written value\n",
@@ -320,7 +320,7 @@ async function testWriteMoveInfoAndEditSurface() {
   const wrtBtchRess = extractBatchResults(writeResult);
   assert.equal(wrtBtchRess[0].ok, true);
 
-  const lrgWrtRes = await dsptTlCll("write_files", {
+  const lrgWrtRes = await dsptTlCll("file-write", {
     items: [
       {
         content_path: LWRF,
@@ -349,14 +349,14 @@ async function testWriteMoveInfoAndEditSurface() {
 
   await fs.writeFile(APWAF, `${argPtWrPyTx}\0\0`, "utf8");
   assert.ok(JSON.stringify(argPtWrCl).length < JSON.stringify(argPtWrPy).length);
-  const argPtWrRe = await dsptTlCll("write_files", argPtWrCl);
+  const argPtWrRe = await dsptTlCll("file-write", argPtWrCl);
   const argPtWrBtRe = extractBatchResults(argPtWrRe);
   assert.equal(argPtWrBtRe.length, 1);
   assert.equal(argPtWrBtRe[0].ok, true);
   assert.equal(argPtWrBtRe[0].input.contentLength, TN_THSN_B.length);
   assert.equal(await fs.readFile(APWF, "utf8"), TN_THSN_B);
 
-  const ovrInWrRe = await dsptTlCll("write_files", {
+  const ovrInWrRe = await dsptTlCll("file-write", {
     items: [
       {
         content: "z".repeat(20_000),
@@ -371,7 +371,7 @@ async function testWriteMoveInfoAndEditSurface() {
   assert.equal(ovrInWrOt.status, "success");
   assert.equal(await fs.readFile(OIWF, "utf8"), "z".repeat(20_000));
 
-  const prtlWrtRes = await dsptTlCll("write_files", {
+  const prtlWrtRes = await dsptTlCll("file-write", {
     items: [
       {
         content_length: 3,
@@ -385,7 +385,7 @@ async function testWriteMoveInfoAndEditSurface() {
   assert.equal(prtWrBtRe[0].ok, true);
   assert.equal(await fs.readFile(PRTL_WRTT_FL, "utf8"), "abc");
 
-  const editResult = await dsptTlCll("edit_blocks", {
+  const editResult = await dsptTlCll("file-edit", {
     items: [
       {
         expected_replacements: 1,
@@ -398,7 +398,7 @@ async function testWriteMoveInfoAndEditSurface() {
   const edtBtchRess = extractBatchResults(editResult);
   assert.equal(edtBtchRess[0].ok, true);
 
-  const fzzyMssRes = await dsptTlCll("edit_blocks", {
+  const fzzyMssRes = await dsptTlCll("file-edit", {
     items: [
       {
         expected_replacements: 1,
@@ -414,7 +414,7 @@ async function testWriteMoveInfoAndEditSurface() {
   assert.match(fzzyMssBtch[0].result.content[0].text, /Exact match not found/);
   assert.equal(await fs.readFile(FZZY_EDT_FL, "utf8"), "function oldName() {\n  return 1;\n}\n");
 
-  const lrgEdtRes = await dsptTlCll("edit_blocks", {
+  const lrgEdtRes = await dsptTlCll("file-edit", {
     items: [
       {
         expected_replacements: 1,
@@ -429,7 +429,7 @@ async function testWriteMoveInfoAndEditSurface() {
   assert.equal(lrgEdBtRe[0].input.old_string_path, LEORF);
   assert.equal(lrgEdBtRe[0].input.new_string_path, LENRF);
 
-  const prtlEdtRes = await dsptTlCll("edit_blocks", {
+  const prtlEdtRes = await dsptTlCll("file-edit", {
     items: [
       {
         expected_replacements: 1,
@@ -466,7 +466,7 @@ async function testWriteMoveInfoAndEditSurface() {
 
   await fs.writeFile(APEAF, `${argPtPyTx}\0\0`, "utf8");
   assert.ok(JSON.stringify(argsPathCall).length < JSON.stringify(argPtEdPy).length);
-  const argPtEdRe = await dsptTlCll("edit_blocks", argsPathCall);
+  const argPtEdRe = await dsptTlCll("file-edit", argsPathCall);
   const argPtEdBtRe = extractBatchResults(argPtEdRe);
   assert.equal(argPtEdBtRe.length, 2);
   assert.equal(argPtEdBtRe[0].ok, true);
@@ -474,7 +474,7 @@ async function testWriteMoveInfoAndEditSurface() {
   assert.equal(await fs.readFile(APEF, "utf8"), "gamma\nbeta\n");
   assert.equal(await fs.readFile(APESF, "utf8"), "one\ndelta\n");
 
-  const lrgRdRes = await dsptTlCll("read_files", {
+  const lrgRdRes = await dsptTlCll("file-read", {
     paths: [MLSF],
   });
   const lrgRdOtpt = parseToolOutput(lrgRdRes);
@@ -484,7 +484,7 @@ async function testWriteMoveInfoAndEditSurface() {
   assert.equal(lrgRdBtRe[0].result.structuredContent.textContent.includes(TN_THSN_B), true);
   assert.equal(JSON.stringify(lrgRdBtRe[0].result).includes("previewOnly"), false);
 
-  const renameResult = await dsptTlCll("move_files", {
+  const renameResult = await dsptTlCll("file-move", {
     items: [
       {
         destination: RENAMED_FILE,
@@ -495,7 +495,7 @@ async function testWriteMoveInfoAndEditSurface() {
   const rnmBtchRess = extractBatchResults(renameResult);
   assert.equal(rnmBtchRess[0].ok, true);
 
-  const moveResult = await dsptTlCll("move_files", {
+  const moveResult = await dsptTlCll("file-move", {
     items: [
       {
         destination: MOVED_FILE,
@@ -506,7 +506,7 @@ async function testWriteMoveInfoAndEditSurface() {
   const mvBtchRess = extractBatchResults(moveResult);
   assert.equal(mvBtchRess[0].ok, true);
 
-  const infoResult = await dsptTlCll("get_file_infos", {
+  const infoResult = await dsptTlCll("file-infos", {
     paths: [SOURCE_FILE, MOVED_FILE],
   });
   const infBtchRess = extractBatchResults(infoResult);
@@ -522,7 +522,7 @@ async function testWriteMoveInfoAndEditSurface() {
   assert.equal(lrgEdtdTxt, MLRT);
   assert.equal(movedText, "written value\n");
 
-  const removeResult = await dsptTlCll("remove_files", {
+  const removeResult = await dsptTlCll("file-remove", {
     items: [
       { path: MOVED_FILE },
       { path: CREATED_DIR },

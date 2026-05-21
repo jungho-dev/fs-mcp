@@ -578,7 +578,7 @@ export async function handleReadFiles(args: unknown): Promise<ServerResult> {
   const parsed = RdFlsArgsSch.parse(args);
   const items = parsed.items ?? parsed.paths?.map((filePath) => ({ isUrl: false, offset: 0, path: filePath })) ?? [];
   const results = await rnPrllBtch(items, (item) => handleParsedReadFileWithMissing(item, parsed.allowMissing));
-  const response = crtBtchTlRes("read_files", results, { preserveLargeStructuredPayloads: true });
+  const response = crtBtchTlRes("file-read", results, { preserveLargeStructuredPayloads: true });
 
   return response;
 }
@@ -587,7 +587,7 @@ export async function handleReadFilesWithLineNumber(args: unknown): Promise<Serv
   const parsed = RdFlsArgsSch.parse(args);
   const items = parsed.items ?? parsed.paths?.map((filePath) => ({ isUrl: false, offset: 0, path: filePath })) ?? [];
   const results = await rnPrllBtch(items, (item) => handleParsedLineNumReadWithMissing(item, parsed.allowMissing));
-  const response = crtBtchTlRes("read_files_with_linenumber", results, { preserveLargeStructuredPayloads: true });
+  const response = crtBtchTlRes("file-lines", results, { preserveLargeStructuredPayloads: true });
 
   return response;
 }
@@ -646,7 +646,7 @@ function createWriteFilesBatchResponse(items: BtchTlItmRes<ParsedWriteFileArgs>[
     content: [
       {
         type: "text",
-        text: `write_files: ${sccdCnt}/${totalCount} succeeded${failedCount > 0 ? `, ${failedCount} failed` : ""}\n\n${summaryLines.join("\n")}`,
+        text: `"file-write": ${sccdCnt}/${totalCount} succeeded${failedCount > 0 ? `, ${failedCount} failed` : ""}\n\n${summaryLines.join("\n")}`,
       },
     ],
     structuredContent: {
@@ -658,7 +658,7 @@ function createWriteFilesBatchResponse(items: BtchTlItmRes<ParsedWriteFileArgs>[
         result: compactWriteBatchResult(item.result),
       })),
       succeededCount: sccdCnt,
-      toolName: "write_files",
+      toolName: "file-write",
       totalCount,
     },
   };
@@ -676,7 +676,7 @@ export async function handleWriteFiles(args: unknown): Promise<ServerResult> {
 export async function handleCreateDirectories(args: unknown): Promise<ServerResult> {
   const parsed = CrtDrArSc.parse(args);
   const results = await rnPrllBtch(parsed.paths, (dirPath) => handleParsedCreateDirectory({ path: dirPath }));
-  const response = crtBtchTlRes("create_directories", results);
+  const response = crtBtchTlRes("dir-mk", results);
 
   return response;
 }
@@ -684,7 +684,7 @@ export async function handleCreateDirectories(args: unknown): Promise<ServerResu
 export async function handleListDirectories(args: unknown): Promise<ServerResult> {
   const parsed = LstDrArSc.parse(args);
   const results = await rnPrllBtch(parsed.items, (item) => handleParsedListDirectoryWithMissing(item, parsed.allowMissing));
-  const response = crtBtchTlRes("list_directories", results, { preserveLargeStructuredPayloads: true });
+  const response = crtBtchTlRes("dir-list", results, { preserveLargeStructuredPayloads: true });
 
   return response;
 }
@@ -692,7 +692,7 @@ export async function handleListDirectories(args: unknown): Promise<ServerResult
 export async function handleCopyFiles(args: unknown): Promise<ServerResult> {
   const parsed = CpyFlArSc.parse(args);
   const results = await rnPrllBtch(parsed.items, (item) => handleParsedCopyFile(item));
-  const response = crtBtchTlRes("copy_files", results);
+  const response = crtBtchTlRes("file-copy", results);
 
   return response;
 }
@@ -700,7 +700,7 @@ export async function handleCopyFiles(args: unknown): Promise<ServerResult> {
 export async function handleMoveFiles(args: unknown): Promise<ServerResult> {
   const parsed = MvFlsArgsSch.parse(args);
   const results = await rnLmPrBt(parsed.items, MFBC, (item) => handleParsedMoveFile(item));
-  const response = crtBtchTlRes("move_files", results);
+  const response = crtBtchTlRes("file-move", results);
 
   return response;
 }
@@ -708,7 +708,7 @@ export async function handleMoveFiles(args: unknown): Promise<ServerResult> {
 export async function handleRemoveFiles(args: unknown): Promise<ServerResult> {
   const parsed = RmvFlArSc.parse(args);
   const results = await rnPrllBtch(parsed.items, (item) => handleParsedRemovePath(item));
-  const response = crtBtchTlRes("remove_files", results);
+  const response = crtBtchTlRes("file-remove", results);
 
   return response;
 }
@@ -716,7 +716,7 @@ export async function handleRemoveFiles(args: unknown): Promise<ServerResult> {
 export async function handleGetFileInfos(args: unknown): Promise<ServerResult> {
   const parsed = GtFlInArSc2.parse(args);
   const results = await rnPrllBtch(parsed.paths, (filePath) => handleParsedGetFileInfoWithMissing({ path: filePath }, parsed.allowMissing));
-  const response = crtBtchTlRes("get_file_infos", results);
+  const response = crtBtchTlRes("file-infos", results);
 
   return response;
 }

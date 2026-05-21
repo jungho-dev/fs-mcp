@@ -73,13 +73,13 @@ export async function handleStartSearch(args: unknown): Promise<ServerResult> {
       output += `\nSearch completed.`;
     }
     else {
-      output += `\nSearch in progress. Use get_full_search with sessionId: ${result.sessionId} and offset: ${nextOffset ?? 0}.`;
+      output += `\nSearch in progress. Use search-get with sessionId: ${result.sessionId} and offset: ${nextOffset ?? 0}.`;
     }
     if (result.wasLimited) {
       output += `\nResult limit reached. Narrow the query or set maxResults explicitly for broader scans.`;
     }
     if (nextOffset !== null) {
-      output += `\nNext offset: ${nextOffset}. Use get_full_search with sessionId: ${result.sessionId}.`;
+      output += `\nNext offset: ${nextOffset}. Use search-get with sessionId: ${result.sessionId}.`;
     }
     return {
       content: [{ type: "text", text: output }],
@@ -169,7 +169,7 @@ export async function handleGetMoreSearchResults(args: unknown): Promise<ServerR
     // Add pagination hints
     const nextOffset = offset >= 0 && results.hasMoreResults ? offset + results.returnedCount : null;
     if (nextOffset !== null) {
-      output += `\nMore results available. Use get_full_search with offset: ${nextOffset}`;
+      output += `\nMore results available. Use search-get with offset: ${nextOffset}`;
     }
     if (results.isComplete) {
       output += `\nSearch completed.`;
@@ -341,7 +341,7 @@ export async function handleRegexSearch(args: unknown): Promise<ServerResult> {
 export async function handleStartSearches(args: unknown): Promise<ServerResult> {
   const parsed = StrSrArSc2.parse(args);
   const results = await rnPrllBtch(parsed.items, (item) => handleStartSearch(item));
-  const response = crtBtchTlRes("start_searches", results);
+  const response = crtBtchTlRes("search-start", results);
 
   return response;
 }
@@ -350,7 +350,7 @@ export async function handleStartSearches(args: unknown): Promise<ServerResult> 
 export async function handleRegexSearches(args: unknown): Promise<ServerResult> {
   const parsed = RgxSrArSc2.parse(args);
   const results = await rnPrllBtch(parsed.items, (item) => handleRegexSearch(item));
-  const response = crtBtchTlRes("regex_searches", results, { resultMode: "full" });
+  const response = crtBtchTlRes("search-regex", results, { resultMode: "full" });
 
   return response;
 }
@@ -359,7 +359,7 @@ export async function handleRegexSearches(args: unknown): Promise<ServerResult> 
 export async function handleGetFullSearchResults(args: unknown): Promise<ServerResult> {
   const parsed = GtFlSrReArSc.parse(args);
   const results = await rnPrllBtch(parsed.items, (item) => handleGetMoreSearchResults(item));
-  const response = crtBtchTlRes("get_full_search", results, { resultMode: "full" });
+  const response = crtBtchTlRes("search-get", results, { resultMode: "full" });
 
   return response;
 }
@@ -368,7 +368,7 @@ export async function handleGetFullSearchResults(args: unknown): Promise<ServerR
 export async function handleStopSearches(args: unknown): Promise<ServerResult> {
   const parsed = StpSrArSc2.parse(args);
   const results = await rnPrllBtch(parsed.sessionIds, (sessionId) => handleStopSearch({ sessionId: sessionId }));
-  const response = crtBtchTlRes("stop_searches", results);
+  const response = crtBtchTlRes("search-stop", results);
 
   return response;
 }

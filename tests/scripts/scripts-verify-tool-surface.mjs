@@ -12,12 +12,12 @@ import { GIT_TOOL_CATALOG as GT_TL_CTLG } from "../../out/tools/tools-git.js";
 import { PROCESS_TOOL_CATALOG as PROC_TL_CTLG } from "../../out/tools/tools-process.js";
 
 const EGTN2 = [
-  "git_add",
-  "git_commit",
-  "git_diff",
-  "git_set_working_dir",
-  "git_show",
-  "git_status",
+  "git-add",
+  "git-commit",
+  "git-diff",
+  "git-cwd",
+  "git-show",
+  "git-status",
 ];
 
 // 1. collection helpers ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――

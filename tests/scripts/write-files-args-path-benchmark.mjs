@@ -1,6 +1,6 @@
 /**
  * @file tests/scripts/write-files-args-path-benchmark.mjs
- * @description write_files args_path transport benchmark.
+ * @description file-write args_path transport benchmark.
  * @author JUNGHO
  * @since 2026-05-13
  */
@@ -91,7 +91,7 @@ async function runWriteMode(mode, payload, argsFilePath) {
   for (let runIndex = 0; runIndex < RUN_COUNT; runIndex += 1) {
     await prepareScenario(payload);
     const startedAt = performance.now();
-    const result = await dsptTlCll("write_files", structuredClone(callArgs));
+    const result = await dsptTlCll("file-write", structuredClone(callArgs));
     const durationMs = Math.round((performance.now() - startedAt) * 100) / 100;
     const batchResults = extractBatchResults(result);
 
@@ -155,7 +155,7 @@ async function runLargeInlineScenario() {
   await fs.writeFile(argsFilePath, payloadText, "utf8");
   await prepareScenario(payload);
 
-  const inlineResult = await dsptTlCll("write_files", payloadBody);
+  const inlineResult = await dsptTlCll("file-write", payloadBody);
   const inlineResults = extractBatchResults(inlineResult);
 
   assert.equal(inlineResult.isError, false);
@@ -164,7 +164,7 @@ async function runLargeInlineScenario() {
   await verifyFiles(payload.items);
 
   await prepareScenario(payload);
-  const argsPthRes = await dsptTlCll("write_files", {
+  const argsPthRes = await dsptTlCll("file-write", {
     args_length: payloadText.length,
     args_path: argsFilePath,
   });

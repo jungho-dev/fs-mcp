@@ -4,28 +4,36 @@
 
 ```text
 MCP stdio client
-  -> fs-mcp binary
-  -> out/index.mjs
-  -> src/index.mts
-  -> src/cores/server/server-run-mcp-server.ts
-  -> src/cores/server/server-create-mcp-server.ts
-  -> src/tools/tools-*.ts for list_tools
-  -> src/tools/tools-dispatcher.ts for call_tool
-  -> src/schemas/*
-  -> src/controllers/*
-  -> src/features/*
-  -> src/cores/responses/*
+-> fs-mcp binary
+-> out/index.mjs
+-> src/index.mts
+-> src/cores/server/server-run-mcp-server.ts
+-> src/cores/server/server-create-mcp-server.ts
+-> src/tools/tools-*.ts for list_tools
+-> src/tools/tools-dispatcher.ts for call_tool
+-> src/schemas/* for argument contracts
+-> src/controllers/* for MCP adapters
+-> src/features/* for domain behavior
+-> src/cores/responses/* for normalized tool output
 ```
+
+The published runtime is the compiled `out` tree. Tests validate that compiled surface instead of importing
+TypeScript source directly.
 
 ## Layer Boundaries
 
-- `src/cores` owns process bootstrap, stdio transport, global output capture, server assembly, runtime guidance,
-  client initialization handling, and response normalization.
-- `src/tools`, `src/schemas`, `src/controllers`, and `src/cores/responses` own the MCP-facing catalog,
-  validation, routing, handler adaptation, and normalized tool result envelope.
-- `src/features` owns domain behavior and must not import from `src/controllers`.
-- `src/assets` owns shared readers, type declarations, and small cross-domain utilities.
-- `tests` validates compiled `out` output instead of importing TypeScript source directly.
+- `src/cores` owns process bootstrap, stdio transport, server assembly, runtime guidance, client initialization,
+  output filtering, and response normalization.
+- `src/tools` owns public tool catalog entries and their descriptions, annotations, and schema wiring.
+- `src/schemas` owns request argument contracts and `args_path` augmentation.
+- `src/controllers` owns MCP handler adaptation, batch result shaping, and calls into feature services.
+- `src/features` owns filesystem, edit, search, process, config, and git domain behavior.
+- `src/assets` owns shared readers, type declarations, and cross-domain utilities.
+- `tests` owns contract, smoke, fixture, and verification coverage for the compiled package surface.
+
+Feature modules can share behavior through feature-level utilities, such as
+`features/filesystem/filesystem-path-resolver.ts`. They should not import controller modules because controllers
+are MCP adapters, not reusable domain services.
 
 ## Source Tree
 
@@ -71,106 +79,136 @@ cores/responses -> assets
 tests -> out
 ```
 
-Feature modules can share behavior through sibling feature utilities, such as
-`features/filesystem/filesystem-path-resolver.ts`. They should not import controller modules, because controllers
-are MCP adapters and not reusable domain services.
+## Public Tool Assembly
 
-## Tool Surface
+`server-create-mcp-server.ts` builds one catalog from four modules:
 
-Tool catalog modules are grouped by runtime domain. The current catalog has 27 exported tools.
+| Module | Count | Public tools |
+|--------|------:|--------------|
+| `tools-config.ts` | 1 | `set_config_values` |
+| `tools-filesystem.ts` | 14 | `file-read`, `file-lines`, `file-write`, `dir-mk`, `dir-list`, `file-copy`, `file-move`, `file-remove`, `search-start`, `search-regex`, `search-get`, `search-stop`, `file-infos`, `file-edit` |
+| `tools-process.ts` | 1 | `interact_with_processes` |
+| `tools-git.ts` | 6 | `git-cwd`, `git-status`, `git-diff`, `git-show`, `git-add`, `git-commit` |
 
-- `tools-config.ts`: 2 configuration tools.
-- `tools-filesystem.ts`: 14 filesystem, search-session, direct regex search, metadata, and exact block edit tools.
-- `tools-process.ts`: 5 process and terminal-session tools.
-- `tools-git.ts`: 6 essential git session tools.
+Total public catalog size: `22` tools.
 
-`server-create-mcp-server.ts` concatenates config, filesystem, process, and git catalogs for `list_tools`. `tools-dispatcher.ts` owns the
-matching `call_tool` registry. Git schemas define a wider set of operation contracts, but `tools-git.ts` filters
-the public catalog through `ESSENTIAL_GIT_TOOL_NAMES`.
+`tools-dispatcher.ts` owns the matching `call_tool` registry. The catalog and dispatcher must expose the same
+names. `tests/scripts/scripts-verify-tool-surface.mjs` checks name equality, uniqueness, essential git filtering,
+and shared `args_path` support.
 
-There is no separate context-index, SQLite, or resource-backed tool family in the current public surface.
-
-`tests/scripts/scripts-verify-tool-surface.mjs` checks that compiled catalog names match dispatcher names, that
-catalog names are unique, that git catalog names match the essential set, and that tools expose `args_path` schema
-support.
+Git schemas define a broader internal operation map, but `tools-git.ts` filters the public surface through the
+essential git name list. The current public surface has no separate context-index, SQLite, MCP resource, config-read,
+or process lifecycle tool family.
 
 ## Request And Argument Flow
 
-- `InitializeRequestSchema` captures client metadata, configures notification behavior, and negotiates protocol
-  version.
-- `ListToolsRequestSchema` returns the concatenated catalog from config, filesystem, process, and git modules.
-- `CallToolRequestSchema` wraps each call in the current client git-session scope before dispatch.
-- `tools-dispatcher.ts` resolves optional `args_path`, `args_offset`, and `args_length` before schema-specific
-  controller validation.
+- `InitializeRequestSchema` captures client metadata, negotiates protocol version, and configures compatibility.
+- `ListToolsRequestSchema` returns the concatenated catalog from config, filesystem/search/edit, process, and git.
+- `CallToolRequestSchema` updates client metadata when present, enters the client git-session scope, and dispatches
+  by tool name.
+- `tools-dispatcher.ts` resolves `args_path`, `args_offset`, and `args_length` before schema-specific controller
+  validation.
 - Inline fields supplied beside `args_path` override fields from the referenced JSON object.
-- Search session handlers surface `sessionId`, `nextOffset`, `wasLimited`, and `wasIncomplete` so
-  clients can continue or diagnose long-running scans.
+- Controllers validate the resolved arguments and call feature services.
+- Feature services return `ServerResult` values, which the dispatcher normalizes before returning to the MCP client.
+
+## Domain Behavior
+
+### Filesystem And Edit
+
+Filesystem tools are batch-first and path-oriented. Reads support `paths` for simple reads and `items` for offset,
+length, URL, and options. Writes and edits support path-backed payload fields for large content. Directory listing,
+metadata, and read tools can use `allowMissing=true` for exploratory candidate paths.
+
+Exact block replacement lives in the edit feature and is exposed through `file-edit`.
+
+### Search
+
+Search behavior is delegated to bundled `@vscode/ripgrep`, with system ripgrep as a fallback. `search-regex` runs
+direct content scans. `search-start` creates paged sessions for broader file or content searches, and `search-get`
+returns result slices with offset and length. `search-stop` stops active sessions.
+
+Search session responses can expose `sessionId`, `nextOffset`, `wasLimited`, and `wasIncomplete`. Sessions only apply
+a result cap when callers provide `maxResults`.
+
+### Config
+
+`config-store.ts` materializes in-memory defaults and mutable runtime values. The public config surface only updates
+configuration through `set_config_values`. Read-only metadata still exists inside the config feature for runtime use,
+but it is not a public MCP tool in this catalog.
+
+### Process
+
+The current public process surface is limited to `interact_with_processes`, which sends stdin to known running process
+IDs. Process service modules still contain policy, session, terminal, and virtual-node behavior used by the runtime
+boundary, but process lifecycle controls are not exported as public tools in this catalog.
+
+### Git
+
+Git calls run inside a client-scoped git session. `git-cwd` pins the working repository, `git-status` and `git-diff`
+inspect state, `git-show` reads git objects or revision files, `git-add` stages paths, and `git-commit` creates
+commits. Commit descriptions guide clients toward English multi-line Conventional Commit messages.
 
 ## Tool Response Contract
 
-- Individual handlers return `ServerResult` values with `content`, optional `structuredContent`, optional
-  `isError`, and optional `_meta`.
-- `dispatchToolCall` normalizes every non-normalized handler result exactly once through `normalizeToolResult`.
-- Visible `content[0].text` is generated by `createToolDisplayText` and uses the configurable display template.
-- `structuredContent.data` stores original normalized content, combined text, and original structured payload.
-- `_meta.fsMcpResult` stores status, duration, content types, error text, schema version, and tool name.
-- Large duplicate text content is not automatically compacted; `structuredContent.data.content` and `structuredContent.data.text` preserve the normalized handler output.
+Individual handlers return `ServerResult` values with `content`, optional `structuredContent`, optional `isError`,
+and optional `_meta`.
+
+`dispatchToolCall` normalizes every non-normalized handler result exactly once through `normalizeToolResult`.
+
+The normalized contract has three layers:
+
+- Visible `content[0].text` from `createToolDisplayText`.
+- Machine-readable `structuredContent` with schema version, tool name, status, duration, error detail, original
+  normalized content, combined text, and original structured payload.
+- Compact `_meta.fsMcpResult` with status, duration, content types, error text, schema version, and tool name.
+
+The default display rows are `tool`, `items`, `status`, `duration`, `tokens`, `contents`, and `structuredText`.
+Gemini clients receive the same display without ANSI escape sequences.
 
 ## Runtime Configuration
 
-- `config-store.ts` materializes in-memory configuration defaults and exposes mutable runtime values.
-- The runtime config surface is intentionally small: editable keys are `allowedDirectories`,
-  `blockedCommands`, and `defaultShell`; query-only keys are `availableShells`, `currentClient`,
-  `systemInfo`, and `version`.
-- `FS_MCP_ALLOWED_DIRECTORIES` can seed allowed directories. On Windows, entries are separated by semicolons.
+- Runtime configuration is in-memory only.
+- Mutable keys are `allowedDirectories`, `blockedCommands`, and `defaultShell`.
+- `FS_MCP_ALLOWED_DIRECTORIES` can seed allowed directories. Windows entries are semicolon-separated.
 - Default shell selection prefers PowerShell 7 on Windows, then `ComSpec`, then system `cmd.exe`; non-Windows
   defaults use `$SHELL`, `/bin/zsh` on macOS, or `/bin/sh`.
-- `config-metadata.ts` is the user-facing metadata source for editable and read-only config keys.
-- Current client state is tracked in `config-client.ts` and is used for git-session scoping.
-- The current implementation keeps configuration in memory and does not create a first-run config file.
+- Current client state is tracked in `config-client.ts` and contributes to git-session scoping.
 
 ## MCP Client Compatibility
 
-- `SERVER_INSTRUCTIONS` presents client-neutral guidance: use fs-mcp for local filesystem, process, git, and config work,
-  and prefer one batch call for multiple same-kind operations.
-- Client metadata is captured during initialization and exposed as `currentClient` through configuration tools.
-- `FilteredStdioServerTransport` captures accidental console output so MCP JSON-RPC stays isolated on stdio.
-- Compatibility profiles cover Claude, Codex, Gemini CLI, and GitHub Copilot only. Gemini CLI and Copilot disable
-  server-side JSON-RPC notifications; Claude and Codex use the standard notification flow.
-- The server registers no-op resource and resource-template handlers so clients that probe resources during
-  initialization can complete even when the package has no MCP resources to expose.
+- `SERVER_INSTRUCTIONS` tells clients to use fs-mcp for local filesystem, process, git, and config work, with a
+  batch-first rule for same-kind operations.
+- `FilteredStdioServerTransport` captures accidental stdout and stderr writes so JSON-RPC remains isolated.
+- Compatibility profiles cover Claude, Codex, Gemini CLI, and GitHub Copilot.
+- Gemini CLI and GitHub Copilot disable server-side JSON-RPC notifications.
+- Claude and Codex keep the standard notification flow.
+- No-op resource and resource-template handlers let probing clients initialize even though no resources are exposed.
 
 ## Performance And Safety Design
 
-- Current compiled catalog exposes `26` tools.
-- Current `list_tools` payload is measured by the tool-surface verification script.
-- Current tool descriptions are measured by the tool-surface verification script.
-- Current tool schemas are measured by the tool-surface verification script.
+- Current compiled catalog exposes `22` tools.
+- Current measured `list_tools` payload is `24,721` characters in this checkout.
+- Tool descriptions total `6,088` characters and schemas total `17,266` characters in this checkout.
 - Tool catalogs are assembled once and input schema JSON is generated through lazy cache.
-- File operations use configured timeout boundaries and path resolution through the filesystem feature layer.
-- Text reading uses offset and length inputs so clients can request bounded slices instead of whole files.
-- Batch-capable tools accept arrays such as `paths`, `items`, `sessionIds`, or `pids` so clients can
-  collapse repeated same-tool work into one request.
-- Large inline tool arguments can be passed through path-backed fields such as `content_path`,
-  `old_string_path`, `new_string_path`, `pattern_path`, `input_path`, and the shared `args_path` fields.
-- Search execution is delegated to bundled `@vscode/ripgrep`, with system ripgrep as a fallback. `regex_searches`
-  exposes direct regex content scans, and search sessions only apply a result cap when callers provide `maxResults`.
-- Content searches can also merge DOCX text matches when the request targets `.docx` inputs or patterns.
-- Process execution uses a command policy blocklist, configured shell selection, explicit session tracking, larger
-  active output windows, and completed-session retention limits.
-- Stdio transport captures accidental stdout and stderr writes before they can corrupt MCP JSON output.
-- Tests exercise the compiled `out` tree, which is the same runtime surface published to npm.
+- Batch-capable tools accept arrays such as `paths`, `items`, and `sessionIds`.
+- Large inline arguments can be passed through `args_path` or specific path-backed fields.
+- File operations use configured timeout boundaries and feature-layer path resolution.
+- Stdio transport captures accidental output before it can corrupt MCP JSON output.
+- Tests exercise the compiled `out` tree, which is the runtime surface published to npm.
 
 ## Verification Boundary
 
-- `package.json` exposes bootstrap-backed scripts such as `bun run swc`, `bun run sync`, and `bun run tools`.
-- `tests/run-all-tests.js` rebuilds `out` unless `FS_MCP_SKIP_BUILD=1` is set, then runs contract and smoke tests.
+- `bun run verify` runs source, release-shape, tool-surface, and optimization-report verification.
+- `bun run test` runs contract and smoke tests through `tests/run-all-tests.js`.
+- `tests/run-all-tests.js` rebuilds `out` unless `FS_MCP_SKIP_BUILD=1` is set.
 - `tests/scripts/scripts-verify-release-shape.mjs` checks release artifact shape and binary shebang.
-- `tests/scripts/scripts-verify-source-boundaries.mjs` is available for source and test root boundary checks.
-- `tests/scripts/scripts-verify-tool-surface.mjs` compares the compiled tool catalog and dispatcher registry.
+- `tests/scripts/scripts-verify-source-boundaries.mjs` checks source and test root boundaries.
+- `tests/scripts/scripts-verify-tool-surface.mjs` compares the compiled catalog and dispatcher registry.
+- `tests/scripts/scripts-verify-optimization-reports.mjs` validates expected report artifacts.
 
 ## Packaging Boundary
 
-The published package exposes `fs-mcp` through `out/index.mjs`. The `package.json` file allowlist includes
-`out`, release documentation, and changelog files. Source files, tests, generated fixtures, local build caches,
-and private runtime artifacts are not runtime package inputs.
+The published package exposes `fs-mcp` through `out/index.mjs`. The `package.json` file allowlist includes `out`,
+release documentation, and changelog files. Source files, tests, generated fixtures, local build caches, and private
+runtime artifacts are development-only surfaces.
