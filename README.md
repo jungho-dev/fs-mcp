@@ -68,12 +68,13 @@ uses stdio and does not open a network listener.
 
 ## Tool Surface
 
-The current source and compiled runtime expose 26 tools. Batch-capable tools are documented as batch-first
+The current source and compiled runtime expose 27 tools. Batch-capable tools are documented as batch-first
 surfaces: when a task needs multiple same-kind filesystem, search, process, or config operations,
 clients should put all items into one tool call instead of repeatedly calling the same tool.
 
 - Config: `get_configs`, `set_config_values`.
-- Filesystem/search/edit: `read_files`, `write_files`, `create_directories`, `list_directories`,
+- Filesystem/search/edit: `read_files`, `read_files_with_linenumber`, `write_files`, `create_directories`,
+  `list_directories`,
   `copy_files`, `move_files`, `remove_files`, `start_searches`, `regex_searches`, `get_full_search`,
   `stop_searches`, `get_file_infos`, `edit_blocks`.
 - Process: `start_processes`, `read_process_outputs`, `interact_with_processes`, `list_sessions`,
@@ -89,7 +90,7 @@ The public tool catalog is assembled from config, filesystem, process, and git m
 
 Current compiled catalog metrics:
 
-- Tool count: `26`.
+- Tool count: `27`.
 - `list_tools` payload: measured by the tool-surface verification script.
 - Tool descriptions: measured by the tool-surface verification script.
 - Tool schemas: measured by the tool-surface verification script.
@@ -122,7 +123,8 @@ repeated same-tool calls. This applies to:
 Large multi-item arguments can be moved into a UTF-8 JSON file and passed with `args_path`, keeping the tool-call
 preview compact while preserving one batch request. Inline overrides are merged on top of the JSON object.
 
-`read_files`, `list_directories`, and `get_file_infos` also accept `allowMissing=true` to return missing local paths
+`read_files`, `read_files_with_linenumber`, `list_directories`, and `get_file_infos` also accept
+`allowMissing=true` to return missing local paths
 as non-error missing results during exploratory candidate reads.
 
 ## Client Compatibility

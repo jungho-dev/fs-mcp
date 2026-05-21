@@ -3,14 +3,19 @@
  */
 
 import assert from "node:assert";
+import path from "node:path";
+import {fileURLToPath as flUrlTPth2} from "node:url";
 import {CONFIG_TOOL_CATALOG as CFG_TL_CTLG} from "../../out/tools/tools-config.js";
 import {FILESYSTEM_TOOL_CATALOG as FLSY_TL_CTLG} from "../../out/tools/tools-filesystem.js";
 import {PROCESS_TOOL_CATALOG as PROC_TL_CTLG} from "../../out/tools/tools-process.js";
+
+const __filename = flUrlTPth2(import.meta.url);
 
 const EXP_TL_NMS = [
   "get_configs",
   "set_config_values",
   "read_files",
+  "read_files_with_linenumber",
   "write_files",
   "create_directories",
   "list_directories",
@@ -34,6 +39,7 @@ const BFTN = [
   "get_configs",
   "set_config_values",
   "read_files",
+  "read_files_with_linenumber",
   "write_files",
   "create_directories",
   "list_directories",
@@ -53,7 +59,6 @@ const BFTN = [
 ];
 
 const APPTN = [
-  "write_files",
   "edit_blocks",
 ];
 
@@ -77,13 +82,12 @@ function testBatchFirstDescriptions() {
     const tool = toolsByName.get(toolName);
 
     assert.ok(tool, `Missing tool: ${toolName}`);
-    assert.match(tool.description, /BATCH-FIRST:/, `Missing batch guidance: ${toolName}`);
-    assert.match(tool.description, /instead of calling this tool repeatedly/, `Missing repeat-call guidance: ${toolName}`);
+    assert.match(tool.description, /Batch same-kind operations into one call\./, `Missing batch guidance: ${toolName}`);
   }
 }
 
-// 3. Test apply patch performance guidance ――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function testApplyPatchPerformanceGuidance() {
+// 3. Test large edit guidance ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function testLargeEditGuidance() {
   const tools = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG];
   const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
 
@@ -91,8 +95,7 @@ function testApplyPatchPerformanceGuidance() {
     const tool = toolsByName.get(toolName);
 
     assert.ok(tool, `Missing tool: ${toolName}`);
-    assert.match(tool.description, /APPLY_PATCH PERFORMANCE:/, `Missing apply_patch performance guidance: ${toolName}`);
-    assert.match(tool.description, /one tool call/, `Missing single-call batching guidance: ${toolName}`);
+    assert.match(tool.description, /For large or multi-file writes\/edits/, `Missing large edit guidance: ${toolName}`);
     assert.match(tool.description, /args_path/, `Missing args_path guidance: ${toolName}`);
   }
 }
@@ -101,11 +104,11 @@ function testApplyPatchPerformanceGuidance() {
 async function runAllTests() {
   testToolCatalogShape();
   testBatchFirstDescriptions();
-  testApplyPatchPerformanceGuidance();
+  testLargeEditGuidance();
   return true;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (process.argv[1] !== undefined && path.resolve(process.argv[1]) === __filename) {
   runAllTests().then((success) => {
     process.exit(success ? 0 : 1);
   });

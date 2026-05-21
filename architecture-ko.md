@@ -76,10 +76,10 @@ tests -> out
 
 ## 도구 표면
 
-Tool catalog module은 runtime domain별로 나뉩니다. 현재 catalog는 26개 도구를 export합니다.
+Tool catalog module은 runtime domain별로 나뉩니다. 현재 catalog는 27개 도구를 export합니다.
 
 - `tools-config.ts`: configuration 도구 2개.
-- `tools-filesystem.ts`: filesystem, search-session, direct regex search, metadata, exact block edit 도구 13개.
+- `tools-filesystem.ts`: filesystem, search-session, direct regex search, metadata, exact block edit 도구 14개.
 - `tools-process.ts`: process 및 terminal-session 도구 5개.
 - `tools-git.ts`: essential git session 도구 6개.
 

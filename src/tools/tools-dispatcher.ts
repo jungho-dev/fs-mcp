@@ -8,7 +8,7 @@
 import type {ServerResult} from "@assets/type/common";
 import {handleGetConfigs as hndlGtCnfg, handleSetConfigValues as hndStCfVa} from "@controllers/controllers-config";
 import {handleEditBlocks as hndlEdtBlck2} from "@controllers/controllers-edit";
-import {handleCopyFiles as hndlCpyFls, handleCreateDirectories as hndlCrtDrct, handleGetFileInfos as hndlGtFlInfs, handleListDirectories as hndlLstDrct, handleMoveFiles as hndlMvFls, handleReadFiles as hndlRdFls, handleRemoveFiles as hndlRmvFls, handleWriteFiles as hndlWrtFls} from "@controllers/controllers-filesystem";
+import {handleCopyFiles as hndlCpyFls, handleCreateDirectories as hndlCrtDrct, handleGetFileInfos as hndlGtFlInfs, handleListDirectories as hndlLstDrct, handleMoveFiles as hndlMvFls, handleReadFiles as hndlRdFls, handleRemoveFiles as hndlRmvFls, handleWriteFiles as hndlWrtFls, handleReadFilesWithLineNumber as hndRdFlLn} from "@controllers/controllers-filesystem";
 import {handleGitTool as hndlGtTl} from "@controllers/controllers-git";
 import {handleKillProcesses as hndlKllPrcs} from "@controllers/controllers-process";
 import {handleGetFullSearchResults as hndGtFlSrRe, handleRegexSearches as hndlRgxSrch, handleStopSearches as hndlStpSrch, handleStartSearches as hndlStrtSrch} from "@controllers/controllers-search";
@@ -138,6 +138,7 @@ export const TL_DSPT: Readonly<Record<string, ToolDispatchHandler>> = {
   list_sessions: (args: unknown) => hndlLstSssn(args),
   kill_processes: (args: unknown) => hndlKllPrcs(args),
   read_files: (args: unknown) => hndlRdFls(args),
+  read_files_with_linenumber: (args: unknown) => hndRdFlLn(args),
   write_files: (args: unknown) => hndlWrtFls(args),
   create_directories: (args: unknown) => hndlCrtDrct(args),
   list_directories: (args: unknown) => hndlLstDrct(args),

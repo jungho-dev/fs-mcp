@@ -45,12 +45,12 @@ const APEAF = path.join(TEST_DIR, "args-path-edit-args.json");
 const MOVED_FILE = path.join(TEST_DIR, "moved.txt");
 const RENAMED_FILE = path.join(TEST_DIR, "renamed.txt");
 const WRITTEN_FILE = path.join(TEST_DIR, "written.txt");
+const LINE_FILE = path.join(TEST_DIR, "line-numbered.txt");
 const MLSF = path.join(TEST_DIR, "many-line-source.txt");
 const BRPMC = 160;
 const OLD_VAL_PAT = /old value/;
 const EXTR_VAL_PAT = /extra value/;
 const CRTD_DR_PAT = /created-dir/;
-const CMPT_PAT = / \.\.\./;
 const UNST_LN_PAT = /unstructured line 79/;
 const RTLP = /Reading 2 lines/;
 const THXP = /x{300}/;
@@ -120,6 +120,7 @@ async function setup() {
   await fs.writeFile(PENRF, "omega\0\0", "utf8");
   await fs.writeFile(APEF, "alpha\nbeta\n", "utf8");
   await fs.writeFile(APESF, "one\ntwo\n", "utf8");
+  await fs.writeFile(LINE_FILE, "first\nsecond\nthird\n", "utf8");
   await fs.writeFile(MLSF, MNY_LN_TXT, "utf8");
   await cfgMgr.updateConfig({
     ...origCfg,
@@ -196,6 +197,24 @@ async function testReadFilesSurface() {
   const mssnDirPyld = parseToolOutput(mssnDirRes).data.structuredContent;
   assert.equal(mssnDirPyld.failedCount, 0);
   assert.equal(mssnDirPyld.results[0].result.structuredContent.missing, true);
+
+  const lnNumRes = await dsptTlCll("read_files_with_linenumber", {
+    items: [{ length: 2, offset: 1, path: LINE_FILE }],
+  });
+  const lnNumPyld = parseToolOutput(lnNumRes).data.structuredContent;
+  assert.equal(lnNumPyld.toolName, "read_files_with_linenumber");
+  assert.equal(lnNumPyld.results[0].ok, true);
+  assert.equal(lnNumPyld.results[0].result.structuredContent.startLine, 2);
+  assert.equal(lnNumPyld.results[0].result.structuredContent.endLine, 3);
+  assert.equal(lnNumPyld.results[0].result.structuredContent.textContent, "2: second\n3: third");
+
+  const lnMssnRes = await dsptTlCll("read_files_with_linenumber", {
+    allowMissing: true,
+    paths: [missingFile],
+  });
+  const lnMssnPyld = parseToolOutput(lnMssnRes).data.structuredContent;
+  assert.equal(lnMssnPyld.failedCount, 0);
+  assert.equal(lnMssnPyld.results[0].result.structuredContent.missing, true);
 }
 
 // 7. Test large unstructured result preserved ―――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -463,7 +482,7 @@ async function testWriteMoveInfoAndEditSurface() {
   assert.equal(lrgRdBtRe[0].ok, true);
   assert.equal(lrgRdOtpt.data.text.includes(TN_THSN_B), true);
   assert.equal(lrgRdBtRe[0].result.structuredContent.textContent.includes(TN_THSN_B), true);
-  assert.equal(JSON.stringify(lrgRdBtRe[0].result).includes("preview" + "Only"), false);
+  assert.equal(JSON.stringify(lrgRdBtRe[0].result).includes("previewOnly"), false);
 
   const renameResult = await dsptTlCll("move_files", {
     items: [

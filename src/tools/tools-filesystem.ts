@@ -31,6 +31,23 @@ const FLSY_TL_DFNT = [
     },
   },
   {
+    name: "read_files_with_linenumber",
+    description: `
+      Read text files in parallel with 1-based line numbers.
+      Use paths for simple reads or items for offset and length.
+      Set allowMissing true to return missing local paths as non-error missing results.
+      ${BTCH_GDNC}
+      ${PTH_GDNC}
+      ${CMD_PRF_DSC}
+    `,
+    inputSchema: wthArPtSc(RdFlsArgsSch),
+    annotations: {
+      title: "Read Files With Line Numbers",
+      readOnlyHint: true,
+      openWorldHint: true,
+    },
+  },
+  {
     name: "write_files",
     description: (`
       Write files in parallel.

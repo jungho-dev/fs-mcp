@@ -77,10 +77,10 @@ are MCP adapters and not reusable domain services.
 
 ## Tool Surface
 
-Tool catalog modules are grouped by runtime domain. The current catalog has 26 exported tools.
+Tool catalog modules are grouped by runtime domain. The current catalog has 27 exported tools.
 
 - `tools-config.ts`: 2 configuration tools.
-- `tools-filesystem.ts`: 13 filesystem, search-session, direct regex search, metadata, and exact block edit tools.
+- `tools-filesystem.ts`: 14 filesystem, search-session, direct regex search, metadata, and exact block edit tools.
 - `tools-process.ts`: 5 process and terminal-session tools.
 - `tools-git.ts`: 6 essential git session tools.
 

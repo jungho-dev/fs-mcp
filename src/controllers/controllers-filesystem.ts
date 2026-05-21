@@ -13,10 +13,11 @@ import { withTimeout } from "@assets/utils/utils-timeout";
 import { type BatchToolItemResult as BtchTlItmRes, createBatchToolResponse as crtBtchTlRes, runLimitedParallelBatch as rnLmPrBt, runParallelBatch as rnPrllBtch } from "@controllers/controllers-batch";
 import { createErrorResponse as crtErrRes } from "@cores/responses/responses-error";
 import { resolveAbsolutePath as rslvAbslPth } from "@features/filesystem/filesystem-path-resolver";
-import { copyFile, createDirectory as crtDir, getFileInfo, listDirectory as lstDir, moveFile, readTextSliceInternal as rdTxtSlcInt, readFile, removePath, writeFile } from "@features/filesystem/filesystem-service";
+import { copyFile, createDirectory as crtDir, getFileInfo, listDirectory as lstDir, moveFile, readFileInternal as rdFlInt, readTextSliceInternal as rdTxtSlcInt, readFile, removePath, writeFile } from "@features/filesystem/filesystem-service";
 import { CpyFlArgsSch, CpyFlArSc, CrtDiArSc, CrtDrArSc, GtFlInArSc, GtFlInArSc2, LstDiArSc, LstDrArSc, MvFlArgsSch, MvFlsArgsSch, RdFlArgsSch, RdFlsArgsSch, RmvFlArSc, RmvPtArSc, WrtFlArFrAr2, WrtFlArFrArP, WrtFlArgsSch, WrtFlArSc } from "@schemas/schemas-filesystem";
 
 const DLEP = /^(?:\[(F|D|W|X)\]|(□|■))\s*(.*)$/;
+const LN_SPLT_PAT = /\r\n|\r|\n/;
 const MPER = /\b(?:ENOENT|ENOTDIR)\b/;
 const WSL_UNC_ERR = /^Failed to (?:resolve symlink|inspect target path) for path: \\\\/;
 const WSL_UNC_MISS = /\b(?:EUNKNOWN|ECONNRESET)\b/;
@@ -65,6 +66,12 @@ type ParsedRemovePathArgs = {
 };
 type ParsedGetFileInfoArgs = {
   path: string;
+};
+type LineNumTextContent = {
+  endLine: number | null;
+  lineCount: number;
+  startLine: number | null;
+  textContent: string;
 };
 
 type ToolArgsSource = "args_path" | "inline";
@@ -193,6 +200,93 @@ async function handleParsedReadFileWithMissing(parsed: ParsedReadFileArgs, allow
   catch (error) {
     if (allowMissing && !parsed.isUrl && isMissingPathError(error)) {
     	return createMissingPathResponse(parsed.path);
+    }
+    throw error;
+  }
+}
+// 3-2. Split line number content ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function splitLineNumContent(content: string): string[] {
+  const lines = content.split(LN_SPLT_PAT);
+  if (lines.at(-1) === "") {
+    lines.pop();
+  }
+  return lines;
+}
+// 3-3. Resolve line number slice ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function resolveLineNumSlice(lines: string[], offset: number, length?: number): { selected: string[]; startLine: number | null } {
+  if (lines.length === 0) {
+    return {
+      selected: [],
+      startLine: null,
+    };
+  }
+  if (offset < 0) {
+    const startIndex = Math.max(0, lines.length + offset);
+    const selected = lines.slice(startIndex);
+
+    return {
+      selected,
+      startLine: selected.length > 0 ? startIndex + 1 : null,
+    };
+  }
+  const startIndex = Math.max(0, offset);
+  const selected = length === undefined ? lines.slice(startIndex) : lines.slice(startIndex, startIndex + length);
+
+  return {
+    selected,
+    startLine: selected.length > 0 ? startIndex + 1 : null,
+  };
+}
+// 3-4. Format line numbered text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function formatLineNumText(content: string, offset: number, length?: number): LineNumTextContent {
+  const lines = splitLineNumContent(content);
+  const slice = resolveLineNumSlice(lines, offset, length);
+  const textContent = slice.selected
+    .map((line, index) => `${(slice.startLine ?? 1) + index}: ${line}`)
+    .join("\n");
+
+  return {
+    endLine: slice.startLine === null ? null : slice.startLine + slice.selected.length - 1,
+    lineCount: slice.selected.length,
+    startLine: slice.startLine,
+    textContent,
+  };
+}
+// 3-5. Handle parsed line numbered read ――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function handleParsedLineNumRead(parsed: ParsedReadFileArgs): Promise<ServerResult> {
+  const rslvFlPth = parsed.isUrl ? parsed.path : rslvAbslPth(parsed.path);
+  const rawContent = parsed.isUrl
+    ? await readFile(parsed.path, { isUrl: true })
+    : { content: await rdFlInt(parsed.path), metadata: {}, mimeType: "text/plain" };
+
+  if (rawContent.metadata?.isImage || rawContent.metadata?.isBinary) {
+    throw new Error(`Cannot add line numbers to non-text content: ${parsed.path}`);
+  }
+  const content = typeof rawContent.content === "string" ? rawContent.content : rawContent.content.toString("utf8");
+  const numbered = formatLineNumText(content, parsed.offset, parsed.length);
+  const fileType = rslPrFlTy(rslvFlPth);
+
+  return {
+    content: [{ type: "text", text: numbered.textContent }],
+    structuredContent: {
+      endLine: numbered.endLine,
+      fileName: path.basename(rslvFlPth),
+      filePath: rslvFlPth,
+      fileType,
+      lineCount: numbered.lineCount,
+      startLine: numbered.startLine,
+      textContent: numbered.textContent,
+    },
+  };
+}
+// 3-6. Handle parsed line numbered read with missing path option ―――――――――――――――――――――――――――――――――――――
+async function handleParsedLineNumReadWithMissing(parsed: ParsedReadFileArgs, allowMissing: boolean): Promise<ServerResult> {
+  try {
+    return await handleParsedLineNumRead(parsed);
+  }
+  catch (error) {
+    if (allowMissing && !parsed.isUrl && isMissingPathError(error)) {
+      return createMissingPathResponse(parsed.path);
     }
     throw error;
   }
@@ -485,6 +579,15 @@ export async function handleReadFiles(args: unknown): Promise<ServerResult> {
   const items = parsed.items ?? parsed.paths?.map((filePath) => ({ isUrl: false, offset: 0, path: filePath })) ?? [];
   const results = await rnPrllBtch(items, (item) => handleParsedReadFileWithMissing(item, parsed.allowMissing));
   const response = crtBtchTlRes("read_files", results, { preserveLargeStructuredPayloads: true });
+
+  return response;
+}
+// 14-1. Handle read files with line number ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export async function handleReadFilesWithLineNumber(args: unknown): Promise<ServerResult> {
+  const parsed = RdFlsArgsSch.parse(args);
+  const items = parsed.items ?? parsed.paths?.map((filePath) => ({ isUrl: false, offset: 0, path: filePath })) ?? [];
+  const results = await rnPrllBtch(items, (item) => handleParsedLineNumReadWithMissing(item, parsed.allowMissing));
+  const response = crtBtchTlRes("read_files_with_linenumber", results, { preserveLargeStructuredPayloads: true });
 
   return response;
 }

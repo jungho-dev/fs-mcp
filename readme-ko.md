@@ -66,12 +66,13 @@ stdio를 사용하며 network listener를 열지 않습니다.
 
 ## 도구 표면
 
-현재 source와 compiled runtime은 26개 도구를 노출합니다. Batch-capable 도구는 batch-first surface로
+현재 source와 compiled runtime은 27개 도구를 노출합니다. Batch-capable 도구는 batch-first surface로
 문서화됩니다. 같은 종류의 filesystem, search, process, config 작업이 여러 개 필요하면 client는
 같은 도구를 반복 호출하지 않고 하나의 multi-item call로 묶어야 합니다.
 
 - Config: `get_configs`, `set_config_values`.
-- Filesystem/search/edit: `read_files`, `write_files`, `create_directories`, `list_directories`,
+- Filesystem/search/edit: `read_files`, `read_files_with_linenumber`, `write_files`, `create_directories`,
+  `list_directories`,
   `copy_files`, `move_files`, `remove_files`, `start_searches`, `regex_searches`, `get_full_search`,
   `stop_searches`, `get_file_infos`, `edit_blocks`.
 - Process: `start_processes`, `read_process_outputs`, `interact_with_processes`, `list_sessions`,
@@ -87,7 +88,7 @@ stdio를 사용하며 network listener를 열지 않습니다.
 
 현재 compiled catalog metric입니다.
 
-- Tool count: `26`.
+- Tool count: `27`.
 - `list_tools` payload: tool-surface verification script에서 측정합니다.
 - Tool description: tool-surface verification script에서 측정합니다.
 - Tool schema: tool-surface verification script에서 측정합니다.
@@ -120,7 +121,8 @@ Runtime 동작은 handler output을 그대로 보존하는 방향입니다.
 큰 multi-item argument는 UTF-8 JSON 파일로 옮긴 뒤 `args_path`로 전달할 수 있습니다. 이렇게 하면 tool-call
 preview가 작게 유지되며 batch request는 그대로 보존됩니다. Inline override는 JSON object 위에 merge됩니다.
 
-`read_files`, `list_directories`, `get_file_infos`는 `allowMissing=true`도 받아 탐색용 후보 경로 중 누락된
+`read_files`, `read_files_with_linenumber`, `list_directories`, `get_file_infos`는 `allowMissing=true`도 받아
+탐색용 후보 경로 중 누락된
 local path를 실패가 아닌 missing 결과로 반환할 수 있습니다.
 
 ## Client 호환성
