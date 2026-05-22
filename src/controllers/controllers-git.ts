@@ -9,6 +9,7 @@ import type {ServerResult} from "@assets/type/common";
 import {createErrorResponse as crtErrRes} from "@cores/responses/responses-error";
 import {executeGitTool as exctGtTl} from "@features/git/git-service";
 import {GT_INPT_SCHS, type GitToolName} from "@schemas/schemas-git";
+import {ZodError} from "zod";
 
 // 1. Handle git tool ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export async function handleGitTool(name: GitToolName, args: unknown): Promise<ServerResult> {
@@ -19,8 +20,14 @@ export async function handleGitTool(name: GitToolName, args: unknown): Promise<S
     response = await exctGtTl(name, parsedArgs);
   }
   catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    response = crtErrRes(errorMessage);
+    if (error instanceof ZodError) {
+      const summary = error.issues.map((issue) => `${issue.path.join(".") || "<root>"}: ${issue.message}`).join("; ");
+      response = crtErrRes(`Validation error for ${name}: ${summary}`);
+    }
+    else {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      response = crtErrRes(`Git tool ${name} failed: ${errorMessage}`);
+    }
   }
   return response;
 }

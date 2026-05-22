@@ -9,6 +9,7 @@ import {type LogLevel, logger} from "@cores/runtime/runtime-app-logger";
 import {flushDeferredMessages as flshDfrrMsgs, server} from "@cores/server/server-create-mcp-server";
 import {FilteredStdioServerTransport as FltStSrTr} from "@cores/transport/transport-stdio-transport";
 import {cfgMgr} from "@features/config/config-store";
+import {srchMgr} from "@features/search/search-service";
 
 type DeferredStartupMessage = {
   level: LogLevel;
@@ -45,6 +46,38 @@ function isProtocolJsonParseError(errorMessage: string): boolean {
 function handleFatalProcessError(label: string, errorMessage: string): void {
   logger.error(`${label}: ${errorMessage}`);
   process.exit(1);
+}
+
+let isShuttingDown = false;
+
+// 4b. Graceful shutdown
+async function gracefulShutdown(signal: NodeJS.Signals): Promise<void> {
+  if (isShuttingDown) {
+    return;
+  }
+  isShuttingDown = true;
+  logger.info(`Received ${signal}, shutting down gracefully...`);
+
+  // Terminate active search sessions so child ripgrep processes are not orphaned
+  try {
+    for (const session of srchMgr.listSearchSessions()) {
+      if (!session.isComplete) {
+        srchMgr.terminateSearch(session.id);
+      }
+    }
+    srchMgr.cleanupSessions(0);
+  }
+  catch (error) {
+    logger.warning(`Search cleanup failed during shutdown: ${error instanceof Error ? error.message : String(error)}`);
+  }
+
+  try {
+    await server.close();
+  }
+  catch (error) {
+    logger.warning(`Server close failed during shutdown: ${error instanceof Error ? error.message : String(error)}`);
+  }
+  process.exit(0);
 }
 
 // 5. Run server ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――

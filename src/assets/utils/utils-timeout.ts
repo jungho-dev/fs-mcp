@@ -14,6 +14,16 @@
 // @returns Promise that resolves with the operation result or the default value on timeout
 
 // 1. With timeout ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// Error raised by withTimeout when the operation exceeds the deadline.
+// Carries an ErrnoException-compatible `code` so call sites can branch on it like other fs errors.
+export class TimeoutError extends Error {
+  code = "ETIMEDOUT";
+  constructor(opName: string, timeoutMs: number) {
+    super(`__ERROR__: ${opName} timed out after ${timeoutMs / 1000} seconds`);
+    this.name = "TimeoutError";
+  }
+}
+
 export function withTimeout<T>(operation: Promise<T>, timeoutMs: number, opNm2: string, defaultValue: T): Promise<T> {
   // Don't sanitize operation name for logs; callers decide how to report it.
   return new Promise((resolve, reject) => {
@@ -27,9 +37,9 @@ export function withTimeout<T>(operation: Promise<T>, timeoutMs: number, opNm2: 
           resolve(defaultValue);
         }
         else {
-          // Keep the original operation name in the error message
-          // Telemetry sanitization happens at the capture level
-          reject(`__ERROR__: ${opNm2} timed out after ${timeoutMs / 1000} seconds`);
+          // Keep the original operation name in the error message; ETIMEDOUT lets callers
+          // branch using the same shape as NodeJS.ErrnoException without string sniffing.
+          reject(new TimeoutError(opNm2, timeoutMs));
         }
       }
     }, timeoutMs);

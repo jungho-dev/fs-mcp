@@ -41,6 +41,7 @@ export declare interface SearchResult {
 }
 export declare interface SearchSession {
   buffer: string; // For processing incomplete JSON lines
+  earlyTermTimer?: NodeJS.Timeout | null;
   error?: string;
   id: string;
   isComplete: boolean;
@@ -623,6 +624,10 @@ export class SearchManager {
     });
 
     process.on("close", (code: number) => {
+      if (session.earlyTermTimer) {
+        clearTimeout(session.earlyTermTimer);
+        session.earlyTermTimer = null;
+      }
       // Process any remaining buffer content
       if (session.buffer.trim()) {
         this.processBufferedOutput(session, true);

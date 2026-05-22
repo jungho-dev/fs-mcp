@@ -472,11 +472,10 @@ export async function readFileFromDisk(filePath: string, options?: ReadOptions):
   }
   catch (error) {
     const err = error as NodeJS.ErrnoException;
-    // withTimeout rejects with a plain string "__ERROR__: ... timed out after N seconds"
-    // when defaultValue is null — it has no .code property, so check for that too.
-    const isWthTmtStr = typeof error === "string" && (error as string).startsWith("__ERROR__:");
-    if (isWthTmtStr || err.code === "EPERM" || err.code === "EACCES" || err.code === "ETIMEDOUT") {
-    	throw buildPermissionError(filePath, isWthTmtStr ? "ETIMEDOUT" : err.code);
+    // withTimeout now rejects with TimeoutError carrying code="ETIMEDOUT", so the same .code
+    // branch handles timeouts and permission errors uniformly.
+    if (err && (err.code === "EPERM" || err.code === "EACCES" || err.code === "ETIMEDOUT")) {
+      throw buildPermissionError(filePath, err.code);
     }
     throw error;
   }

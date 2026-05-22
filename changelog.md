@@ -2,10 +2,43 @@
 
 ## [Unreleased]
 
-* remove SQLite-backed context-index tools, schemas, controllers, services, tests, and catalog routing
-* remove automatic duplicate text compaction and implicit search result caps
-* keep search result caps caller-controlled through explicit `maxResults`
+* graceful SIGINT/SIGTERM shutdown that terminates active ripgrep sessions and closes the MCP server before exit
+* surface git tool validation failures with structured `Validation error for <tool>: ...` messages and tag transport failures with the tool name
+* clear early-termination timers when a search session closes, errors out, or is terminated explicitly so no orphaned timers remain
+* replace the ad-hoc `__ERROR__:` string rejection in `withTimeout` with a `TimeoutError` carrying `code = "ETIMEDOUT"` for consistent error branching
+* allow overriding the edit fuzzy match threshold through the `FS_MCP_EDIT_FUZZY_THRESHOLD` environment variable
+
+## [1.7.1] - 2026-05-22
+
+* republish a clean prepared project state after the 1.7.0 release pipeline
+
+## [1.7.0] - 2026-05-21
+
+* harden the npm publish preflight: enforce exact package version match and reject duplicate release uploads
+* tighten the publish workflow with stricter build and verification stages before npm release
+* extract release publishing into a dedicated reusable workflow stage
+
+## [1.6.9] - 2026-05-20
+
+* prepare the 1.6.9 release with refreshed verify scripts and tooling metadata
+
+## [1.6.8] - 2026-05-19
+
+* release version 1.6.8 with the npm publish preflight hardening series
+
+## [1.6.0] - 2026-05-18
+
+* remove the SQLite-backed context-index tools, schemas, controllers, services, tests, and catalog routing
+* drop automatic duplicate text compaction and implicit search result caps so callers keep `maxResults` control
 * remove the package self-dependency from runtime dependency metadata
+* compact tool output payloads so large MCP responses stay inline by default
+
+## [1.5.1] - 2026-05-16
+
+* preserve large filesystem payloads safely when responses approach transport limits
+* add token counts to tool result summaries so callers can budget context use
+* expose manual context index maintenance tools (later removed in 1.6.0)
+* keep large MCP responses inline by default for clients that cannot follow streamed chunks
 
 ## [1.4.2] - 2026-05-12
 
@@ -331,3 +364,11 @@
 ## \[ 1.7.1 \]
 
 - 2026-05-22 (15:38:25)
+
+## \[ 1.7.2 \]
+
+- 2026-05-22 (18:05:04)
+
+## \[ 1.7.3 \]
+
+- 2026-05-22 (18:06:05)

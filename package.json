@@ -4,7 +4,7 @@
   "description": "MCP server for file system operations",
   "publisher": "JUNGHO",
   "license": "Apache-2.0",
-  "version": "1.7.1",
+  "version": "1.7.3",
   "type": "module",
   "main": "./out/index.mjs",
   "exports": {
@@ -57,7 +57,8 @@
     "publish:npm": "npm publish --access public",
     "test": "bun tests/run-all-tests.js",
     "build": "bunx tsc --noEmit && shx rm -rf out && bunx swc src -d out --config-file ./.server.swcrc --strip-leading-paths && bunx tsc-alias -p tsconfig.json --outDir out -f -fe .js",
-    "verify": "bun run verify:source && bun run verify:shape && bun run verify:tools && bun run verify:reports",
+    "verify": "bun run verify:source && bun run verify:shape && bun run verify:tools && bun run verify:reports && bun run verify:docs",
+    "verify:docs": "bun tests/scripts/scripts-verify-doc-sync.mjs",
     "verify:reports": "bun tests/scripts/scripts-verify-optimization-reports.mjs",
     "verify:shape": "bun tests/scripts/scripts-verify-release-shape.mjs",
     "verify:source": "bunx tsc --noEmit",
