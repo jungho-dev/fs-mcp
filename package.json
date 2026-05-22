@@ -4,7 +4,7 @@
   "description": "MCP server for file system operations",
   "publisher": "JUNGHO",
   "license": "Apache-2.0",
-  "version": "1.6.9",
+  "version": "1.7.0",
   "type": "module",
   "main": "./out/index.mjs",
   "exports": {
@@ -52,11 +52,9 @@
     "file-operations"
   ],
   "scripts": {
-    "publish": "npm publish --access public",
-    "git": "bun ~/.bootstrap/bootstrap-sync.ts --git",
     "swc": "bun ~/.bootstrap/bootstrap-sync.ts --swc",
-    "sync": "bun ~/.bootstrap/bootstrap-sync.ts --sync",
-    "tools": "bun ~/.bootstrap/bootstrap-sync.ts --tools",
+    "publish": "npm publish --access public",
+    "publish:npm": "npm publish --access public",
     "test": "bun tests/run-all-tests.js",
     "build": "bunx tsc --noEmit && shx rm -rf out && bunx swc src -d out --config-file ./.server.swcrc --strip-leading-paths && bunx tsc-alias -p tsconfig.json --outDir out -f -fe .js",
     "verify": "bun run verify:source && bun run verify:shape && bun run verify:tools && bun run verify:reports",
