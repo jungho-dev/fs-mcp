@@ -28,6 +28,7 @@ interface PreservedTextPayload extends Record<string, unknown> {
 const BSIK = ["path", "file_path", "source", "destination", "args_path", "sessionId", "pid", "key", "name"];
 const LN_SPLT_PAT = /\r\n|\r|\n/;
 const WHTS_PAT = /\s+/g;
+const TEXT_PREVIEW_CHARS = 768;
 
 // 1. Is record ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -129,7 +130,28 @@ function preserveUnstructuredResultText(result: ServerResult, text: string): Ser
 function createResultTextPreview(text: string): string {
   const cmpcTxt = text.replace(WHTS_PAT, " ").trim();
 
-  return cmpcTxt;
+  if (cmpcTxt.length <= TEXT_PREVIEW_CHARS) {
+    return cmpcTxt;
+  }
+  return `${cmpcTxt.slice(0, TEXT_PREVIEW_CHARS)}... [truncated ${cmpcTxt.length - TEXT_PREVIEW_CHARS} chars]`;
+}
+
+// 10-1. Has structured text copy ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function hasStructuredTextCopy(result: ServerResult, text: string): boolean {
+  const strcCont = result.structuredContent;
+
+  return isRecord(strcCont) && strcCont.textContent === text;
+}
+
+// 10-2. Compact duplicate text item ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function compactDuplicateTextItem(item: ServerResult["content"][number]): ServerResult["content"][number] {
+  if (item.type !== "text" || typeof item.text !== "string" || item.text.length <= TEXT_PREVIEW_CHARS) {
+    return item;
+  }
+  return {
+    ...item,
+    text: `${item.text.slice(0, TEXT_PREVIEW_CHARS)}\n[truncated ${item.text.length - TEXT_PREVIEW_CHARS} chars; full text in structuredContent.textContent]`,
+  };
 }
 
 // 11. Compact batch result ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -137,7 +159,13 @@ function compactBatchResult(result: ServerResult): ServerResult {
   const originalText = extractTextContent(result);
   const prsrRes = preserveUnstructuredResultText(result, originalText);
 
-  return prsrRes;
+  if (!hasStructuredTextCopy(prsrRes, originalText)) {
+    return prsrRes;
+  }
+  return {
+    ...prsrRes,
+    content: prsrRes.content.map((item) => compactDuplicateTextItem(item)),
+  };
 }
 
 // 11-1. Create batch summary line ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――

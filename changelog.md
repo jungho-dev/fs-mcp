@@ -7,6 +7,9 @@
 * clear early-termination timers when a search session closes, errors out, or is terminated explicitly so no orphaned timers remain
 * replace the ad-hoc `__ERROR__:` string rejection in `withTimeout` with a `TimeoutError` carrying `code = "ETIMEDOUT"` for consistent error branching
 * allow overriding the edit fuzzy match threshold through the `FS_MCP_EDIT_FUZZY_THRESHOLD` environment variable
+* replace exact `gpt-tokenizer` result token counts with lightweight estimates to remove cold large-payload stalls
+* preview duplicate large text in batch and normalized envelopes while preserving full text in structured payloads
+* add `tests/scripts/performance-benchmark.mjs` for repeatable pure-shell, pure-Bun, fs-mcp, catalog, and normalization benchmarks
 
 ## [1.7.1] - 2026-05-22
 
@@ -372,3 +375,7 @@
 ## \[ 1.7.3 \]
 
 - 2026-05-22 (18:06:05)
+
+## \[ 1.7.4 \]
+
+- 2026-05-25 (21:02:59)

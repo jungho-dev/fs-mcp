@@ -33,13 +33,14 @@ function testTemplateLiteralDisplayFormat() {
   const mssnPlch = `${"$"}{missing}`;
 
   assert.equal(crtTlDsplTxt(output, `name=\${toolName}; result=\${status}; time=\${durationMs}; bytes=\${contents}`), "name=template_tool; result=success; time=0.001 sec; bytes=2 chars");
-  assert.equal(crtTlDsplTxt(output, `tokens=\${tokens}`), "tokens=2 token");
+  assert.equal(crtTlDsplTxt(output, `tokens=\${tokens}`), "tokens=1 token est");
   assert.equal(crtTlDsplTxt(output, `unknown=${mssnPlch}`), `unknown=${mssnPlch}`);
 }
 
 function testDisplayFormatsUnitsAndCommas() {
   const strcCont = { payload: "x".repeat(9017) };
-  const strcChrs = JSON.stringify(strcCont, null, 2).length;
+  const strcChrs = JSON.stringify(strcCont).length;
+  const tokenEst = Math.ceil((9045 + strcChrs) / 4);
 
   assert.equal(crtTlDsplTxt({
     data: {
@@ -50,7 +51,7 @@ function testDisplayFormatsUnitsAndCommas() {
     durationMs: 4000,
     status: "success",
     toolName: "format_tool",
-  }, `time=\${durationMs}; contents=\${contents}; structured=\${structuredText}; tokens=\${tokens}`), `time=4 sec; contents=9,045 chars; structured=${strcChrs.toLocaleString("en-US")} chars; tokens=2,268 token`);
+  }, `time=\${durationMs}; contents=\${contents}; structured=\${structuredText}; tokens=\${tokens}`), `time=4 sec; contents=9,045 chars; structured=${strcChrs.toLocaleString("en-US")} chars; tokens=${tokenEst.toLocaleString("en-US")} token est`);
 }
 
 function testDefaultDisplayPlacesMetricsInTemplateOrder() {
@@ -246,7 +247,7 @@ function testLargeDuplicateTextStaysUntrimmed() {
   const serialized = JSON.stringify(output);
 
   assert.equal(output.data.text, fullText);
-  assert.equal(output.data.content[0].text, fullText);
+  assert.equal(output.data.content[0].text.includes("full text in data.text"), true);
   assert.equal(output.data.structuredContent.textContent, fullText);
   assert.equal(output[indexKey], undefined);
   assert.equal(serialized.includes(indexErrorKey), false);

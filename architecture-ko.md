@@ -80,24 +80,23 @@ tests -> out
 
 ## Public Tool 조립
 
-`server-create-mcp-server.ts`는 네 module의 catalog를 합쳐 public surface를 구성합니다.
+`server-create-mcp-server.ts`는 네 module의 catalog를 합쳐 public surface를 구성합니다. Config와 process catalog는 현재 비어 있습니다.
 
 | Module | Count | Public tools |
 |--------|------:|--------------|
-| `tools-config.ts` | 1 | `set_config_values` |
+| `tools-config.ts` | 0 | none |
 | `tools-filesystem.ts` | 14 | `file-read`, `file-lines`, `file-write`, `dir-mk`, `dir-list`, `file-copy`, `file-move`, `file-remove`, `search-start`, `search-regex`, `search-get`, `search-stop`, `file-infos`, `file-edit` |
-| `tools-process.ts` | 1 | `interact_with_processes` |
+| `tools-process.ts` | 0 | none |
 | `tools-git.ts` | 6 | `git-cwd`, `git-status`, `git-diff`, `git-show`, `git-add`, `git-commit` |
 
-전체 public catalog 크기는 `22`개 tool입니다.
+전체 public catalog 크기는 `20`개 tool입니다.
 
 `tools-dispatcher.ts`는 대응되는 `call_tool` registry를 담당합니다. Catalog와 dispatcher는 같은 이름을
 노출해야 합니다. `tests/scripts/scripts-verify-tool-surface.mjs`는 name equality, uniqueness, essential git
 filtering, shared `args_path` 지원을 확인합니다.
 
 Git schema는 더 넓은 internal operation map을 정의하지만 `tools-git.ts`는 essential git name list로 public
-surface를 필터링합니다. 현재 public surface에는 별도 context-index, SQLite, MCP resource, config-read,
-process lifecycle tool family가 없습니다.
+surface를 필터링합니다. 현재 public surface에는 별도 context-index, SQLite, MCP resource, config, process tool family가 없습니다.
 
 ## 요청 및 Argument 흐름
 
@@ -132,15 +131,12 @@ caller가 `maxResults`를 제공한 경우에만 result cap을 적용합니다.
 
 ### Config
 
-`config-store.ts`는 in-memory default와 mutable runtime value를 materialize합니다. Public config surface는
-`set_config_values`를 통한 configuration update만 노출합니다. Read-only metadata는 runtime 내부에서 사용되지만
-현재 catalog의 public MCP tool은 아닙니다.
+`config-store.ts`는 in-memory default와 runtime value를 materialize합니다. Config state는 runtime 내부에 남아 있지만
+현재 catalog에서 config operation은 public MCP tool로 export하지 않습니다.
 
 ### Process
 
-현재 public process surface는 `interact_with_processes` 하나로 제한됩니다. 이 tool은 알려진 running process ID에
-stdin을 보냅니다. Process service module에는 policy, session, terminal, virtual-node behavior가 남아 있지만,
-process lifecycle control은 이번 catalog에서 public tool로 export되지 않습니다.
+현재 catalog에서 process operation은 public MCP tool로 export하지 않습니다. Process service module에는 runtime boundary에 필요한 policy, session, terminal, virtual-node behavior가 남을 수 있습니다.
 
 ### Git
 
@@ -159,12 +155,13 @@ Git call은 client-scoped git session 안에서 실행됩니다. `git-cwd`는 wo
 정규화된 contract는 세 layer입니다.
 
 - `createToolDisplayText`가 생성하는 표시용 `content[0].text`.
-- Schema version, tool name, status, duration, error detail, 원본 normalized content, combined text, 원본
+- Schema version, tool name, status, duration, error detail, preview 처리된 normalized content, combined text, 원본
   structured payload를 담는 machine-readable `structuredContent`.
 - Status, duration, content type, error text, schema version, tool name을 담는 compact `_meta.fsMcpResult`.
 
-기본 display row는 `tool`, `items`, `status`, `duration`, `tokens`, `contents`, `structuredText`입니다. Gemini
-client는 같은 display에서 ANSI escape sequence를 제거한 text를 받습니다.
+기본 display row는 `tool`, `items`, `status`, `duration`, `tokens`, `contents`, `structuredText`입니다. `tokens` row는
+큰 결과에서 tokenizer vocabulary를 load하지 않도록 문자 수 기반 추정치를 사용합니다. Gemini client는 같은
+display에서 ANSI escape sequence를 제거한 text를 받습니다.
 
 ## Runtime Configuration
 
@@ -187,21 +184,39 @@ client는 같은 display에서 ANSI escape sequence를 제거한 text를 받습�
 
 ## Performance And Safety Design
 
-- 현재 compiled catalog는 `22`개 tool을 노출합니다.
-- 현재 checkout에서 측정한 `list_tools` payload는 `24,721` chars입니다.
-- Tool description은 총 `6,088` chars, schema는 총 `17,266` chars입니다.
+- 현재 compiled catalog는 `20`개 tool을 노출합니다.
+- 현재 checkout에서 측정한 `list_tools` payload는 `24,003` chars입니다.
+- Tool description은 총 `5,613` chars, schema는 총 `15,568` chars입니다.
 - Tool catalog는 한 번 조립하고 input schema JSON은 lazy cache로 생성합니다.
 - Batch-capable tool은 `paths`, `items`, `sessionIds` 같은 array를 받습니다.
 - 큰 inline argument는 `args_path` 또는 tool-specific path-backed field로 전달할 수 있습니다.
+- Batch summary와 duplicated normalized `content` slot은 큰 text를 preview로 줄이고 full text는 `data.text` 또는
+  중첩 `structuredContent.textContent`에 보존합니다.
 - File operation은 configured timeout boundary와 feature-layer path resolution을 사용합니다.
 - Stdio transport는 MCP JSON output을 오염시키기 전에 우발적 output을 capture합니다.
 - 테스트는 npm에 배포되는 런타임 표면과 같은 compiled `out` tree를 검증합니다.
 
+`2026-05-24` 기준 측정된 optimization data입니다.
+
+| Measurement | Current result | Compared baseline | Design implication |
+|-------------|----------------|-------------------|--------------------|
+| 4 KB 파일 12개 `file-read` | 평균 `3.11 ms`, median `1.86 ms` | 순차 PowerShell read 평균 `2,617.42 ms`, median `2,579.75 ms` | Batch dispatch가 반복 process 및 tool-call overhead를 제거합니다. |
+| 4 KB 파일 20개 `args_path` `file-write` | transport `140` chars, `35` token est | Inline JSON payload `82,911` chars, `20,728` token est | Path-backed argument가 큰 payload를 prompt 크기 call argument 밖에 둡니다. |
+| 128 KB text result 정규화 | visible `498` chars, duplicated content `817` chars | Raw text body `131,072` chars | 표시 display는 compact하게 유지하고 full text는 machine-readable payload에 보존합니다. |
+
+Benchmark command는 `bun tests/scripts/performance-benchmark.mjs`와
+`bun tests/scripts/write-files-args-path-benchmark.mjs`입니다. Token estimate는 local `4` chars per token
+heuristic을 사용하므로 client-visible saving은 MCP host가 `content`와 `structuredContent`를 전달하는 방식에 따라
+달라집니다.
+
 ## Verification Boundary
 
-- `bun run verify`는 source, release-shape, tool-surface, optimization-report verification을 실행합니다.
-- `bun run test`는 `tests/run-all-tests.js`를 통해 contract 및 smoke test를 실행합니다.
+- `bun x tsc --noEmit`는 source TypeScript contract를 검증합니다.
+- `bun tests/run-all-tests.js`는 contract 및 smoke test를 실행합니다.
 - `tests/run-all-tests.js`는 `FS_MCP_SKIP_BUILD=1`이 설정되지 않은 경우 `out`을 다시 build합니다.
+- `tests/scripts/performance-benchmark.mjs`는 pure Bun read, sequential shell read, fs-mcp batch read,
+  list-tools payload size, large-result normalization을 비교합니다.
+- `tests/scripts/write-files-args-path-benchmark.mjs`는 inline payload transport와 `args_path` reference를 비교합니다.
 - `tests/scripts/scripts-verify-release-shape.mjs`는 release artifact shape와 binary shebang을 확인합니다.
 - `tests/scripts/scripts-verify-source-boundaries.mjs`는 source/test root boundary를 확인합니다.
 - `tests/scripts/scripts-verify-tool-surface.mjs`는 compiled catalog와 dispatcher registry를 비교합니다.

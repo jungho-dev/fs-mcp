@@ -234,7 +234,8 @@ function testLargeUnstructuredResultPreserved() {
   const batchResult = result.structuredContent.results[0].result;
 
   assert.match(batchResult.content[0].text, unstLnZrPat);
-  assert.match(batchResult.content[0].text, UNST_LN_PAT);
+  assert.match(batchResult.content[0].text, /full text in structuredContent\.textContent/);
+  assert.match(batchResult.structuredContent.textContent, UNST_LN_PAT);
 }
 
 // 8. Test create and list directory surface ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -480,7 +481,7 @@ async function testWriteMoveInfoAndEditSurface() {
   const lrgRdOtpt = parseToolOutput(lrgRdRes);
   const lrgRdBtRe = lrgRdOtpt.data.structuredContent.results;
   assert.equal(lrgRdBtRe[0].ok, true);
-  assert.equal(lrgRdOtpt.data.text.includes(TN_THSN_B), true);
+  assert.equal(lrgRdOtpt.data.text.includes("truncated"), true);
   assert.equal(lrgRdBtRe[0].result.structuredContent.textContent.includes(TN_THSN_B), true);
   assert.equal(JSON.stringify(lrgRdBtRe[0].result).includes("previewOnly"), false);
 

@@ -81,24 +81,24 @@ tests -> out
 
 ## Public Tool Assembly
 
-`server-create-mcp-server.ts` builds one catalog from four modules:
+`server-create-mcp-server.ts` builds one catalog from four modules. Config and process catalogs are currently empty:
 
 | Module | Count | Public tools |
 |--------|------:|--------------|
-| `tools-config.ts` | 1 | `set_config_values` |
+| `tools-config.ts` | 0 | none |
 | `tools-filesystem.ts` | 14 | `file-read`, `file-lines`, `file-write`, `dir-mk`, `dir-list`, `file-copy`, `file-move`, `file-remove`, `search-start`, `search-regex`, `search-get`, `search-stop`, `file-infos`, `file-edit` |
-| `tools-process.ts` | 1 | `interact_with_processes` |
+| `tools-process.ts` | 0 | none |
 | `tools-git.ts` | 6 | `git-cwd`, `git-status`, `git-diff`, `git-show`, `git-add`, `git-commit` |
 
-Total public catalog size: `22` tools.
+Total public catalog size: `20` tools.
 
 `tools-dispatcher.ts` owns the matching `call_tool` registry. The catalog and dispatcher must expose the same
 names. `tests/scripts/scripts-verify-tool-surface.mjs` checks name equality, uniqueness, essential git filtering,
 and shared `args_path` support.
 
 Git schemas define a broader internal operation map, but `tools-git.ts` filters the public surface through the
-essential git name list. The current public surface has no separate context-index, SQLite, MCP resource, config-read,
-or process lifecycle tool family.
+essential git name list. The current public surface has no separate context-index, SQLite, MCP resource, config,
+or process tool family.
 
 ## Request And Argument Flow
 
@@ -133,15 +133,13 @@ a result cap when callers provide `maxResults`.
 
 ### Config
 
-`config-store.ts` materializes in-memory defaults and mutable runtime values. The public config surface only updates
-configuration through `set_config_values`. Read-only metadata still exists inside the config feature for runtime use,
-but it is not a public MCP tool in this catalog.
+`config-store.ts` materializes in-memory defaults and runtime values. Config state still exists inside the runtime,
+but no config operation is exported as a public MCP tool in this catalog.
 
 ### Process
 
-The current public process surface is limited to `interact_with_processes`, which sends stdin to known running process
-IDs. Process service modules still contain policy, session, terminal, and virtual-node behavior used by the runtime
-boundary, but process lifecycle controls are not exported as public tools in this catalog.
+No process operation is exported as a public MCP tool in this catalog. Process service modules can still contain
+policy, session, terminal, and virtual-node behavior used by runtime boundaries.
 
 ### Git
 
@@ -159,12 +157,13 @@ and optional `_meta`.
 The normalized contract has three layers:
 
 - Visible `content[0].text` from `createToolDisplayText`.
-- Machine-readable `structuredContent` with schema version, tool name, status, duration, error detail, original
+- Machine-readable `structuredContent` with schema version, tool name, status, duration, error detail, previewed
   normalized content, combined text, and original structured payload.
 - Compact `_meta.fsMcpResult` with status, duration, content types, error text, schema version, and tool name.
 
 The default display rows are `tool`, `items`, `status`, `duration`, `tokens`, `contents`, and `structuredText`.
-Gemini clients receive the same display without ANSI escape sequences.
+The `tokens` row is a character-based estimate so large results do not load tokenizer vocabularies during response
+normalization. Gemini clients receive the same display without ANSI escape sequences.
 
 ## Runtime Configuration
 
@@ -187,21 +186,38 @@ Gemini clients receive the same display without ANSI escape sequences.
 
 ## Performance And Safety Design
 
-- Current compiled catalog exposes `22` tools.
-- Current measured `list_tools` payload is `24,721` characters in this checkout.
-- Tool descriptions total `6,088` characters and schemas total `17,266` characters in this checkout.
+- Current compiled catalog exposes `20` tools.
+- Current measured `list_tools` payload is `24,003` characters in this checkout.
+- Tool descriptions total `5,613` characters and schemas total `15,568` characters in this checkout.
 - Tool catalogs are assembled once and input schema JSON is generated through lazy cache.
 - Batch-capable tools accept arrays such as `paths`, `items`, and `sessionIds`.
 - Large inline arguments can be passed through `args_path` or specific path-backed fields.
+- Batch summaries and duplicated normalized `content` slots preview large text while retaining full text in
+  `data.text` or nested `structuredContent.textContent`.
 - File operations use configured timeout boundaries and feature-layer path resolution.
 - Stdio transport captures accidental output before it can corrupt MCP JSON output.
 - Tests exercise the compiled `out` tree, which is the runtime surface published to npm.
 
+Measured optimization data from `2026-05-24`:
+
+| Measurement | Current result | Compared baseline | Design implication |
+|-------------|----------------|-------------------|--------------------|
+| `file-read` over 12 files, 4 KB each | `3.11 ms` average, `1.86 ms` median | Sequential PowerShell reads at `2,617.42 ms` average, `2,579.75 ms` median | Batch dispatch removes repeated process and tool-call overhead. |
+| `file-write` 20 files, 4 KB each through `args_path` | `140` transport chars, `35` token est | Inline JSON payload at `82,911` chars, `20,728` token est | Path-backed arguments keep large payloads outside prompt-sized call arguments. |
+| Normalizing one 128 KB text result | `498` visible chars and `817` duplicated content chars | Raw text body at `131,072` chars | The visible display stays compact while full text remains machine-readable. |
+
+The benchmark commands are `bun tests/scripts/performance-benchmark.mjs` and
+`bun tests/scripts/write-files-args-path-benchmark.mjs`. Token estimates use the local `4` characters per token
+heuristic, so client-visible savings depend on how the MCP host forwards `content` and `structuredContent`.
+
 ## Verification Boundary
 
-- `bun run verify` runs source, release-shape, tool-surface, and optimization-report verification.
-- `bun run test` runs contract and smoke tests through `tests/run-all-tests.js`.
+- `bun x tsc --noEmit` validates the source TypeScript contract.
+- `bun tests/run-all-tests.js` runs contract and smoke tests.
 - `tests/run-all-tests.js` rebuilds `out` unless `FS_MCP_SKIP_BUILD=1` is set.
+- `tests/scripts/performance-benchmark.mjs` compares pure Bun reads, sequential shell reads, fs-mcp batch reads,
+  list-tools payload size, and large-result normalization.
+- `tests/scripts/write-files-args-path-benchmark.mjs` compares inline payload transport with `args_path` references.
 - `tests/scripts/scripts-verify-release-shape.mjs` checks release artifact shape and binary shebang.
 - `tests/scripts/scripts-verify-source-boundaries.mjs` checks source and test root boundaries.
 - `tests/scripts/scripts-verify-tool-surface.mjs` compares the compiled catalog and dispatcher registry.

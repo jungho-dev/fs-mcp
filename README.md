@@ -3,8 +3,7 @@
 ## Overview
 
 `@jungho-dev/fs-mcp` is a stdio-based Model Context Protocol server for local file work, batched
-search, exact block editing, runtime configuration updates, process stdin interaction, and essential
-git workflows.
+search, exact block editing, and essential git workflows.
 
 This package is the MCP server runtime. It is not a VS Code extension bundle, does not require a
 specific AI client, and does not open a network listener. Any MCP-capable client that can launch a
@@ -13,6 +12,27 @@ Gemini CLI, and GitHub Copilot.
 
 The current runtime does not include a SQLite sidecar, context-index store, or MCP resource catalog.
 Resource and resource-template handlers intentionally return empty lists for client compatibility.
+
+## Measured Performance And Token Savings
+
+The practical baseline for AI file work is often repeated shell calls that each pay process and tool-call overhead.
+Current benchmarks show where `fs-mcp` reduces that overhead while keeping full payloads available to the client.
+
+| Scenario | `fs-mcp` path | Baseline | Measured effect |
+|----------|---------------|----------|-----------------|
+| Read 12 files, 4 KB each | One `file-read` batch: `3.11 ms` avg, `1.86 ms` median | Sequential PowerShell reads: `2,617.42 ms` avg, `2,579.75 ms` median | About `842x` faster by average time and `1,387x` faster by median time |
+| Write 20 files, 4 KB each | `args_path` reference: `140` transport chars, `35` token est | Inline JSON payload: `82,911` transport chars, `20,728` token est | `99.83%` fewer transport chars and `20,693` estimated tokens avoided |
+| Normalize one 128 KB text result | Visible display: `498` chars; duplicated `content` slots: `817` chars | Raw text body: `131,072` chars | Full text stays in `data.text` while repeated visible text is kept to a preview |
+
+Numbers above were generated on `2026-05-24` from this checkout with seven runs per timed scenario:
+
+```bash
+bun tests/scripts/performance-benchmark.mjs
+bun tests/scripts/write-files-args-path-benchmark.mjs
+```
+
+Token estimates use the project heuristic of `4` characters per token. Actual model billing depends on the client and
+whether it forwards only `content[0].text` or also injects `structuredContent` into model context.
 
 ## Installation
 
@@ -58,22 +78,20 @@ If a client cannot resolve global binaries, set `command` to the absolute `fs-mc
 
 ## Current Public Tool Surface
 
-The current source and compiled runtime expose 22 public tools. Tool names are intentionally short,
+The current source and compiled runtime expose 20 public tools. Tool names are intentionally short,
 hyphenated for filesystem/search/git surfaces, and stable for clients that cache MCP catalogs.
 
 | Domain | Tools | Purpose |
 |--------|-------|---------|
-| Config | `set_config_values` | Update mutable in-memory configuration values. |
 | Filesystem | `file-read`, `file-lines`, `file-write`, `file-infos` | Read, line-read, write, and inspect files. |
 | Directories | `dir-list`, `dir-mk` | List directory trees and create directories. |
 | File operations | `file-copy`, `file-move`, `file-remove`, `file-edit` | Copy, move, remove, and exact-edit files or directories. |
 | Search | `search-regex`, `search-start`, `search-get`, `search-stop` | Run direct regex scans or manage paged search sessions. |
-| Process | `interact_with_processes` | Send stdin to known running process IDs. |
 | Git | `git-cwd`, `git-status`, `git-diff`, `git-show`, `git-add`, `git-commit` | Pin repo state, inspect changes, stage, and commit. |
 
 `src/schemas/schemas-git.ts` contains schemas for additional git operations, but `src/tools/tools-git.ts`
-exports only the essential git set above in this version. Config read tools and process start/read/list/kill
-controls are outside the current public catalog.
+exports only the essential git set above in this version. Config tools and process controls are outside the current
+public catalog.
 
 ## Main Capabilities
 
@@ -81,8 +99,6 @@ controls are outside the current public catalog.
   deletion, and exact block replacement.
 - Direct ripgrep-compatible regex search and asynchronous search sessions with pagination and stop controls.
 - Optional DOCX text extraction for content searches when the target inputs or patterns include `.docx`.
-- Runtime configuration updates for supported mutable keys.
-- Process stdin interaction for existing running process IDs.
 - Essential git session workflows for repository pinning, status, diff, show, staging, and commit.
 - Normalized tool responses with a visible display block, machine-readable `structuredContent`, and compact
   `_meta.fsMcpResult` metadata.
@@ -95,13 +111,10 @@ one multi-item call. This applies to:
 - File reads through `paths` or `items`.
 - Directory and file operations through `items` or `paths` arrays.
 - Search work through `search-regex.items`, `search-start.items`, `search-get.items`, and `search-stop.sessionIds`.
-- Process input through `interact_with_processes.items`.
-- Configuration updates through `set_config_values.items`.
 
 Large arguments can be moved into a UTF-8 JSON file and passed with `args_path`. Inline fields supplied beside
 `args_path` override fields from the referenced JSON object. Large text payloads can also use path-backed fields
-such as `content_path`, `old_string_path`, `new_string_path`, `pattern_path`, `input_path`, `messagePath`, and
-`value_path`.
+such as `content_path`, `old_string_path`, `new_string_path`, `pattern_path`, and `messagePath`.
 
 `file-read`, `file-lines`, `dir-list`, and `file-infos` accept `allowMissing=true` so exploratory candidate reads
 can return missing local paths as non-error results.
@@ -110,10 +123,10 @@ can return missing local paths as non-error results.
 
 Current compiled catalog metrics from this checkout:
 
-- Tool count: `22`.
-- `list_tools` payload: `24,721` characters.
-- Tool descriptions: `6,088` characters.
-- Tool schemas: `17,266` characters.
+- Tool count: `20`.
+- `list_tools` payload: `24,003` characters.
+- Tool descriptions: `5,613` characters.
+- Tool schemas: `15,568` characters.
 
 Runtime behavior:
 
@@ -121,14 +134,15 @@ Runtime behavior:
 - Zod-to-JSON-schema conversion is lazy-cached per tool entry.
 - Tool calls resolve `args_path`, `args_offset`, and `args_length` before controller validation.
 - Search sessions have no implicit `maxResults` cap. Set `maxResults` explicitly when a bounded scan is needed.
-- Large duplicate text is not automatically compacted; normalized responses preserve handler output.
+- Large duplicate text is previewed in duplicated envelope slots; full text remains in `data.text` or
+  `structuredContent.textContent`.
 - Stdio filtering captures accidental console output before it can corrupt MCP JSON-RPC frames.
 
 ## Runtime Configuration
 
 Runtime configuration is in memory only. The server does not create a first-run config file.
 
-Mutable configuration keys are:
+Internal runtime configuration keys are:
 
 - `allowedDirectories`
 - `blockedCommands`
@@ -165,29 +179,32 @@ Every dispatched tool result is normalized by `src/cores/responses/responses-too
 
 - Visible `content[0].text` is generated by `src/cores/responses/responses-tool-display.ts`.
 - The default visible rows are `tool`, `items`, `status`, `duration`, `tokens`, `contents`, and `structuredText`.
-- `tokens` uses `gpt-tokenizer` over the visible combined text plus serialized structured content.
+- `tokens` uses a lightweight character-based estimate over visible combined text plus serialized structured content.
 - `structuredContent` stores schema version, tool name, status, duration, error detail, original normalized content,
   combined text, and original structured payload.
+- Large duplicated text fields use previews in repeated `content` slots while preserving the full text in
+  `data.text` or nested `structuredContent.textContent`.
 - `_meta.fsMcpResult` stores compact status, duration, content type, error, schema, and tool metadata.
 - Already normalized results are not wrapped again; the visible display text is regenerated.
 
 ## Development
 
-Current package scripts use Bun:
+Current development checks use Bun:
 
 ```bash
-bun run build
-bun run verify
-bun run test
+bun x tsc --noEmit
+bun tests/run-all-tests.js
+bun tests/scripts/performance-benchmark.mjs
+bun tests/scripts/write-files-args-path-benchmark.mjs
 ```
 
 Useful scoped checks:
 
 ```bash
-bun run verify:source
-bun run verify:shape
-bun run verify:tools
-bun run verify:reports
+bun tests/scripts/scripts-verify-release-shape.mjs
+bun tests/scripts/scripts-verify-tool-surface.mjs
+bun tests/scripts/scripts-verify-optimization-reports.mjs
+bun tests/scripts/scripts-verify-doc-sync.mjs
 ```
 
 `tests/run-all-tests.js` rebuilds `out` unless `FS_MCP_SKIP_BUILD=1` is set, then runs contract and smoke tests.

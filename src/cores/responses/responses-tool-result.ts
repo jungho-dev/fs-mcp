@@ -40,7 +40,9 @@ export declare interface ToolResponseOptions {
   structuredContent?: ServerResult["structuredContent"];
 }
 const DSTP = /<\|endoftext\|>/g;
+const DST = "<|endoftext|>";
 const DSTR = "<|endoftext |>";
+const TEXT_PREVIEW_CHARS = 768;
 
 // 1. Normalize content item ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function normalizeContentItem(item: SrvrResCont): SrvrResCont {
@@ -76,7 +78,7 @@ function createCombinedText(content: SrvrResCont[]): string {
 
 // 3-1. Sanitize text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function sanitizeText(value: string): string {
-  return value.replace(DSTP, DSTR);
+  return value.includes(DST) ? value.replace(DSTP, DSTR) : value;
 }
 
 // 3-2. Sanitize JSON value ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -85,12 +87,50 @@ function sanitizeJson(value: unknown): unknown {
     return sanitizeText(value);
   }
   if (Array.isArray(value)) {
-    return value.map((item) => sanitizeJson(item));
+    let changed = false;
+    const sanitized = value.map((item) => {
+      const nextItem = sanitizeJson(item);
+      changed ||= nextItem !== item;
+      return nextItem;
+    });
+
+    return changed ? sanitized : value;
   }
   if (typeof value === "object" && value !== null) {
-    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, sanitizeJson(item)]));
+    let changed = false;
+    const entries = Object.entries(value).map(([key, item]) => {
+      const nextItem = sanitizeJson(item);
+      changed ||= nextItem !== item;
+      return [key, nextItem];
+    });
+
+    return changed ? Object.fromEntries(entries) : value;
   }
   return value;
+}
+
+// 3-3. Create text preview ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function createTextPreview(value: string): string {
+  if (value.length <= TEXT_PREVIEW_CHARS) {
+    return value;
+  }
+  return `${value.slice(0, TEXT_PREVIEW_CHARS)}\n[truncated ${value.length - TEXT_PREVIEW_CHARS} chars; full text in data.text]`;
+}
+
+// 3-4. Compact output content item ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function compactOutputContentItem(item: SrvrResCont): SrvrResCont {
+  if (item.type !== "text" || typeof item.text !== "string" || item.text.length <= TEXT_PREVIEW_CHARS) {
+    return item;
+  }
+  return {
+    ...item,
+    text: createTextPreview(item.text),
+  };
+}
+
+// 3-5. Compact output content ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function compactOutputContent(content: SrvrResCont[]): SrvrResCont[] {
+  return content.map((item) => compactOutputContentItem(item));
 }
 
 // 4. Create error details ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -127,7 +167,7 @@ function createStandardOutput(toolName: string, result: ServerResult, content: S
   const text = createCombinedText(content);
   const stndOtpt: StandardToolOutput = {
     data: {
-      content,
+      content: compactOutputContent(content),
       structuredContent: strcCont,
       text,
     },

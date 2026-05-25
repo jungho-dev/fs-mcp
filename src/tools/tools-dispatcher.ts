@@ -6,12 +6,10 @@
  */
 
 import type {ServerResult} from "@assets/type/common";
-import {handleSetConfigValues as hndStCfVa} from "@controllers/controllers-config";
 import {handleEditBlocks as hndlEdtBlck2} from "@controllers/controllers-edit";
 import {handleCopyFiles as hndlCpyFls, handleCreateDirectories as hndlCrtDrct, handleGetFileInfos as hndlGtFlInfs, handleListDirectories as hndlLstDrct, handleMoveFiles as hndlMvFls, handleReadFiles as hndlRdFls, handleRemoveFiles as hndlRmvFls, handleWriteFiles as hndlWrtFls, handleReadFilesWithLineNumber as hndRdFlLn} from "@controllers/controllers-filesystem";
 import {handleGitTool as hndlGtTl} from "@controllers/controllers-git";
 import {handleGetFullSearchResults as hndGtFlSrRe, handleRegexSearches as hndlRgxSrch, handleStopSearches as hndlStpSrch, handleStartSearches as hndlStrtSrch} from "@controllers/controllers-search";
-import {handleInteractWithProcesses as hndInWtPr} from "@controllers/controllers-terminal";
 import {createErrorResponse as crtErrRes} from "@cores/responses/responses-error";
 import {normalizeToolResult as nrmlTlRes} from "@cores/responses/responses-tool-result";
 import {readTextSliceInternal as rdTxtSlcInt} from "@features/filesystem/filesystem-service";
@@ -129,8 +127,6 @@ const GT_TL_DSPT = Object.fromEntries(
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export const TL_DSPT: Readonly<Record<string, ToolDispatchHandler>> = {
-  set_config_values: (args: unknown) => hndStCfVa(args),
-  interact_with_processes: (args: unknown) => hndInWtPr(args),
   "file-read": (args: unknown) => hndlRdFls(args),
   "file-lines": (args: unknown) => hndRdFlLn(args),
   "file-write": (args: unknown) => hndlWrtFls(args),

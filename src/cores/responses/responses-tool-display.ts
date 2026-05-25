@@ -7,7 +7,6 @@
 
 import type { ServerResult, ServerResponseContent as SrvrResCont } from "@assets/type/common";
 import {curClnt} from "@features/config/config-client";
-import {countTokens as cntTkns} from "gpt-tokenizer";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 type ToolDisplayStatus = "success" | "error";
@@ -79,17 +78,18 @@ const scndFrmt = new Intl.NumberFormat(`en-US`, {
   minimumFractionDigits: 0,
 });
 const ANSI_ESC_PAT = /\u001B\[[0-?]*[ -/]*[@-~]/g;
+const TKN_CHR_RT = 4;
 
-// 1. Stringify display structured content ―――――――――――――――――――――――――――――――――――――――――――――――――――――
-function stringifyDisplayStructuredContent(value: ServerResult["structuredContent"] | null): string {
+// 1. Measure display structured content ―――――――――――――――――――――――――――――――――――――――――――――――――――――
+function measureDisplayStructuredContent(value: ServerResult["structuredContent"] | null): number {
   if (value === null || value === undefined) {
-    return "";
+    return 0;
   }
   try {
-    return JSON.stringify(value, null, 2) ?? String(value);
+    return (JSON.stringify(value) ?? String(value)).length;
   }
   catch {
-    return String(value);
+    return String(value).length;
   }
 }
 
@@ -124,27 +124,33 @@ function formatDisplayDuration(duration: number | null | undefined, unit: string
   return `${scndFrmt.format(duration / 1000)} ${unit}`;
 }
 
-// 5. Count display tokens ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function countDisplayTokens(value: string): number {
-  return cntTkns(value);
+// 5. Estimate display tokens ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function estimateDisplayTokens(textChars: number, structuredChars: number): number {
+  const totalChars = textChars + structuredChars;
+
+  if (totalChars === 0) {
+    return 0;
+  }
+  return Math.ceil(totalChars / TKN_CHR_RT);
 }
 
 // 6. Create tool display values ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createToolDisplayValues(output: ToolDisplayOutput): ToolDisplayTemplateValues {
-  const strcTxt = stringifyDisplayStructuredContent(output.data.structuredContent);
-  const tokenCount = countDisplayTokens(`${output.data.text}\n${strcTxt}`);
+  const strcTxtChrs = measureDisplayStructuredContent(output.data.structuredContent);
+  const itemCount = itemsDisplayItems(output);
+  const tokenCount = estimateDisplayTokens(output.data.text.length, strcTxtChrs);
 
   return {
     tool: output.toolName,
     toolName: output.toolName,
-    items: itemsDisplayItems(output),
-    count: itemsDisplayItems(output),
+    items: itemCount,
+    count: itemCount,
     status: output.status,
     duration: formatDisplayDuration(output.durationMs, `sec`),
     durationMs: formatDisplayDuration(output.durationMs, `sec`),
-    tokens: formatDisplayNumber(tokenCount, `token`),
+    tokens: formatDisplayNumber(tokenCount, `token est`),
     contents: formatDisplayNumber(output.data.text.length, `chars`),
-    structuredText: formatDisplayNumber(strcTxt.length, `chars`),
+    structuredText: formatDisplayNumber(strcTxtChrs, `chars`),
   };
 }
 

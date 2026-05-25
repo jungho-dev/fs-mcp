@@ -12,7 +12,6 @@ import {PROCESS_TOOL_CATALOG as PROC_TL_CTLG} from "../../out/tools/tools-proces
 const __filename = flUrlTPth2(import.meta.url);
 
 const EXP_TL_NMS = [
-  "set_config_values",
   "file-read",
   "file-lines",
   "file-write",
@@ -27,11 +26,9 @@ const EXP_TL_NMS = [
   "search-stop",
   "file-infos",
   "file-edit",
-  "interact_with_processes",
 ];
 
 const BFTN = [
-  "set_config_values",
   "file-read",
   "file-lines",
   "file-write",
@@ -46,7 +43,6 @@ const BFTN = [
   "search-stop",
   "file-infos",
   "file-edit",
-  "interact_with_processes",
 ];
 
 const APPTN = [
