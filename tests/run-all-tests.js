@@ -36,8 +36,10 @@ const TEST_GROUPS = {
   smoke: [
     "./smoke/config/allowed-directories.test.js",
     "./smoke/edit/edit-block-basic.test.js",
+    "./smoke/edit/edit-lines-basic.test.js",
     "./smoke/filesystem/file-handlers.test.js",
     "./smoke/git/git-basic.test.js",
+    "./smoke/inspect/fs-inspect-basic.test.js",
     "./smoke/process/list-processes.test.js",
     "./smoke/process/virtual-node-session.test.js",
     "./smoke/search/search-code.test.js",

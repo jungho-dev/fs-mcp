@@ -5,7 +5,7 @@
  * @since 2026-05-03
  */
 
-import { AT_EXCL_PATS, normalizeCommitMessage as nrmlCmmtMsg, requireGitTextArgument as rqrGtTxtArg, runGitCommand as rnGtCmd, splitLines } from "@features/git/git-runtime";
+import { AT_EXCL_PATS, normalizeCommitMessage as nrmlCmmtMsg, runGitCommand as rnGtCmd, requireGitTextArgument as rqrGtTxtArg, splitLines } from "@features/git/git-runtime";
 import { getHeadCommit as gtHdCmmt, resolveRepositoryPath as rslvRepoPth } from "@features/git/git-session";
 import { detectAutoExcludedFiles as dtcAtExFl, getStatusSummary as gtStatSmmr, sumNumstat, toSnakeStatus as tSnkStat } from "@features/git/git-status-support";
 import type { GitArgsMap, GitToolOutput as GtTlOtpt } from "@features/git/git-types";
@@ -62,7 +62,9 @@ export async function runGitCommit(input: GitArgsMap["git-commit"]): Promise<GtT
   if (input.filesToStage && input.filesToStage.length > 0) {
     await rnGtCmd(["add", ...input.filesToStage], { cwd });
   }
-  const commitArgs = ["commit", "-m", normCmmtMsg, ...(input.amend ? ["--amend"] : []), ...(input.allowEmpty ? ["--allow-empty"] : []), ...(input.noVerify ? ["--no-verify"] : []), ...(input.author ? ["--author", `${input.author.name} <${input.author.email}>`] : [])];
+  // Inject committer identity so commit works without local git config.
+  // `--author` overrides AUTHOR only; COMMITTER must come from -c, git config, or env.
+  const commitArgs = ["-c", "user.name=fs-mcp", "-c", "user.email=fs-mcp@example.invalid", "commit", "-m", normCmmtMsg, ...(input.amend ? ["--amend"] : []), ...(input.allowEmpty ? ["--allow-empty"] : []), ...(input.noVerify ? ["--no-verify"] : []), ...(input.author ? ["--author", `${input.author.name} <${input.author.email}>`] : [])];
   let sgnnWrnn: string | undefined;
   let commitResult = await rnGtCmd(commitArgs, { cwd, allowFailure: true });
 

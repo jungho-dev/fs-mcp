@@ -26,6 +26,8 @@ const EXP_TL_NMS = [
   "search-stop",
   "file-infos",
   "file-edit",
+  "file-edit-lines",
+  "fs-inspect",
 ];
 
 const BFTN = [
@@ -43,6 +45,7 @@ const BFTN = [
   "search-stop",
   "file-infos",
   "file-edit",
+  "file-edit-lines",
 ];
 
 const APPTN = [

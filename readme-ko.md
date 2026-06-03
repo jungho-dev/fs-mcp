@@ -77,14 +77,15 @@ client가 전역 binary를 찾지 못하면 `command`를 절대 경로의 `fs-mc
 
 ## 현재 Public Tool Surface
 
-현재 source와 compiled runtime은 20개 public tool을 노출합니다. Filesystem/search/git 표면은 짧은
+현재 source와 compiled runtime은 22개 public tool을 노출합니다. Filesystem/search/git 표면은 짧은
 hyphen 이름을 사용하고, client가 MCP catalog를 cache해도 안정적으로 동작하도록 public 이름을 고정합니다.
 
 | Domain | Tools | Purpose |
 |--------|-------|---------|
 | Filesystem | `file-read`, `file-lines`, `file-write`, `file-infos` | 파일 읽기, line read, 쓰기, metadata 확인. |
 | Directories | `dir-list`, `dir-mk` | directory tree 조회 및 directory 생성. |
-| File operations | `file-copy`, `file-move`, `file-remove`, `file-edit` | copy, move, remove, exact edit. |
+| File operations | `file-copy`, `file-move`, `file-remove`, `file-edit`, `file-edit-lines` | copy, move, remove, exact edit, 1-based line range edit. |
+| Inspect | `fs-inspect` | count-files, search, json-pick, snippet, git-status를 한 호출에 묶는 read-only 조회. |
 | Search | `search-regex`, `search-start`, `search-get`, `search-stop` | direct regex scan 및 paged search session 관리. |
 | Git | `git-cwd`, `git-status`, `git-diff`, `git-show`, `git-add`, `git-commit` | repo pinning, inspect, stage, commit. |
 
@@ -93,8 +94,9 @@ hyphen 이름을 사용하고, client가 MCP catalog를 cache해도 안정적으
 
 ## 주요 기능
 
-- 파일 read, write, list, metadata, directory create, copy, move, remove, exact block replacement의
-  batch-first 처리.
+- 파일 read, write, list, metadata, directory create, copy, move, remove, exact block replacement,
+  1-based line range edit의 batch-first 처리.
+- count-files, search, json-pick, snippet, git-status를 한 round-trip에 묶는 `fs-inspect` composite 조회.
 - Ripgrep-compatible direct regex search와 pagination/stop control을 갖춘 asynchronous search session.
 - `.docx` 입력 또는 pattern을 대상으로 할 때 선택적으로 병합되는 DOCX text extraction.
 - Repository pinning, status, diff, show, staging, commit 중심의 essential git session workflow.
@@ -122,10 +124,10 @@ local path를 실패가 아닌 missing 결과로 반환할 수 있습니다.
 
 현재 checkout의 compiled catalog metric입니다.
 
-- Tool count: `20`.
-- `list_tools` payload: `24,003` chars.
-- Tool description: `5,613` chars.
-- Tool schema: `15,568` chars.
+- Tool count: `22`.
+- `list_tools` payload: `27,707` chars.
+- Tool description: `6,606` chars.
+- Tool schema: `17,988` chars.
 
 Runtime 동작:
 
@@ -133,8 +135,8 @@ Runtime 동작:
 - Zod-to-JSON-schema 변환은 tool entry별 lazy cache로 수행합니다.
 - Tool call은 controller validation 전에 `args_path`, `args_offset`, `args_length`를 해석합니다.
 - Search session에는 암묵적 `maxResults` cap이 없습니다. 제한된 scan이 필요하면 `maxResults`를 명시합니다.
-- 큰 중복 text는 반복되는 envelope slot에서 preview로 줄이고, full text는 `data.text` 또는
-  `structuredContent.textContent`에 보존합니다.
+- 기본값인 compact envelope에서 본문은 `data.content`에 한 번만 담기고 `data.text` 복제는 생략됩니다.
+  `FS_MCP_COMPACT=0`으로 끄면 `data.text`가 복원됩니다.
 - Stdio filtering은 우발적 console output이 MCP JSON-RPC frame을 오염시키기 전에 capture합니다.
 
 ## Runtime Configuration
@@ -148,7 +150,8 @@ Runtime configuration은 in-memory only입니다. 서버는 first-run config fil
 - `defaultShell`
 
 `FS_MCP_ALLOWED_DIRECTORIES`로 allowed directory를 초기화할 수 있습니다. Windows에서는 semicolon으로
-entry를 구분합니다.
+entry를 구분합니다. `FS_MCP_COMPACT=0`은 compact envelope를 끄고 `data.text` 복제를 복원합니다.
+`FS_MCP_TOOL_PROFILE=fast-coding`은 `tools/list`를 `fs-inspect`로만 좁힙니다.
 
 ## Client 호환성
 
@@ -179,11 +182,12 @@ project root/
 
 - 표시용 `content[0].text`는 `src/cores/responses/responses-tool-display.ts`에서 생성합니다.
 - 기본 표시 row는 `tool`, `items`, `status`, `duration`, `tokens`, `contents`, `structuredText`입니다.
-- `tokens`는 visible combined text와 serialized structured content를 문자 수 기반 경량 추정치로 표시합니다.
+- `tokens`는 content text와 serialized structured content를 문자 수 기반 경량 추정치로 표시합니다.
 - `structuredContent`는 schema version, tool name, status, duration, error detail, 원본 normalized content,
-  combined text, 원본 structured payload를 저장합니다.
-- 큰 중복 text field는 반복되는 `content` slot에서 preview를 사용하고, full text는 `data.text` 또는
-  중첩 `structuredContent.textContent`에 보존합니다.
+  원본 structured payload를 저장합니다.
+- 기본값인 compact envelope에서 본문은 `data.content`에 한 번만 담기고 `data.text` 복제는 생략됩니다.
+  Batch per-item result는 `structuredContent`와 `isError`만 담고 256 byte 초과 input 문자열은
+  `<N bytes elided>`로 echo됩니다. `FS_MCP_COMPACT=0`으로 끄면 이전 형태가 복원됩니다.
 - `_meta.fsMcpResult`는 status, duration, content type, error, schema, tool metadata를 compact하게 저장합니다.
 - 이미 정규화된 result는 다시 감싸지 않고 표시 text만 재생성합니다.
 

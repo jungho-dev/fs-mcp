@@ -86,11 +86,12 @@ tests -> out
 | Module | Count | Public tools |
 |--------|------:|--------------|
 | `tools-config.ts` | 0 | none |
-| `tools-filesystem.ts` | 14 | `file-read`, `file-lines`, `file-write`, `dir-mk`, `dir-list`, `file-copy`, `file-move`, `file-remove`, `search-start`, `search-regex`, `search-get`, `search-stop`, `file-infos`, `file-edit` |
+| `tools-filesystem.ts` | 16 | `file-read`, `file-lines`, `file-write`, `dir-mk`, `dir-list`, `file-copy`, `file-move`, `file-remove`, `search-start`, `search-regex`, `search-get`, `search-stop`, `file-infos`, `file-edit`, `file-edit-lines`, `fs-inspect` |
 | `tools-process.ts` | 0 | none |
 | `tools-git.ts` | 6 | `git-cwd`, `git-status`, `git-diff`, `git-show`, `git-add`, `git-commit` |
 
-Total public catalog size: `20` tools.
+Total public catalog size: `22` tools. `FS_MCP_TOOL_PROFILE=fast-coding` narrows `tools/list` to `fs-inspect`
+while dispatch compatibility keeps the full surface.
 
 `tools-dispatcher.ts` owns the matching `call_tool` registry. The catalog and dispatcher must expose the same
 names. `tests/scripts/scripts-verify-tool-surface.mjs` checks name equality, uniqueness, essential git filtering,
@@ -120,7 +121,19 @@ Filesystem tools are batch-first and path-oriented. Reads support `paths` for si
 length, URL, and options. Writes and edits support path-backed payload fields for large content. Directory listing,
 metadata, and read tools can use `allowMissing=true` for exploratory candidate paths.
 
-Exact block replacement lives in the edit feature and is exposed through `file-edit`.
+Exact block replacement lives in the edit feature and is exposed through `file-edit`. `file-edit-lines` replaces,
+inserts (`after: true`), or deletes (empty replacement) an inclusive 1-based line range, detects and preserves the
+file's dominant EOL (CRLF/LF), and can assert the file length through `expected_lines`. Items may target the same
+file, so the batch runs sequentially.
+
+### Inspect
+
+`fs-inspect` is a read-only composite lookup tool for coding workflows. One call carries a `root` and a list of
+requests, and each request dispatches on `op` (`count-files`, `search`, `json-pick`, `snippet`, `git-status`).
+The `git-status` op delegates to the git feature's `git-status` execution so filesystem lookups and a git state
+resolve in one round-trip. A per-call `maxSnippetChars` budget (default 6000) caps total evidence text and sets a
+`truncated` flag on overflow. Each answer carries `id`, `op`, `status`, `value`, `confidence`, `evidence`, and
+`warnings`, and the call result includes `scannedFiles`, `bytesRead`, `snippetChars`, and `truncated` metrics.
 
 ### Search
 
@@ -145,7 +158,9 @@ policy, session, terminal, and virtual-node behavior used by runtime boundaries.
 
 Git calls run inside a client-scoped git session. `git-cwd` pins the working repository, `git-status` and `git-diff`
 inspect state, `git-show` reads git objects or revision files, `git-add` stages paths, and `git-commit` creates
-commits. Commit descriptions guide clients toward English multi-line Conventional Commit messages.
+commits. Commit descriptions guide clients toward English multi-line Conventional Commit messages. `git-commit`
+always injects `-c user.name=fs-mcp` and `-c user.email=fs-mcp@example.invalid` so commits work without local git
+config; a provided `author` object overrides only the author through `--author`.
 
 ## Tool Response Contract
 
@@ -157,9 +172,16 @@ and optional `_meta`.
 The normalized contract has three layers:
 
 - Visible `content[0].text` from `createToolDisplayText`.
-- Machine-readable `structuredContent` with schema version, tool name, status, duration, error detail, previewed
-  normalized content, combined text, and original structured payload.
+- Machine-readable `structuredContent` with schema version, tool name, status, duration, error detail, normalized
+  content, and original structured payload.
 - Compact `_meta.fsMcpResult` with status, duration, content types, error text, schema version, and tool name.
+
+With the default-on compact envelope, `data.content` is the single full-text source and the `data.text` copy is
+omitted; `FS_MCP_COMPACT=0` (or `false`) restores `data.text` with the combined text. Batch responses follow the
+same flag: in compact mode each per-item `result` carries only `structuredContent` and `isError`, body-copy keys
+such as `textContent`/`listing` are dropped, and echoed `input` string values above 256 bytes are replaced with
+`<N bytes elided>`. The body lives once in the batch text of full-mode tools (`file-read`, `file-lines`,
+`dir-list`, `search-regex`, `search-get`).
 
 The default display rows are `tool`, `items`, `status`, `duration`, `tokens`, `contents`, and `structuredText`.
 The `tokens` row is a character-based estimate so large results do not load tokenizer vocabularies during response
@@ -170,6 +192,8 @@ normalization. Gemini clients receive the same display without ANSI escape seque
 - Runtime configuration is in-memory only.
 - Mutable keys are `allowedDirectories`, `blockedCommands`, and `defaultShell`.
 - `FS_MCP_ALLOWED_DIRECTORIES` can seed allowed directories. Windows entries are semicolon-separated.
+- `FS_MCP_COMPACT=0` disables the compact envelope and restores the `data.text` copy plus batch per-item content.
+- `FS_MCP_TOOL_PROFILE=fast-coding` narrows `tools/list` to `fs-inspect` only.
 - Default shell selection prefers PowerShell 7 on Windows, then `ComSpec`, then system `cmd.exe`; non-Windows
   defaults use `$SHELL`, `/bin/zsh` on macOS, or `/bin/sh`.
 - Current client state is tracked in `config-client.ts` and contributes to git-session scoping.

@@ -578,7 +578,7 @@ export async function handleReadFiles(args: unknown): Promise<ServerResult> {
   const parsed = RdFlsArgsSch.parse(args);
   const items = parsed.items ?? parsed.paths?.map((filePath) => ({ isUrl: false, offset: 0, path: filePath })) ?? [];
   const results = await rnPrllBtch(items, (item) => handleParsedReadFileWithMissing(item, parsed.allowMissing));
-  const response = crtBtchTlRes("file-read", results, { preserveLargeStructuredPayloads: true });
+  const response = crtBtchTlRes("file-read", results, { resultMode: "full" });
 
   return response;
 }
@@ -587,7 +587,7 @@ export async function handleReadFilesWithLineNumber(args: unknown): Promise<Serv
   const parsed = RdFlsArgsSch.parse(args);
   const items = parsed.items ?? parsed.paths?.map((filePath) => ({ isUrl: false, offset: 0, path: filePath })) ?? [];
   const results = await rnPrllBtch(items, (item) => handleParsedLineNumReadWithMissing(item, parsed.allowMissing));
-  const response = crtBtchTlRes("file-lines", results, { preserveLargeStructuredPayloads: true });
+  const response = crtBtchTlRes("file-lines", results, { resultMode: "full" });
 
   return response;
 }
@@ -684,7 +684,7 @@ export async function handleCreateDirectories(args: unknown): Promise<ServerResu
 export async function handleListDirectories(args: unknown): Promise<ServerResult> {
   const parsed = LstDrArSc.parse(args);
   const results = await rnPrllBtch(parsed.items, (item) => handleParsedListDirectoryWithMissing(item, parsed.allowMissing));
-  const response = crtBtchTlRes("dir-list", results, { preserveLargeStructuredPayloads: true });
+  const response = crtBtchTlRes("dir-list", results, { resultMode: "full" });
 
   return response;
 }

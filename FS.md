@@ -2,8 +2,8 @@
 
 ## Purpose
 
-* Use `fs-mcp` first for local filesystem, search, git, and config work.
-* Use shell only for build, test, runtime, package, network, or CLI behavior outside `fs-mcp`.
+* Use `rust-fs-mcp` first for local filesystem, search, git, and config work.
+* Use shell only for build, test, runtime, package, network, or CLI behavior outside `rust-fs-mcp`.
 
 ## Rules
 
@@ -11,18 +11,18 @@
 * Batch same-kind operations into one call.
 * Use `allowMissing: true` when missing paths are expected.
 * Prefer source files over generated, cached, vendor, build, log, backup, or temp artifacts.
-* Use `args_path` or `*_path` fields for large arguments or file contents.
 * Commit only when the user asks.
 
 ## Tool Routing
 
 | Trigger                   | Use                                                         |
 |---------------------------|-------------------------------------------------------------|
-| Directory list/create     | `dir_list`, `dir_mk`                                        |
-| File read/lines/metadata  | `file_read`, `file_lines`, `file_infos`                     |
-| File write/edit           | `file_write`, `file_edit`                                   |
-| File copy/move/remove     | `file_copy`, `file_move`, `file_remove`                     |
-| Regex or broad search     | `search_regex`, `search_start`, `search_get`, `search_stop` |
-| Git status/diff/show      | `git_status`, `git_diff`, `git_show`                        |
-| Git add/commit            | `git_add`, `git_commit`                                     |
+| Directory list/create     | `dir-list`, `dir-mk`                                        |
+| File read/lines/metadata  | `file-read`, `file-lines`, `file-infos`                     |
+| File write/edit           | `file-write`, `file-edit`, `file-edit-lines`                |
+| File copy/move/remove     | `file-copy`, `file-move`, `file-remove`                     |
+| Composite read-only scan  | `fs-inspect`                                                |
+| Regex or broad search     | `search-regex`, `search-start`, `search-get`, `search-stop` |
+| Git status/diff/show      | `git-status`, `git-diff`, `git-show`                        |
+| Git add/commit            | `git-add`, `git-commit`                                     |
 |---------------------------|-------------------------------------------------------------|

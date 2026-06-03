@@ -16,7 +16,7 @@ import {resolveAbsolutePath as rslvAbslPth} from "@features/filesystem/filesyste
 import {readFileInternal as rdFlInt, readTextSliceInternal as rdTxtSlcInt, validatePath, writeFile} from "@features/filesystem/filesystem-service";
 import {getSimilarityRatio as gtSmlrRt, recursiveFuzzyIndexOf as rcrFzIdOf} from "@features/search/search-fuzzy-matcher";
 import {type FuzzySearchLogEntry as FzzSrLgEn, fzzySrchLggr} from "@features/search/search-log";
-import {EdtBlArSc2} from "@schemas/schemas-edit";
+import {EdtBlArSc2, EdtLnItmSc} from "@schemas/schemas-edit";
 
 interface SearchReplace {
   replace: string;
@@ -388,4 +388,131 @@ export async function handleEditBlock(args: unknown): Promise<ServerResult> {
     },
     parsed.expected_replacements,
   );
+}
+
+// 5. Detect dominant EOL ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// Counts CRLF and lone LF in one pass; ties and CRLF-majority files keep CRLF.
+function detectDominantEol(text: string): "\r\n" | "\n" {
+  let crlfCount = 0;
+  let lfOnlyCount = 0;
+
+  for (let index = 0; index < text.length; index++) {
+    if (text[index] !== "\n") {
+      continue;
+    }
+    if (index > 0 && text[index - 1] === "\r") {
+      crlfCount++;
+    }
+    else {
+      lfOnlyCount++;
+    }
+  }
+  return crlfCount >= lfOnlyCount && crlfCount > 0 ? "\r\n" : "\n";
+}
+
+// 6. Compute line ranges ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// Each range is [start, end) in character offsets and includes its trailing newline when present.
+function computeLineRanges(text: string): [number, number][] {
+  const ranges: [number, number][] = [];
+  let start = 0;
+
+  for (let index = 0; index < text.length; index++) {
+    if (text[index] === "\n") {
+      ranges.push([start, index + 1]);
+      start = index + 1;
+    }
+  }
+  if (start < text.length) {
+    ranges.push([start, text.length]);
+  }
+  return ranges;
+}
+
+// 7. Ends with EOL ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function endsWithEol(value: string): boolean {
+  return value.endsWith("\n") || value.endsWith("\r");
+}
+
+// 8. Handle edit line range ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// Replace, insert (after: true), or delete (empty replacement) an inclusive 1-based line range.
+// The file's dominant EOL is detected and preserved; replacement EOLs are normalized to match.
+export async function handleEditLineRange(args: unknown): Promise<ServerResult> {
+  const parsed = EdtLnItmSc.parse(args);
+  const startLine = parsed.start_line;
+
+  if (!Number.isInteger(startLine) || startLine < 1) {
+    return crtErrRes("start_line is 1-based and must be >= 1");
+  }
+  const endLine = parsed.end_line ?? startLine;
+  if (!Number.isInteger(endLine) || endLine < startLine) {
+    return crtErrRes("end_line must be >= start_line");
+  }
+  const after = parsed.after;
+  const replacement = await resolveEditTextArgument(parsed.replacement, parsed.replacement_path, parsed.replacement_offset, parsed.replacement_length, "replacement");
+  const validPath = await validatePath(parsed.file_path);
+  const text = await rdFlInt(validPath, 0, Number.MAX_SAFE_INTEGER);
+
+  if (typeof text !== "string") {
+    return crtErrRes(`Wrong content for file ${parsed.file_path}`);
+  }
+  const eol = detectDominantEol(text);
+  const lineRanges = computeLineRanges(text);
+  const totalLines = lineRanges.length;
+
+  if (parsed.expected_lines !== undefined && totalLines !== parsed.expected_lines) {
+    return crtErrRes(`Expected ${parsed.expected_lines} lines but file has ${totalLines}`);
+  }
+  if (startLine > totalLines && !after) {
+    return crtErrRes(`start_line ${startLine} exceeds file line count ${totalLines}`);
+  }
+  const effectiveEnd = Math.min(endLine, Math.max(totalLines, 1));
+  const startIdx = startLine - 1;
+  const endIdx = Math.max(effectiveEnd - 1, 0);
+  const normalized = nrmlLnEndn2(replacement, eol);
+  const needsTrailEol = normalized.length > 0 && !endsWithEol(normalized);
+  const finalReplacement = needsTrailEol && (after || endIdx < totalLines) ? `${normalized}${eol}` : normalized;
+  let newText: string;
+
+  if (after) {
+    let insertAt = text.length;
+    if (totalLines === 0) {
+      insertAt = 0;
+    }
+    else if (endIdx < totalLines) {
+      insertAt = lineRanges[endIdx][1];
+    }
+    const head = text.slice(0, insertAt);
+    const needsEolBefore = insertAt > 0 && !head.endsWith("\n") && finalReplacement.length > 0;
+
+    newText = `${head}${needsEolBefore ? eol : ""}${finalReplacement}${text.slice(insertAt)}`;
+  }
+  else {
+    const cutStart = lineRanges[startIdx][0];
+    const cutEnd = lineRanges[endIdx][1];
+
+    newText = `${text.slice(0, cutStart)}${finalReplacement}${text.slice(cutEnd)}`;
+  }
+  await writeFile(parsed.file_path, newText);
+
+  const action = after ? "insert_after" : finalReplacement.length === 0 ? "delete" : "replace";
+  const linesRemoved = after ? 0 : effectiveEnd - startLine + 1;
+  const rslvEdtPth = rslvAbslPth(parsed.file_path);
+
+  return {
+    content: [
+      {
+        text: `${action} ${parsed.file_path} (lines ${startLine}-${effectiveEnd})`,
+        type: "text",
+      },
+    ],
+    structuredContent: {
+      file_path: rslvEdtPth,
+      action,
+      start_line: startLine,
+      end_line: effectiveEnd,
+      lines_removed: linesRemoved,
+      bytes: Buffer.byteLength(newText, "utf8"),
+      eol: eol === "\r\n" ? "crlf" : "lf",
+    },
+  };
 }

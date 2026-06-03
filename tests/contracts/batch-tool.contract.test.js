@@ -47,7 +47,7 @@ const RENAMED_FILE = path.join(TEST_DIR, "renamed.txt");
 const WRITTEN_FILE = path.join(TEST_DIR, "written.txt");
 const LINE_FILE = path.join(TEST_DIR, "line-numbered.txt");
 const MLSF = path.join(TEST_DIR, "many-line-source.txt");
-const BRPMC = 160;
+const ELID_EDT_FL = path.join(TEST_DIR, "elide-edit.txt");
 const OLD_VAL_PAT = /old value/;
 const EXTR_VAL_PAT = /extra value/;
 const CRTD_DR_PAT = /created-dir/;
@@ -73,6 +73,14 @@ function parseToolOutput(result) {
   return result.structuredContent;
 }
 
+// 1-1. Batch body text ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// The compact envelope keeps the full per-item body inside data.content for full-mode tools.
+function batchBodyText(output) {
+  assert.equal(Array.isArray(output.data.content), true);
+  assert.equal(Object.hasOwn(output.data, "text"), false);
+  return output.data.content[0].text;
+}
+
 // 2. Extract batch results ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function extractBatchResults(result) {
   const output = parseToolOutput(result);
@@ -81,6 +89,14 @@ function extractBatchResults(result) {
   assert.equal(typeof batchPayload.totalCount, "number");
   assert.equal(Array.isArray(batchPayload.results), true);
   return batchPayload.results;
+}
+
+// 2-1. Assert compact batch item ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// Compact per-item results carry only structuredContent and isError; the content copy is dropped.
+function assertCompactBatchItem(batchItem) {
+  assert.equal(Object.hasOwn(batchItem.result, "content"), false);
+  assert.equal(typeof batchItem.result.isError, "boolean");
+  assert.equal(Object.hasOwn(batchItem.result, "structuredContent"), true);
 }
 
 // 1. Path exists helper ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -122,6 +138,7 @@ async function setup() {
   await fs.writeFile(APESF, "one\ntwo\n", "utf8");
   await fs.writeFile(LINE_FILE, "first\nsecond\nthird\n", "utf8");
   await fs.writeFile(MLSF, MNY_LN_TXT, "utf8");
+  await fs.writeFile(ELID_EDT_FL, `${TN_THSN_A}\n`, "utf8");
   await cfgMgr.updateConfig({
     ...origCfg,
     allowedDirectories: [TEST_DIR],
@@ -141,30 +158,31 @@ async function testReadFilesSurface() {
   const result = await dsptTlCll("file-read", {
     paths: [SOURCE_FILE, EXTRA_FILE],
   });
-  const batchResults = extractBatchResults(result);
+  const output = parseToolOutput(result);
+  const bodyText = batchBodyText(output);
+  const batchResults = output.data.structuredContent.results;
 
   assert.equal(batchResults.length, 2);
   assert.equal(batchResults[0].ok, true);
-  assert.ok(batchResults[0].result.content[0].text.length <= BRPMC);
-  assert.ok(batchResults[1].result.content[0].text.length <= BRPMC);
-  assert.match(batchResults[0].result.structuredContent.textContent, OLD_VAL_PAT);
-  assert.match(batchResults[1].result.structuredContent.textContent, EXTR_VAL_PAT);
+  assertCompactBatchItem(batchResults[0]);
+  assertCompactBatchItem(batchResults[1]);
+  assert.match(bodyText, OLD_VAL_PAT);
+  assert.match(bodyText, EXTR_VAL_PAT);
+  assert.equal(Object.hasOwn(batchResults[0].result.structuredContent, "textContent"), false);
+  assert.equal(typeof batchResults[0].result.structuredContent.filePath, "string");
 
   const largeResult = await dsptTlCll("file-read", {
     paths: [LARGE_FILE],
   });
   const largeOutput = parseToolOutput(largeResult);
+  const largeBody = batchBodyText(largeOutput);
   const lrgBtchRess = largeOutput.data.structuredContent.results;
 
   assert.equal(lrgBtchRess[0].ok, true);
-  assert.match(lrgBtchRess[0].result.content[0].text, THXP);
-  assert.match(lrgBtchRess[0].result.content[0].text, THYP);
-  assert.match(lrgBtchRess[0].result.structuredContent.textContent, RTLP);
-  assert.match(largeOutput.data.text, THXP);
-  assert.match(largeOutput.data.text, THYP);
-  assert.match(lrgBtchRess[0].result.structuredContent.textContent, THXP);
-  assert.match(lrgBtchRess[0].result.structuredContent.textContent, THYP);
-  assert.match(JSON.stringify(lrgBtchRess[0].result), THYP);
+  assert.match(largeBody, RTLP);
+  assert.match(largeBody, THXP);
+  assert.match(largeBody, THYP);
+  assert.equal(largeBody.includes("truncated"), false);
 
   const missingFile = path.join(TEST_DIR, "missing.txt");
   const defMssnRes = await dsptTlCll("file-read", {
@@ -201,12 +219,16 @@ async function testReadFilesSurface() {
   const lnNumRes = await dsptTlCll("file-lines", {
     items: [{ length: 2, offset: 1, path: LINE_FILE }],
   });
-  const lnNumPyld = parseToolOutput(lnNumRes).data.structuredContent;
+  const lnNumOtpt = parseToolOutput(lnNumRes);
+  const lnNumBody = batchBodyText(lnNumOtpt);
+  const lnNumPyld = lnNumOtpt.data.structuredContent;
   assert.equal(lnNumPyld.toolName, "file-lines");
   assert.equal(lnNumPyld.results[0].ok, true);
   assert.equal(lnNumPyld.results[0].result.structuredContent.startLine, 2);
   assert.equal(lnNumPyld.results[0].result.structuredContent.endLine, 3);
-  assert.equal(lnNumPyld.results[0].result.structuredContent.textContent, "2: second\n3: third");
+  assert.equal(Object.hasOwn(lnNumPyld.results[0].result.structuredContent, "textContent"), false);
+  assert.equal(lnNumBody.includes("2: second"), true);
+  assert.equal(lnNumBody.includes("3: third"), true);
 
   const lnMssnRes = await dsptTlCll("file-lines", {
     allowMissing: true,
@@ -217,9 +239,10 @@ async function testReadFilesSurface() {
   assert.equal(lnMssnPyld.results[0].result.structuredContent.missing, true);
 }
 
-// 7. Test large unstructured result preserved ―――――――――――――――――――――――――――――――――――――――――――――――――――――
-function testLargeUnstructuredResultPreserved() {
-  const unstLnZrPat = /unstructured line 0/;
+// 7. Test summary line keeps unstructured body ――――――――――――――――――――――――――――――――――――――――――――――――――――
+// With the compact envelope the per-item content copy is dropped, so the flattened summary line
+// becomes the only body carrier for summary-mode tools and must stay untruncated.
+function testSummaryLineKeepsUnstructuredBody() {
   const largeText = Array.from({ length: 80 }, (_value, index) => `unstructured line ${index} ${"z".repeat(40)}`).join("\n");
   const result = crtBtchTlRes("synthetic_tool", [
     {
@@ -231,11 +254,33 @@ function testLargeUnstructuredResultPreserved() {
       },
     },
   ]);
-  const batchResult = result.structuredContent.results[0].result;
+  const batchItem = result.structuredContent.results[0];
 
-  assert.match(batchResult.content[0].text, unstLnZrPat);
-  assert.match(batchResult.content[0].text, /full text in structuredContent\.textContent/);
-  assert.match(batchResult.structuredContent.textContent, UNST_LN_PAT);
+  assert.match(result.content[0].text, UNST_LN_PAT);
+  assert.equal(result.content[0].text.includes("truncated"), false);
+  assert.equal(Object.hasOwn(batchItem.result, "content"), false);
+  assert.equal(batchItem.result.structuredContent, null);
+}
+
+// 7-1. Test large input strings elided ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+async function testLargeInputStringsElided() {
+  const editResult = await dsptTlCll("file-edit", {
+    items: [
+      {
+        expected_replacements: 1,
+        file_path: ELID_EDT_FL,
+        new_string: TN_THSN_B,
+        old_string: TN_THSN_A,
+      },
+    ],
+  });
+  const edtBtchRess = extractBatchResults(editResult);
+
+  assert.equal(edtBtchRess[0].ok, true);
+  assert.match(edtBtchRess[0].input.old_string, /^<\d+ bytes elided>$/);
+  assert.match(edtBtchRess[0].input.new_string, /^<\d+ bytes elided>$/);
+  assert.equal(edtBtchRess[0].input.file_path, ELID_EDT_FL);
+  assert.equal(await fs.readFile(ELID_EDT_FL, "utf8"), `${TN_THSN_B}\n`);
 }
 
 // 8. Test create and list directory surface ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -255,13 +300,15 @@ async function testCreateAndListDirectorySurface() {
     ],
   });
   const listOutput = parseToolOutput(listResult);
+  const listBody = batchBodyText(listOutput);
   const lstBtchRess = listOutput.data.structuredContent.results;
 
   assert.equal(lstBtchRess.length, 1);
   assert.equal(lstBtchRess[0].ok, true);
-  assert.equal(typeof lstBtchRess[0].result.structuredContent.listing, "string");
-  assert.match(lstBtchRess[0].result.structuredContent.listing, CRTD_DR_PAT);
-  assert.match(listOutput.data.text, CRTD_DR_PAT);
+  assertCompactBatchItem(lstBtchRess[0]);
+  assert.equal(Object.hasOwn(lstBtchRess[0].result.structuredContent, "listing"), false);
+  assert.equal(Array.isArray(lstBtchRess[0].result.structuredContent.entries), true);
+  assert.match(listBody, CRTD_DR_PAT);
 }
 
 // 9. Test copy files surface ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -398,6 +445,7 @@ async function testWriteMoveInfoAndEditSurface() {
   });
   const edtBtchRess = extractBatchResults(editResult);
   assert.equal(edtBtchRess[0].ok, true);
+  assertCompactBatchItem(edtBtchRess[0]);
 
   const fzzyMssRes = await dsptTlCll("file-edit", {
     items: [
@@ -409,10 +457,11 @@ async function testWriteMoveInfoAndEditSurface() {
       },
     ],
   });
-  const fzzyMssBtch = extractBatchResults(fzzyMssRes);
+  const fzzyMssOtpt = parseToolOutput(fzzyMssRes);
+  const fzzyMssBtch = fzzyMssOtpt.data.structuredContent.results;
   assert.equal(fzzyMssRes.isError, true);
   assert.equal(fzzyMssBtch[0].ok, false);
-  assert.match(fzzyMssBtch[0].result.content[0].text, /Exact match not found/);
+  assert.match(fzzyMssOtpt.data.content[0].text, /Exact match not found/);
   assert.equal(await fs.readFile(FZZY_EDT_FL, "utf8"), "function oldName() {\n  return 1;\n}\n");
 
   const lrgEdtRes = await dsptTlCll("file-edit", {
@@ -479,10 +528,10 @@ async function testWriteMoveInfoAndEditSurface() {
     paths: [MLSF],
   });
   const lrgRdOtpt = parseToolOutput(lrgRdRes);
+  const lrgRdBody = batchBodyText(lrgRdOtpt);
   const lrgRdBtRe = lrgRdOtpt.data.structuredContent.results;
   assert.equal(lrgRdBtRe[0].ok, true);
-  assert.equal(lrgRdOtpt.data.text.includes("truncated"), true);
-  assert.equal(lrgRdBtRe[0].result.structuredContent.textContent.includes(TN_THSN_B), true);
+  assert.equal(lrgRdBody.includes(TN_THSN_B), true);
   assert.equal(JSON.stringify(lrgRdBtRe[0].result).includes("previewOnly"), false);
 
   const renameResult = await dsptTlCll("file-move", {
@@ -537,14 +586,15 @@ async function testWriteMoveInfoAndEditSurface() {
   assert.equal(await pathExists(CREATED_DIR), false);
 }
 
-// 10. Main \u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015\u2015
+// 10. Main ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 
 async function main() {
   const origCfg = await setup();
 
   try {
     await testReadFilesSurface();
-  testLargeUnstructuredResultPreserved();
+    testSummaryLineKeepsUnstructuredBody();
+    await testLargeInputStringsElided();
     await testCreateAndListDirectorySurface();
     await testCopyFilesSurface();
     await testWriteMoveInfoAndEditSurface();

@@ -27,3 +27,19 @@ export const EdtBlArSc2 = z.object({
 export const EdtBlArSc = z.object({
   items: z.array(EdtBlArSc2).min(1),
 });
+
+export const EdtLnItmSc = z.object({
+  file_path: z.string(),
+  start_line: z.number(),
+  end_line: z.number().optional(),
+  replacement: z.string().optional(),
+  replacement_path: z.string().optional(),
+  replacement_offset: z.number().optional().default(0),
+  replacement_length: z.number().optional(),
+  after: z.boolean().optional().default(false),
+  expected_lines: z.number().optional(),
+});
+
+export const EdtLnArSc = z.object({
+  items: z.array(EdtLnItmSc).min(1),
+});

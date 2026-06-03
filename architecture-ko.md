@@ -85,11 +85,12 @@ tests -> out
 | Module | Count | Public tools |
 |--------|------:|--------------|
 | `tools-config.ts` | 0 | none |
-| `tools-filesystem.ts` | 14 | `file-read`, `file-lines`, `file-write`, `dir-mk`, `dir-list`, `file-copy`, `file-move`, `file-remove`, `search-start`, `search-regex`, `search-get`, `search-stop`, `file-infos`, `file-edit` |
+| `tools-filesystem.ts` | 16 | `file-read`, `file-lines`, `file-write`, `dir-mk`, `dir-list`, `file-copy`, `file-move`, `file-remove`, `search-start`, `search-regex`, `search-get`, `search-stop`, `file-infos`, `file-edit`, `file-edit-lines`, `fs-inspect` |
 | `tools-process.ts` | 0 | none |
 | `tools-git.ts` | 6 | `git-cwd`, `git-status`, `git-diff`, `git-show`, `git-add`, `git-commit` |
 
-전체 public catalog 크기는 `20`개 tool입니다.
+전체 public catalog 크기는 `22`개 tool입니다. `FS_MCP_TOOL_PROFILE=fast-coding`은 `tools/list`를
+`fs-inspect` 하나로 좁히며 dispatch 호환성은 전체 surface를 유지합니다.
 
 `tools-dispatcher.ts`는 대응되는 `call_tool` registry를 담당합니다. Catalog와 dispatcher는 같은 이름을
 노출해야 합니다. `tests/scripts/scripts-verify-tool-surface.mjs`는 name equality, uniqueness, essential git
@@ -118,7 +119,19 @@ URL, option을 지정하는 `items`를 모두 지원합니다. Write와 edit은 
 지원합니다. Directory listing, metadata, read tool은 탐색용 후보 경로를 위해 `allowMissing=true`를 사용할 수
 있습니다.
 
-Exact block replacement는 edit feature에 있으며 `file-edit`으로 노출됩니다.
+Exact block replacement는 edit feature에 있으며 `file-edit`으로 노출됩니다. `file-edit-lines`는 1-based
+inclusive line range를 교체, 삽입(`after: true`), 삭제(빈 replacement)하며, 파일의 dominant EOL(CRLF/LF)을
+감지해 보존하고 `expected_lines`로 파일 길이를 검증할 수 있습니다. 같은 파일을 다루는 item이 섞일 수 있어
+batch는 순차로 실행됩니다.
+
+### Inspect
+
+`fs-inspect`는 코딩 작업용 read-only composite 조회 tool입니다. 한 번의 호출이 `root`와 request 목록을 받고,
+각 request는 `op`(`count-files`, `search`, `json-pick`, `snippet`, `git-status`)에 따라 dispatch됩니다.
+`git-status` op은 git feature의 `git-status` 실행에 위임해 filesystem 조회와 git 상태를 한 round-trip에
+해결합니다. per-call `maxSnippetChars` budget(기본 6000)이 evidence text 총량을 제한하고 초과 시 `truncated`
+flag를 설정합니다. 각 answer는 `id`, `op`, `status`, `value`, `confidence`, `evidence`, `warnings`를 담으며,
+호출 결과에는 `scannedFiles`, `bytesRead`, `snippetChars`, `truncated` metric이 포함됩니다.
 
 ### Search
 
@@ -143,7 +156,9 @@ caller가 `maxResults`를 제공한 경우에만 result cap을 적용합니다.
 Git call은 client-scoped git session 안에서 실행됩니다. `git-cwd`는 working repository를 pin하고, `git-status`와
 `git-diff`는 상태를 검사하며, `git-show`는 git object 또는 revision file을 읽습니다. `git-add`는 path를 stage하고
 `git-commit`은 commit을 생성합니다. Commit description은 English multi-line Conventional Commit message를
-권장합니다.
+권장합니다. `git-commit`은 local git config 없이도 commit이 되도록 `-c user.name=fs-mcp`와
+`-c user.email=fs-mcp@example.invalid`를 항상 주입하며, `author` object가 주어지면 `--author`로 author만
+override합니다.
 
 ## Tool Response Contract
 
@@ -155,9 +170,16 @@ Git call은 client-scoped git session 안에서 실행됩니다. `git-cwd`는 wo
 정규화된 contract는 세 layer입니다.
 
 - `createToolDisplayText`가 생성하는 표시용 `content[0].text`.
-- Schema version, tool name, status, duration, error detail, preview 처리된 normalized content, combined text, 원본
-  structured payload를 담는 machine-readable `structuredContent`.
+- Schema version, tool name, status, duration, error detail, normalized content, 원본 structured payload를 담는
+  machine-readable `structuredContent`.
 - Status, duration, content type, error text, schema version, tool name을 담는 compact `_meta.fsMcpResult`.
+
+기본값인 compact envelope에서 `data.content`는 전체 본문을 담는 단일 source이고 `data.text` 복제는 생략됩니다.
+`FS_MCP_COMPACT=0`(또는 `false`)으로 끄면 `data.text`에 combined text가 복원됩니다. Batch 응답도 같은 flag를
+따릅니다. compact에서 per-item `result`는 `structuredContent`와 `isError`만 담고 content 복제와
+`textContent`/`listing` 같은 본문 복제 key를 제거하며, echo되는 `input`의 256 byte 초과 문자열 값은
+`<N bytes elided>`로 대체됩니다. 본문은 full mode tool(`file-read`, `file-lines`, `dir-list`, `search-regex`,
+`search-get`)의 batch text에 한 번만 담깁니다.
 
 기본 display row는 `tool`, `items`, `status`, `duration`, `tokens`, `contents`, `structuredText`입니다. `tokens` row는
 큰 결과에서 tokenizer vocabulary를 load하지 않도록 문자 수 기반 추정치를 사용합니다. Gemini client는 같은
@@ -168,6 +190,8 @@ display에서 ANSI escape sequence를 제거한 text를 받습니다.
 - Runtime configuration은 in-memory only입니다.
 - Mutable key는 `allowedDirectories`, `blockedCommands`, `defaultShell`입니다.
 - `FS_MCP_ALLOWED_DIRECTORIES`로 allowed directory를 초기화할 수 있습니다. Windows entry는 semicolon으로 구분합니다.
+- `FS_MCP_COMPACT=0`은 compact envelope를 끄고 `data.text` 복제와 batch per-item content를 복원합니다.
+- `FS_MCP_TOOL_PROFILE=fast-coding`은 `tools/list`를 `fs-inspect`로만 좁힙니다.
 - Windows 기본 shell 선택은 PowerShell 7, `ComSpec`, system `cmd.exe` 순서를 따릅니다. Non-Windows 기본값은
   `$SHELL`, macOS의 `/bin/zsh`, 또는 `/bin/sh`입니다.
 - Current client state는 `config-client.ts`에서 추적하며 git-session scoping에 사용됩니다.

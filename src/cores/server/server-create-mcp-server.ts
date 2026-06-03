@@ -14,7 +14,7 @@ import {buildCurrentClientSessionKey as bldCuClSeKy, type ClientInfoUpdate as Cl
 import {PCKG_VRSN} from "@features/config/config-store";
 import {runWithGitSessionScope as rnWtGtSeSc} from "@features/git/git-session";
 import {Server} from "@modelcontextprotocol/sdk/server/index.js";
-import {type CallToolRequest as CllTlReq, CallToolRequestSchema as CllTlReqSch, type InitializeRequest as IntlReq, InitializeRequestSchema as IntlReqSch, LATEST_PROTOCOL_VERSION as LTS_PRT_VRS, ListResourcesRequestSchema as LstReReSc, ListResourceTemplatesRequestSchema as LstReTmReSc, ListToolsRequestSchema as LstTlsReqSch, SUPPORTED_PROTOCOL_VERSIONS as SUP_PRT_VRS} from "@modelcontextprotocol/sdk/types.js";
+import {type CallToolRequest as CllTlReq, CallToolRequestSchema as CllTlReqSch, type InitializeRequest as IntlReq, InitializeRequestSchema as IntlReqSch, ListResourcesRequestSchema as LstReReSc, ListResourceTemplatesRequestSchema as LstReTmReSc, ListToolsRequestSchema as LstTlsReqSch, LATEST_PROTOCOL_VERSION as LTS_PRT_VRS, SUPPORTED_PROTOCOL_VERSIONS as SUP_PRT_VRS} from "@modelcontextprotocol/sdk/types.js";
 import {CFG_TL_CTLG} from "@tools/tools-config";
 import type {ToolCatalogEntry as TlCtlgEntr} from "@tools/tools-const";
 import {dispatchToolCall as dsptTlCll} from "@tools/tools-dispatcher";
@@ -39,8 +39,15 @@ function hasRequestMetadata(value: unknown): value is RequestMetadata {
 }
 
 // 3. Create tool catalog ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// FS_MCP_TOOL_PROFILE=fast-coding narrows tools/list to fs-inspect while dispatch compatibility stays full.
 function createToolCatalog(): TlCtlgEntr[] {
-  return [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG, ...GT_TL_CTLG];
+  const fullCatalog = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG, ...GT_TL_CTLG];
+  const profile = process.env.FS_MCP_TOOL_PROFILE ?? "full";
+
+  if (profile === "fast-coding") {
+    return fullCatalog.filter((tool) => tool.name === "fs-inspect");
+  }
+  return fullCatalog;
 }
 
 const TOOL_CATALOG = createToolCatalog();

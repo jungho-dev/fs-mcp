@@ -16,7 +16,7 @@ export declare interface ToolDisplayOutput {
   data: {
     content: SrvrResCont[];
     structuredContent: ServerResult["structuredContent"] | null;
-    text: string;
+    text?: string;
   };
   durationMs?: number | null;
   status: ToolDisplayStatus;
@@ -134,11 +134,21 @@ function estimateDisplayTokens(textChars: number, structuredChars: number): numb
   return Math.ceil(totalChars / TKN_CHR_RT);
 }
 
+// 5-1. Measure display content text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// Compact envelopes omit data.text, so fall back to summing the content text blocks.
+function measureDisplayContentText(output: ToolDisplayOutput): number {
+  if (typeof output.data.text === "string") {
+    return output.data.text.length;
+  }
+  return output.data.content.reduce((total, item) => total + (typeof item.text === "string" ? item.text.length : 0), 0);
+}
+
 // 6. Create tool display values ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createToolDisplayValues(output: ToolDisplayOutput): ToolDisplayTemplateValues {
   const strcTxtChrs = measureDisplayStructuredContent(output.data.structuredContent);
   const itemCount = itemsDisplayItems(output);
-  const tokenCount = estimateDisplayTokens(output.data.text.length, strcTxtChrs);
+  const cntnTxtChrs = measureDisplayContentText(output);
+  const tokenCount = estimateDisplayTokens(cntnTxtChrs, strcTxtChrs);
 
   return {
     tool: output.toolName,
@@ -149,7 +159,7 @@ function createToolDisplayValues(output: ToolDisplayOutput): ToolDisplayTemplate
     duration: formatDisplayDuration(output.durationMs, `sec`),
     durationMs: formatDisplayDuration(output.durationMs, `sec`),
     tokens: formatDisplayNumber(tokenCount, `token est`),
-    contents: formatDisplayNumber(output.data.text.length, `chars`),
+    contents: formatDisplayNumber(cntnTxtChrs, `chars`),
     structuredText: formatDisplayNumber(strcTxtChrs, `chars`),
   };
 }

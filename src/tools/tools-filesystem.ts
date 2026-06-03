@@ -6,8 +6,9 @@
  */
 
 import { withArgsPathSchema as wthArPtSc } from "@schemas/schemas-args-ref";
-import { EdtBlArSc } from "@schemas/schemas-edit";
+import { EdtBlArSc, EdtLnArSc } from "@schemas/schemas-edit";
 import { CpyFlArSc, CrtDrArSc, GtFlInArSc2, LstDrArSc, MvFlsArgsSch, RdFlsArgsSch, RmvFlArSc, WrtFlArSc } from "@schemas/schemas-filesystem";
+import { InspArSc } from "@schemas/schemas-inspect";
 import { GtFlSrReArSc, RgxSrArSc2, StpSrArSc2, StrSrArSc2 } from "@schemas/schemas-search";
 import { APPG, BTCH_GDNC, CMD_PRF_DSC, createToolCatalogEntry as crtTlCtEn, PTH_GDNC, type ToolCatalogEntryConfig as TlCtEnCf, type ToolCatalogEntry as TlCtlgEntr } from "@tools/tools-const";
 
@@ -235,6 +236,35 @@ const FLSY_TL_DFNT = [
       readOnlyHint: false,
       destructiveHint: true,
       openWorldHint: false,
+    },
+  },
+  {
+    name: "file-edit-lines",
+    description: (`
+      Replace, insert, or delete by 1-based line numbers. PREFER over file-edit when line numbers are known (faster, no EOL crafting). EOL auto-detected from file. Use \`after: true\` to insert after end_line without removing it.
+      ${BTCH_GDNC}
+      ${PTH_GDNC}
+      ${CMD_PRF_DSC}
+    `),
+    inputSchema: wthArPtSc(EdtLnArSc),
+    annotations: {
+      title: "file-edit-lines",
+      readOnlyHint: false,
+      destructiveHint: true,
+      openWorldHint: false,
+    },
+  },
+  {
+    name: "fs-inspect",
+    description: (`
+      Run compact read-only filesystem inspection requests in one call for coding tasks. Supports count-files, search, json-pick, snippet, and git-status operations. Bundle file reads, content search, and a git-status/branch lookup into a SINGLE call to avoid multiple tool round-trips. For count-files, use glob or pattern for filename matching; git-status takes an optional path (defaults to root).
+      ${PTH_GDNC}
+      ${CMD_PRF_DSC}
+    `),
+    inputSchema: wthArPtSc(InspArSc),
+    annotations: {
+      title: "fs-inspect",
+      readOnlyHint: true,
     },
   },
 ] satisfies TlCtEnCf[];

@@ -6,9 +6,10 @@
  */
 
 import type {ServerResult} from "@assets/type/common";
-import {handleEditBlocks as hndlEdtBlck2} from "@controllers/controllers-edit";
+import {handleEditBlocks as hndlEdtBlck2, handleEditLines as hndlEdtLns} from "@controllers/controllers-edit";
 import {handleCopyFiles as hndlCpyFls, handleCreateDirectories as hndlCrtDrct, handleGetFileInfos as hndlGtFlInfs, handleListDirectories as hndlLstDrct, handleMoveFiles as hndlMvFls, handleReadFiles as hndlRdFls, handleRemoveFiles as hndlRmvFls, handleWriteFiles as hndlWrtFls, handleReadFilesWithLineNumber as hndRdFlLn} from "@controllers/controllers-filesystem";
 import {handleGitTool as hndlGtTl} from "@controllers/controllers-git";
+import {handleFsInspect as hndlFsInsp} from "@controllers/controllers-inspect";
 import {handleGetFullSearchResults as hndGtFlSrRe, handleRegexSearches as hndlRgxSrch, handleStopSearches as hndlStpSrch, handleStartSearches as hndlStrtSrch} from "@controllers/controllers-search";
 import {createErrorResponse as crtErrRes} from "@cores/responses/responses-error";
 import {normalizeToolResult as nrmlTlRes} from "@cores/responses/responses-tool-result";
@@ -137,6 +138,8 @@ export const TL_DSPT: Readonly<Record<string, ToolDispatchHandler>> = {
   "file-remove": (args: unknown) => hndlRmvFls(args),
   "file-infos": (args: unknown) => hndlGtFlInfs(args),
   "file-edit": (args: unknown) => hndlEdtBlck2(args),
+  "file-edit-lines": (args: unknown) => hndlEdtLns(args),
+  "fs-inspect": (args: unknown) => hndlFsInsp(args),
   "search-start": (args: unknown) => hndlStrtSrch(args),
   "search-regex": (args: unknown) => hndlRgxSrch(args),
   "search-get": (args: unknown) => hndGtFlSrRe(args),

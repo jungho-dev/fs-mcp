@@ -5,7 +5,7 @@
  * @since 2026-05-02
  */
 
-import type { ServerResponseContent as SrvrResCont, ServerResult } from "@assets/type/common";
+import type { ServerResult, ServerResponseContent as SrvrResCont } from "@assets/type/common";
 import {createToolDisplayText as crtTlDsplTxt} from "@cores/responses/responses-tool-display";
 
 export declare type ToolResultStatus = "success" | "error";
@@ -26,7 +26,7 @@ export declare interface StandardToolOutput {
   data: {
     content: SrvrResCont[];
     structuredContent: ServerResult["structuredContent"] | null;
-    text: string;
+    text?: string;
   };
   durationMs: number | null;
   error: ToolResultError | null;
@@ -42,7 +42,23 @@ export declare interface ToolResponseOptions {
 const DSTP = /<\|endoftext\|>/g;
 const DST = "<|endoftext|>";
 const DSTR = "<|endoftext |>";
-const TEXT_PREVIEW_CHARS = 768;
+
+// Default-on compact envelope: drops the data.text copy that duplicates data.content for
+// token-sensitive clients. Opt out with FS_MCP_COMPACT=0 (or false) to restore data.text.
+function resolveCompactEnabled(): boolean {
+  const raw = process.env.FS_MCP_COMPACT;
+
+  if (raw === undefined || raw === "") {
+    return true;
+  }
+  return raw !== "0" && raw !== "false";
+}
+const CMPC_ENVL = resolveCompactEnabled();
+
+// 0. Compact envelope flag ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+export function isCompactEnvelopeEnabled(): boolean {
+  return CMPC_ENVL;
+}
 
 // 1. Normalize content item ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function normalizeContentItem(item: SrvrResCont): SrvrResCont {
@@ -109,30 +125,6 @@ function sanitizeJson(value: unknown): unknown {
   return value;
 }
 
-// 3-3. Create text preview ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function createTextPreview(value: string): string {
-  if (value.length <= TEXT_PREVIEW_CHARS) {
-    return value;
-  }
-  return `${value.slice(0, TEXT_PREVIEW_CHARS)}\n[truncated ${value.length - TEXT_PREVIEW_CHARS} chars; full text in data.text]`;
-}
-
-// 3-4. Compact output content item ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function compactOutputContentItem(item: SrvrResCont): SrvrResCont {
-  if (item.type !== "text" || typeof item.text !== "string" || item.text.length <= TEXT_PREVIEW_CHARS) {
-    return item;
-  }
-  return {
-    ...item,
-    text: createTextPreview(item.text),
-  };
-}
-
-// 3-5. Compact output content ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function compactOutputContent(content: SrvrResCont[]): SrvrResCont[] {
-  return content.map((item) => compactOutputContentItem(item));
-}
-
 // 4. Create error details ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function createErrorDetails(status: ToolResultStatus, content: SrvrResCont[]): ToolResultError | null {
   if (status !== "error") {
@@ -161,16 +153,21 @@ function createResultMetadata(toolName: string, result: ServerResult, content: S
 }
 
 // 6. Create standard output ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// Compact envelope keeps data.content as the single full-text source; data.text is only added
+// when FS_MCP_COMPACT is disabled to restore the duplicated combined-text field.
 function createStandardOutput(toolName: string, result: ServerResult, content: SrvrResCont[], durationMs?: number): StandardToolOutput {
   const status: ToolResultStatus = result.isError === true ? "error" : "success";
   const strcCont = sanitizeJson(result.structuredContent ?? null) as ServerResult["structuredContent"] | null;
-  const text = createCombinedText(content);
+  const data: StandardToolOutput["data"] = {
+    content,
+    structuredContent: strcCont,
+  };
+
+  if (!CMPC_ENVL) {
+    data.text = createCombinedText(content);
+  }
   const stndOtpt: StandardToolOutput = {
-    data: {
-      content: compactOutputContent(content),
-      structuredContent: strcCont,
-      text,
-    },
+    data,
     durationMs: durationMs ?? null,
     error: createErrorDetails(status, content),
     schemaVersion: 1,
@@ -197,7 +194,7 @@ export function isStandardToolOutput(value: unknown): value is StandardToolOutpu
     (candidate.error === null || typeof candidate.error === "object") &&
     typeof data === "object" &&
     data !== null &&
-    typeof data.text === "string" &&
+    (data.text === undefined || typeof data.text === "string") &&
     Array.isArray(data.content) &&
     Object.hasOwn(data, "structuredContent")
   );

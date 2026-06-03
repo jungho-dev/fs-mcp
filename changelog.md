@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+* add `file-edit-lines` for 1-based inclusive line range replace, insert (`after: true`), and delete with dominant EOL (CRLF/LF) detection, EOL-normalized replacements, and `expected_lines` validation
+* add `fs-inspect`, a read-only composite inspection tool bundling count-files, search, json-pick, snippet, and git-status requests into one call with a per-call `maxSnippetChars` evidence budget and `scannedFiles`/`bytesRead`/`snippetChars`/`truncated` metrics
+* always inject `-c user.name=fs-mcp -c user.email=fs-mcp@example.invalid` into `git-commit` so commits work without local git config while `author` still overrides the author only
+* add `FS_MCP_TOOL_PROFILE=fast-coding` to narrow `tools/list` to `fs-inspect` while dispatch compatibility keeps the full surface
+* adopt the default-on compact envelope matching the rust-fs-mcp contract: drop the `data.text` copy, keep the full body once in `data.content`, reduce batch per-item results to `structuredContent` plus `isError`, drop `textContent`/`listing` body copies, and elide echoed input strings above 256 bytes; `FS_MCP_COMPACT=0` restores the previous shape
+* run `file-read`, `file-lines`, and `dir-list` batches in full text mode so the complete body lands in the batch text like `search-regex` and `search-get`
 * graceful SIGINT/SIGTERM shutdown that terminates active ripgrep sessions and closes the MCP server before exit
 * surface git tool validation failures with structured `Validation error for <tool>: ...` messages and tag transport failures with the tool name
 * clear early-termination timers when a search session closes, errors out, or is terminated explicitly so no orphaned timers remain
@@ -399,3 +405,7 @@
 ## \[ 1.7.9 \]
 
 - 2026-05-31 (23:21:30)
+
+## \[ 1.8.0 \]
+
+- 2026-06-03 (23:52:08)

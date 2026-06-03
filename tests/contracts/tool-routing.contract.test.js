@@ -31,7 +31,7 @@ function assertStandardToolResult(result, toolName, status) {
   assert.equal(output.toolName, toolName);
   assert.equal(output.status, status);
   assert.equal(typeof output.durationMs, "number");
-  assert.equal(typeof output.data.text, "string");
+  assert.equal(Object.hasOwn(output.data, "text"), false);
   assert.equal(Array.isArray(output.data.content), true);
   assert.equal(Object.hasOwn(output.data, "structuredContent"), true);
 
@@ -44,7 +44,7 @@ async function testUnknownToolResponse() {
   const output = assertStandardToolResult(result, "missing_tool_for_contract_test", "error");
 
   assert.match(output.error.message, UNKN_TL_PAT);
-  assert.match(output.data.text, UNKN_TL_PAT);
+  assert.match(output.data.content[0].text, UNKN_TL_PAT);
   assert.equal(result.content[0].text, crtTlDsplTxt(output));
   assert.doesNotMatch(result.content[0].text, UNKN_TL_PAT);
 }
@@ -72,7 +72,7 @@ function testDisplayPreservesStructuredData() {
 
   assert.equal(result.content[0].text, crtTlDsplTxt(output));
   assert.doesNotMatch(result.content[0].text, /synthetic output line/);
-  assert.equal(output.data.text, longText);
+  assert.equal(output.data.content[0].text, longText);
 }
 
 // 7. Test every dispatchable tool returns display text ―――――――――――――――――――――――――――――――――――――――――

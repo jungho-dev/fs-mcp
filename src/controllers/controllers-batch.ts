@@ -7,6 +7,7 @@
 
 import type { ServerResult } from "@assets/type/common";
 import { createErrorResponse as crtErrRes } from "@cores/responses/responses-error";
+import { isCompactEnvelopeEnabled as isCmpcEnvl } from "@cores/responses/responses-tool-result";
 
 export declare interface BatchToolItemResult<T> {
   index: number;
@@ -15,40 +16,69 @@ export declare interface BatchToolItemResult<T> {
   result: ServerResult;
 }
 interface BatchToolResponseOptions {
-  preserveLargeStructuredPayloads?: boolean;
   resultMode?: "compact" | "full";
 }
 
-interface PreservedTextPayload extends Record<string, unknown> {
-  lineCount: number;
-  originalLength: number;
-  textContent: string;
-}
-
 const BSIK = ["path", "file_path", "source", "destination", "args_path", "sessionId", "pid", "key", "name"];
-const LN_SPLT_PAT = /\r\n|\r|\n/;
 const WHTS_PAT = /\s+/g;
-const TEXT_PREVIEW_CHARS = 768;
+const INPT_ELID_MAX = 256;
+const BODY_COPY_KEYS = ["textContent", "listing"];
 
 // 1. Is record ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// 2. Count lines ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function countLines(value: string): number {
-  return value.length === 0 ? 0 : value.split(LN_SPLT_PAT).length;
+// 2. Elide batch input ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// Echo the request back for traceability, but elide large string bodies (write content, edit
+// text, base64 data). Those just re-send what the caller already holds, doubling client tokens.
+// Identity fields (path, source, ...) stay short and pass through untouched.
+function elideBatchInput(value: unknown): unknown {
+  if (!isRecord(value)) {
+    return value;
+  }
+  const entries = Object.entries(value).map(([key, item]) => {
+    if (typeof item === "string") {
+      const bytes = Buffer.byteLength(item, "utf8");
+      if (bytes > INPT_ELID_MAX) {
+        return [key, `<${bytes} bytes elided>`];
+      }
+    }
+    return [key, item];
+  });
+
+  return Object.fromEntries(entries);
 }
 
-// 4. Compact batch input ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function compactBatchInput(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map((item) => compactBatchInput(item));
+// 3. Strip body copy keys ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// textContent and listing duplicate the per-item content text; the batch text already carries
+// the full body for full-mode tools, so the compact envelope drops these structured copies.
+function stripBodyCopyKeys(structured: ServerResult["structuredContent"] | undefined): unknown {
+  if (!isRecord(structured)) {
+    return structured ?? null;
   }
-  if (isRecord(value)) {
-    return Object.fromEntries(Object.entries(value).map(([key, item]) => [key, compactBatchInput(item)]));
+  if (!BODY_COPY_KEYS.some((key) => key in structured)) {
+    return structured;
   }
-  return value;
+  const { textContent: _txtCont, listing: _listing, ...rest } = structured;
+
+  return rest;
+}
+
+// 4. Create batch item result ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// Compact envelope drops the per-item content copy; full envelope keeps the verbatim result.
+function createBatchItemResult(result: ServerResult, compact: boolean): Record<string, unknown> {
+  if (compact) {
+    return {
+      structuredContent: stripBodyCopyKeys(result.structuredContent),
+      isError: result.isError === true,
+    };
+  }
+  return {
+    content: result.content,
+    structuredContent: result.structuredContent ?? null,
+    isError: result.isError === true,
+  };
 }
 
 // 4-1. Create summary text preview ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -77,7 +107,7 @@ function createSummaryInputPreview(input: unknown): string {
     }
     else {
       const summaryKey = BSIK.find((key) => input[key] !== undefined);
-      inputPreview = summaryKey !== undefined ? String(input[summaryKey]) : JSON.stringify(compactBatchInput(input));
+      inputPreview = summaryKey !== undefined ? String(input[summaryKey]) : JSON.stringify(elideBatchInput(input));
     }
   }
   return createSummaryTextPreview(inputPreview);
@@ -106,73 +136,13 @@ function extractTextContent(result: ServerResult): string {
   return textChunks.join("\n");
 }
 
-// 7. Create preserved text payload ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function createPreservedTextPayload(text: string): PreservedTextPayload {
-  return {
-    lineCount: countLines(text),
-    originalLength: text.length,
-    textContent: text,
-  };
-}
-
-// 8. Preserve unstructured result text ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function preserveUnstructuredResultText(result: ServerResult, text: string): ServerResult {
-  if (result.structuredContent !== undefined || text.length === 0) {
-    return result;
-  }
-  return {
-    ...result,
-    structuredContent: createPreservedTextPayload(text),
-  };
-}
-
-// 10. Create result text preview ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function createResultTextPreview(text: string): string {
-  const cmpcTxt = text.replace(WHTS_PAT, " ").trim();
-
-  if (cmpcTxt.length <= TEXT_PREVIEW_CHARS) {
-    return cmpcTxt;
-  }
-  return `${cmpcTxt.slice(0, TEXT_PREVIEW_CHARS)}... [truncated ${cmpcTxt.length - TEXT_PREVIEW_CHARS} chars]`;
-}
-
-// 10-1. Has structured text copy ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function hasStructuredTextCopy(result: ServerResult, text: string): boolean {
-  const strcCont = result.structuredContent;
-
-  return isRecord(strcCont) && strcCont.textContent === text;
-}
-
-// 10-2. Compact duplicate text item ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function compactDuplicateTextItem(item: ServerResult["content"][number]): ServerResult["content"][number] {
-  if (item.type !== "text" || typeof item.text !== "string" || item.text.length <= TEXT_PREVIEW_CHARS) {
-    return item;
-  }
-  return {
-    ...item,
-    text: `${item.text.slice(0, TEXT_PREVIEW_CHARS)}\n[truncated ${item.text.length - TEXT_PREVIEW_CHARS} chars; full text in structuredContent.textContent]`,
-  };
-}
-
-// 11. Compact batch result ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-function compactBatchResult(result: ServerResult): ServerResult {
-  const originalText = extractTextContent(result);
-  const prsrRes = preserveUnstructuredResultText(result, originalText);
-
-  if (!hasStructuredTextCopy(prsrRes, originalText)) {
-    return prsrRes;
-  }
-  return {
-    ...prsrRes,
-    content: prsrRes.content.map((item) => compactDuplicateTextItem(item)),
-  };
-}
-
 // 11-1. Create batch summary line ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// Flattens the per-item text to one line without truncation; the summary line is the only body
+// carrier for summary-mode tools once the compact envelope drops per-item content.
 function createBatchSummaryLine<T>(item: BatchToolItemResult<T>): string {
   const statusText = item.ok ? "OK" : "ERROR";
   const inputPreview = createSummaryInputPreview(item.input);
-  const textPreview = createResultTextPreview(extractPrimaryText(item.result));
+  const textPreview = extractPrimaryText(item.result);
   const detailParts = [inputPreview, textPreview].filter((part) => part.length > 0);
   const detailText = detailParts.length > 0 ? ` ${detailParts.join(": ")}` : "";
 
@@ -254,14 +224,19 @@ export async function runLimitedParallelBatch<T>(items: T[], concurrency: number
 }
 
 // 13. Create batch tool response ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// resultMode "full" embeds each item's complete text in the batch text (read-style tools);
+// "compact" keeps one flattened summary line per item. The compact envelope additionally drops
+// per-item content copies and elides large input strings.
 export function createBatchToolResponse<T>(toolName: string, items: BatchToolItemResult<T>[], options: BatchToolResponseOptions = {}): ServerResult {
   const totalCount = items.length;
   const failedCount = items.filter((item) => !item.ok).length;
   const sccdCnt = totalCount - failedCount;
-  const summaryLines = items.map((item) => createBatchSummaryLine(item));
   const smmrHdr = `${toolName}: ${sccdCnt}/${totalCount} succeeded${failedCount > 0 ? `, ${failedCount} failed` : ""}`;
   const resultMode = options.resultMode ?? "compact";
-  const resultText = resultMode === "full" ? `${smmrHdr}\n\n${items.map((item) => createFullBatchDetailBlock(item)).join("\n\n")}` : `${smmrHdr}\n\n${summaryLines.join("\n")}`;
+  const resultText = resultMode === "full"
+    ? `${smmrHdr}\n\n${items.map((item) => createFullBatchDetailBlock(item)).join("\n\n")}`
+    : `${smmrHdr}\n\n${items.map((item) => createBatchSummaryLine(item)).join("\n")}`;
+  const compact = isCmpcEnvl();
   const response: ServerResult = {
     content: [
       {
@@ -273,9 +248,9 @@ export function createBatchToolResponse<T>(toolName: string, items: BatchToolIte
       failedCount: failedCount,
       results: items.map((item) => ({
         index: item.index,
-        input: compactBatchInput(item.input),
+        input: compact ? elideBatchInput(item.input) : item.input,
         ok: item.ok,
-        result: compactBatchResult(item.result),
+        result: createBatchItemResult(item.result, compact),
       })),
       succeededCount: sccdCnt,
       toolName: toolName,
@@ -283,7 +258,7 @@ export function createBatchToolResponse<T>(toolName: string, items: BatchToolIte
     },
   };
 
-  if (failedCount === totalCount) {
+  if (failedCount === totalCount && totalCount > 0) {
     response.isError = true;
   }
   return response;

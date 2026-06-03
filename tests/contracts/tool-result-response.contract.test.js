@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { createToolDisplayText as crtTlDsplTxt } from "../../out/cores/responses/responses-tool-display.js";
-import { createToolErrorResponse as crtTlErrRes, createToolTextResponse as crtTlTxtRes, normalizeToolResult as nrmlTlRes } from "../../out/cores/responses/responses-tool-result.js";
+import { createToolErrorResponse as crtTlErrRes, createToolTextResponse as crtTlTxtRes, isCompactEnvelopeEnabled as isCmpcEnvl, normalizeToolResult as nrmlTlRes } from "../../out/cores/responses/responses-tool-result.js";
 import { getCurrentClient as getCurClnt, updateCurrentClient as updtCurClnt } from "../../out/features/config/config-client.js";
 
 // 2. Parse standard output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -14,17 +14,20 @@ function parseStandardOutput(result) {
   return result.structuredContent;
 }
 
-function createExpectedDisplaySummary(toolName, status, text, strcCont, contentItems = 1, durationMs = null) {
+function createExpectedDisplaySummary(toolName, status, text, strcCont, durationMs = null) {
   return crtTlDsplTxt({
     data: {
-      content: Array.from({ length: contentItems }, () => ({ text: "", type: "text" })),
+      content: [{ text, type: "text" }],
       structuredContent: strcCont,
-      text,
     },
     durationMs,
     status,
     toolName,
   });
+}
+
+function testCompactEnvelopeDefaultOn() {
+  assert.equal(isCmpcEnvl(), true);
 }
 
 function testTemplateLiteralDisplayFormat() {
@@ -44,9 +47,8 @@ function testDisplayFormatsUnitsAndCommas() {
 
   assert.equal(crtTlDsplTxt({
     data: {
-      content: [{ text: "", type: "text" }],
+      content: [{ text: "x".repeat(9045), type: "text" }],
       structuredContent: strcCont,
-      text: "x".repeat(9045),
     },
     durationMs: 4000,
     status: "success",
@@ -88,7 +90,6 @@ function testDisplayCountsBatchStructuredItems() {
     data: {
       content: [{ text: "", type: "text" }],
       structuredContent: { results: [{}, {}], totalCount: 2 },
-      text: "",
     },
     status: "success",
     toolName: "batch_tool",
@@ -97,7 +98,6 @@ function testDisplayCountsBatchStructuredItems() {
     data: {
       content: [{ text: "", type: "text" }],
       structuredContent: { results: [{}, {}, {}] },
-      text: "",
     },
     status: "success",
     toolName: "batch_tool",
@@ -118,8 +118,8 @@ function testSuccessEnvelope() {
   assert.equal(output.status, "success");
   assert.equal(output.durationMs, 7);
   assert.equal(output.error, null);
-  assert.equal(output.data.text, "ok");
-  assert.equal(normalized.content[0].text, createExpectedDisplaySummary("contract_tool", "success", "ok", { value: 42 }, 1, 7));
+  assert.equal(Object.hasOwn(output.data, "text"), false);
+  assert.equal(normalized.content[0].text, createExpectedDisplaySummary("contract_tool", "success", "ok", { value: 42 }, 7));
   assert.deepEqual(output.data.content, [{ type: "text", text: "ok" }]);
   assert.deepEqual(output.data.structuredContent, { value: 42 });
   assert.equal(normalized.structuredContent.toolName, "contract_tool");
@@ -138,8 +138,7 @@ function testErrorEnvelope() {
   assert.equal(normalized.isError, true);
   assert.equal(output.status, "error");
   assert.deepEqual(output.error, { message: "Error: boom" });
-  assert.equal(output.data.text, "Error: boom");
-  assert.equal(normalized.content[0].text, createExpectedDisplaySummary("error_tool", "error", "Error: boom", null, 1, 3));
+  assert.equal(normalized.content[0].text, createExpectedDisplaySummary("error_tool", "error", "Error: boom", null, 3));
   assert.equal(output.data.content[0].text, "Error: boom");
   assert.equal(normalized._meta.fsMcpResult.status, "error");
   assert.equal(normalized._meta.fsMcpResult.errorMessage, "Error: boom");
@@ -151,9 +150,8 @@ function testEmptyContentFallback() {
   const output = parseStandardOutput(normalized);
 
   assert.deepEqual(output.data.content, [{ type: "text", text: "" }]);
-  assert.equal(output.data.text, "");
   assert.equal(output.data.structuredContent, null);
-  assert.equal(normalized.content[0].text, createExpectedDisplaySummary("empty_tool", "success", "", null, 1, 1));
+  assert.equal(normalized.content[0].text, createExpectedDisplaySummary("empty_tool", "success", "", null, 1));
   assert.deepEqual(normalized._meta.fsMcpResult.contentTypes, ["text"]);
 }
 
@@ -175,10 +173,10 @@ function testNormalizedResultRestoresDisplay() {
   const renormalized = nrmlTlRes("already_normalized_tool", normalized, 3);
   const output = parseStandardOutput(renormalized);
 
-  assert.equal(renormalized.content[0].text, createExpectedDisplaySummary("already_normalized_tool", "success", "visible data", null, 1, 3));
+  assert.equal(renormalized.content[0].text, createExpectedDisplaySummary("already_normalized_tool", "success", "visible data", null, 3));
   assert.equal(output.durationMs, 3);
   assert.equal(renormalized._meta.fsMcpResult.durationMs, 3);
-  assert.equal(output.data.text, "visible data");
+  assert.equal(output.data.content[0].text, "visible data");
 }
 
 // 7. display preserves structured data ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -187,18 +185,18 @@ function testDisplayPreservesStructuredText() {
   const normalized = nrmlTlRes("preview_tool", crtTlTxtRes(fullText), 9);
   const output = parseStandardOutput(normalized);
 
-  assert.equal(output.data.text, fullText);
-  assert.equal(normalized.content[0].text, createExpectedDisplaySummary("preview_tool", "success", fullText, null, 1, 9));
+  assert.equal(output.data.content[0].text, fullText);
+  assert.equal(normalized.content[0].text, createExpectedDisplaySummary("preview_tool", "success", fullText, null, 9));
 }
 
-// 9. Test long text structured data preserved ―――――――――――――――――――――――――――――――――――――――――――――――――――――
-function testLongTextStructuredDataPreserved() {
+// 9. Test long text content preserved ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+function testLongTextContentPreserved() {
   const fullText = Array.from({ length: 50 }, (_value, index) => `line${index + 1} ${"x".repeat(640)}`).join("\n");
   const normalized = nrmlTlRes("file-write", crtTlTxtRes(fullText), 9);
   const output = parseStandardOutput(normalized);
 
-  assert.equal(output.data.text, fullText);
-  assert.equal(normalized.content[0].text, createExpectedDisplaySummary("file-write", "success", fullText, null, 1, 9));
+  assert.equal(output.data.content[0].text, fullText);
+  assert.equal(normalized.content[0].text, createExpectedDisplaySummary("file-write", "success", fullText, null, 9));
 }
 
 // 9-1. Test special token sanitized ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -212,7 +210,7 @@ function testSpecialTokenSanitized() {
   const output = parseStandardOutput(normalized);
   const serialized = JSON.stringify(normalized);
 
-  assert.equal(output.data.text, "alpha " + safeToken + " omega");
+  assert.equal(output.data.content[0].text, "alpha " + safeToken + " omega");
   assert.equal(output.data.structuredContent.textContent, "alpha " + safeToken + " omega");
   assert.equal(serialized.includes(rawToken), false);
 }
@@ -230,12 +228,12 @@ function testExistingSummaryPreserved() {
   const normalized = nrmlTlRes("batch_tool", crtTlTxtRes(batchText), 5);
   const output = parseStandardOutput(normalized);
 
-  assert.equal(normalized.content[0].text, createExpectedDisplaySummary("batch_tool", "success", batchText, null, 1, 5));
-  assert.equal(output.data.text, batchText);
+  assert.equal(normalized.content[0].text, createExpectedDisplaySummary("batch_tool", "success", batchText, null, 5));
+  assert.equal(output.data.content[0].text, batchText);
 }
 
-// 10-1. Large duplicate text stays untrimmed without indexing ―――――――――――――――――――――――――――――――――――
-function testLargeDuplicateTextStaysUntrimmed() {
+// 10-1. Large content stays untrimmed without a data.text copy ――――――――――――――――――――――――――――――――――
+function testLargeContentStaysUntrimmed() {
   const fullText = Array.from({ length: 180 }, (_value, index) => `line${index + 1} ${"x".repeat(640)}`).join("\n");
   const normalized = nrmlTlRes("large_text_tool", crtTlTxtRes(fullText, {
     structuredContent: { textContent: fullText },
@@ -246,8 +244,9 @@ function testLargeDuplicateTextStaysUntrimmed() {
   const indexErrorKey = "context" + "Index";
   const serialized = JSON.stringify(output);
 
-  assert.equal(output.data.text, fullText);
-  assert.equal(output.data.content[0].text.includes("full text in data.text"), true);
+  assert.equal(output.data.content[0].text, fullText);
+  assert.equal(output.data.content[0].text.includes("truncated"), false);
+  assert.equal(Object.hasOwn(output.data, "text"), false);
   assert.equal(output.data.structuredContent.textContent, fullText);
   assert.equal(output[indexKey], undefined);
   assert.equal(serialized.includes(indexErrorKey), false);
@@ -256,6 +255,7 @@ function testLargeDuplicateTextStaysUntrimmed() {
 
 // 8. test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function main() {
+  testCompactEnvelopeDefaultOn();
   testSuccessEnvelope();
   testErrorEnvelope();
   testEmptyContentFallback();
@@ -267,10 +267,10 @@ function main() {
   testGeminiDisplayStripsAnsi();
   testDisplayCountsBatchStructuredItems();
   testDisplayPreservesStructuredText();
-  testLongTextStructuredDataPreserved();
+  testLongTextContentPreserved();
   testSpecialTokenSanitized();
   testExistingSummaryPreserved();
-  testLargeDuplicateTextStaysUntrimmed();
+  testLargeContentStaysUntrimmed();
 }
 
 main();
