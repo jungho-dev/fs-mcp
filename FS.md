@@ -15,14 +15,16 @@
 
 ## Tool Routing
 
-| Trigger                   | Use                                                         |
-|---------------------------|-------------------------------------------------------------|
-| Directory list/create     | `dir-list`, `dir-mk`                                        |
-| File read/lines/metadata  | `file-read`, `file-lines`, `file-infos`                     |
-| File write/edit           | `file-write`, `file-edit`, `file-edit-lines`                |
-| File copy/move/remove     | `file-copy`, `file-move`, `file-remove`                     |
-| Composite read-only scan  | `fs-inspect`                                                |
-| Regex or broad search     | `search-regex`, `search-start`, `search-get`, `search-stop` |
-| Git status/diff/show      | `git-status`, `git-diff`, `git-show`                        |
-| Git add/commit            | `git-add`, `git-commit`                                     |
-|---------------------------|-------------------------------------------------------------|
+| Trigger                   | Operation                                                                |
+|---------------------------|--------------------------------------------------------------------------|
+| Directory list/create     | `dir-list`, `dir-mk`                                                     |
+| File read/lines/metadata  | `file-read`, `file-lines`, `file-infos`                                  |
+| File write/edit           | `file-write`, `file-edit`, `file-edit-lines`                             |
+| File copy/move/remove     | `file-copy`, `file-move`, `file-remove`                                  |
+| Regex or broad search     | `search-regex`, `search-start`, `search-get`, `search-stop`              |
+| Compact fs inspection     | `fs-inspect` (count-files, search, json-pick, snippet)                   |
+| Git status/diff/show      | `git-status`, `git-diff`, `git-show`                                     |
+| Git log/history search    | shell `git log` only when no MCP equivalent exists                       |
+| Git add/commit            | `git-add`, `git-commit`                                                  |
+| Pin git working dir       | `git-cwd`                                                                |
+|---------------------------|--------------------------------------------------------------------------|
