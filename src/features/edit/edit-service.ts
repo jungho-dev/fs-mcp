@@ -22,6 +22,7 @@ interface SearchReplace {
   replace: string;
   search: string;
 }
+
 // Threshold for fuzzy matching - similarity must be at least this value to be considered
 // (0-1 scale where 1 is perfect match and 0 is completely different).
 // Override via env FS_MCP_EDIT_FUZZY_THRESHOLD when callers need a stricter or looser bound.
