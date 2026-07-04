@@ -57,7 +57,7 @@ const GT_TL_DSCR: GitToolDescription[] = [
   { name: "git_worktree", title: "Git Worktree", description: ["Manage additional git worktrees.", PTH_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
 ];
 
-// 1. git tool catalog build ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. git tool catalog build -----------------------------------------------------------------------
 export const GT_TL_CTLG: TlCtlgEntr[] = GT_TL_DSCR
   .filter((tool) => EGTNS.has(tool.name))
   .map((tool) => crtTlCtEn({

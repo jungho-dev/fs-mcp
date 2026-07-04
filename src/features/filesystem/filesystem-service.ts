@@ -48,7 +48,7 @@ export declare interface ListDirectoryOptions {
   maxEntries?: number;
 }
 
-// 1. Build glob pattern reg exp ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Build glob pattern reg exp ----------------------------------------------------------------
 function buildGlobPatternRegExp(pattern: string): RegExp {
   const regexPattern = pattern.replace(GREP, "\\$&").replace(GLB_ASTR_PAT, ".*");
   return new RegExp(`^${regexPattern}$`, "i");
@@ -56,11 +56,11 @@ function buildGlobPatternRegExp(pattern: string): RegExp {
 
 // UTILITY FUNCTIONS - Eliminate duplication
 
-// 1. Get MIME type information for a file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Get MIME type information for a file ---------------------------------------------------------
 // @param filePath Path to the file
 // @returns Object with mimeType and isImage properties
 
-// 1. Get MIME type info ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Get MIME type info ---------------------------------------------------------------------------
 async function getMimeTypeInfo(filePath: string): Promise<{ mimeType: string; isImage: boolean }> {
   const { getMimeType, isImageFile } = await import("@features/filesystem/filesystem-mime-registry");
   const mimeType = getMimeType(filePath);
@@ -68,13 +68,13 @@ async function getMimeTypeInfo(filePath: string): Promise<{ mimeType: string; is
   return { mimeType, isImage };
 }
 
-// 4. Permission error message builder ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Permission error message builder -------------------------------------------------------------
 // or timeout error.
 // Lists all common causes without path-based detection — the AI receiving this
 // error should inspect the path and inform the user which cause is most likely
 // (e.g. cloud storage folder, network drive, system file, locked file, etc.)
 
-// 4. Build permission error ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Build permission error -----------------------------------------------------------------------
 function buildPermissionError(filePath: string, errCode: string | undefined): Error {
   const isMac = process.platform === "darwin";
   const isTimeout = errCode === "ETIMEDOUT";
@@ -111,7 +111,7 @@ function buildPermissionError(filePath: string, errCode: string | undefined): Er
 
 // Initialize allowed directories from configuration
 
-// 5. Get allowed dirs ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Get allowed dirs -----------------------------------------------------------------------------
 async function getAllowedDirs(): Promise<string[]> {
   try {
     const config = await cfgMgr.getConfig();
@@ -128,12 +128,12 @@ async function getAllowedDirs(): Promise<string[]> {
 
 // Normalize all paths consistently
 
-// 6. Normalize path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Normalize path -------------------------------------------------------------------------------
 function normalizePath(p: string): string {
   return path.normalize(expandHome(p)).toLowerCase();
 }
 
-// 7. Expand home ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Expand home ----------------------------------------------------------------------------------
 function expandHome(filepath: string): string {
   if (filepath.startsWith("~/") || filepath === "~") {
   	return path.join(os.homedir(), filepath.slice(1));
@@ -141,20 +141,20 @@ function expandHome(filepath: string): string {
   return filepath;
 }
 
-// 7-1. Resolve requested path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7-1. Resolve requested path -------------------------------------------------------------------
 function resolveRequestedPath(rqstPth: string): string {
   const expandedPath = expandHome(rqstPth);
 
   return path.isAbsolute(expandedPath) ? path.resolve(expandedPath) : path.resolve(process.cwd(), expandedPath);
 }
 
-// 5. Recursively validates parent directories until it finds a valid one ――――――――――――――――――――――――――
+// 5. Recursively validates parent directories until it finds a valid one --------------------------
 // This function handles the case where we need to create nested directories
 // and we need to check if any of the parent directories exist
 // @param directoryPath The path to validate
 // @returns Promise<boolean> True if a valid parent directory was found
 
-// 8. Validate parent directories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Validate parent directories ------------------------------------------------------------------
 async function validateParentDirectories(dirPth2: string): Promise<boolean> {
   const parentDir = path.dirname(dirPth2);
 
@@ -181,11 +181,11 @@ async function validateParentDirectories(dirPth2: string): Promise<boolean> {
   }
 }
 
-// 6. Checks if a path is within any of the allowed directories ――――――――――――――――――――――――――――――――――――
+// 6. Checks if a path is within any of the allowed directories ------------------------------------
 // @param pathToCheck Path to check
 // @returns boolean True if path is allowed
 
-// 9. Is path allowed ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Is path allowed ------------------------------------------------------------------------------
 async function isPathAllowed(pathToCheck: string): Promise<boolean> {
   // If root directory is allowed, all paths are allowed
   const allwDrct = await getAllowedDirs();
@@ -226,21 +226,21 @@ async function isPathAllowed(pathToCheck: string): Promise<boolean> {
   return isAllowed;
 }
 
-// 9-1. Assert allowed path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9-1. Assert allowed path -----------------------------------------------------------------------
 async function assertAllowedPath(pathToCheck: string, rqstPth: string): Promise<void> {
   if (!(await isPathAllowed(pathToCheck))) {
     throw new Error(`Path not allowed: ${rqstPth}. Must be within one of these directories: ${(await getAllowedDirs()).join(", ")}`);
   }
 }
 
-// 7. Validates a path to ensure it can be accessed or created ―――――――――――――――――――――――――――――――――――――
+// 7. Validates a path to ensure it can be accessed or created -------------------------------------
 // For existing paths, returns the real path (resolving symlinks).
 // For non-existent paths, validates parent directories to ensure they exist.
 // @param requestedPath The path to validate
 // @returns Promise<string> The validated path
 // @throws Error if the path or its parent directories don't exist or if the path is not allowed
 
-// 10. Validate path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Validate path -------------------------------------------------------------------------------
 export async function validatePath(rqstPth: string): Promise<string> {
   const valOp = async (): Promise<string> => {
     const abslOrig = resolveRequestedPath(rqstPth);
@@ -298,7 +298,7 @@ export async function validatePath(rqstPth: string): Promise<string> {
   return result;
 }
 
-// 10-1. Validate target path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10-1. Validate target path --------------------------------------------------------------------
 export async function validateTargetPath(rqstPth: string): Promise<string> {
   const valOp = async (): Promise<string> => {
     const abslOrig = resolveRequestedPath(rqstPth);
@@ -329,11 +329,11 @@ export async function validateTargetPath(rqstPth: string): Promise<string> {
 // Re-export FileResult from base for consumers
 export type { FileResult } from "@assets/readers/readers-base";
 
-// 8. Read file content from a URL ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Read file content from a URL -----------------------------------------------------------------
 // @param url URL to fetch content from
 // @returns File content or file result with metadata
 
-// 11. Read file from URL ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11. Read file from URL --------------------------------------------------------------------------
 export async function readFileFromUrl(url: string): Promise<FileResult> {
   // Import the MIME type utilities
   const { isImageFile } = await import("@features/filesystem/filesystem-mime-registry");
@@ -361,12 +361,12 @@ export async function readFileFromUrl(url: string): Promise<FileResult> {
   };
 }
 
-// 9. Read file content from the local filesystem ――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Read file content from the local filesystem --------------------------------------------------
 // @param filePath Path to the file
 // @param options Read options
 // @returns File content or file result with metadata
 
-// 12. Read file from disk ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 12. Read file from disk -------------------------------------------------------------------------
 export async function readFileFromDisk(filePath: string, options?: ReadOptions): Promise<FileResult> {
   const { offset = 0 } = options ?? {};
   const { length } = options ?? {};
@@ -460,18 +460,18 @@ export async function readFileFromDisk(filePath: string, options?: ReadOptions):
   return result;
 }
 
-// 10. Read a file from either the local filesystem or a URL ―――――――――――――――――――――――――――――――――――――――
+// 10. Read a file from either the local filesystem or a URL ---------------------------------------
 // @param filePath Path to the file or URL
 // @param options Read options
 // @returns File content or file result with metadata
 
-// 13. Read file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 13. Read file -----------------------------------------------------------------------------------
 export async function readFile(filePath: string, options?: ReadOptions): Promise<FileResult> {
   const { isUrl, offset, length } = options ?? {};
   return isUrl ? readFileFromUrl(filePath) : readFileFromDisk(filePath, { offset, length });
 }
 
-// 11. Read file content without status messages for internal operations ―――――――――――――――――――――――――――
+// 11. Read file content without status messages for internal operations ---------------------------
 // This function preserves exact file content including original line endings,
 // which is essential for edit operations that need to maintain file formatting.
 // @param filePath Path to the file
@@ -479,7 +479,7 @@ export async function readFile(filePath: string, options?: ReadOptions): Promise
 // @param length Maximum number of lines to read. Omit to read through EOF.
 // @returns File content without status headers, with preserved line endings
 
-// 14. Read file internal ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 14. Read file internal --------------------------------------------------------------------------
 export async function readFileInternal(filePath: string, offset: number=0, length?: number): Promise<string> {
   const validPath = await validatePath(filePath);
 
@@ -511,7 +511,7 @@ export async function readFileInternal(filePath: string, offset: number=0, lengt
   return selLns.join("");
 }
 
-// 15. Read text slice internal ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 15. Read text slice internal --------------------------------------------------------------------
 export async function readTextSliceInternal(filePath: string, offset: number=0, length?: number): Promise<string> {
   if (!Number.isInteger(offset) || offset < 0) {
   	throw new Error("Text slice offset must be a non-negative integer");
@@ -533,12 +533,12 @@ export async function readTextSliceInternal(filePath: string, offset: number=0, 
   return content.slice(offset, offset + length);
 }
 
-// 16. Should use text file fast path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 16. Should use text file fast path -----------------------------------------------------------
 function shouldUseTextFileFastPath(filePath: string): boolean {
   return TXT_FL_TYPS.has(rslPrFlTy(filePath));
 }
 
-// 17. Write file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 17. Write file ----------------------------------------------------------------------------------
 export async function writeFile(filePath: string, content: string, mode: "rewrite" | "append" = "rewrite"): Promise<void> {
   const validPath = await validateTargetPath(filePath);
 
@@ -552,13 +552,13 @@ export async function writeFile(filePath: string, content: string, mode: "rewrit
   await handler.write(validPath, content, mode);
 }
 
-// 18. Create directory ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 18. Create directory ----------------------------------------------------------------------------
 export async function createDirectory(dirPath: string): Promise<void> {
   const validPath = await validateTargetPath(dirPath);
   await fs.mkdir(validPath, { recursive: true });
 }
 
-// 18. List directory ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 18. List directory ------------------------------------------------------------------------------
 export async function listDirectory(dirPath: string, depth: number=2, options: ListDirectoryOptions={}): Promise<string[]> {
   const validPath = await validatePath(dirPath);
   const results: string[] = [];
@@ -568,14 +568,14 @@ export async function listDirectory(dirPath: string, depth: number=2, options: L
   const exclPats2 = options.excludePatterns?.map((pattern) => buildGlobPatternRegExp(pattern)) ?? [];
   const includeFiles = options.includeFiles !== false;
 
-  // 19. Should skip directory entry ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 19. Should skip directory entry --------------------------------------------------------------
   function shouldSkipEntry(entry: Dirent, displayPath: string): boolean {
     if (!includeFiles && !entry.isDirectory()) {
     	return true;
     }
     return exclPats2.some((pattern) => pattern.test(entry.name) || pattern.test(displayPath));
   }
-  // 19. List recursive ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 19. List recursive ----------------------------------------------------------------------------
   async function listRecursive(currentPath: string, currentDepth: number, relativePath: string="", isTopLevel: boolean=true): Promise<void> {
     if (currentDepth <= 0) {
     	return;
@@ -641,7 +641,7 @@ export async function listDirectory(dirPath: string, depth: number=2, options: L
   return results;
 }
 
-// 20. Copy file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 20. Copy file -----------------------------------------------------------------------------------
 export async function copyFile(sourcePath: string, dstPth: string, recursive: boolean=false, force: boolean=false): Promise<void> {
   const vldSrcPth = await validatePath(sourcePath);
   const vldDstPth = await validateTargetPath(dstPth);
@@ -652,14 +652,14 @@ export async function copyFile(sourcePath: string, dstPth: string, recursive: bo
   });
 }
 
-// 21. Move file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 21. Move file -----------------------------------------------------------------------------------
 export async function moveFile(sourcePath: string, dstPth: string): Promise<void> {
   const vldSrcPth = await validatePath(sourcePath);
   const vldDstPth = await validateTargetPath(dstPth);
   await fs.rename(vldSrcPth, vldDstPth);
 }
 
-// 22. Remove path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 22. Remove path ---------------------------------------------------------------------------------
 export async function removePath(filePath: string, recursive: boolean=false, force: boolean=false): Promise<void> {
   const validPath = await validatePath(filePath);
   let stats: Stats;
@@ -684,7 +684,7 @@ export async function removePath(filePath: string, recursive: boolean=false, for
   await fs.rm(validPath, { force, recursive });
 }
 
-// 23. Get file info ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 23. Get file info -------------------------------------------------------------------------------
 export async function getFileInfo(filePath: string): Promise<LegacyFileInfo> {
   const validPath = await validatePath(filePath);
 

@@ -74,7 +74,7 @@ const RGX_ESC_PAT = /[.+()[\]{}|^$\\*?]/g;
 const RGX_SPCL_CHRS = ".+()[]{}|^$\\*?";
 const LN_SPLT_PAT = /\r\n|\r|\n/;
 
-// 1. Answer builders ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Answer builders ------------------------------------------------------------------------------
 function answerOf(id: string, op: string, status: InspectStatus, value: unknown, confidence: InspectConfidence, evidence: InspectEvidence[], warnings: string[]): InspectAnswer {
   return {id, op, status, value, confidence, evidence, warnings};
 }
@@ -83,7 +83,7 @@ function answerError(id: string, op: string, message: string): InspectAnswer {
   return answerOf(id, op, "error", null, "low", [], [message]);
 }
 
-// 2. Path helpers ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Path helpers ---------------------------------------------------------------------------------
 function cmpPath(value: string): string {
   let out = value.replace(/\\/g, "/");
   if (out.startsWith("//?/")) {
@@ -140,7 +140,7 @@ async function requestPath(root: string, reqPath: string | undefined): Promise<s
   return real;
 }
 
-// 3. Wildcard matching ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Wildcard matching ----------------------------------------------------------------------------
 function wildcardMatch(pattern: string, text: string): boolean {
   let regex = INSP_WLDC_CACHE.get(pattern);
 
@@ -172,7 +172,7 @@ function wildcardMatch(pattern: string, text: string): boolean {
   return regex.test(text);
 }
 
-// 4. Evidence shaping ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Evidence shaping -----------------------------------------------------------------------------
 // Per-call snippet budget: appends evidence until maxChars is consumed, then flags truncation.
 function addEvidence(evidence: InspectEvidence[], entryPath: string, lineStart: number | null, lineEnd: number | null, snippet: string, state: InspectState): void {
   if (state.usedChars >= state.maxChars) {
@@ -195,7 +195,7 @@ function addEvidence(evidence: InspectEvidence[], entryPath: string, lineStart: 
   });
 }
 
-// 5. Directory traversal ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Directory traversal --------------------------------------------------------------------------
 async function readDirSorted(dirPath: string): Promise<Array<{name: string; full: string; isDirectory: boolean; isFile: boolean}>> {
   const entries = await fs.readdir(dirPath, {withFileTypes: true});
   const mapped = entries.map((entry) => ({
@@ -235,7 +235,7 @@ async function countDir(root: string, dirPath: string, glob: string, recursive: 
   return count;
 }
 
-// 6. Count files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Count files ----------------------------------------------------------------------------------
 async function countFilesAnswer(root: string, request: InspectRequest, id: string, state: InspectState): Promise<InspectAnswer> {
   const op = "count-files";
   let target: string;
@@ -273,7 +273,7 @@ async function countFilesAnswer(root: string, request: InspectRequest, id: strin
   }, "high", evidence, []);
 }
 
-// 7. Search ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Search ---------------------------------------------------------------------------------------
 function escapeRegexLiteral(value: string): string {
   return value.replace(RGX_ESC_PAT, "\\$&");
 }
@@ -441,7 +441,7 @@ async function searchAnswer(root: string, request: InspectRequest, id: string, s
   return answerOf(id, op, "ok", value, confidence, evidence, warnings);
 }
 
-// 8. JSON pointer picks ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. JSON pointer picks ---------------------------------------------------------------------------
 function jsonPointerPick(value: unknown, pointer: string): {found: boolean; value: unknown} {
   if (pointer === "") {
     return {found: true, value};
@@ -521,7 +521,7 @@ async function jsonPickAnswer(root: string, request: InspectRequest, id: string,
   return answerOf(id, op, status, {path: relPath(root, target), values}, confidence, evidence, warnings);
 }
 
-// 9. Snippet collection ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Snippet collection ---------------------------------------------------------------------------
 function pushSnippetRange(ranges: [number, number][], start: number, end: number): void {
   const last = ranges.at(-1);
 
@@ -591,7 +591,7 @@ async function snippetAnswer(root: string, request: InspectRequest, id: string, 
   }, "high", evidence, []);
 }
 
-// 10. Git status inspection ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Git status inspection -----------------------------------------------------------------------
 // Composite op: folds a git status/branch lookup into the same fs-inspect call so file reads,
 // content search, and a git resolve land in ONE tool round-trip instead of three.
 async function gitStatusAnswer(root: string, request: InspectRequest, id: string): Promise<InspectAnswer> {
@@ -613,7 +613,7 @@ async function gitStatusAnswer(root: string, request: InspectRequest, id: string
   }
 }
 
-// 11. Request dispatch ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11. Request dispatch ----------------------------------------------------------------------------
 async function runRequest(root: string, request: InspectRequest, index: number, state: InspectState): Promise<InspectAnswer> {
   const id = request.id ?? `request-${index}`;
 
@@ -648,7 +648,7 @@ function inspectStatus(answers: InspectAnswer[]): InspectStatus {
   return "ok";
 }
 
-// 12. FS inspect entry ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 12. FS inspect entry ----------------------------------------------------------------------------
 export async function runFsInspect(args: unknown): Promise<ServerResult> {
   const parsed = InspArSc.parse(args);
   let root: string;

@@ -62,7 +62,7 @@ const MNY_LN_PRFX = Array.from({ length: 1100 }, (_value, index) => `prefix-${in
 const MNY_LN_TXT = `${MNY_LN_PRFX}\n${TN_THSN_A}\n`;
 const MLRT = `${MNY_LN_PRFX}\n${TN_THSN_B}\n`;
 
-// 1. Parse tool output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Parse tool output ----------------------------------------------------------------------------
 function parseToolOutput(result) {
   assert.equal(result.content.length, 1);
   assert.equal(result.content[0].type, "text");
@@ -73,7 +73,7 @@ function parseToolOutput(result) {
   return result.structuredContent;
 }
 
-// 1-1. Batch body text ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1-1. Batch body text ----------------------------------------------------------------------------
 // The compact envelope keeps the full per-item body inside data.content for full-mode tools.
 function batchBodyText(output) {
   assert.equal(Array.isArray(output.data.content), true);
@@ -81,7 +81,7 @@ function batchBodyText(output) {
   return output.data.content[0].text;
 }
 
-// 2. Extract batch results ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Extract batch results ------------------------------------------------------------------------
 function extractBatchResults(result) {
   const output = parseToolOutput(result);
   const batchPayload = output.data.structuredContent;
@@ -91,7 +91,7 @@ function extractBatchResults(result) {
   return batchPayload.results;
 }
 
-// 2-1. Assert compact batch item ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2-1. Assert compact batch item ------------------------------------------------------------------
 // Compact per-item results carry only structuredContent and isError; the content copy is dropped.
 function assertCompactBatchItem(batchItem) {
   assert.equal(Object.hasOwn(batchItem.result, "content"), false);
@@ -99,7 +99,7 @@ function assertCompactBatchItem(batchItem) {
   assert.equal(Object.hasOwn(batchItem.result, "structuredContent"), true);
 }
 
-// 1. Path exists helper ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Path exists helper ---------------------------------------------------------------------------
 async function pathExists(filePath) {
   try {
     await fs.stat(filePath);
@@ -113,7 +113,7 @@ async function pathExists(filePath) {
   }
 }
 
-// 4. Setup ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Setup ----------------------------------------------------------------------------------------
 async function setup() {
   const origCfg = await cfgMgr.getConfig();
 
@@ -147,13 +147,13 @@ async function setup() {
   return origCfg;
 }
 
-// 5. Teardown ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Teardown -------------------------------------------------------------------------------------
 async function teardown(origCfg) {
   await cfgMgr.updateConfig(origCfg);
   await fs.rm(TEST_DIR, { recursive: true, force: true });
 }
 
-// 6. Test read files surface ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Test read files surface ----------------------------------------------------------------------
 async function testReadFilesSurface() {
   const result = await dsptTlCll("file-read", {
     paths: [SOURCE_FILE, EXTRA_FILE],
@@ -239,7 +239,7 @@ async function testReadFilesSurface() {
   assert.equal(lnMssnPyld.results[0].result.structuredContent.missing, true);
 }
 
-// 7. Test summary line keeps unstructured body ――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Test summary line keeps unstructured body ----------------------------------------------------
 // With the compact envelope the per-item content copy is dropped, so the flattened summary line
 // becomes the only body carrier for summary-mode tools and must stay untruncated.
 function testSummaryLineKeepsUnstructuredBody() {
@@ -262,7 +262,7 @@ function testSummaryLineKeepsUnstructuredBody() {
   assert.equal(batchItem.result.structuredContent, null);
 }
 
-// 7-1. Test large input strings elided ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7-1. Test large input strings elided ------------------------------------------------------------
 async function testLargeInputStringsElided() {
   const editResult = await dsptTlCll("file-edit", {
     items: [
@@ -283,7 +283,7 @@ async function testLargeInputStringsElided() {
   assert.equal(await fs.readFile(ELID_EDT_FL, "utf8"), `${TN_THSN_B}\n`);
 }
 
-// 8. Test create and list directory surface ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Test create and list directory surface -------------------------------------------------------
 async function testCreateAndListDirectorySurface() {
   const createResult = await dsptTlCll("dir-create", {
     paths: [CREATED_DIR],
@@ -311,7 +311,7 @@ async function testCreateAndListDirectorySurface() {
   assert.match(listBody, CRTD_DR_PAT);
 }
 
-// 9. Test copy files surface ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Test copy files surface -----------------------------------------------------------------------
 async function testCopyFilesSurface() {
   const copyResult = await dsptTlCll("path-copy", {
     items: [
@@ -354,7 +354,7 @@ async function testCopyFilesSurface() {
   assert.equal(ovrwBtchRess[0].ok, false);
 }
 
-// 10. Test write move info and edit surface ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Test write move info and edit surface -------------------------------------------------------
 async function testWriteMoveInfoAndEditSurface() {
   const writeResult = await dsptTlCll("file-write", {
     items: [
@@ -586,7 +586,7 @@ async function testWriteMoveInfoAndEditSurface() {
   assert.equal(await pathExists(CREATED_DIR), false);
 }
 
-// 10. Main ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Main ----------------------------------------------------------------------------------------
 
 async function main() {
   const origCfg = await setup();

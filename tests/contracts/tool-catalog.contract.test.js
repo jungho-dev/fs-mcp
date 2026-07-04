@@ -54,7 +54,7 @@ const APPTN = [
   "file-edit",
 ];
 
-// 1. Test tool catalog shape ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Test tool catalog shape --------------------------------------------------------------------
 function testToolCatalogShape() {
   const tools = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG, ...WEB_TL_CTLG];
 
@@ -65,7 +65,7 @@ function testToolCatalogShape() {
   );
 }
 
-// 2. Test batch first descriptions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Test batch first descriptions ----------------------------------------------------------------
 function testBatchFirstDescriptions() {
   const tools = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG, ...WEB_TL_CTLG];
   const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
@@ -78,7 +78,7 @@ function testBatchFirstDescriptions() {
   }
 }
 
-// 3. Test large edit guidance ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Test large edit guidance -------------------------------------------------------------------
 function testLargeEditGuidance() {
   const tools = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG, ...WEB_TL_CTLG];
   const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
@@ -92,7 +92,7 @@ function testLargeEditGuidance() {
   }
 }
 
-// 4. Run all tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Run all tests ----------------------------------------------------------------------------
 async function runAllTests() {
   testToolCatalogShape();
   testBatchFirstDescriptions();

@@ -23,7 +23,7 @@ let textHandler: TxtFlHdl | null = null;
 let bnryHdl: BnryFlHdl | null = null;
 let docxHandler: DcxFlHdl | null = null;
 
-// 1. Get image handler ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Get image handler ----------------------------------------------------------------------------
 function getImageHandler(): ImgFlHdl {
   if (!imageHandler) {
     imageHandler = new ImgFlHdl();
@@ -31,7 +31,7 @@ function getImageHandler(): ImgFlHdl {
   return imageHandler;
 }
 
-// 2. Get text handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Get text handler -----------------------------------------------------------------------------
 function getTextHandler(): TxtFlHdl {
   if (!textHandler) {
     textHandler = new TxtFlHdl();
@@ -39,7 +39,7 @@ function getTextHandler(): TxtFlHdl {
   return textHandler;
 }
 
-// 3. Get binary handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Get binary handler ---------------------------------------------------------------------------
 function getBinaryHandler(): BnryFlHdl {
   if (!bnryHdl) {
     bnryHdl = new BnryFlHdl();
@@ -47,7 +47,7 @@ function getBinaryHandler(): BnryFlHdl {
   return bnryHdl;
 }
 
-// 4. Get docx handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Get docx handler -----------------------------------------------------------------------------
 function getDocxHandler(): DcxFlHdl {
   if (!docxHandler) {
     docxHandler = new DcxFlHdl();
@@ -55,7 +55,7 @@ function getDocxHandler(): DcxFlHdl {
   return docxHandler;
 }
 
-// 2. Get the appropriate file handler for a given file path ―――――――――――――――――――――――――――――――――――――――
+// 2. Get the appropriate file handler for a given file path ---------------------------------------
 // Each handler's canHandle() determines if it can process the file.
 // Extension-based handlers (DOCX, Image) return sync boolean.
 // BinaryFileHandler uses async isBinaryFile for content-based detection.
@@ -67,7 +67,7 @@ function getDocxHandler(): DcxFlHdl {
 // @param filePath File path to get handler for
 // @returns FileHandler instance that can handle this file
 
-// 5. Get file handler ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Get file handler -----------------------------------------------------------------------------
 export async function getFileHandler(filePath: string): Promise<FileHandler> {
   // Check DOCX first (extension-based, sync)
   if (getDocxHandler().canHandle(filePath)) {
@@ -85,12 +85,12 @@ export async function getFileHandler(filePath: string): Promise<FileHandler> {
   return getTextHandler();
 }
 
-// 3. Check if a file path is an image file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Check if a file path is an image file --------------------------------------------------------
 // Delegates to ImageFileHandler.canHandle to avoid duplicating extension logic
 // @param path File path
 // @returns true if file is an image format
 
-// 6. Is image file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Is image file --------------------------------------------------------------------------------
 export function isImageFile(path: string): boolean {
   return getImageHandler().canHandle(path);
 }

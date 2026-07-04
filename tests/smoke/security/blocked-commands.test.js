@@ -15,7 +15,7 @@ import { startProcess } from "../../../out/features/process/process-runner.js";
 // We need a wrapper because startProcess in tools/improved-process-tools.js returns a ServerResult
 // but our tests expect to receive the actual command result
 
-// 1. Execute command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Execute command ------------------------------------------------------------------------------
 async function executeCommand(command, timeout_ms = 2000, shell = null) {
   const args = {
     command: command,
@@ -46,7 +46,7 @@ const SF_CMDS = ['echo "Hello World"', "pwd", "date"];
 
 const POT_HRM_CMD = ["rm", "mkfs", "dd"];
 
-// 1. Helper function to clean up test directories ―――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Helper function to clean up test directories -------------------------------------------------
 async function cleanupTestDirectories() {
   try {
     await fs.rm(TEST_DIR, { recursive: true, force: true });
@@ -59,7 +59,7 @@ async function cleanupTestDirectories() {
   }
 }
 
-// 2. Try command helper ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Try command helper ---------------------------------------------------------------------------
 async function tryCommand(command) {
   const pidPattern = /PID (\d+)/;
   try {
@@ -93,7 +93,7 @@ async function tryCommand(command) {
   }
 }
 
-// 3. Setup function to prepare the test environment ―――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Setup function to prepare the test environment -----------------------------------------------
 async function setup() {
   // Clean up before tests
   await cleanupTestDirectories();
@@ -109,7 +109,7 @@ async function setup() {
   return origCfg;
 }
 
-// 4. Teardown function to clean up after tests ――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Teardown function to clean up after tests ----------------------------------------------------
 async function teardown(origCfg) {
   // Reset configuration to original
   await cfgMgr.updateConfig(origCfg);
@@ -118,7 +118,7 @@ async function teardown(origCfg) {
   await cleanupTestDirectories();
 }
 
-// 5. Test execution of non-blocked commands ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Test execution of non-blocked commands -------------------------------------------------------
 async function testNonBlockedCommands() {
   // Set blockedCommands to include specific harmful commands
   const blckCmds = ["rm -rf /", ":(){ :|:& };:", "> /dev/sda", "dd if=/dev/zero of=/dev/sda", "mkfs", "mkfs.ext4", "format"];
@@ -138,7 +138,7 @@ async function testNonBlockedCommands() {
   );
 }
 
-// 6. Test execution of blocked commands ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Test execution of blocked commands -----------------------------------------------------------
 async function testBlockedCommandsExecution() {
   // Set blockedCommands to block our test harmful commands
   const blckCmds = POT_HRM_CMD.slice();
@@ -161,7 +161,7 @@ async function testBlockedCommandsExecution() {
   );
 }
 
-// 7. Test updating blockedCommands list ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Test updating blockedCommands list -----------------------------------------------------------
 async function testUpdatingBlockedCommands() {
   // Start with one blocked command
   const testCommand = "echo";
@@ -179,7 +179,7 @@ async function testUpdatingBlockedCommands() {
   assert.strictEqual(isAllowed2, true, "Command should be allowed after update");
 }
 
-// 8. Test empty blockedCommands array ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Test empty blockedCommands array -------------------------------------------------------------
 async function testEmptyBlockedCommands() {
   // Set blockedCommands to empty array
   await cfgMgr.setValue("blockedCommands", []);
@@ -199,7 +199,7 @@ async function testEmptyBlockedCommands() {
   );
 }
 
-// 9. Main test function ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Main test function ---------------------------------------------------------------------------
 async function runBlockedCommandsTests() {
   // Test 1: Execution of non-blocked commands
   await testNonBlockedCommands();
@@ -216,7 +216,7 @@ async function runBlockedCommandsTests() {
 
 // Export the main test function
 
-// 11. Run tests ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11. Run tests -----------------------------------------------------------------------------------
 export default async function runTests() {
   let origCfg;
   try {

@@ -9,7 +9,7 @@ const ignrDrct = new Set([".git", "node_modules"]);
 const frbdSffx = [".map", ".d.ts"];
 const expBnShbn = "#!/usr/bin/env bun";
 
-// 1. filesystem helpers ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. filesystem helpers ---------------------------------------------------------------------------
 async function pathExists(targetPath) {
   try {
     await stat(targetPath);
@@ -23,7 +23,7 @@ async function pathExists(targetPath) {
   }
 }
 
-// 2. bin entrypoint check ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. bin entrypoint check --------------------------------------------------------------------------
 async function verifyBinEntrypoint() {
   const packageJson = JSON.parse(await readFile(pckgJsnPth2, "utf8"));
   const binTarget = packageJson.bin?.["fs-mcp"];
@@ -47,7 +47,7 @@ async function verifyBinEntrypoint() {
   return failures;
 }
 
-// 3. forbidden artifact scan ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. forbidden artifact scan ----------------------------------------------------------------------
 async function collectForbiddenArtifacts(dirPth2, results = []) {
   const entries = await readdir(dirPth2, { withFileTypes: true });
 
@@ -70,7 +70,7 @@ async function collectForbiddenArtifacts(dirPth2, results = []) {
   return results;
 }
 
-// 4. release shape check ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. release shape check --------------------------------------------------------------------------
 async function main() {
   const rqrdDrct = ["src", "out", "tests", path.join("tests", "scripts")];
   const mssnDrct = [];

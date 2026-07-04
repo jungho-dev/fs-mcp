@@ -27,7 +27,7 @@ const colors = {
   red: "\x1b[31m",
 };
 
-// 1. Run single regex search ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Run single regex search -------------------------------------------------------------------------
 async function runSearch(item) {
   const result = await hndlRgxSrchs({ items: [item] });
   const itemResult = result.structuredContent?.results?.[0]?.result?.structuredContent;
@@ -35,7 +35,7 @@ async function runSearch(item) {
   return { itemResult, result, text: result.content[0].text };
 }
 
-// 2. Setup function to prepare test environment ―――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Setup function to prepare test environment -----------------------------------------------------
 async function setup() {
   // Save original config
   const origCfg = await cfgMgr.getConfig();
@@ -117,7 +117,7 @@ class TestClass:
   return origCfg;
 }
 
-// 3. Teardown function to clean up after tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Teardown function to clean up after tests ------------------------------------------------------
 async function teardown(origCfg) {
   // Remove test directory and all files
   await fs.rm(TEST_DIR, { force: true, recursive: true });
@@ -126,14 +126,14 @@ async function teardown(origCfg) {
   await cfgMgr.updateConfig(origCfg);
 }
 
-// 4. Assert function for test validation ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Assert function for test validation --------------------------------------------------------------
 function assert(condition, message) {
   if (!condition) {
     throw new Error(`Assertion failed: ${message}`);
   }
 }
 
-// 5. Test basic regex search ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Test basic regex search -------------------------------------------------------------------------
 async function testBasicSearch() {
   const { result, text } = await runSearch({
     path: TEST_DIR,
@@ -148,7 +148,7 @@ async function testBasicSearch() {
   assert(text.includes("nested.py"), "Should find matches in nested.py");
 }
 
-// 6. Test regex searches structured payload ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Test regex searches structured payload ----------------------------------------------------------
 async function testRegexSearchesTool() {
   const result = await hndlRgxSrchs({
     items: [
@@ -173,7 +173,7 @@ async function testRegexSearchesTool() {
   assert(itemResult?.results?.some((item) => item.file.endsWith("test1.js")), "Regex searches should return matching files");
 }
 
-// 7. Test case-sensitive search ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Test case-sensitive search ----------------------------------------------------------------------
 async function testCaseSensitiveSearch() {
   const { text } = await runSearch({
     path: TEST_DIR,
@@ -186,7 +186,7 @@ async function testCaseSensitiveSearch() {
   assert(!text.includes("test1.js"), "Should not match lowercase pattern in test1.js");
 }
 
-// 8. Test case-insensitive search ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Test case-insensitive search --------------------------------------------------------------------
 async function testCaseInsensitiveSearch() {
   const { text } = await runSearch({
     path: TEST_DIR,
@@ -200,7 +200,7 @@ async function testCaseInsensitiveSearch() {
   assert(text.includes("nested.py"), "Should find pattern in nested.py");
 }
 
-// 9. Test file pattern filtering ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Test file pattern filtering ---------------------------------------------------------------------
 async function testFilePatternFiltering() {
   const { text } = await runSearch({
     path: TEST_DIR,
@@ -214,7 +214,7 @@ async function testFilePatternFiltering() {
   assert(!text.includes("nested.py"), "Should not include Python files");
 }
 
-// 10. Test maximum results limiting ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Test maximum results limiting ------------------------------------------------------------------
 async function testMaxResults() {
   const { itemResult, text } = await runSearch({
     path: TEST_DIR,
@@ -227,7 +227,7 @@ async function testMaxResults() {
   assert(itemResult?.totalResults <= 5 || itemResult?.wasLimited === true, "Should respect the maxResults cap");
 }
 
-// 11. Test context lines functionality ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11. Test context lines functionality ----------------------------------------------------------------
 async function testContextLines() {
   const { text } = await runSearch({
     path: TEST_DIR,
@@ -240,7 +240,7 @@ async function testContextLines() {
   assert(text.includes("test1.js"), "Should match searchFunction in test1.js");
 }
 
-// 12. Test hidden files inclusion ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 12. Test hidden files inclusion --------------------------------------------------------------------
 async function testIncludeHidden() {
   const hiddenFile = path.join(TEST_DIR, ".hidden-file.txt");
   await fs.writeFile(hiddenFile, "This is hidden content with pattern");
@@ -260,7 +260,7 @@ async function testIncludeHidden() {
   }
 }
 
-// 13. Test no matches found scenario ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 13. Test no matches found scenario -----------------------------------------------------------------
 async function testNoMatches() {
   const { text } = await runSearch({
     path: TEST_DIR,
@@ -271,7 +271,7 @@ async function testNoMatches() {
   assert(text.includes("No matches") || text.includes("Total results found: 0"), "Should return no matches message");
 }
 
-// 14. Test invalid path handling ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 14. Test invalid path handling ---------------------------------------------------------------------
 async function testInvalidPath() {
   const result = await hndlRgxSrchs({
     items: [
@@ -288,7 +288,7 @@ async function testInvalidPath() {
   assert(isVldRes, "Should handle invalid path gracefully");
 }
 
-// 15. Test schema validation with invalid arguments ―――――――――――――――――――――――――――――――――――――――――――――――――
+// 15. Test schema validation with invalid arguments -------------------------------------------------
 async function testInvalidArguments() {
   // Missing required path fails item-level validation but keeps the batch envelope.
   const result = await hndlRgxSrchs({
@@ -315,7 +315,7 @@ async function testInvalidArguments() {
   assert(noPtrnText.includes("Invalid arguments"), "Should validate pattern is required");
 }
 
-// 16. Main test runner function ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 16. Main test runner function --------------------------------------------------------------------
 export async function testSearchCode() {
   let origCfg;
 

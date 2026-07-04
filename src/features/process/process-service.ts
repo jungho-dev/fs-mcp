@@ -15,7 +15,7 @@ const execAsync = promisify(exec);
 const PCSP = /\s+/;
 const WTLP = /^(.+?)\s+(\d+)\s+(.+?)\s+(\d+)\s+(.+)$/;
 
-// 1. Parse Unix process line ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Parse Unix process line ----------------------------------------------------------------------
 function parseUnixProcessLine(line: string): ProcessInfo | null {
   const parts = line.trim().split(PCSP);
   if (parts.length < 11) {
@@ -33,7 +33,7 @@ function parseUnixProcessLine(line: string): ProcessInfo | null {
   };
 }
 
-// 2. Parse Windows process line ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Parse Windows process line -------------------------------------------------------------------
 function parseWindowsProcessLine(line: string): ProcessInfo | null {
   const match = line.trim().match(WTLP);
   if (!match) {
@@ -51,13 +51,13 @@ function parseWindowsProcessLine(line: string): ProcessInfo | null {
   };
 }
 
-// 3. Parse process line ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Parse process line ---------------------------------------------------------------------------
 function parseProcessLine(line: string, platform: NodeJS.Platform): ProcessInfo | null {
   const prsdProc = platform === "win32" ? parseWindowsProcessLine(line) : parseUnixProcessLine(line);
   return prsdProc;
 }
 
-// 4. List processes ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. List processes -------------------------------------------------------------------------------
 export async function listProcesses(): Promise<ServerResult> {
   const lnSprtPat = /\r?\n/;
   const platform = os.platform();
@@ -88,7 +88,7 @@ export async function listProcesses(): Promise<ServerResult> {
   }
 }
 
-// 5. Kill process ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Kill process ---------------------------------------------------------------------------------
 export async function killProcess(args: unknown): Promise<ServerResult> {
   const parsed = KllPrArSc.safeParse(args);
   if (!parsed.success) {

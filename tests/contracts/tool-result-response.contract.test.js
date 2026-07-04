@@ -3,7 +3,7 @@ import { createToolDisplayText as crtTlDsplTxt } from "../../out/cores/responses
 import { createToolErrorResponse as crtTlErrRes, createToolTextResponse as crtTlTxtRes, isCompactEnvelopeEnabled as isCmpcEnvl, normalizeToolResult as nrmlTlRes } from "../../out/cores/responses/responses-tool-result.js";
 import { getCurrentClient as getCurClnt, updateCurrentClient as updtCurClnt } from "../../out/features/config/config-client.js";
 
-// 2. Parse standard output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Parse standard output ------------------------------------------------------------------------
 function parseStandardOutput(result) {
   assert.equal(result.content.length, 1);
   assert.equal(result.content[0].type, "text");
@@ -61,7 +61,7 @@ function testDefaultDisplayPlacesMetricsInTemplateOrder() {
   const summary = normalized.content[0].text;
   const strcIdx = summary.indexOf("structuredText =");
   const tokenIdx = summary.indexOf("tokens =");
-  const lineIdx = summary.lastIndexOf("――――");
+  const lineIdx = summary.lastIndexOf("----");
 
   assert.equal(tokenIdx < strcIdx, true);
   assert.equal(lineIdx > strcIdx, true);
@@ -104,7 +104,7 @@ function testDisplayCountsBatchStructuredItems() {
   }, `items=\${count}`), "items=3");
 }
 
-// 2. success envelope contract ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. success envelope contract --------------------------------------------------------------------
 function testSuccessEnvelope() {
   const result = crtTlTxtRes("ok", {
     structuredContent: { value: 42 },
@@ -129,7 +129,7 @@ function testSuccessEnvelope() {
   assert.equal(normalized._meta.fsMcpResult.errorMessage, null);
 }
 
-// 3. error envelope contract ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. error envelope contract ----------------------------------------------------------------------
 function testErrorEnvelope() {
   const result = crtTlErrRes("boom");
   const normalized = nrmlTlRes("error_tool", result, 3);
@@ -144,7 +144,7 @@ function testErrorEnvelope() {
   assert.equal(normalized._meta.fsMcpResult.errorMessage, "Error: boom");
 }
 
-// 4. empty content fallback ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. empty content fallback -----------------------------------------------------------------------
 function testEmptyContentFallback() {
   const normalized = nrmlTlRes("empty_tool", { content: [] }, 1);
   const output = parseStandardOutput(normalized);
@@ -155,7 +155,7 @@ function testEmptyContentFallback() {
   assert.deepEqual(normalized._meta.fsMcpResult.contentTypes, ["text"]);
 }
 
-// 5. duration shape without timing ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. duration shape without timing ----------------------------------------------------------------
 function testDurationShapeWithoutTiming() {
   const result = crtTlTxtRes("ok");
   const normalized = nrmlTlRes("no_duration_tool", result);
@@ -165,7 +165,7 @@ function testDurationShapeWithoutTiming() {
   assert.equal(normalized._meta.fsMcpResult.durationMs, null);
 }
 
-// 6. normalized result display contract ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. normalized result display contract ---------------------------------------------------------
 function testNormalizedResultRestoresDisplay() {
   const normalized = nrmlTlRes("already_normalized_tool", crtTlTxtRes("visible data"), 2);
   normalized.content[0].text = "should not be shown";
@@ -179,7 +179,7 @@ function testNormalizedResultRestoresDisplay() {
   assert.equal(output.data.content[0].text, "visible data");
 }
 
-// 7. display preserves structured data ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. display preserves structured data ---------------------------------------------------------
 function testDisplayPreservesStructuredText() {
   const fullText = Array.from({ length: 6 }, (_value, index) => `line${index + 1} ${"x".repeat(320)}`).join("\n");
   const normalized = nrmlTlRes("preview_tool", crtTlTxtRes(fullText), 9);
@@ -189,7 +189,7 @@ function testDisplayPreservesStructuredText() {
   assert.equal(normalized.content[0].text, createExpectedDisplaySummary("preview_tool", "success", fullText, null, 9));
 }
 
-// 9. Test long text content preserved ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Test long text content preserved -------------------------------------------------------------
 function testLongTextContentPreserved() {
   const fullText = Array.from({ length: 50 }, (_value, index) => `line${index + 1} ${"x".repeat(640)}`).join("\n");
   const normalized = nrmlTlRes("file-write", crtTlTxtRes(fullText), 9);
@@ -199,7 +199,7 @@ function testLongTextContentPreserved() {
   assert.equal(normalized.content[0].text, createExpectedDisplaySummary("file-write", "success", fullText, null, 9));
 }
 
-// 9-1. Test special token sanitized ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9-1. Test special token sanitized -------------------------------------------------------------
 function testSpecialTokenSanitized() {
   const rawToken = "<|" + "endoftext" + "|>";
   const safeToken = "<|endoftext |>";
@@ -215,7 +215,7 @@ function testSpecialTokenSanitized() {
   assert.equal(serialized.includes(rawToken), false);
 }
 
-// 10. Test existing summary preserved ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Test existing summary preserved -------------------------------------------------------------
 function testExistingSummaryPreserved() {
   const batchText = [
     "batch_tool: 4/4 succeeded",
@@ -232,7 +232,7 @@ function testExistingSummaryPreserved() {
   assert.equal(output.data.content[0].text, batchText);
 }
 
-// 10-1. Large content stays untrimmed without a data.text copy ――――――――――――――――――――――――――――――――――
+// 10-1. Large content stays untrimmed without a data.text copy ----------------------------------
 function testLargeContentStaysUntrimmed() {
   const fullText = Array.from({ length: 180 }, (_value, index) => `line${index + 1} ${"x".repeat(640)}`).join("\n");
   const normalized = nrmlTlRes("large_text_tool", crtTlTxtRes(fullText, {
@@ -253,7 +253,7 @@ function testLargeContentStaysUntrimmed() {
   assert.equal(serialized.includes(indexPrefix), false);
 }
 
-// 8. test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. test runner ----------------------------------------------------------------------------------
 function main() {
   testCompactEnvelopeDefaultOn();
   testSuccessEnvelope();

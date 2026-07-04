@@ -40,7 +40,7 @@ export const WEB_DFLT_UA = `fs-mcp/${PCKG_VRSN}`;
 const WEB_MAX_ALLW_BYTS = 200_000_000;
 const OBSC_DFLT_BIN = "C:/JUNGHO/0.Tools/obscura.exe";
 
-// 1. Allow private urls ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Allow private urls --------------------------------------------------------------------------
 // FS_MCP_ALLOW_PRIVATE_URLS=1 disables the private-address block (local testing only).
 export function allowPrivateUrls(): boolean {
   const value = process.env.FS_MCP_ALLOW_PRIVATE_URLS;
@@ -51,7 +51,7 @@ export function allowPrivateUrls(): boolean {
   return value !== "0" && value !== "false" && value.length > 0;
 }
 
-// 2. Parse web url ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Parse web url --------------------------------------------------------------------------------
 function parseWebUrl(url: string): { host: string; scheme: string } {
   let parsed: URL;
 
@@ -71,7 +71,7 @@ function parseWebUrl(url: string): { host: string; scheme: string } {
   return { host: parsed.hostname, scheme };
 }
 
-// 3. Is public ipv4 ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Is public ipv4 -------------------------------------------------------------------------------
 function isPublicIpv4(address: string): boolean {
   const octets = address.split(".").map((part) => Number.parseInt(part, 10));
   const [a, b, c] = octets;
@@ -94,7 +94,7 @@ function isPublicIpv4(address: string): boolean {
   return a < 224;
 }
 
-// 4. Parse ipv6 segments ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Parse ipv6 segments --------------------------------------------------------------------------
 function parseIpv6Segments(address: string): number[] | null {
   const [bare] = address.split("%");
   const tail: number[] = [];
@@ -142,7 +142,7 @@ function parseIpv6Segments(address: string): number[] | null {
   return known === 8 ? [...head, ...rest, ...tail] : null;
 }
 
-// 5. Embedded ipv4 ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Embedded ipv4 --------------------------------------------------------------------------------
 // Canonicalize IPv4-in-IPv6 embeddings (mapped, compatible, NAT64, 6to4) so loopback/private
 // targets cannot pass the guard through an IPv6 literal.
 function embeddedIpv4(segments: number[]): string | null {
@@ -158,7 +158,7 @@ function embeddedIpv4(segments: number[]): string | null {
   return null;
 }
 
-// 6. Is public ip ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Is public ip ---------------------------------------------------------------------------------
 export function isPublicIp(address: string): boolean {
   if (net.isIPv4(address)) {
     return isPublicIpv4(address);
@@ -184,7 +184,7 @@ export function isPublicIp(address: string): boolean {
   return !(isUniqueLocal || isLinkLocal);
 }
 
-// 7. Ensure url allowed ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Ensure url allowed ---------------------------------------------------------------------------
 export async function ensureUrlAllowed(url: string, allowPrivate: boolean): Promise<void> {
   const parts = parseWebUrl(url);
 
@@ -216,7 +216,7 @@ export async function ensureUrlAllowed(url: string, allowPrivate: boolean): Prom
   }
 }
 
-// 8. Resolve url ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Resolve url ----------------------------------------------------------------------------------
 // Resolve a possibly-relative target (redirect Location or <a href>) against a base URL.
 export function resolveUrl(base: string, target: string): string {
   const trimmed = target.trim();
@@ -232,7 +232,7 @@ export function resolveUrl(base: string, target: string): string {
   }
 }
 
-// 9. Read body limited ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Read body limited ----------------------------------------------------------------------------
 async function readBodyLimited(response: Response, maxBytes: number): Promise<Buffer> {
   if (response.body === null) {
     return Buffer.alloc(0);
@@ -257,7 +257,7 @@ async function readBodyLimited(response: Response, maxBytes: number): Promise<Bu
   return Buffer.concat(chunks);
 }
 
-// 10. Http fetch ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Http fetch ----------------------------------------------------------------------------------
 // Follows redirects manually and re-checks each hop against the SSRF boundary, which closes the
 // redirect-to-internal-host vector. One wall-clock budget spans the whole redirect chain.
 export async function httpFetch(url: string, opts: WebFetchOptions, allowPrivate: boolean): Promise<FetchedPage> {
@@ -322,7 +322,7 @@ export async function httpFetch(url: string, opts: WebFetchOptions, allowPrivate
   }
 }
 
-// 11. Resolve obscura bin ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11. Resolve obscura bin -------------------------------------------------------------------------
 // obscura is a fixed-path headless-browser CLI, not a PATH tool. Prefer the env override, then
 // the known install path, then fall back to a bare PATH lookup for portability.
 function resolveObscuraBin(): string {
@@ -334,7 +334,7 @@ function resolveObscuraBin(): string {
   return existsSync(OBSC_DFLT_BIN) ? OBSC_DFLT_BIN : "obscura";
 }
 
-// 12. Run obscura ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 12. Run obscura ---------------------------------------------------------------------------------
 export function runObscura(args: string[], timeoutMs: number): Promise<ObscuraOutput> {
   return new Promise((resolve, reject) => {
     const child = spawn(resolveObscuraBin(), args, { stdio: ["ignore", "pipe", "pipe"], windowsHide: true });

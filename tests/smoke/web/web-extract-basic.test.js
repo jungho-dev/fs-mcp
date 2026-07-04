@@ -8,7 +8,7 @@
 import assert from "node:assert/strict";
 import { dispatchToolCall as dsptTlCll } from "../../../out/tools/tools-dispatcher.js";
 
-// 1. batch body text ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. batch body text ------------------------------------------------------------------------------
 // The batch text echoes the request input, so extraction checks slice from the item label
 // ("inline:") to inspect only the rendered body.
 function batchBodyText(result) {
@@ -18,7 +18,7 @@ function batchBodyText(result) {
   return labelIndex >= 0 ? text.slice(labelIndex) : text;
 }
 
-// 2. web-extract markdown ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. web-extract markdown --------------------------------------------------------------------------
 async function testWebExtractMarkdown() {
   const result = await dsptTlCll("web-extract", {
     items: [{ html: "<h1>Hi</h1><p>Body with <strong>bold</strong> and <a href=\"https://e.com/x\">link</a></p>", dump: "markdown" }],
@@ -31,7 +31,7 @@ async function testWebExtractMarkdown() {
   assert.equal(text.includes("[link](https://e.com/x)"), true);
 }
 
-// 3. web-extract links ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. web-extract links -----------------------------------------------------------------------------
 async function testWebExtractLinks() {
   const html = "<a href=\"/x\">1</a><a href=\"/x\">dup</a><a href=\"#f\">frag</a><a href=\"https://e.com/y\">2</a>";
   const result = await dsptTlCll("web-extract", {
@@ -46,7 +46,7 @@ async function testWebExtractLinks() {
   assert.equal((text.match(/ex\.com\/x/g) ?? []).length, 1);
 }
 
-// 4. web-extract text ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. web-extract text ------------------------------------------------------------------------------
 async function testWebExtractText() {
   const result = await dsptTlCll("web-extract", {
     items: [{ html: "<script>skip()</script><p>Alpha &amp; beta</p>", dump: "text" }],
@@ -58,14 +58,14 @@ async function testWebExtractText() {
   assert.equal(text.includes("skip()"), false);
 }
 
-// 5. web-extract requires html or path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. web-extract requires html or path -----------------------------------------------------------------
 async function testWebExtractRequiresInput() {
   const result = await dsptTlCll("web-extract", { items: [{ dump: "text" }] });
 
   assert.equal(result.isError, true);
 }
 
-// 6. web-fetch blocks loopback ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. web-fetch blocks loopback ------------------------------------------------------------------------
 async function testWebFetchBlocksLoopback() {
   const previous = process.env.FS_MCP_ALLOW_PRIVATE_URLS;
   delete process.env.FS_MCP_ALLOW_PRIVATE_URLS;
@@ -82,7 +82,7 @@ async function testWebFetchBlocksLoopback() {
   }
 }
 
-// 7. web-render rejects eval without allow-private ―――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. web-render rejects eval without allow-private ---------------------------------------------------
 async function testWebRenderRejectsEval() {
   const previous = process.env.FS_MCP_ALLOW_PRIVATE_URLS;
   delete process.env.FS_MCP_ALLOW_PRIVATE_URLS;
@@ -99,14 +99,14 @@ async function testWebRenderRejectsEval() {
   }
 }
 
-// 8. download-to-file requires url and path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. download-to-file requires url and path ------------------------------------------------------------
 async function testDownloadRequiresUrlAndPath() {
   const result = await dsptTlCll("download-to-file", { items: [{ url: "https://example.com/" }] });
 
   assert.equal(result.isError, true);
 }
 
-// 9. test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. test runner --------------------------------------------------------------------------------
 async function main() {
   await testWebExtractMarkdown();
   await testWebExtractLinks();

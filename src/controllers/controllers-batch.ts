@@ -24,12 +24,12 @@ const WHTS_PAT = /\s+/g;
 const INPT_ELID_MAX = 256;
 const BODY_COPY_KEYS = ["textContent", "listing"];
 
-// 1. Is record ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Is record ------------------------------------------------------------------------------------
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// 2. Elide batch input ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Elide batch input ----------------------------------------------------------------------------
 // Echo the request back for traceability, but elide large string bodies (write content, edit
 // text, base64 data). Those just re-send what the caller already holds, doubling client tokens.
 // Identity fields (path, source, ...) stay short and pass through untouched.
@@ -50,7 +50,7 @@ function elideBatchInput(value: unknown): unknown {
   return Object.fromEntries(entries);
 }
 
-// 3. Strip body copy keys ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Strip body copy keys -------------------------------------------------------------------------
 // textContent and listing duplicate the per-item content text; the batch text already carries
 // the full body for full-mode tools, so the compact envelope drops these structured copies.
 function stripBodyCopyKeys(structured: ServerResult["structuredContent"] | undefined): unknown {
@@ -65,7 +65,7 @@ function stripBodyCopyKeys(structured: ServerResult["structuredContent"] | undef
   return rest;
 }
 
-// 4. Create batch item result ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Create batch item result ---------------------------------------------------------------------
 // Compact envelope drops the per-item content copy; full envelope keeps the verbatim result.
 function createBatchItemResult(result: ServerResult, compact: boolean): Record<string, unknown> {
   if (compact) {
@@ -81,14 +81,14 @@ function createBatchItemResult(result: ServerResult, compact: boolean): Record<s
   };
 }
 
-// 4-1. Create summary text preview ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4-1. Create summary text preview ----------------------------------------------------------------
 function createSummaryTextPreview(value: string): string {
   const cmpcVal = value.replace(WHTS_PAT, " ").trim();
 
   return cmpcVal;
 }
 
-// 4-2. Create summary input preview ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4-2. Create summary input preview ---------------------------------------------------------------
 function createSummaryInputPreview(input: unknown): string {
   let inputPreview = "";
 
@@ -113,7 +113,7 @@ function createSummaryInputPreview(input: unknown): string {
   return createSummaryTextPreview(inputPreview);
 }
 
-// 5. Extract primary text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Extract primary text -------------------------------------------------------------------------
 function extractPrimaryText(result: ServerResult): string {
   const textChunks = result.content
     .filter((item) => item.type === "text" && typeof item.text === "string")
@@ -127,7 +127,7 @@ function extractPrimaryText(result: ServerResult): string {
   return primaryText;
 }
 
-// 6. Extract text content ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Extract text content -------------------------------------------------------------------------
 function extractTextContent(result: ServerResult): string {
   const textChunks = result.content
     .filter((item) => item.type === "text" && typeof item.text === "string")
@@ -136,7 +136,7 @@ function extractTextContent(result: ServerResult): string {
   return textChunks.join("\n");
 }
 
-// 11-1. Create batch summary line ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11-1. Create batch summary line -----------------------------------------------------------------
 // Flattens the per-item text to one line without truncation; the summary line is the only body
 // carrier for summary-mode tools once the compact envelope drops per-item content.
 function createBatchSummaryLine<T>(item: BatchToolItemResult<T>): string {
@@ -149,7 +149,7 @@ function createBatchSummaryLine<T>(item: BatchToolItemResult<T>): string {
   return `- [${item.index}] ${statusText}${detailText}`;
 }
 
-// 11-2. Create full batch detail block ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11-2. Create full batch detail block -------------------------------------------------------------
 function createFullBatchDetailBlock<T>(item: BatchToolItemResult<T>): string {
   const statusText = item.ok ? "OK" : "ERROR";
   const inputPreview = createSummaryInputPreview(item.input);
@@ -159,7 +159,7 @@ function createFullBatchDetailBlock<T>(item: BatchToolItemResult<T>): string {
   return text.length > 0 ? `${header}\n${text}` : header;
 }
 
-// 12. Run parallel batch ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 12. Run parallel batch --------------------------------------------------------------------------
 export async function runParallelBatch<T>(items: T[], runItem: (item: T) => Promise<ServerResult>): Promise<BatchToolItemResult<T>[]> {
   const results = await Promise.all(
     items.map(async (item, index) => {
@@ -184,7 +184,7 @@ export async function runParallelBatch<T>(items: T[], runItem: (item: T) => Prom
   return results;
 }
 
-// 12-1. Run limited parallel batch ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 12-1. Run limited parallel batch ----------------------------------------------------------------
 export async function runLimitedParallelBatch<T>(items: T[], concurrency: number, runItem: (item: T) => Promise<ServerResult>): Promise<BatchToolItemResult<T>[]> {
   const results: BatchToolItemResult<T>[] = new Array(items.length);
   const normCncr = Number.isFinite(concurrency) ? Math.floor(concurrency) : 1;
@@ -223,7 +223,7 @@ export async function runLimitedParallelBatch<T>(items: T[], concurrency: number
   return results;
 }
 
-// 13. Create batch tool response ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 13. Create batch tool response ------------------------------------------------------------------
 // resultMode "full" embeds each item's complete text in the batch text (read-style tools);
 // "compact" keeps one flattened summary line per item. The compact envelope additionally drops
 // per-item content copies and elides large input strings.

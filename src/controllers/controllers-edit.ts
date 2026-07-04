@@ -13,7 +13,7 @@ import { EdtBlArSc, EdtLnArSc } from "@schemas/schemas-edit";
 // Uses the enhanced implementation with multiple occurrence support and fuzzy matching
 export { hndlEdtBlck as handleEditBlock };
 
-// 1. Handle edit blocks ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Handle edit blocks ---------------------------------------------------------------------------
 export async function handleEditBlocks(args: unknown) {
   const parsed = EdtBlArSc.parse(args);
   const results = await rnPrllBtch(parsed.items, (item) => hndlEdtBlck(item));
@@ -22,7 +22,7 @@ export async function handleEditBlocks(args: unknown) {
   return response;
 }
 
-// 2. Handle edit lines ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Handle edit lines ----------------------------------------------------------------------------
 // Runs sequentially so multiple items editing the same file cannot interleave reads and writes.
 export async function handleEditLines(args: unknown) {
   const parsed = EdtLnArSc.parse(args);

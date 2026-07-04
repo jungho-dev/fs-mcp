@@ -15,7 +15,7 @@ const __filename = flUrlTPth2(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..", "..");
 
-// 1. Read package version ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Read package version -------------------------------------------------------------------------
 async function readPackageVersion() {
   const pckgJsnPth2 = path.join(projectRoot, "package.json");
   const packageJson = JSON.parse(await readFile(pckgJsnPth2, "utf8"));
@@ -24,14 +24,14 @@ async function readPackageVersion() {
   return packageJson.version;
 }
 
-// 2. Runtime version contract ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Runtime version contract ---------------------------------------------------------------------
 async function testRuntimeVersionMatchesPackage() {
   const pckgVrsn = await readPackageVersion();
 
   assert.equal(PCKG_VRSN, pckgVrsn);
 }
 
-// 3. Config version contract ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Config version contract ----------------------------------------------------------------------
 async function testConfigVersionMatchesPackage() {
   const pckgVrsn = await readPackageVersion();
   const config = await cfgMgr.getConfig();
@@ -39,7 +39,7 @@ async function testConfigVersionMatchesPackage() {
   assert.equal(config.version, pckgVrsn);
 }
 
-// 4. Test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Test runner ----------------------------------------------------------------------------------
 async function main() {
   await testRuntimeVersionMatchesPackage();
   await testConfigVersionMatchesPackage();

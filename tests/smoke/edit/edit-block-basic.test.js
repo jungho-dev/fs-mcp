@@ -9,14 +9,14 @@ const __dirname = path.dirname(__filename);
 
 const TST_FLPT = path.join(__dirname, "test.txt");
 
-// 1. Setup ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Setup ----------------------------------------------------------------------------------------
 async function setup() {
   // Save original config to restore later
   const origCfg = await cfgMgr.getConfig();
   return origCfg;
 }
 
-// 1. Teardown function to clean up after tests ――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Teardown function to clean up after tests ----------------------------------------------------
 async function teardown(origCfg) {
   // Reset configuration to original
   await cfgMgr.updateConfig(origCfg);
@@ -26,7 +26,7 @@ async function teardown(origCfg) {
 
 // Export the main test function
 
-// 3. Test edit block ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Test edit block ------------------------------------------------------------------------------
 async function testEditBlock() {
   try {
     await cfgMgr.setValue("allowedDirectories", [__dirname]);
@@ -61,7 +61,7 @@ async function testEditBlock() {
 
 // Export the main test function
 
-// 4. Run tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Run tests ------------------------------------------------------------------------------------
 export default async function runTests() {
   let origCfg;
   try {

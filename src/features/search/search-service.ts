@@ -71,17 +71,17 @@ export declare interface SearchSessionOptions {
   timeout?: number;
 }
 
-// 1. Search session manager ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Search session manager -----------------------------------------------------------------------
 // Supports both file search and content search with progressive results
-// 1. Search manager ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Search manager -------------------------------------------------------------------------------
 export class SearchManager {
   private readonly sessions = new Map<string, SearchSession>();
   private sessionCounter = 0;
 
-  // 2. Start a new search session (like start_process) ――――――――――――――――――――――――――――――――――――――――――――
+  // 2. Start a new search session (like start_process) --------------------------------------------
   // Returns immediately with initial state and results
 
-  // 2. Start search ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 2. Start search -------------------------------------------------------------------------------
   async startSearch(options: SearchSessionOptions): Promise<{
     sessionId: string;
     isComplete: boolean;
@@ -217,7 +217,7 @@ export class SearchManager {
   // Read search results with offset-based pagination (like read_file)
   // Supports both range reading and tail behavior
 
-  // 3. Read search results ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 3. Read search results ------------------------------------------------------------------------
   readSearchResults(
     sessionId: string,
     offset: number = 0,
@@ -282,7 +282,7 @@ export class SearchManager {
     };
   }
 
-  // 3. Terminate a search session (like force_terminate) ――――――――――――――――――――――――――――――――――――――――――
+  // 3. Terminate a search session (like force_terminate) ------------------------------------------
   terminateSearch(sessionId: string): boolean {
     const session = this.sessions.get(sessionId);
 
@@ -298,7 +298,7 @@ export class SearchManager {
     return true;
   }
 
-  // 4. Get list of active search sessions ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 4. Get list of active search sessions ---------------------------------------------------------
   listSearchSessions(): Array<{
     id: string;
     searchType: string;
@@ -319,7 +319,7 @@ export class SearchManager {
     }));
   }
 
-  // 2. Should include docx search ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 2. Should include docx search -----------------------------------------------------------------
   private shouldIncludeDocxSearch(filePattern?: string, rootPath?: string): boolean {
     if (rootPath) {
       const lowerPath = rootPath.toLowerCase();
@@ -336,9 +336,9 @@ export class SearchManager {
     return false;
   }
 
-  // 6. Search DOCX files for content matches ――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 6. Search DOCX files for content matches ------------------------------------------------------
   // Extracts <w:t> text from document.xml and searches it
-  // 3. Search docx files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 3. Search docx files --------------------------------------------------------------------------
   private async searchDocxFiles(rootPath: string, pattern: string, ignoreCase: boolean, maxResults?: number, filePattern?: string, _ltrlSrch?: boolean): Promise<SearchResult[]> {
     const results: SearchResult[] = [];
 
@@ -414,12 +414,12 @@ export class SearchManager {
     return results;
   }
 
-  // 4. Find docx files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 4. Find docx files ----------------------------------------------------------------------------
   private async findDocxFiles(rootPath: string): Promise<string[]> {
     const docxFiles: string[] = [];
     const isDocx = (name: string) => name.toLowerCase().endsWith(".docx");
 
-    // 5. Walk ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+    // 5. Walk -------------------------------------------------------------------------------------
     async function walk(dir: string): Promise<void> {
       try {
         const entries = await fs.readdir(dir, {withFileTypes: true});
@@ -455,7 +455,7 @@ export class SearchManager {
     return docxFiles;
   }
 
-  // 6. Get match context ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 6. Get match context --------------------------------------------------------------------------
   private getMatchContext(text: string, matchStart: number, matchLength: number): string {
     const start = Math.max(0, matchStart - MTC_CTX_CHR);
     const end = Math.min(text.length, matchStart + matchLength + MTC_CTX_CHR);
@@ -472,10 +472,10 @@ export class SearchManager {
     return context;
   }
 
-  // 9. Clean up completed sessions older than specified time ――――――――――――――――――――――――――――――――――――――
+  // 9. Clean up completed sessions older than specified time --------------------------------------
   // Called automatically by cleanup interval
 
-  // 11. Cleanup sessions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 11. Cleanup sessions --------------------------------------------------------------------------
   cleanupSessions(maxAge: number = SCIM): void {
     const cutoffTime = Date.now() - maxAge;
 
@@ -486,24 +486,24 @@ export class SearchManager {
     }
   }
 
-  // 10. Get total number of active sessions (excluding completed ones) ――――――――――――――――――――――――――――
+  // 10. Get total number of active sessions (excluding completed ones) ----------------------------
   getActiveSessionCount(): number {
     return Array.from(this.sessions.values()).filter((session) => !session.isComplete).length;
   }
 
-  // 11. Detect if pattern looks like an exact filename ――――――――――――――――――――――――――――――――――――――――――――
+  // 11. Detect if pattern looks like an exact filename --------------------------------------------
   // (has file extension and no glob wildcards)
-  // 7. Is exact filename ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 7. Is exact filename --------------------------------------------------------------------------
   private isExactFilename(pattern: string): boolean {
     return EXC_FLN_PAT.test(pattern) && !this.isGlobPattern(pattern);
   }
 
-  // 8. Is glob pattern ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 8. Is glob pattern ----------------------------------------------------------------------------
   private isGlobPattern(pattern: string): boolean {
     return GLB_MT_CHRS.some((char) => pattern.includes(char));
   }
 
-  // 9. Build ripgrep args ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 9. Build ripgrep args -------------------------------------------------------------------------
   private buildRipgrepArgs(options: SearchSessionOptions): string[] {
     const args: string[] = [];
 
@@ -583,7 +583,7 @@ export class SearchManager {
     return args;
   }
 
-  // 10. Setup process handlers ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 10. Setup process handlers --------------------------------------------------------------------
   private setupProcessHandlers(session: SearchSession): void {
     const {process} = session;
 
@@ -665,7 +665,7 @@ export class SearchManager {
     });
   }
 
-  // 11. Process buffered output ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 11. Process buffered output -------------------------------------------------------------------
   private processBufferedOutput(session: SearchSession, isFinal: boolean = false): void {
     const lines = session.buffer.split(SRCH_LN_SPRT);
 
@@ -716,7 +716,7 @@ export class SearchManager {
     }
   }
 
-  // 12. Parse line ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 12. Parse line --------------------------------------------------------------------------------
   private parseLine(line: string, searchType: "files" | "content"): SearchResult | null {
     if (searchType === "content") {
       // Parse JSON output from content search
@@ -763,7 +763,7 @@ export class SearchManager {
   }
 }
 
-// 13. Build glob pattern reg exp ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 13. Build glob pattern reg exp ------------------------------------------------------------------
 function buildGlobPatternRegExp(pattern: string): RegExp {
   const regexPattern = pattern.replace(GREP, "\\$&").replace(GLB_ASTR_PAT, ".*");
   return new RegExp(`^${regexPattern}$`, "i");
@@ -775,7 +775,7 @@ export const srchMgr = new SearchManager();
 // Cleanup management - run on fixed schedule
 let clnpIntr: NodeJS.Timeout | null = null;
 
-// 14. Start cleanup if needed ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 14. Start cleanup if needed ---------------------------------------------------------------------
 function startCleanupIfNeeded(): void {
   if (!clnpIntr) {
     clnpIntr = setInterval(() => {

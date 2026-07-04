@@ -23,7 +23,7 @@ const WBSP = /\r?\n\r?\n/;
 const BRN_LST_FRM = "%(refname:short)%x1f%(HEAD)%x1f%(objectname)%x1f%(upstream:short)%x1f%(upstream:track)";
 const STS_LST_FRM = "%gd%x1f%ct%x1f%gs";
 
-// 1. Run git clean ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Run git clean --------------------------------------------------------------------------------
 export async function runGitClean(input: GitArgsMap["git_clean"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
   const cleanResult = await rnGtCmd(["clean", ...(input.dryRun ? ["-n"] : []), ...(input.force ? ["-f"] : []), ...(input.directories ? ["-d"] : []), ...(input.ignored ? ["-x"] : [])], { cwd });
@@ -52,7 +52,7 @@ export async function runGitClean(input: GitArgsMap["git_clean"]): Promise<GtTlO
   };
 }
 
-// 2. Run git branch ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Run git branch -------------------------------------------------------------------------------
 export async function runGitBranch(input: GitArgsMap["git_branch"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
   const mode = input.mode ?? "list";
@@ -121,7 +121,7 @@ export async function runGitBranch(input: GitArgsMap["git_branch"]): Promise<GtT
   };
 }
 
-// 3. Run git checkout ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Run git checkout -----------------------------------------------------------------------------
 export async function runGitCheckout(input: GitArgsMap["git_checkout"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
 
@@ -137,7 +137,7 @@ export async function runGitCheckout(input: GitArgsMap["git_checkout"]): Promise
   return { success: true, target: input.target, branchCreated: false, filesModified: [] };
 }
 
-// 4. Run git cherry pick ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Run git cherry pick --------------------------------------------------------------------------
 export async function runGitCherryPick(input: GitArgsMap["git_cherry_pick"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
 
@@ -172,7 +172,7 @@ export async function runGitCherryPick(input: GitArgsMap["git_cherry_pick"]): Pr
   };
 }
 
-// 5. Run git merge ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Run git merge --------------------------------------------------------------------------------
 export async function runGitMerge(input: GitArgsMap["git_merge"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
   const mergeMessage = await rslvGtTxtArg(input.message, input.messagePath, input.messageOffset, input.messageLength, "message");
@@ -193,7 +193,7 @@ export async function runGitMerge(input: GitArgsMap["git_merge"]): Promise<GtTlO
   };
 }
 
-// 6. Run git rebase ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Run git rebase -------------------------------------------------------------------------------
 export async function runGitRebase(input: GitArgsMap["git_rebase"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
   const mode = input.mode ?? "start";
@@ -232,7 +232,7 @@ export async function runGitRebase(input: GitArgsMap["git_rebase"]): Promise<GtT
   };
 }
 
-// 7. Run git reset ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Run git reset --------------------------------------------------------------------------------
 export async function runGitReset(input: GitArgsMap["git_reset"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
   const mode = input.mode ?? "mixed";
@@ -264,7 +264,7 @@ export async function runGitReset(input: GitArgsMap["git_reset"]): Promise<GtTlO
   };
 }
 
-// 8. Run git stash ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Run git stash --------------------------------------------------------------------------------
 export async function runGitStash(input: GitArgsMap["git_stash"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
   const mode = input.mode ?? "push";
@@ -319,7 +319,7 @@ export async function runGitStash(input: GitArgsMap["git_stash"]): Promise<GtTlO
   };
 }
 
-// 9. Run git tag ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Run git tag ----------------------------------------------------------------------------------
 export async function runGitTag(input: GitArgsMap["git_tag"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
   const mode = input.mode ?? "list";
@@ -378,7 +378,7 @@ export async function runGitTag(input: GitArgsMap["git_tag"]): Promise<GtTlOtpt>
   };
 }
 
-// 10. Run git worktree ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Run git worktree ----------------------------------------------------------------------------
 export async function runGitWorktree(input: GitArgsMap["git_worktree"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
   const mode = input.mode ?? "list";

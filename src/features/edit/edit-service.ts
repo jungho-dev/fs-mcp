@@ -39,12 +39,12 @@ function resolveFuzzyThreshold(): number {
 }
 const FZZY_THRS = resolveFuzzyThreshold();
 
-// 1. Extract character code data from diff ――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Extract character code data from diff --------------------------------------------------------
 // @param expected The string that was searched for
 // @param actual The string that was found
 // @returns Character code statistics
 
-// 1. Get character code data ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Get character code data ----------------------------------------------------------------------
 function getCharacterCodeData(
   expected: string,
   actual: string,
@@ -102,7 +102,7 @@ function getCharacterCodeData(
   };
 }
 
-// 2. Perform search replace ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Perform search replace -----------------------------------------------------------------------
 export async function performSearchReplace(filePath: string, block: SearchReplace, expRplc: number=1): Promise<ServerResult> {
   // Get file extension for diagnostics using path module.
   const flExt2 = path.extname(filePath).toLowerCase();
@@ -274,12 +274,12 @@ export async function performSearchReplace(filePath: string, block: SearchReplac
   throw new Error("Unexpected error during search and replace operation.");
 }
 
-// 2. Character diff formatter ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Character diff formatter ---------------------------------------------------------------------
 // @param expected The string that was searched for
 // @param actual The string that was found
 // @returns A formatted string showing character-level differences
 
-// 3. Highlight differences ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Highlight differences ------------------------------------------------------------------------
 function highlightDifferences(expected: string, actual: string): string {
   // Implementation of a simplified character-level diff
 
@@ -307,7 +307,7 @@ function highlightDifferences(expected: string, actual: string): string {
   return `${commonPrefix}{-${expectedDiff}-}{+${actualDiff}+}${commonSuffix}`;
 }
 
-// 4. Resolve edit text argument ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Resolve edit text argument -------------------------------------------------------------------
 async function resolveEditTextArgument(value: string | undefined, filePath: string | undefined, offset: number, length: number | undefined, label: string): Promise<string> {
   if (value !== undefined) {
     return value;
@@ -318,12 +318,12 @@ async function resolveEditTextArgument(value: string | undefined, filePath: stri
   return rdTxtSlcInt(filePath, offset, length);
 }
 
-// 3. Handle edit_block command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Handle edit_block command --------------------------------------------------------------------
 // 1. Text files: String replacement (old_string/new_string)
 // - Uses fuzzy matching for resilience
 // - Handles expected_replacements parameter
 
-// 4. Handle edit block ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Handle edit block ----------------------------------------------------------------------------
 export async function handleEditBlock(args: unknown): Promise<ServerResult> {
   const parsed = EdtBlArSc2.parse(args);
   const oldString = await resolveEditTextArgument(parsed.old_string, parsed.old_string_path, parsed.old_string_offset, parsed.old_string_length, "old_string");
@@ -391,7 +391,7 @@ export async function handleEditBlock(args: unknown): Promise<ServerResult> {
   );
 }
 
-// 5. Detect dominant EOL ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Detect dominant EOL --------------------------------------------------------------------------
 // Counts CRLF and lone LF in one pass; ties and CRLF-majority files keep CRLF.
 function detectDominantEol(text: string): "\r\n" | "\n" {
   let crlfCount = 0;
@@ -411,7 +411,7 @@ function detectDominantEol(text: string): "\r\n" | "\n" {
   return crlfCount >= lfOnlyCount && crlfCount > 0 ? "\r\n" : "\n";
 }
 
-// 6. Compute line ranges ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Compute line ranges --------------------------------------------------------------------------
 // Each range is [start, end) in character offsets and includes its trailing newline when present.
 function computeLineRanges(text: string): [number, number][] {
   const ranges: [number, number][] = [];
@@ -429,12 +429,12 @@ function computeLineRanges(text: string): [number, number][] {
   return ranges;
 }
 
-// 7. Ends with EOL ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Ends with EOL --------------------------------------------------------------------------------
 function endsWithEol(value: string): boolean {
   return value.endsWith("\n") || value.endsWith("\r");
 }
 
-// 8. Handle edit line range ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Handle edit line range -----------------------------------------------------------------------
 // Replace, insert (after: true), or delete (empty replacement) an inclusive 1-based line range.
 // The file's dominant EOL is detected and preserved; replacement EOLs are normalized to match.
 export async function handleEditLineRange(args: unknown): Promise<ServerResult> {

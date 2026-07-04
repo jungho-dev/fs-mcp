@@ -5,7 +5,7 @@
  * @since 2026-05-02
  */
 
-// 1. Execute promise with timeout ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Execute promise with timeout -----------------------------------------------------------------
 // the specified timeout, returns the provided default value.
 // @param operation The promise to execute
 // @param timeoutMs Timeout in milliseconds
@@ -13,7 +13,7 @@
 // @param defaultValue Value to return if the operation times out
 // @returns Promise that resolves with the operation result or the default value on timeout
 
-// 1. With timeout ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. With timeout ---------------------------------------------------------------------------------
 // Error raised by withTimeout when the operation exceeds the deadline.
 // Carries an ErrnoException-compatible `code` so call sites can branch on it like other fs errors.
 export class TimeoutError extends Error {

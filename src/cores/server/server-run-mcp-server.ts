@@ -18,12 +18,12 @@ type DeferredStartupMessage = {
 
 const dfrrMsgs: DeferredStartupMessage[] = [];
 
-// 1. Defer log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Defer log ------------------------------------------------------------------------------------
 function deferLog(level: LogLevel, message: string): void {
   dfrrMsgs.push({level, message});
 }
 
-// 2. Flush startup logs ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Flush startup logs ---------------------------------------------------------------------------
 export function flushStartupLogs(transport: Pick<FltStSrTr, "sendLog">, messages: DeferredStartupMessage[]): DeferredStartupMessage[] {
   const sentMessages: DeferredStartupMessage[] = [];
   while (messages.length > 0) {
@@ -37,12 +37,12 @@ export function flushStartupLogs(transport: Pick<FltStSrTr, "sendLog">, messages
   return sentMessages;
 }
 
-// 3. Is protocol JSON parse error ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Is protocol JSON parse error -----------------------------------------------------------------
 function isProtocolJsonParseError(errorMessage: string): boolean {
   return errorMessage.includes("JSON") && errorMessage.includes("Unexpected token");
 }
 
-// 4. Handle fatal process error ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Handle fatal process error -------------------------------------------------------------------
 function handleFatalProcessError(label: string, errorMessage: string): void {
   logger.error(`${label}: ${errorMessage}`);
   process.exit(1);
@@ -80,7 +80,7 @@ async function gracefulShutdown(signal: NodeJS.Signals): Promise<void> {
   process.exit(0);
 }
 
-// 5. Run server ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Run server -----------------------------------------------------------------------------------
 export async function runServer () {
   try {
     // Create transport FIRST so all logging gets properly buffered
@@ -151,7 +151,7 @@ export async function runServer () {
   }
 }
 
-// 4. Start server ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Start server ---------------------------------------------------------------------------------
 export function startServer () {
   void runServer().catch(async (error) => {
     const errorMessage = error instanceof Error ? error.message : String(error);

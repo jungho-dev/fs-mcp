@@ -11,7 +11,7 @@ import { ensureDirectoryExists as ensrDirExst, getCurrentBranch as gtCurBrnc, ge
 import { gatherRepositorySnapshot as gthrRepoSnps, getStatusSummary as gtStatSmmr } from "@features/git/git-status-support";
 import type { GitArgsMap, GitToolOutput as GtTlOtpt } from "@features/git/git-types";
 
-// 1. Run git set working dir ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Run git set working dir ----------------------------------------------------------------------
 export async function runGitSetWorkingDir(input: GitArgsMap["git-set-workdir"]): Promise<GtTlOtpt> {
   const resolvedPath = await rslvCrtnPth(input.path);
   const shldValRepo = input.validateGitRepo ?? true;
@@ -55,7 +55,7 @@ export async function runGitSetWorkingDir(input: GitArgsMap["git-set-workdir"]):
   };
 }
 
-// 3. Run git status ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Run git status -------------------------------------------------------------------------------
 export async function runGitStatus(input: GitArgsMap["git-status"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
   const incUntr = input.includeUntracked ?? true;
@@ -75,7 +75,7 @@ export async function runGitStatus(input: GitArgsMap["git-status"]): Promise<GtT
   };
 }
 
-// 4. Run git init ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Run git init ---------------------------------------------------------------------------------
 export async function runGitInit(input: GitArgsMap["git_init"]): Promise<GtTlOtpt> {
   const targetPath = await rslCrBsPt(input.path);
   const intlBrnc = input.initialBranch ?? "main";
@@ -91,7 +91,7 @@ export async function runGitInit(input: GitArgsMap["git_init"]): Promise<GtTlOtp
   };
 }
 
-// 5. Run git clone ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Run git clone --------------------------------------------------------------------------------
 export async function runGitClone(input: GitArgsMap["git_clone"]): Promise<GtTlOtpt> {
   const dstPth = await rslvCrtnPth(input.path);
 

@@ -22,7 +22,7 @@ const EGTN2 = [
   "git-status",
 ];
 
-// 1. collection helpers ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. collection helpers ---------------------------------------------------------------------------
 function findDuplicates(values) {
   const seen = new Set();
   const duplicates = new Set();
@@ -39,13 +39,13 @@ function findDuplicates(values) {
   return [...duplicates].sort();
 }
 
-// 2. Difference ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Difference -----------------------------------------------------------------------------------
 function difference(left, right) {
   const rightSet = new Set(right);
   return left.filter((value) => !rightSet.has(value)).sort();
 }
 
-// 2. tool surface check ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. tool surface check ---------------------------------------------------------------------------
 function verifyToolSurface() {
   const catalogNames = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...GT_TL_CTLG, ...PROC_TL_CTLG, ...WEB_TL_CTLG]
     .map((tool) => tool.name)

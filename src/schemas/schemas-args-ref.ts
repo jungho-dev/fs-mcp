@@ -24,7 +24,7 @@ function getBaseObject(schema: z.ZodTypeAny): z.AnyZodObject {
   throw new Error(`withArgsPathSchema: expected ZodObject, got ${schema.constructor.name}`);
 }
 
-// 1. With args path schema ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. With args path schema ------------------------------------------------------------------------
 // Merges args_path/args_offset/args_length as optional fields into the base object schema.
 // Anthropic API rejects anyOf/oneOf at the root — type:"object" is required at root.
 export function withArgsPathSchema<T extends z.ZodTypeAny>(schema: T): z.ZodObject<any> {

@@ -27,7 +27,7 @@ const fileCount = 12;
 const fileChars = 4096;
 const largeChars = 128 * 1024;
 
-// 1. Sample summary ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Sample summary --------------------------------------------------------------------------------
 function summarizeSamples(samples) {
   const sorted = [...samples].sort((left, right) => left - right);
   const total = samples.reduce((sum, value) => sum + value, 0);
@@ -42,7 +42,7 @@ function summarizeSamples(samples) {
   };
 }
 
-// 2. Timed runs ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Timed runs --------------------------------------------------------------------------------------
 async function runTimedSamples(sampleCount, runSample) {
   const samples = [];
   let lastValue;
@@ -58,7 +58,7 @@ async function runTimedSamples(sampleCount, runSample) {
   };
 }
 
-// 3. Fixture preparation ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Fixture preparation ----------------------------------------------------------------------------
 async function prepareFixtures() {
   const readDir = path.join(benchRoot, "read-files");
 
@@ -83,7 +83,7 @@ async function prepareFixtures() {
   };
 }
 
-// 4. Catalog benchmark ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Catalog benchmark ------------------------------------------------------------------------------
 async function benchmarkCatalog() {
   const tools = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG, ...GT_TL_CTLG];
   const firstStart = performance.now();
@@ -103,7 +103,7 @@ async function benchmarkCatalog() {
   };
 }
 
-// 5. Result size metrics ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Result size metrics ----------------------------------------------------------------------------
 function createResultMetrics(result) {
   const serialized = JSON.stringify(result);
   const output = result.structuredContent;
@@ -121,7 +121,7 @@ function createResultMetrics(result) {
   };
 }
 
-// 6. Read quality assertion ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Read quality assertion ------------------------------------------------------------------------
 function assertBatchReadQuality(result, fixtures) {
   const output = result.structuredContent;
   const nested = output?.data?.structuredContent?.results;
@@ -142,7 +142,7 @@ function assertBatchReadQuality(result, fixtures) {
   }
 }
 
-// 7. fs-mcp batch read benchmark ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. fs-mcp batch read benchmark ------------------------------------------------------------------
 async function benchmarkFsMcpBatchRead(fixtures) {
   const paths = fixtures.map((item) => item.path);
   const measured = await runTimedSamples(runCount, async () => {
@@ -159,7 +159,7 @@ async function benchmarkFsMcpBatchRead(fixtures) {
   };
 }
 
-// 8. Pure Bun read benchmark ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Pure Bun read benchmark ------------------------------------------------------------------------
 async function benchmarkPureBunRead(fixtures) {
   const measured = await runTimedSamples(runCount, async () => {
     const contents = await Promise.all(fixtures.map((item) => Bun.file(item.path).text()));
@@ -180,7 +180,7 @@ async function benchmarkPureBunRead(fixtures) {
   };
 }
 
-// 9. Pure shell sequential read benchmark ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Pure shell sequential read benchmark -------------------------------------------------------
 async function benchmarkPureShellRead(fixtures) {
   const measured = await runTimedSamples(runCount, async () => {
     let totalChars = 0;
@@ -213,7 +213,7 @@ async function benchmarkPureShellRead(fixtures) {
   };
 }
 
-// 10. Normalization benchmark ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Normalization benchmark ---------------------------------------------------------------------
 async function benchmarkNormalization() {
   const largeText = `large-start\n${"y".repeat(largeChars - 12)}`;
   const measured = await runTimedSamples(runCount, async () => {
@@ -242,7 +242,7 @@ async function benchmarkNormalization() {
   };
 }
 
-// 11. Main ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11. Main ------------------------------------------------------------------------------------------
 async function main() {
   const fixtures = await prepareFixtures();
   const report = {

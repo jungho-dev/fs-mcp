@@ -15,7 +15,7 @@ export declare type LogLevel = "emergency" | "alert" | "critical" | "error" | "w
 
 const LOG_CONFIG = {
   "line": {
-    "str": `―――――――――――――――――――――――――――――――――――――――――`,
+    "str": `-----------------------------------------`,
     "color": `\u001B[38;2;255;162;0m`,
   },
   "debug": {
@@ -42,7 +42,7 @@ const LOG_CONFIG = {
 
 type DisplayLevel = "debug" | "info" | "warn" | "error";
 
-// 1. Display level resolve ―――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Display level resolve -----------------------------------------------------
 function resolveDisplayLevel(level: LogLevel): DisplayLevel {
   if (level === "debug") {
     return "debug";
@@ -56,12 +56,12 @@ function resolveDisplayLevel(level: LogLevel): DisplayLevel {
   return "error";
 }
 
-// 2. Is structured log data ―――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Is structured log data -----------------------------------------------------
 function isStructuredLogData(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// 3. Create log payload ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Create log payload ---------------------------------------------------------
 function createLogPayload(message: string, data?: unknown): string | Record<string, unknown> {
   if (data === undefined) {
     return message;
@@ -74,7 +74,7 @@ function createLogPayload(message: string, data?: unknown): string | Record<stri
   return { data, message };
 }
 
-// 4. Format fallback data ――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Format fallback data --------------------------------------------------------
 function formatFallbackData(message: string, data?: unknown): string {
   if (data === undefined) {
     return "";
@@ -88,7 +88,7 @@ function formatFallbackData(message: string, data?: unknown): string {
   }
 }
 
-// 5. Create stderr fallback message ―――――――――――――――――――――――――――――――――――――――――――――
+// 5. Create stderr fallback message ---------------------------------------------
 function createStderrFallbackMessage(level: LogLevel, message: string, data?: unknown): string {
   const displayLevel = resolveDisplayLevel(level);
   const cfg = LOG_CONFIG[displayLevel];
@@ -97,7 +97,7 @@ function createStderrFallbackMessage(level: LogLevel, message: string, data?: un
   return `${prefix} ${text}${formatFallbackData(message, data)}\n`;
 }
 
-// 6. Log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Log ----------------------------------------------------------------------
 export function log(level: LogLevel, message: string, data?: unknown): void {
   try {
     if (global.mcpTransport) {
@@ -123,7 +123,7 @@ export const logger: Readonly<Record<LogLevel, (message: string, data?: unknown)
   warning: (message: string, data?: unknown) => log("warning", message, data),
 };
 
-// 7. Log to stderr ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Log to stderr ---------------------------------------------------------------
 export function logToStderr(level: LogLevel, message: string): void {
   process.stderr.write(createStderrFallbackMessage(level, message));
 }

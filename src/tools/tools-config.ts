@@ -7,7 +7,7 @@
 
 import type { ToolCatalogEntry as TlCtlgEntr } from "@tools/tools-const";
 
-// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// -------------------------------------------------------------------------------------------------
 export const CFG_TL_CTLG: TlCtlgEntr[] = [];
 
 export const CFG_TL_CTLG2 = CFG_TL_CTLG;

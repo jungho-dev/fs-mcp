@@ -11,7 +11,7 @@ import { normalizeToolResult as nrmlTlRes } from "../../out/cores/responses/resp
 import { dispatchToolCall as dsptTlCll, getDispatchableToolNames as gtDsptTlNms } from "../../out/tools/tools-dispatcher.js";
 
 const UNKN_TL_PAT = /Unknown tool: missing_tool_for_contract_test/;
-// 1. standard output parser ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. standard output parser -----------------------------------------------------------------------
 function parseStandardOutput(result) {
   assert.equal(result.content.length, 1);
   assert.equal(result.content[0].type, "text");
@@ -22,7 +22,7 @@ function parseStandardOutput(result) {
   return result.structuredContent;
 }
 
-// 2. Assert standard tool result ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Assert standard tool result ------------------------------------------------------------------
 function assertStandardToolResult(result, toolName, status) {
   const output = parseStandardOutput(result);
 
@@ -38,7 +38,7 @@ function assertStandardToolResult(result, toolName, status) {
   return output;
 }
 
-// 2. unknown tool contract ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. unknown tool contract ------------------------------------------------------------------------
 async function testUnknownToolResponse() {
   const result = await dsptTlCll("missing_tool_for_contract_test", {});
   const output = assertStandardToolResult(result, "missing_tool_for_contract_test", "error");
@@ -49,7 +49,7 @@ async function testUnknownToolResponse() {
   assert.doesNotMatch(result.content[0].text, UNKN_TL_PAT);
 }
 
-// 3. dispatcher output contract ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. dispatcher output contract -------------------------------------------------------------------
 async function testDispatcherNormalizesKnownToolResponse() {
   const result = await dsptTlCll("git-status", {
     path: process.cwd(),
@@ -62,7 +62,7 @@ async function testDispatcherNormalizesKnownToolResponse() {
   assert.equal(output.data.structuredContent.success, true);
 }
 
-// 4. display data preservation ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. display data preservation ---------------------------------------------------------------
 function testDisplayPreservesStructuredData() {
   const longText = Array.from({ length: 20 }, (_value, index) => `synthetic output line ${index} ${"x".repeat(80)}`).join("\n");
   const result = nrmlTlRes("synthetic_tool", {
@@ -75,7 +75,7 @@ function testDisplayPreservesStructuredData() {
   assert.equal(output.data.content[0].text, longText);
 }
 
-// 7. Test every dispatchable tool returns display text ―――――――――――――――――――――――――――――――――――――――――
+// 7. Test every dispatchable tool returns display text -----------------------------------------
 async function testEveryDispatchableToolReturnsDisplayText() {
   for (const toolName of gtDsptTlNms()) {
     // Invalid args keep the check side-effect-light while still proving dispatcher normalization.
@@ -90,7 +90,7 @@ async function testEveryDispatchableToolReturnsDisplayText() {
   }
 }
 
-// 5. test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. test runner ----------------------------------------------------------------------------------
 async function main() {
   await testUnknownToolResponse();
   await testDispatcherNormalizesKnownToolResponse();

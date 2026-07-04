@@ -21,7 +21,7 @@ const WRPP_RFS_PAT = /^\((.*)\)$/;
 const RCN_CMM_FRM = "%H%x1f%an%x1f%aI%x1f%s%x1e";
 const RCNT_TG_FRMT = `%(refname:short)${GRFS}%(creatordate:iso-strict)${GRFS}%(taggername)${GRFS}%(taggeremail)${GRFS}%(subject)${GRFS}%(body)${GRRS}`;
 
-// 1. Append unique ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Append unique --------------------------------------------------------------------------------
 export function appendUnique(target: string[] | undefined, value: string): string[] {
   const normTgt2 = target ?? [];
 
@@ -32,7 +32,7 @@ export function appendUnique(target: string[] | undefined, value: string): strin
   return normTgt2;
 }
 
-// 2. Add index change ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Add index change -----------------------------------------------------------------------------
 export function addIndexChange(bucket: GtStatBckt, code: string, pathValue: string): void {
   if (code === "A") {
     bucket.added = appendUnique(bucket.added, pathValue);
@@ -51,7 +51,7 @@ export function addIndexChange(bucket: GtStatBckt, code: string, pathValue: stri
   }
 }
 
-// 3. Add working tree change ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Add working tree change ----------------------------------------------------------------------
 export function addWorkingTreeChange(bucket: GtWrknTrBckt, code: string, pathValue: string): void {
   if (code === "A") {
     bucket.added = appendUnique(bucket.added, pathValue);
@@ -64,13 +64,13 @@ export function addWorkingTreeChange(bucket: GtWrknTrBckt, code: string, pathVal
   }
 }
 
-// 4. Flatten bucket ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Flatten bucket -------------------------------------------------------------------------------
 export function flattenBucket(bucket: GtStatBckt | GtWrknTrBckt): string[] {
   const flttVals = Object.values(bucket).flatMap((value) => value ?? []);
   return flttVals;
 }
 
-// 5. Parse branch header ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Parse branch header --------------------------------------------------------------------------
 export function parseBranchHeader(line: string, summary: GtStatSmmr): void {
   const branchLine = line.slice(3);
 
@@ -106,7 +106,7 @@ export function parseBranchHeader(line: string, summary: GtStatSmmr): void {
   }
 }
 
-// 6. Parse status summary ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Parse status summary -------------------------------------------------------------------------
 export function parseStatusSummary(text: string, incUntr: boolean): GtStatSmmr {
   const summary: GtStatSmmr = {
     currentBranch: null,
@@ -151,14 +151,14 @@ export function parseStatusSummary(text: string, incUntr: boolean): GtStatSmmr {
   return summary;
 }
 
-// 7. Get status summary ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Get status summary ---------------------------------------------------------------------------
 export async function getStatusSummary(cwd: string, incUntr: boolean = true): Promise<GtStatSmmr> {
   const statusArgs = ["status", "--short", "--branch", incUntr ? "--untracked-files=all" : "--untracked-files=no"];
   const cmdRes = await rnGtCmd(statusArgs, { cwd });
   return parseStatusSummary(cmdRes.stdout, incUntr);
 }
 
-// 8. To snake status ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. To snake status ------------------------------------------------------------------------------
 export function toSnakeStatus(summary: GtStatSmmr): Record<string, unknown> {
   return {
     current_branch: summary.currentBranch,
@@ -173,7 +173,7 @@ export function toSnakeStatus(summary: GtStatSmmr): Record<string, unknown> {
   };
 }
 
-// 9. To snapshot status ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. To snapshot status ---------------------------------------------------------------------------
 export function toSnapshotStatus(summary: GtStatSmmr): Record<string, unknown> {
   return {
     branch: summary.currentBranch,
@@ -188,7 +188,7 @@ export function toSnapshotStatus(summary: GtStatSmmr): Record<string, unknown> {
   };
 }
 
-// 10. Get remotes ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Get remotes ---------------------------------------------------------------------------------
 export async function getRemotes(cwd: string): Promise<Record<string, string>[]> {
   const cmdRes = await rnGtCmd(["remote", "-v"], { cwd, allowFailure: true });
   const remoteMap = new Map<string, { name: string; fetchUrl: string; pushUrl: string }>();
@@ -216,7 +216,7 @@ export async function getRemotes(cwd: string): Promise<Record<string, string>[]>
   return [...remoteMap.values()];
 }
 
-// 11. Get recent commits ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11. Get recent commits --------------------------------------------------------------------------
 export async function getRecentCommits(cwd: string, limit: number): Promise<Record<string, string>[]> {
   const cmdRes = await rnGtCmd(["log", `--max-count=${String(limit)}`, `--pretty=format:${RCN_CMM_FRM}`], { cwd, allowFailure: true });
 
@@ -239,7 +239,7 @@ export async function getRecentCommits(cwd: string, limit: number): Promise<Reco
     });
 }
 
-// 12. Get recent tags ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 12. Get recent tags -----------------------------------------------------------------------------
 export async function getRecentTags(cwd: string, limit: number): Promise<Record<string, string>[]> {
   const cmdRes = await rnGtCmd([
     "for-each-ref",
@@ -274,7 +274,7 @@ export async function getRecentTags(cwd: string, limit: number): Promise<Record<
     });
 }
 
-// 13. Gather repository snapshot ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 13. Gather repository snapshot ------------------------------------------------------------------
 export async function gatherRepositorySnapshot(cwd: string): Promise<Record<string, unknown>> {
   const [status, rcntCmmt, recentTags, remotes] = await Promise.all([
     getStatusSummary(cwd, true),
@@ -291,19 +291,19 @@ export async function gatherRepositorySnapshot(cwd: string): Promise<Record<stri
   };
 }
 
-// 14. Get changed files between ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 14. Get changed files between -------------------------------------------------------------------
 export async function getChangedFilesBetween(cwd: string, left: string, right: string): Promise<string[]> {
   const cmdRes = await rnGtCmd(["diff", "--name-only", left, right], { cwd, allowFailure: true });
   return splitLines(cmdRes.stdout);
 }
 
-// 15. Get conflicted files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 15. Get conflicted files ------------------------------------------------------------------------
 export async function getConflictedFiles(cwd: string): Promise<string[]> {
   const status = await getStatusSummary(cwd, true);
   return status.conflictedFiles;
 }
 
-// 16. Sum numstat ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 16. Sum numstat ---------------------------------------------------------------------------------
 export function sumNumstat(text: string): { filesChanged: number; insertions?: number; deletions?: number } {
   let filesChanged = 0;
   let insertions = 0;
@@ -327,7 +327,7 @@ export function sumNumstat(text: string): { filesChanged: number; insertions?: n
   };
 }
 
-// 17. Parse refs ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 17. Parse refs ----------------------------------------------------------------------------------
 export function parseRefs(refText: string | undefined): string[] | undefined {
   if (!refText) {
     return undefined;
@@ -343,7 +343,7 @@ export function parseRefs(refText: string | undefined): string[] | undefined {
   return refs.length > 0 ? refs : undefined;
 }
 
-// 18. Detect auto excluded files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 18. Detect auto excluded files ------------------------------------------------------------------
 export function detectAutoExcludedFiles(paths: string[], patterns: readonly string[]): string[] {
   const exclFls = paths.filter((filePath) => patterns.includes(path.basename(filePath)));
   return exclFls;

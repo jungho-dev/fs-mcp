@@ -8,7 +8,7 @@
 import type {ServerResult} from "@assets/type/common";
 import {runFsInspect as rnFsInsp} from "@features/inspect/inspect-service";
 
-// 1. Handle fs inspect ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Handle fs inspect ----------------------------------------------------------------------------
 export async function handleFsInspect(args: unknown): Promise<ServerResult> {
   return rnFsInsp(args);
 }

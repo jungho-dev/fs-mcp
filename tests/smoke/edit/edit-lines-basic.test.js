@@ -19,7 +19,7 @@ const INSERT_FILE = path.join(TEST_DIR, "insert.txt");
 const OOR_FILE = path.join(TEST_DIR, "out-of-range.txt");
 const EXPC_FILE = path.join(TEST_DIR, "expected-lines.txt");
 
-// 1. Extract batch results ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Extract batch results ------------------------------------------------------------------------
 function extractBatchResults(result) {
   const output = result.structuredContent;
 
@@ -28,7 +28,7 @@ function extractBatchResults(result) {
   return output.data.structuredContent.results;
 }
 
-// 2. Setup ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Setup ----------------------------------------------------------------------------------------
 async function setup() {
   const origCfg = await cfgMgr.getConfig();
 
@@ -47,13 +47,13 @@ async function setup() {
   return origCfg;
 }
 
-// 3. Teardown ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Teardown -------------------------------------------------------------------------------------
 async function teardown(origCfg) {
   await cfgMgr.updateConfig(origCfg);
   await fs.rm(TEST_DIR, { recursive: true, force: true });
 }
 
-// 4. Replace single line keeps CRLF ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Replace single line keeps CRLF ---------------------------------------------------------------
 async function testReplaceSingleLineCrlfPreserved() {
   const result = await dsptTlCll("file-edit-lines", {
     items: [{ file_path: CRLF_FILE, start_line: 2, replacement: "BETA" }],
@@ -68,7 +68,7 @@ async function testReplaceSingleLineCrlfPreserved() {
   assert.equal(await fs.readFile(CRLF_FILE, "utf8"), "alpha\r\nBETA\r\ngamma\r\n");
 }
 
-// 5. Delete range ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Delete range ---------------------------------------------------------------------------------
 async function testDeleteRange() {
   const result = await dsptTlCll("file-edit-lines", {
     items: [{ file_path: DELETE_FILE, start_line: 2, end_line: 3, replacement: "" }],
@@ -81,7 +81,7 @@ async function testDeleteRange() {
   assert.equal(await fs.readFile(DELETE_FILE, "utf8"), "one\nfour\n");
 }
 
-// 6. Insert after line ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Insert after line ----------------------------------------------------------------------------
 async function testInsertAfterLine() {
   const result = await dsptTlCll("file-edit-lines", {
     items: [{ file_path: INSERT_FILE, start_line: 1, end_line: 1, after: true, replacement: "inserted" }],
@@ -94,7 +94,7 @@ async function testInsertAfterLine() {
   assert.equal(await fs.readFile(INSERT_FILE, "utf8"), "first\ninserted\nsecond\n");
 }
 
-// 7. Rejects out-of-range start line ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Rejects out-of-range start line --------------------------------------------------------------
 async function testRejectsOutOfRange() {
   const result = await dsptTlCll("file-edit-lines", {
     items: [{ file_path: OOR_FILE, start_line: 9, replacement: "nope" }],
@@ -107,7 +107,7 @@ async function testRejectsOutOfRange() {
   assert.equal(await fs.readFile(OOR_FILE, "utf8"), "only\n");
 }
 
-// 8. Enforces expected_lines ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Enforces expected_lines ----------------------------------------------------------------------
 async function testEnforcesExpectedLines() {
   const mismatch = await dsptTlCll("file-edit-lines", {
     items: [{ file_path: EXPC_FILE, start_line: 1, replacement: "z", expected_lines: 99 }],
@@ -126,7 +126,7 @@ async function testEnforcesExpectedLines() {
   assert.equal(await fs.readFile(EXPC_FILE, "utf8"), "z\nb\nc\n");
 }
 
-// 9. Main ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Main -----------------------------------------------------------------------------------------
 async function main() {
   const origCfg = await setup();
 

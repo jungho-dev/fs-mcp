@@ -6,7 +6,7 @@
 import assert from "node:assert";
 import { commandManager as cmdMgr2 } from "../../../out/features/process/process-command-policy.js";
 
-// 1. Run tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Run tests ------------------------------------------------------------------------------------
 async function runTests() {
   // mock config with blocked commands
   const _blockedCmds = ["sudo", "iptables", "rm"];

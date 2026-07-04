@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { listProcesses as lstPrcs } from "../../../out/features/process/process-service.js";
 
-// 1. Test list processes ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Test list processes --------------------------------------------------------------------------
 async function testListProcesses() {
   const lnSprtPat = /\r?\n/;
   const result = await lstPrcs();

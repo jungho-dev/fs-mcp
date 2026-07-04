@@ -49,7 +49,7 @@ type DownloadDefaults = {
   userAgent?: string;
 };
 
-// 1. Render fetched page ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Render fetched page --------------------------------------------------------------------------
 // Non-HTML bodies (JSON, plain text) cannot be extracted, so they pass through as raw text.
 function renderFetchedPage(page: FetchedPage, mode: WebDumpMode): string {
   const body = page.body.toString("utf8");
@@ -60,7 +60,7 @@ function renderFetchedPage(page: FetchedPage, mode: WebDumpMode): string {
   return rndrHtml(mode, body, page.finalUrl);
 }
 
-// 2. Fetch one url ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Fetch one url --------------------------------------------------------------------------------
 async function fetchOneUrl(item: ParsedWebFetchItem, defaults: WebFetchDefaults): Promise<ServerResult> {
   const dump = item.dump ?? defaults.dump;
   const mode = prsWbDmp(dump);
@@ -86,7 +86,7 @@ async function fetchOneUrl(item: ParsedWebFetchItem, defaults: WebFetchDefaults)
   };
 }
 
-// 3. Handle web fetch ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Handle web fetch -----------------------------------------------------------------------------
 export async function handleWebFetch(args: unknown): Promise<ServerResult> {
   const parsed = WbFtArSc.parse(args);
   const items: ParsedWebFetchItem[] = [
@@ -109,7 +109,7 @@ export async function handleWebFetch(args: unknown): Promise<ServerResult> {
   return crtBtchTlRes("web-fetch", results, { resultMode: "full" });
 }
 
-// 4. Handle web render ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Handle web render ----------------------------------------------------------------------------
 export async function handleWebRender(args: unknown): Promise<ServerResult> {
   const parsed = WbRnArSc.parse(args);
 
@@ -171,7 +171,7 @@ export async function handleWebRender(args: unknown): Promise<ServerResult> {
   };
 }
 
-// 5. Extract one item ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Extract one item -----------------------------------------------------------------------------
 async function extractOneItem(item: ParsedWebExtractItem): Promise<ServerResult> {
   const mode = prsWbDmp(item.dump);
   let label: string;
@@ -203,7 +203,7 @@ async function extractOneItem(item: ParsedWebExtractItem): Promise<ServerResult>
   };
 }
 
-// 6. Handle web extract ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Handle web extract ---------------------------------------------------------------------------
 export async function handleWebExtract(args: unknown): Promise<ServerResult> {
   const parsed = WbExArSc.parse(args);
   const results = await rnPrllBtch(parsed.items, (item) => extractOneItem(item));
@@ -211,7 +211,7 @@ export async function handleWebExtract(args: unknown): Promise<ServerResult> {
   return crtBtchTlRes("web-extract", results, { resultMode: "full" });
 }
 
-// 7. Download one item ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Download one item ----------------------------------------------------------------------------
 async function downloadOneItem(item: ParsedDownloadItem, defaults: DownloadDefaults): Promise<ServerResult> {
   const target = await vldtTrgPth(item.path);
   let exists = true;
@@ -248,7 +248,7 @@ async function downloadOneItem(item: ParsedDownloadItem, defaults: DownloadDefau
   };
 }
 
-// 8. Handle download to file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Handle download to file ----------------------------------------------------------------------
 export async function handleDownloadToFile(args: unknown): Promise<ServerResult> {
   const parsed = DwFlArSc.parse(args);
   const defaults: DownloadDefaults = {

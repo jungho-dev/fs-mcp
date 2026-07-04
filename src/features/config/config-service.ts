@@ -20,14 +20,14 @@ const ALLW_CFG_KYS = new Set(CFG_FLD_KYS);
 const CDLO = process.env.FS_MCP_DEBUG_CONFIG === "1";
 const SLSR = /\r?\n/;
 
-// 1. Log config debug ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Log config debug -----------------------------------------------------------------------------
 function logConfigDebug(message: string): void {
   if (CDLO) {
     console.error(message);
   }
 }
 
-// 1. Normalize array config value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Normalize array config value -----------------------------------------------------------------
 function normalizeArrayConfigValue(key: string, value: unknown): unknown {
   let normVal2 = value;
 
@@ -37,7 +37,7 @@ function normalizeArrayConfigValue(key: string, value: unknown): unknown {
   return normVal2;
 }
 
-// 2. Path exists ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Path exists ----------------------------------------------------------------------------------
 async function pathExists(pathValue: string): Promise<boolean> {
   try {
     await access(pathValue, fsConstants.X_OK);
@@ -48,7 +48,7 @@ async function pathExists(pathValue: string): Promise<boolean> {
   }
 }
 
-// 3. Detect available shells ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Detect available shells ----------------------------------------------------------------------
 async function detectAvailableShells(systemInfo: ReturnType<typeof gtSystInf>): Promise<string[]> {
   const detected = new Set<string>();
   const add = (shell: string): void => {
@@ -122,7 +122,7 @@ async function detectAvailableShells(systemInfo: ReturnType<typeof gtSystInf>): 
   return [...detected];
 }
 
-// 4. Format config value ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Format config value --------------------------------------------------------------------------
 function formatConfigValue(value: unknown): string {
   const srlzVal2 = JSON.stringify(value, null, 2);
 
@@ -132,7 +132,7 @@ function formatConfigValue(value: unknown): string {
   return String(value);
 }
 
-// 5. Create system info snapshot ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Create system info snapshot ------------------------------------------------------------------
 function createSystemInfoSnapshot(): ReturnType<typeof gtSystInf> & {
   memory: {
     rss: string;
@@ -157,7 +157,7 @@ function createSystemInfoSnapshot(): ReturnType<typeof gtSystInf> & {
   };
 }
 
-// 6. Get config value ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Get config value -----------------------------------------------------------------------------
 export async function getConfigValue(args: unknown): Promise<ServerResult> {
   logConfigDebug(`getConfigValue called with args: ${JSON.stringify(args)}`);
   const parsed = GtCfVaArSc.safeParse(args);

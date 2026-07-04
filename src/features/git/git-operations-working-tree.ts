@@ -14,7 +14,7 @@ const GPG_SGN_PAT = /gpg|sign/i;
 // biome-ignore lint/security/noSecrets: Git pretty-format token string, not credential material.
 const CMM_SMM_FRM = "%H%x1f%an <%ae>%x1f%ct%x1f%s%x1f%G?";
 
-// 1. Looks conventional ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Looks conventional --------------------------------------------------------------------------
 // Mirrors the rust-fs-mcp header check: "<type>: <summary>" with a lowercase/dash/paren type
 // and at least one ASCII letter in the summary.
 function looksConventional(message: string): boolean {
@@ -30,7 +30,7 @@ function looksConventional(message: string): boolean {
   return /^[a-z()-]*$/.test(kind) && /[a-zA-Z]/.test(summary);
 }
 
-// 2. Author identity ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Author identity ------------------------------------------------------------------------------
 function authorIdentity(author: { name: string; email: string } | undefined): string[] {
   if (!author) {
     return [];
@@ -38,7 +38,7 @@ function authorIdentity(author: { name: string; email: string } | undefined): st
   return ["--author", `${author.name} <${author.email}>`];
 }
 
-// 3. Run commit with retry ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Run commit with retry ------------------------------------------------------------------------
 // Retries once with --no-gpg-sign when the failure looks like a signing problem.
 async function runCommitWithRetry(cwd: string, commitArgs: string[]): Promise<string | undefined> {
   let sgnnWrnn: string | undefined;
@@ -58,7 +58,7 @@ async function runCommitWithRetry(cwd: string, commitArgs: string[]): Promise<st
   return sgnnWrnn;
 }
 
-// 4. Build commit output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Build commit output --------------------------------------------------------------------------
 // Reads the HEAD commit back so commit and amend report the same summary shape.
 async function buildCommitOutput(cwd: string, sgnnWrnn: string | undefined): Promise<GtTlOtpt> {
   const headCommit = await gtHdCmmt(cwd);
@@ -90,7 +90,7 @@ async function buildCommitOutput(cwd: string, sgnnWrnn: string | undefined): Pro
   };
 }
 
-// 5. Run git add ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Run git add ------------------------------------------------------------------------------------
 export async function runGitAdd(input: GitArgsMap["git-add"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
   const paths = input.paths ?? [];
@@ -124,7 +124,7 @@ export async function runGitAdd(input: GitArgsMap["git-add"]): Promise<GtTlOtpt>
   };
 }
 
-// 6. Run git commit ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Run git commit -------------------------------------------------------------------------------
 export async function runGitCommit(input: GitArgsMap["git-commit"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
 
@@ -145,7 +145,7 @@ export async function runGitCommit(input: GitArgsMap["git-commit"]): Promise<GtT
   return await buildCommitOutput(cwd, sgnnWrnn);
 }
 
-// 7. Run git amend ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Run git amend --------------------------------------------------------------------------------
 // Amends HEAD in place. A new message replaces the header; otherwise --no-edit reuses it.
 export async function runGitAmend(input: GitArgsMap["git-amend"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
@@ -175,7 +175,7 @@ export async function runGitAmend(input: GitArgsMap["git-amend"]): Promise<GtTlO
   return await buildCommitOutput(cwd, sgnnWrnn);
 }
 
-// 8. Run git diff ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Run git diff -----------------------------------------------------------------------------------
 export async function runGitDiff(input: GitArgsMap["git-diff"]): Promise<GtTlOtpt> {
   // A leading '-' revision would be parsed as a git option (e.g. --output) and could write
   // files outside the repository, so option-like revisions are rejected.
@@ -234,7 +234,7 @@ export async function runGitDiff(input: GitArgsMap["git-diff"]): Promise<GtTlOtp
   return { success: true, path: cwd, diff: diffResult.stdout.trimEnd() };
 }
 
-// 9. Run git show ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Run git show -----------------------------------------------------------------------------------
 export async function runGitShow(input: GitArgsMap["git-show"]): Promise<GtTlOtpt> {
   const objects = input.objects && input.objects.length > 0 ? [...input.objects] : input.object !== undefined ? [input.object] : [];
   const fromSingle = input.objects === undefined || input.objects.length === 0;

@@ -37,12 +37,12 @@ const AGNT_PRFLS: AgentProfile[] = [
   {disableNotifications: true, id: "copilot", markers: ["copilot"]},
 ];
 
-// 1. Is structured log data ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Is structured log data -----------------------------------------------------------------------
 function isStructuredLogData(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// 2. Create log payload ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Create log payload ---------------------------------------------------------------------------
 function createLogPayload(message: string, data?: unknown): string | Record<string, unknown> {
   if (data === undefined) {
     return message;
@@ -53,7 +53,7 @@ function createLogPayload(message: string, data?: unknown): string | Record<stri
   return {data, message};
 }
 
-// 3. Format log argument ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Format log argument --------------------------------------------------------------------------
 function formatLogArgument(value: unknown): string {
   if (typeof value === "object" && value !== null) {
     try {
@@ -66,36 +66,36 @@ function formatLogArgument(value: unknown): string {
   return String(value);
 }
 
-// 4. Write to stdout ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Write to stdout ------------------------------------------------------------------------------
 function writeToStdout(write: typeof process.stdout.write, chunk: string | Uint8Array, encdOrCllb?: BufferEncoding | StdoutWriteCallback, callback?: StdoutWriteCallback): boolean {
   const writeArgs = callback !== undefined ? [chunk, encdOrCllb, callback] : encdOrCllb !== undefined ? [chunk, encdOrCllb] : [chunk];
   return Reflect.apply(write, process.stdout, writeArgs) as boolean;
 }
 
-// 5. Should disable notifications ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Should disable notifications ---------------------------------------------------------------
 export function shouldDisableNotifications(clientName: string): boolean {
   const profile = getAgentProfile(clientName);
 
   return profile?.disableNotifications ?? false;
 }
 
-// 5-1. Detect agent id ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5-1. Detect agent id --------------------------------------------------------------------------
 export function detectAgentId(clientName: string): AgentId {
   const profile = getAgentProfile(clientName);
 
   return profile?.id ?? "unknown";
 }
 
-// 5-2. Get agent profile ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5-2. Get agent profile ------------------------------------------------------------------------
 function getAgentProfile(clientName: string): AgentProfile | undefined {
   const normName = clientName.trim().toLowerCase();
 
   return AGNT_PRFLS.find((profile) => profile.markers.some((marker) => normName.includes(marker)));
 }
 
-// 1. JSON-RPC console wrapping transport ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. JSON-RPC console wrapping transport ----------------------------------------------------------
 // instead of filtering them out. This prevents crashes while maintaining debug visibility.
-// 5. Filtered stdio server transport ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Filtered stdio server transport --------------------------------------------------------------
 export class FilteredStdioServerTransport extends StdSrvrTrns {
   private readonly originalConsole: {
     log: typeof console.log;
@@ -114,7 +114,7 @@ export class FilteredStdioServerTransport extends StdSrvrTrns {
   private clientName: string = "unknown";
   private disableNotifications: boolean = false;
 
-  // 6. Constructor ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 6. Constructor --------------------------------------------------------------------------------
   constructor() {
     super();
 
@@ -139,7 +139,7 @@ export class FilteredStdioServerTransport extends StdSrvrTrns {
     // to ensure MCP protocol compliance - notifications must not be sent before initialization
   }
 
-  // 7. Enable notifications ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 7. Enable notifications -----------------------------------------------------------------------
   public enableNotifications(): void {
     this.isInitialized = true;
 
@@ -171,9 +171,9 @@ export class FilteredStdioServerTransport extends StdSrvrTrns {
     this.sendLogNotification("info", ["JSON-RPC notifications enabled"]);
   }
 
-  // 3. Configure client-specific behavior ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 3. Configure client-specific behavior ---------------------------------------------------------
   // Call this BEFORE enableNotifications()
-  // 8. Configure for client ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 8. Configure for client -----------------------------------------------------------------------
   public configureForClient(clientName: string): void {
     this.clientName = detectAgentId(clientName);
     this.disableNotifications = shouldDisableNotifications(this.clientName);
@@ -184,18 +184,18 @@ export class FilteredStdioServerTransport extends StdSrvrTrns {
   }
   // Check if notifications are enabled
 
-  // 9. Is notifications enabled ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 9. Is notifications enabled -------------------------------------------------------------------
   public get isNotificationsEnabled(): boolean {
     return this.isInitialized;
   }
   // Get the current count of buffered messages
 
-  // 10. Buffered message count ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 10. Buffered message count --------------------------------------------------------------------
   public get bufferedMessageCount(): number {
     return this.messageBuffer.length;
   }
 
-  // 11. Setup console redirection ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 11. Setup console redirection -----------------------------------------------------------------
   private setupConsoleRedirection(): void {
     console.log = (...args: unknown[]) => {
       if (this.isInitialized) {
@@ -264,7 +264,7 @@ export class FilteredStdioServerTransport extends StdSrvrTrns {
     };
   }
 
-  // 12. Setup stdout filtering ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 12. Setup stdout filtering --------------------------------------------------------------------
   private setupStdoutFiltering(): void {
     process.stdout.write = (buffer: string | Uint8Array, encdOrCllb?: BufferEncoding | StdoutWriteCallback, callback?: StdoutWriteCallback): boolean => {
       const encoding = typeof encdOrCllb === "string" ? encdOrCllb : undefined;
@@ -303,7 +303,7 @@ export class FilteredStdioServerTransport extends StdSrvrTrns {
     };
   }
 
-  // 13. Send log notification ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 13. Send log notification ---------------------------------------------------------------------
   private sendLogNotification(level: LogLevel, args: unknown[]): void {
     // Skip if notifications are disabled for the active MCP client.
     if (this.disableNotifications) {
@@ -348,9 +348,9 @@ export class FilteredStdioServerTransport extends StdSrvrTrns {
     }
   }
 
-  // 4. Public log notification sender ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 4. Public log notification sender -------------------------------------------------------------
   // Now properly buffers messages before MCP initialization to avoid breaking stdio protocol
-  // 14. Send log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 14. Send log ----------------------------------------------------------------------------------
   public sendLog(level: LogLevel, message: string, data?: unknown): void {
     // Skip if notifications are disabled for the active MCP client.
     if (this.disableNotifications) {
@@ -394,7 +394,7 @@ export class FilteredStdioServerTransport extends StdSrvrTrns {
     }
   }
 
-  // 15. Send progress ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 15. Send progress -----------------------------------------------------------------------------
   public sendProgress(token: string, value: number, total?: number): void {
     // Don't send progress before initialization - would break MCP protocol
     if (!this.isInitialized) {
@@ -428,7 +428,7 @@ export class FilteredStdioServerTransport extends StdSrvrTrns {
     }
   }
 
-  // 16. Send custom notification ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 16. Send custom notification ------------------------------------------------------------------
   public sendCustomNotification(method: string, params: unknown): void {
     // Don't send custom notifications before initialization - would break MCP protocol
     if (!this.isInitialized) {
@@ -458,7 +458,7 @@ export class FilteredStdioServerTransport extends StdSrvrTrns {
     }
   }
 
-  // 17. Cleanup ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 17. Cleanup -----------------------------------------------------------------------------------
   public cleanup(): void {
     if (this.originalConsole) {
       console.log = this.originalConsole.log;

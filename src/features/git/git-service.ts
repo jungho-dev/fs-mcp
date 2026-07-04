@@ -44,12 +44,12 @@ const GT_TL_HNDL = {
   "git_worktree": rnGtWrkt,
 } satisfies {[K in GitToolName]: (args: GitArgsMap[K]) => Promise<GtTlOtpt>};
 
-// 1. Create JSON response ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Create JSON response -------------------------------------------------------------------------
 function createJsonResponse(output: Record<string, unknown>): ServerResult {
   return crtTlTxtRes(JSON.stringify(output, null, 2), {structuredContent: output});
 }
 
-// 2. Execute git tool ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Execute git tool -----------------------------------------------------------------------------
 export async function executeGitTool<TName extends GitToolName>(name: TName, args: GitArgsMap[TName]): Promise<ServerResult> {
   const handler = GT_TL_HNDL[name] as (input: GitArgsMap[TName]) => Promise<GtTlOtpt>;
   const output = await handler(args);

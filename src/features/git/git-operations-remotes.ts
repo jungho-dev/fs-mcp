@@ -13,7 +13,7 @@ import type { GitArgsMap, GitToolOutput as GtTlOtpt } from "@features/git/git-ty
 const FPRP = /prune|deleted/i;
 const PRRP = /\\[rejected\\]/i;
 
-// 1. Run git fetch ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Run git fetch --------------------------------------------------------------------------------
 export async function runGitFetch(input: GitArgsMap["git_fetch"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
   const remote = input.remote ?? "origin";
@@ -27,7 +27,7 @@ export async function runGitFetch(input: GitArgsMap["git_fetch"]): Promise<GtTlO
   };
 }
 
-// 2. Run git pull ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Run git pull ---------------------------------------------------------------------------------
 export async function runGitPull(input: GitArgsMap["git_pull"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
   const previousHead = await gtHdCmmt(cwd);
@@ -50,7 +50,7 @@ export async function runGitPull(input: GitArgsMap["git_pull"]): Promise<GtTlOtp
   };
 }
 
-// 3. Run git push ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Run git push ---------------------------------------------------------------------------------
 export async function runGitPush(input: GitArgsMap["git_push"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
   const branch = input.branch ?? (await gtCurBrnc(cwd)) ?? "HEAD";
@@ -74,7 +74,7 @@ export async function runGitPush(input: GitArgsMap["git_push"]): Promise<GtTlOtp
   };
 }
 
-// 4. Run git remote ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Run git remote -------------------------------------------------------------------------------
 export async function runGitRemote(input: GitArgsMap["git_remote"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
   const mode = input.mode ?? "list";

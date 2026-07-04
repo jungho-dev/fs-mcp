@@ -76,7 +76,7 @@ type LineNumTextContent = {
 
 type ToolArgsSource = "args_path" | "inline";
 
-// 1. Missing path error check ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Missing path error check ----------------------------------------------------------------------
 function isMissingPathError(error: unknown): boolean {
   const code = typeof error === "object" && error !== null ? (error as NodeJS.ErrnoException).code : undefined;
   const message = error instanceof Error ? error.message : String(error);
@@ -84,7 +84,7 @@ function isMissingPathError(error: unknown): boolean {
   return code === "ENOENT" || code === "ENOTDIR" || MPER.test(message) || (WSL_UNC_ERR.test(message) && WSL_UNC_MISS.test(message));
 }
 
-// 1-1. Create missing path response ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1-1. Create missing path response ------------------------------------------------------------------
 function createMissingPathResponse(rqstPth: string): ServerResult {
   const resolvedPath = rslvAbslPth(rqstPth);
 
@@ -101,7 +101,7 @@ function createMissingPathResponse(rqstPth: string): ServerResult {
   };
 }
 
-// 1-2. Missing local path check ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1-2. Missing local path check --------------------------------------------------------------------
 async function isMissingLocalPath(rqstPth: string): Promise<boolean> {
   try {
     await getFileInfo(rqstPth);
@@ -115,7 +115,7 @@ async function isMissingLocalPath(rqstPth: string): Promise<boolean> {
   }
 }
 
-// 1. Resolve directory listing entry type ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Resolve directory listing entry type ---------------------------------------------------------
 function resolveDirectoryListingEntryType(match: RegExpMatchArray | null): DirLsEnTy {
   if (!match) {
   	return "unknown";
@@ -136,7 +136,7 @@ function resolveDirectoryListingEntryType(match: RegExpMatchArray | null): DirLs
   return "unknown";
 }
 
-// 2. Handle parsed read file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Handle parsed read file ---------------------------------------------------------------------
 async function handleParsedReadFile(parsed: ParsedReadFileArgs): Promise<ServerResult> {
   const options: ReadOptions = {
     isUrl: parsed.isUrl,
@@ -188,7 +188,7 @@ async function handleParsedReadFile(parsed: ParsedReadFileArgs): Promise<ServerR
   }
 }
 
-// 3. Handle parsed read file with timeout ――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Handle parsed read file with timeout ------------------------------------------------------
 async function handleParsedReadFileWithTimeout(parsed: ParsedReadFileArgs): Promise<ServerResult> {
   const result = await withTimeout(handleParsedReadFile(parsed), RFHTM, "Read file handler operation", null);
   if (result == null) {
@@ -198,7 +198,7 @@ async function handleParsedReadFileWithTimeout(parsed: ParsedReadFileArgs): Prom
   return result;
 }
 
-// 3-1. Handle parsed read file with missing path option ――――――――――――――――――――――――――――――――――――――――――――――
+// 3-1. Handle parsed read file with missing path option ----------------------------------------------
 async function handleParsedReadFileWithMissing(parsed: ParsedReadFileArgs, allowMissing: boolean): Promise<ServerResult> {
   try {
     return await handleParsedReadFileWithTimeout(parsed);
@@ -211,7 +211,7 @@ async function handleParsedReadFileWithMissing(parsed: ParsedReadFileArgs, allow
   }
 }
 
-// 3-2. Split line number content ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3-2. Split line number content ----------------------------------------------------------------
 function splitLineNumContent(content: string): string[] {
   const lines = content.split(LN_SPLT_PAT);
   if (lines.at(-1) === "") {
@@ -220,7 +220,7 @@ function splitLineNumContent(content: string): string[] {
   return lines;
 }
 
-// 3-3. Resolve line number slice ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3-3. Resolve line number slice -----------------------------------------------------------------
 function resolveLineNumSlice(lines: string[], offset: number, length?: number): { selected: string[]; startLine: number | null } {
   if (lines.length === 0) {
     return {
@@ -246,7 +246,7 @@ function resolveLineNumSlice(lines: string[], offset: number, length?: number): 
   };
 }
 
-// 3-4. Format line numbered text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3-4. Format line numbered text -----------------------------------------------------------------
 function formatLineNumText(content: string, offset: number, length?: number): LineNumTextContent {
   const lines = splitLineNumContent(content);
   const slice = resolveLineNumSlice(lines, offset, length);
@@ -262,7 +262,7 @@ function formatLineNumText(content: string, offset: number, length?: number): Li
   };
 }
 
-// 3-5. Handle parsed line numbered read ――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3-5. Handle parsed line numbered read --------------------------------------------------------
 async function handleParsedLineNumRead(parsed: ParsedReadFileArgs): Promise<ServerResult> {
   const rslvFlPth = parsed.isUrl ? parsed.path : rslvAbslPth(parsed.path);
   const rawContent = parsed.isUrl
@@ -290,7 +290,7 @@ async function handleParsedLineNumRead(parsed: ParsedReadFileArgs): Promise<Serv
   };
 }
 
-// 3-6. Handle parsed line numbered read with missing path option ―――――――――――――――――――――――――――――――――――――
+// 3-6. Handle parsed line numbered read with missing path option -------------------------------------
 async function handleParsedLineNumReadWithMissing(parsed: ParsedReadFileArgs, allowMissing: boolean): Promise<ServerResult> {
   try {
     return await handleParsedLineNumRead(parsed);
@@ -303,7 +303,7 @@ async function handleParsedLineNumReadWithMissing(parsed: ParsedReadFileArgs, al
   }
 }
 
-// 4. Handle read file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Handle read file -----------------------------------------------------------------------------
 export async function handleReadFile(args: unknown): Promise<ServerResult> {
   // Add input validation
   if (args === null || args === undefined) {
@@ -314,12 +314,12 @@ export async function handleReadFile(args: unknown): Promise<ServerResult> {
   return await handleParsedReadFileWithTimeout(parsed);
 }
 
-// 5. Is tool args record ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Is tool args record -------------------------------------------------------------------
 function isToolArgsRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// 6. Resolve tool args source ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Resolve tool args source -------------------------------------------------------------------
 function resolveToolArgsSource(args: unknown): ToolArgsSource {
   if (!isToolArgsRecord(args) || args[ASMF] !== "args_path") {
   	return "inline";
@@ -327,7 +327,7 @@ function resolveToolArgsSource(args: unknown): ToolArgsSource {
   return "args_path";
 }
 
-// 7. Strip tool args metadata ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Strip tool args metadata --------------------------------------------------------------------
 function stripToolArgsMetadata(args: unknown): unknown {
   if (!isToolArgsRecord(args) || !Object.hasOwn(args, ASMF)) {
   	return args;
@@ -337,7 +337,7 @@ function stripToolArgsMetadata(args: unknown): unknown {
   return rest;
 }
 
-// 3. Resolve write content ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Resolve write content --------------------------------------------------------------------
 async function resolveWriteContent(parsed: ParsedWriteFileArgs): Promise<string> {
   if (parsed.content !== undefined) {
   	return parsed.content;
@@ -345,12 +345,12 @@ async function resolveWriteContent(parsed: ParsedWriteFileArgs): Promise<string>
   return rdTxtSlcInt(parsed.content_path ?? "", parsed.content_offset, parsed.content_length);
 }
 
-// 4. Count write lines ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Count write lines ----------------------------------------------------------------------------
 function countWriteLines(content: string): number {
   return content.split("\n").length;
 }
 
-// 6. Handle parsed write file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Handle parsed write file -------------------------------------------------------------------
 async function handleParsedWriteFile(parsed: ParsedWriteFileArgs): Promise<ServerResult> {
   const content = await resolveWriteContent(parsed);
   const lineCount = countWriteLines(content);
@@ -375,7 +375,7 @@ async function handleParsedWriteFile(parsed: ParsedWriteFileArgs): Promise<Serve
   };
 }
 
-// 7. Handle write file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Handle write file ----------------------------------------------------------------------------
 export async function handleWriteFile(args: unknown): Promise<ServerResult> {
   try {
     const argsSource = resolveToolArgsSource(args);
@@ -390,7 +390,7 @@ export async function handleWriteFile(args: unknown): Promise<ServerResult> {
   }
 }
 
-// 8. Handle parsed create directory ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Handle parsed create directory --------------------------------------------------------------
 async function handleParsedCreateDirectory(parsed: ParsedCreateDirectoryArgs): Promise<ServerResult> {
   await crtDir(parsed.path);
   return {
@@ -398,7 +398,7 @@ async function handleParsedCreateDirectory(parsed: ParsedCreateDirectoryArgs): P
   };
 }
 
-// 9. Handle create directory ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Handle create directory ----------------------------------------------------------------------
 export async function handleCreateDirectory(args: unknown): Promise<ServerResult> {
   try {
     const parsed = CrtDiArSc.parse(args);
@@ -411,7 +411,7 @@ export async function handleCreateDirectory(args: unknown): Promise<ServerResult
   }
 }
 
-// 10. Handle parsed list directory ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Handle parsed list directory --------------------------------------------------------------
 async function handleParsedListDirectory(parsed: ParsedListDirectoryArgs): Promise<ServerResult> {
   const entries = await lstDir(parsed.path, parsed.depth, {
     excludePatterns: parsed.excludePatterns,
@@ -443,7 +443,7 @@ async function handleParsedListDirectory(parsed: ParsedListDirectoryArgs): Promi
   };
 }
 
-// 10-1. Handle parsed list directory with missing path option ―――――――――――――――――――――――――――――――――――――――――
+// 10-1. Handle parsed list directory with missing path option -----------------------------------------
 async function handleParsedListDirectoryWithMissing(parsed: ParsedListDirectoryArgs, allowMissing: boolean): Promise<ServerResult> {
   if (allowMissing && (await isMissingLocalPath(parsed.path))) {
   	return createMissingPathResponse(parsed.path);
@@ -451,7 +451,7 @@ async function handleParsedListDirectoryWithMissing(parsed: ParsedListDirectoryA
   return await handleParsedListDirectory(parsed);
 }
 
-// 11. Handle list directory ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11. Handle list directory -----------------------------------------------------------------------
 export async function handleListDirectory(args: unknown): Promise<ServerResult> {
   try {
     const parsed = LstDiArSc.parse(args);
@@ -464,7 +464,7 @@ export async function handleListDirectory(args: unknown): Promise<ServerResult> 
   }
 }
 
-// 12. Handle parsed copy file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 12. Handle parsed copy file --------------------------------------------------------------------
 async function handleParsedCopyFile(parsed: ParsedCopyFileArgs): Promise<ServerResult> {
   await copyFile(parsed.source, parsed.destination, parsed.recursive, parsed.force);
   return {
@@ -472,7 +472,7 @@ async function handleParsedCopyFile(parsed: ParsedCopyFileArgs): Promise<ServerR
   };
 }
 
-// 13. Handle copy file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 13. Handle copy file -----------------------------------------------------------------------------
 export async function handleCopyFile(args: unknown): Promise<ServerResult> {
   try {
     const parsed = CpyFlArgsSch.parse(args);
@@ -485,7 +485,7 @@ export async function handleCopyFile(args: unknown): Promise<ServerResult> {
   }
 }
 
-// 14. Handle parsed move file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 14. Handle parsed move file --------------------------------------------------------------------
 async function handleParsedMoveFile(parsed: ParsedMoveFileArgs): Promise<ServerResult> {
   await moveFile(parsed.source, parsed.destination);
   return {
@@ -493,7 +493,7 @@ async function handleParsedMoveFile(parsed: ParsedMoveFileArgs): Promise<ServerR
   };
 }
 
-// 15. Handle move file ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 15. Handle move file -----------------------------------------------------------------------------
 export async function handleMoveFile(args: unknown): Promise<ServerResult> {
   try {
     const parsed = MvFlArgsSch.parse(args);
@@ -506,7 +506,7 @@ export async function handleMoveFile(args: unknown): Promise<ServerResult> {
   }
 }
 
-// 19. Handle parsed remove path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 19. Handle parsed remove path ------------------------------------------------------------------
 async function handleParsedRemovePath(parsed: ParsedRemovePathArgs): Promise<ServerResult> {
   const resolvedPath = rslvAbslPth(parsed.path);
 
@@ -522,7 +522,7 @@ async function handleParsedRemovePath(parsed: ParsedRemovePathArgs): Promise<Ser
   };
 }
 
-// 20. Handle remove path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 20. Handle remove path --------------------------------------------------------------------------
 export async function handleRemovePath(args: unknown): Promise<ServerResult> {
   try {
     const parsed = RmvPtArSc.parse(args);
@@ -535,7 +535,7 @@ export async function handleRemovePath(args: unknown): Promise<ServerResult> {
   }
 }
 
-// 12. Format value ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 12. Format value --------------------------------------------------------------------------------
 function formatValue(value: unknown, indent: string=""): string {
   if (value === null || value === undefined) {
   	return String(value);
@@ -562,7 +562,7 @@ function formatValue(value: unknown, indent: string=""): string {
   return String(value);
 }
 
-// 22. Handle parsed get file info ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 22. Handle parsed get file info ----------------------------------------------------------------
 async function handleParsedGetFileInfo(parsed: ParsedGetFileInfoArgs): Promise<ServerResult> {
   const info = await getFileInfo(parsed.path);
 
@@ -582,7 +582,7 @@ async function handleParsedGetFileInfo(parsed: ParsedGetFileInfoArgs): Promise<S
   };
 }
 
-// 22-1. Handle parsed get file info with missing path option ――――――――――――――――――――――――――――――――――――――――――
+// 22-1. Handle parsed get file info with missing path option ------------------------------------------
 async function handleParsedGetFileInfoWithMissing(parsed: ParsedGetFileInfoArgs, allowMissing: boolean): Promise<ServerResult> {
   try {
     return await handleParsedGetFileInfo(parsed);
@@ -595,7 +595,7 @@ async function handleParsedGetFileInfoWithMissing(parsed: ParsedGetFileInfoArgs,
   }
 }
 
-// 23. Handle get file info ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 23. Handle get file info ------------------------------------------------------------------------
 export async function handleGetFileInfo(args: unknown): Promise<ServerResult> {
   try {
     const parsed = GtFlInArSc.parse(args);
@@ -608,7 +608,7 @@ export async function handleGetFileInfo(args: unknown): Promise<ServerResult> {
   }
 }
 
-// 14. Handle read files ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 14. Handle read files ---------------------------------------------------------------------------
 export async function handleReadFiles(args: unknown): Promise<ServerResult> {
   const parsed = RdFlsArgsSch.parse(args);
   const items = parsed.items ?? parsed.paths?.map((filePath) => ({ isUrl: false, offset: 0, path: filePath })) ?? [];
@@ -618,7 +618,7 @@ export async function handleReadFiles(args: unknown): Promise<ServerResult> {
   return response;
 }
 
-// 14-1. Handle read files with line number ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 14-1. Handle read files with line number -------------------------------------------------------
 // file-read-line-range items use a 1-based start_line and a line_count budget.
 export async function handleReadFilesWithLineNumber(args: unknown): Promise<ServerResult> {
   const parsed = RdLnRngArSc.parse(args);
@@ -629,12 +629,12 @@ export async function handleReadFilesWithLineNumber(args: unknown): Promise<Serv
   return response;
 }
 
-// 15. Is record ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 15. Is record -----------------------------------------------------------------------------------
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// 16. Compact write batch input ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 16. Compact write batch input -------------------------------------------------------------------
 function compactWriteBatchInput(input: ParsedWriteFileArgs): Record<string, unknown> {
   const compacted: Record<string, unknown> = {
     content_offset: input.content_offset,
@@ -654,7 +654,7 @@ function compactWriteBatchInput(input: ParsedWriteFileArgs): Record<string, unkn
   return compacted;
 }
 
-// 17. Compact write batch result ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 17. Compact write batch result -----------------------------------------------------------------
 function compactWriteBatchResult(result: ServerResult): ServerResult {
   if (result.isError === true || !isRecord(result.structuredContent)) {
   	return result;
@@ -673,7 +673,7 @@ function compactWriteBatchResult(result: ServerResult): ServerResult {
   };
 }
 
-// 18. Create write files batch response ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 18. Create write files batch response ---------------------------------------------------------
 function createWriteFilesBatchResponse(items: BtchTlItmRes<ParsedWriteFileArgs>[]): ServerResult {
   const totalCount = items.length;
   const failedCount = items.filter((item) => !item.ok).length;
@@ -705,7 +705,7 @@ function createWriteFilesBatchResponse(items: BtchTlItmRes<ParsedWriteFileArgs>[
   };
 }
 
-// 19. Handle write files ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 19. Handle write files --------------------------------------------------------------------------
 export async function handleWriteFiles(args: unknown): Promise<ServerResult> {
   const argsSource = resolveToolArgsSource(args);
   const rawArgs = stripToolArgsMetadata(args);
@@ -715,7 +715,7 @@ export async function handleWriteFiles(args: unknown): Promise<ServerResult> {
   return createWriteFilesBatchResponse(results);
 }
 
-// 16. Handle create directories ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 16. Handle create directories -------------------------------------------------------------------
 export async function handleCreateDirectories(args: unknown): Promise<ServerResult> {
   const parsed = CrtDrArSc.parse(args);
   const results = await rnPrllBtch(parsed.paths, (dirPath) => handleParsedCreateDirectory({ path: dirPath }));
@@ -724,7 +724,7 @@ export async function handleCreateDirectories(args: unknown): Promise<ServerResu
   return response;
 }
 
-// 17. Handle list directories ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 17. Handle list directories ---------------------------------------------------------------------
 export async function handleListDirectories(args: unknown): Promise<ServerResult> {
   const parsed = LstDrArSc.parse(args);
   const results = await rnPrllBtch(parsed.items, (item) => handleParsedListDirectoryWithMissing(item, parsed.allowMissing));
@@ -733,7 +733,7 @@ export async function handleListDirectories(args: unknown): Promise<ServerResult
   return response;
 }
 
-// 18. Handle copy files ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 18. Handle copy files ---------------------------------------------------------------------------
 export async function handleCopyFiles(args: unknown): Promise<ServerResult> {
   const parsed = CpyFlArSc.parse(args);
   const results = await rnPrllBtch(parsed.items, (item) => handleParsedCopyFile(item));
@@ -742,7 +742,7 @@ export async function handleCopyFiles(args: unknown): Promise<ServerResult> {
   return response;
 }
 
-// 19. Handle move files ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 19. Handle move files ---------------------------------------------------------------------------
 export async function handleMoveFiles(args: unknown): Promise<ServerResult> {
   const parsed = MvFlsArgsSch.parse(args);
   const results = await rnLmPrBt(parsed.items, MFBC, (item) => handleParsedMoveFile(item));
@@ -751,7 +751,7 @@ export async function handleMoveFiles(args: unknown): Promise<ServerResult> {
   return response;
 }
 
-// 21. Handle remove files ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 21. Handle remove files -------------------------------------------------------------------------
 export async function handleRemoveFiles(args: unknown): Promise<ServerResult> {
   const parsed = RmvFlArSc.parse(args);
   const results = await rnPrllBtch(parsed.items, (item) => handleParsedRemovePath(item));
@@ -760,7 +760,7 @@ export async function handleRemoveFiles(args: unknown): Promise<ServerResult> {
   return response;
 }
 
-// 22. Handle get file infos ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 22. Handle get file infos -----------------------------------------------------------------------
 export async function handleGetFileInfos(args: unknown): Promise<ServerResult> {
   const parsed = GtFlInArSc2.parse(args);
   const results = await rnPrllBtch(parsed.paths, (filePath) => handleParsedGetFileInfoWithMissing({ path: filePath }, parsed.allowMissing));

@@ -5,10 +5,10 @@
  * @since 2026-05-02
  */
 
-// 1. Line ending types ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Line ending types ----------------------------------------------------------------------------
 export declare type LineEndingStyle = "\r\n" | "\n" | "\r";
 
-// 1. Detect line ending ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Detect line ending ---------------------------------------------------------------------------
 export function detectLineEnding(content: string): LineEndingStyle {
   let index = 0;
   while (index < content.length) {
@@ -27,7 +27,7 @@ export function detectLineEnding(content: string): LineEndingStyle {
   return process.platform === "win32" ? "\r\n" : "\n";
 }
 
-// 2. Normalize line endings ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Normalize line endings -----------------------------------------------------------------------
 export function normalizeLineEndings(text: string, tgtLnEndn: LineEndingStyle): string {
   // First normalize to LF
   const normalized = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n");

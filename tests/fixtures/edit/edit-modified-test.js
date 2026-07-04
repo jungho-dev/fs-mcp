@@ -3,7 +3,7 @@
  * This is a modified version to work with the 100-line limit
  */
 
-// 1. Test large file performance ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Test large file performance ------------------------------------------------------------------
 async function _testLargeFilePerformance() {
   const LRG_FL_LF = path.join(TEST_DIR, "large_lf.txt");
   const LRG_FL_CRLF = path.join(TEST_DIR, "large_crlf.txt");

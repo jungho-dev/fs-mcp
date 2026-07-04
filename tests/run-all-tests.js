@@ -51,17 +51,17 @@ const TEST_GROUPS = {
 };
 const RNNB_TSTS = Object.values(TEST_GROUPS).flat();
 
-// 1. Write stdout ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Write stdout ---------------------------------------------------------------------------------
 function writeStdout(message) {
   process.stdout.write(`${message}\n`);
 }
 
-// 2. Write stderr ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Write stderr ---------------------------------------------------------------------------------
 function writeStderr(message) {
   process.stderr.write(`${message}\n`);
 }
 
-// 3. Run test file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Run test file --------------------------------------------------------------------------------
 async function runTestFile(testFile) {
   writeStdout(`\n${colors.cyan}Running ${testFile}${colors.reset}`);
 
@@ -93,7 +93,7 @@ async function runTestFile(testFile) {
   });
 }
 
-// 4. Run build command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Run build command ----------------------------------------------------------------------------
 async function runBuildCommand(args) {
   await new Promise((resolve, reject) => {
     const proc = spawn("bun", args, {
@@ -117,14 +117,14 @@ async function runBuildCommand(args) {
   });
 }
 
-// 5. Build project ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Build project --------------------------------------------------------------------------------
 async function buildProject() {
   await runBuildCommand(["x", "swc", "./src", "-d", "./out", "--config-file", "./.server.swcrc", "--strip-leading-paths", "--out-file-extension", "js", "--delete-dir-on-start"]);
   await runBuildCommand(["x", "tsc-alias", "-p", "tsconfig.json", "--outDir", "./out", "-f", "-fe", ".js"]);
   await fs.rename(path.join(projectRoot, "out", "index.js"), path.join(projectRoot, "out", "index.mjs"));
 }
 
-// 6. Run smoke tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Run smoke tests ------------------------------------------------------------------------------
 async function runSmokeTests() {
   if (RNNB_TSTS.length === 0) {
     writeStderr(`${colors.yellow}Warning: No runnable tests configured${colors.reset}`);
@@ -164,7 +164,7 @@ async function runSmokeTests() {
   };
 }
 
-// 7. Main ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Main -----------------------------------------------------------------------------------------
 async function main() {
   try {
     if (shldSkpBld) {

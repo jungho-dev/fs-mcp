@@ -8,7 +8,7 @@
 import assert from "node:assert/strict";
 import { detectAgentId as dtctAgntId, shouldDisableNotifications as shldDsblNtfc } from "../../out/cores/transport/transport-stdio-transport.js";
 
-// 1. Test representative agent detection ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Test representative agent detection -------------------------------------------------------
 function testAgentDetection() {
   assert.equal(dtctAgntId("Claude Desktop"), "claude");
   assert.equal(dtctAgntId("codex-cli"), "codex");
@@ -17,7 +17,7 @@ function testAgentDetection() {
   assert.equal(dtctAgntId("Visual Studio Code"), "unknown");
 }
 
-// 2. Test notification policy ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Test notification policy --------------------------------------------------------------------
 function testNotificationPolicy() {
   assert.equal(shldDsblNtfc("Claude Desktop"), false);
   assert.equal(shldDsblNtfc("codex-cli"), false);
@@ -27,7 +27,7 @@ function testNotificationPolicy() {
   assert.equal(shldDsblNtfc("Visual Studio Code"), false);
 }
 
-// 3. Main ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Main -----------------------------------------------------------------------------------------
 function main() {
   testAgentDetection();
   testNotificationPolicy();

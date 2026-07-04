@@ -48,18 +48,18 @@ const HEADERS = [
   "diffLength",
 ].join("\t");
 
-// 1. Fuzzy search logger ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Fuzzy search logger -------------------------------------------------------
 class FuzzySearchLogger {
   private readonly logPath: string;
   private initialized = false;
 
-  // 2. Constructor ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 2. Constructor -------------------------------------------------------------
   constructor() {
     const logDir = path.join(os.homedir(), ".mcp/");
     this.logPath = path.join(logDir, "fuzzy-search.log");
   }
 
-  // 3. Ensure log file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 3. Ensure log file ----------------------------------------------------------
   private async ensureLogFile(): Promise<void> {
     if (this.initialized) {
       return;
@@ -83,7 +83,7 @@ class FuzzySearchLogger {
     }
   }
 
-  // 4. Log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 4. Log --------------------------------------------------------------------
   async log(entry: FuzzySearchLogEntry): Promise<void> {
     try {
       await this.ensureLogFile();
@@ -113,13 +113,13 @@ class FuzzySearchLogger {
     }
   }
 
-  // 5. Get log path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 5. Get log path ------------------------------------------------------------
   async getLogPath(): Promise<string> {
     await this.ensureLogFile();
     return this.logPath;
   }
 
-  // 6. Get recent logs ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 6. Get recent logs ---------------------------------------------------------
   async getRecentLogs(count: number = 10): Promise<string[]> {
     try {
       await this.ensureLogFile();
@@ -133,7 +133,7 @@ class FuzzySearchLogger {
     }
   }
 
-  // 7. Clear log ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 7. Clear log ---------------------------------------------------------------
   async clearLog(): Promise<void> {
     try {
       await fs.writeFile(this.logPath, `${HEADERS}\n`);
@@ -145,7 +145,7 @@ class FuzzySearchLogger {
   }
 }
 
-// 8. Sanitize field ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Sanitize field ------------------------------------------------------------
 function sanitizeField(value: string): string {
   return value.replace(/\n/g, "\\n").replace(/\t/g, "\\t");
 }

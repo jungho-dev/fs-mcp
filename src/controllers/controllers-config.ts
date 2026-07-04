@@ -11,7 +11,7 @@ import {prepareConfigValueUpdate as prpCfgVlUpd} from "@features/config/config-s
 import {cfgMgr, type ServerConfig as SrvrCfg} from "@features/config/config-store";
 import {StCfVaArSc} from "@schemas/schemas-config";
 
-// 1. Create set config failure results ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Create set config failure results ---------------------------------------------------------
 function createSetConfigFailureResults<T>(items: T[], message: string): BtchTlItmRe2<T>[] {
   return items.map((item, index) => ({
     index: index + 1,
@@ -29,7 +29,7 @@ function createSetConfigFailureResults<T>(items: T[], message: string): BtchTlIt
   }));
 }
 
-// 2. Handle set config values ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Handle set config values -------------------------------------------------------------------
 export async function handleSetConfigValues(args: unknown): Promise<ServerResult> {
   const parsed = StCfVaArSc.parse(args);
   const baseConfig = await cfgMgr.getConfig();

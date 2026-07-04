@@ -24,13 +24,13 @@ const RSTR_DR = path.join(__dirname, "test_symlink_restricted");
 const SYM_T_RSTR = path.join(ALLOWED_DIR, "link_to_restricted");
 const SYM_T_RST_FL = path.join(ALLOWED_DIR, "link_to_secret");
 
-// 1. Clean up test directories ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Clean up test directories --------------------------------------------------------------------
 async function cleanup() {
   await fs.rm(ALLOWED_DIR, { recursive: true, force: true }).catch(() => undefined);
   await fs.rm(RSTR_DR, { recursive: true, force: true }).catch(() => undefined);
 }
 
-// 2. Setup test environment ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Setup test environment -----------------------------------------------------------------------
 async function setup() {
   await cleanup();
 
@@ -54,7 +54,7 @@ async function setup() {
   return await cfgMgr.getConfig();
 }
 
-// 3. Test helper: check if path validation succeeds or fails ――――――――――――――――――――――――――――――――――――――
+// 3. Test helper: check if path validation succeeds or fails --------------------------------------
 async function canAccessPath(testPath) {
   try {
     const result = await validatePath(testPath);
@@ -65,7 +65,7 @@ async function canAccessPath(testPath) {
   }
 }
 
-// 4. Test 1: Normal file access within allowed directory (should succeed) ―――――――――――――――――――――――――
+// 4. Test 1: Normal file access within allowed directory (should succeed) -------------------------
 async function testNormalFileAccess() {
   await cfgMgr.setValue("allowedDirectories", [ALLOWED_DIR]);
 
@@ -75,7 +75,7 @@ async function testNormalFileAccess() {
   assert.strictEqual(result.success, true, "Normal file in allowed directory should be accessible");
 }
 
-// 5. Test 2: Direct access to restricted directory (should fail) ――――――――――――――――――――――――――――――――――
+// 5. Test 2: Direct access to restricted directory (should fail) ----------------------------------
 async function testDirectRestrictedAccess() {
   await cfgMgr.setValue("allowedDirectories", [ALLOWED_DIR]);
 
@@ -84,10 +84,10 @@ async function testDirectRestrictedAccess() {
   assert.strictEqual(result.success, false, "Direct access to restricted directory should fail");
 }
 
-// 6. Symlink bypass directory test ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Symlink bypass directory test ----------------------------------------------------------------
 // This is the main security test!
 
-// 6. Test symlink directory bypass ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Test symlink directory bypass ----------------------------------------------------------------
 async function testSymlinkDirectoryBypass() {
   await cfgMgr.setValue("allowedDirectories", [ALLOWED_DIR]);
 
@@ -98,7 +98,7 @@ async function testSymlinkDirectoryBypass() {
   assert.strictEqual(result.success, false, "SECURITY: Symlink pointing to restricted directory should be BLOCKED");
 }
 
-// 7. Test 4: SYMLINK BYPASS - File symlink pointing outside allowed dirs ――――――――――――――――――――――――――
+// 7. Test 4: SYMLINK BYPASS - File symlink pointing outside allowed dirs --------------------------
 async function testSymlinkFileBypass() {
   await cfgMgr.setValue("allowedDirectories", [ALLOWED_DIR]);
 
@@ -107,10 +107,10 @@ async function testSymlinkFileBypass() {
   assert.strictEqual(result.success, false, "SECURITY: Symlink pointing to restricted file should be BLOCKED");
 }
 
-// 8. Test 5: Access file through directory symlink ――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Test 5: Access file through directory symlink ------------------------------------------------
 // Attempt to access a file via the symlinked directory
 
-// 8. Test access through symlink dir ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Test access through symlink dir --------------------------------------------------------------
 async function testAccessThroughSymlinkDir() {
   await cfgMgr.setValue("allowedDirectories", [ALLOWED_DIR]);
 
@@ -126,7 +126,7 @@ async function testAccessThroughSymlinkDir() {
   assert.strictEqual(result.success, false, "SECURITY: Accessing file through symlinked directory should be BLOCKED");
 }
 
-// 9. Symlink within allowed location ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Symlink within allowed location --------------------------------------------------------------
 async function testSymlinkWithinAllowed() {
   // Create another allowed subdirectory and symlink within it
   const subdir = path.join(ALLOWED_DIR, "subdir");
@@ -144,7 +144,7 @@ async function testSymlinkWithinAllowed() {
   assert.strictEqual(result.success, true, "Symlink pointing within allowed directories should be accessible");
 }
 
-// 10. Test 7: Broken symlink (pointing to non-existent target) ――――――――――――――――――――――――――――――――――――
+// 10. Test 7: Broken symlink (pointing to non-existent target) ------------------------------------
 async function testBrokenSymlink() {
   const brknSym = path.join(ALLOWED_DIR, "broken_link");
   await fs.symlink("/nonexistent/path/that/does/not/exist", brknSym).catch(() => undefined);
@@ -154,7 +154,7 @@ async function testBrokenSymlink() {
   const _result = await canAccessPath(brknSym);
 }
 
-// 11. Main test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11. Main test runner ----------------------------------------------------------------------------
 async function runAllTests() {
   let origCfg;
   let _passed = 0;

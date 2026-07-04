@@ -14,7 +14,7 @@ const ignrDrct = new Set([".git", "node_modules", "out", "fixtures"]);
 const txtFlExts = new Set([".json", ".mjs", ".ts", ".ts", ".js", ".md", ".txt"]);
 const frbdRtTrm = ["caff", "einate"].join("");
 
-// 1. filesystem helpers ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. filesystem helpers ---------------------------------------------------------------------------
 async function pathExists(targetPath) {
   try {
     await stat(targetPath);
@@ -28,7 +28,7 @@ async function pathExists(targetPath) {
   }
 }
 
-// 2. Collect text files ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Collect text files ---------------------------------------------------------------------------
 async function collectTextFiles(targetPath, results = []) {
   const targetStat = await stat(targetPath);
   if (targetStat.isFile()) {
@@ -58,7 +58,7 @@ async function collectTextFiles(targetPath, results = []) {
   return results;
 }
 
-// 2. boundary checks ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. boundary checks ------------------------------------------------------------------------------
 async function verifySourceRootEntries() {
   const entries = await readdir(sourceRoot, { withFileTypes: true });
   const names = new Set(entries.map((entry) => entry.name));
@@ -77,7 +77,7 @@ async function verifySourceRootEntries() {
   return failures;
 }
 
-// 4. Verify test root entries ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Verify test root entries ---------------------------------------------------------------------
 async function verifyTestRootEntries() {
   const rtTstFlPat = /^test.*\.(js|mjs)$/;
   const entries = await readdir(testRoot, { withFileTypes: true });
@@ -100,7 +100,7 @@ async function verifyTestRootEntries() {
   return failures;
 }
 
-// 5. Verify forbidden runtime terms ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Verify forbidden runtime terms ---------------------------------------------------------------
 async function verifyForbiddenRuntimeTerms() {
   const failures = [];
 
@@ -121,7 +121,7 @@ async function verifyForbiddenRuntimeTerms() {
   return failures;
 }
 
-// 3. script runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. script runner --------------------------------------------------------------------------------
 async function main() {
   const failures = [...(await verifySourceRootEntries()), ...(await verifyTestRootEntries()), ...(await verifyForbiddenRuntimeTerms())];
 

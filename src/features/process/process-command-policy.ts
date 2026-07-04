@@ -12,10 +12,10 @@ const CMD_SPRT = [";", "&&", "||", "|", "&"] as const;
 const ENV_ASSG_PAT = /\w+=\S+\s*/g;
 const WHTS_PAT = /\s+/;
 
-// 1. Command manager ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Command manager ------------------------------------------------------------------------------
 class CommandManager {
 
-  // 1-1. base command logging name ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 1-1. base command logging name ----------------------------------------------------------------
   getBaseCommand(command: string): string {
     const firstToken = command.trim().split(WHTS_PAT)[0] ?? "";
     const baseCommand = firstToken.toLowerCase();
@@ -23,7 +23,7 @@ class CommandManager {
     return baseCommand;
   }
 
-  // 1-2. command chain extraction ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 1-2. command chain extraction -----------------------------------------------------------------
   extractCommands(cmdStr: string): string[] {
     let extrCmds: string[] = [];
 
@@ -134,7 +134,7 @@ class CommandManager {
     return extrCmds;
   }
 
-  // 1-3. command token normalization ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 1-3. command token normalization --------------------------------------------------------------
   extractBaseCommand(commandStr: string): string | null {
     let baseCommand: string | null = null;
 
@@ -165,7 +165,7 @@ class CommandManager {
     return baseCommand;
   }
 
-  // 1-4. blocked command validation ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 1-4. blocked command validation ---------------------------------------------------------------
   async validateCommand(command: string): Promise<boolean> {
     let isAllowed = false;
 
@@ -185,9 +185,9 @@ class CommandManager {
     return isAllowed;
   }
 
-  // 1-5. balanced parenthesis range ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 1-5. balanced parenthesis range ---------------------------------------------------------------
 
-  // 2. Find balanced group end ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 2. Find balanced group end --------------------------------------------------------------------
   private findBalancedGroupEnd(cmdSrc: string, opnPrnIdx: number): number | null {
     let groupEnd: number | null = null;
     let openParens = 1;
@@ -214,9 +214,9 @@ class CommandManager {
     return groupEnd;
   }
 
-  // 1-6. backtick substitution range ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 1-6. backtick substitution range --------------------------------------------------------------
 
-  // 3. Find backtick end ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 3. Find backtick end --------------------------------------------------------------------------
   private findBacktickEnd(cmdSrc: string, bcktStrt: number): number | null {
     let backtickEnd: number | null = null;
     let index = bcktStrt + 1;
@@ -232,9 +232,9 @@ class CommandManager {
     return backtickEnd;
   }
 
-  // 1-7. command separator match ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 1-7. command separator match ------------------------------------------------------------------
 
-  // 4. Find separator ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 4. Find separator -----------------------------------------------------------------------------
   private findSeparator(cmdSrc: string, index: number): string | null {
     let mtchSprt: string | null = null;
 
@@ -247,9 +247,9 @@ class CommandManager {
     return mtchSprt;
   }
 
-  // 1-8. extracted command append ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 1-8. extracted command append -----------------------------------------------------------------
 
-  // 5. Push base command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 5. Push base command --------------------------------------------------------------------------
   private pushBaseCommand(commands: string[], command: string): void {
     const baseCommand = this.extractBaseCommand(command.trim());
 
@@ -258,9 +258,9 @@ class CommandManager {
     }
   }
 
-  // 1-9. first executable token ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 1-9. first executable token -------------------------------------------------------------------
 
-  // 6. Find first command token ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+  // 6. Find first command token -------------------------------------------------------------------
   private findFirstCommandToken(tokens: string[]): string | null {
     let firstToken: string | null = null;
 
@@ -277,7 +277,7 @@ class CommandManager {
   }
 }
 
-// 2. singleton export ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. singleton export -----------------------------------------------------------------------------
 export const cmdMgr2 = new CommandManager();
 export const cmdMgr = cmdMgr2;
 export {cmdMgr2 as commandManager};

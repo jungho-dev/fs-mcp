@@ -7,7 +7,7 @@
 
 import type {SystemInfo} from "@cores/runtime/runtime-info";
 
-// 1. Get os specific guidance ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Get os specific guidance ---------------------------------------------------------------------
 export function getOSSpecificGuidance(systemInfo: SystemInfo): string {
   const {platformName, defaultShell, isWindows, docker} = systemInfo;
 
@@ -130,7 +130,7 @@ LINUX-SPECIFIC NOTES:
   return guidance;
 }
 
-// 2. Get path guidance ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Get path guidance ----------------------------------------------------------------------------
 export function getPathGuidance(systemInfo: SystemInfo): string {
   let guidance = `Always use absolute paths for reliability. Paths are automatically normalized regardless of slash direction.`;
 

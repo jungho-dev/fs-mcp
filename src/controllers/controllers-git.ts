@@ -11,7 +11,7 @@ import {executeGitTool as exctGtTl} from "@features/git/git-service";
 import {GT_INPT_SCHS, type GitToolName} from "@schemas/schemas-git";
 import {ZodError} from "zod";
 
-// 1. Handle git tool ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Handle git tool ------------------------------------------------------------------------------
 export async function handleGitTool(name: GitToolName, args: unknown): Promise<ServerResult> {
   let response: ServerResult;
 

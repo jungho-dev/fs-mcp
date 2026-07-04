@@ -18,7 +18,7 @@ const RNFM = "ripgrep binary not found. fs-mcp requires ripgrep to perform searc
 
 let cachedRgPath: string | null = null;
 
-// 1. Get ripgrep path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Get ripgrep path -----------------------------------------------------------------------------
 export async function getRipgrepPath(): Promise<string> {
   if (cachedRgPath) {
     return cachedRgPath;
@@ -38,7 +38,7 @@ export async function getRipgrepPath(): Promise<string> {
   throw new Error(RNFM);
 }
 
-// 2. Resolve bundled ripgrep path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Resolve bundled ripgrep path -----------------------------------------------------------------
 async function resolveBundledRipgrepPath(): Promise<string | null> {
   try {
     const {rgPath} = await import("@vscode/ripgrep");
@@ -53,7 +53,7 @@ async function resolveBundledRipgrepPath(): Promise<string | null> {
   return null;
 }
 
-// 3. Resolve system ripgrep path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Resolve system ripgrep path ------------------------------------------------------------------
 function resolveSystemRipgrepPath(): string | null {
   try {
     const isWindows = process.platform === WNDW_PLTF;
@@ -70,7 +70,7 @@ function resolveSystemRipgrepPath(): string | null {
   return null;
 }
 
-// 4. Resolve common ripgrep path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Resolve common ripgrep path ------------------------------------------------------------------
 function resolveCommonRipgrepPath(): string | null {
   for (const possiblePath of getCommonRipgrepPaths()) {
     if (existsSync(possiblePath)) {
@@ -80,7 +80,7 @@ function resolveCommonRipgrepPath(): string | null {
   return null;
 }
 
-// 5. Get common ripgrep paths ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Get common ripgrep paths ---------------------------------------------------------------------
 function getCommonRipgrepPaths(): string[] {
   if (process.platform === WNDW_PLTF) {
     const commonPaths = [join(homedir(), "scoop", "apps", "ripgrep", "current", "rg.exe"), join(homedir(), ".cargo", "bin", "rg.exe")];
@@ -98,7 +98,7 @@ function getCommonRipgrepPaths(): string[] {
   return ["/usr/local/bin/rg", "/usr/bin/rg", join(homedir(), ".cargo", "bin", "rg"), "/opt/homebrew/bin/rg"];
 }
 
-// 6. Ensure executable ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Ensure executable ----------------------------------------------------------------------------
 function ensureExecutable(rgPath: string): void {
   if (process.platform === WNDW_PLTF) {
     return;
@@ -111,7 +111,7 @@ function ensureExecutable(rgPath: string): void {
   }
 }
 
-// 7. Cache ripgrep path ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Cache ripgrep path ---------------------------------------------------------------------------
 function cacheRipgrepPath(rgPath: string): string {
   cachedRgPath = rgPath;
   return rgPath;

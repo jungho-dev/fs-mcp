@@ -33,7 +33,7 @@ const isWindows = process.platform === "win32";
 const TST_RT_PTH = isWindows ? path.parse(TEST_DIR).root.replaceAll("\\", "/") : "/";
 const TST_RT_WLDC = isWindows ? `${path.parse(TEST_DIR).root}*` : null;
 
-// 1. Helper function to clean up test directories ―――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Helper function to clean up test directories -------------------------------------------------
 async function cleanupTestDirectories() {
   try {
     await fs.rm(TEST_DIR, { recursive: true, force: true });
@@ -51,7 +51,7 @@ async function cleanupTestDirectories() {
   }
 }
 
-// 2. Check if a path is accessible ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Check if a path is accessible ----------------------------------------------------------------
 async function isPathAccessible(testPath) {
   try {
     const _vldtPth = await validatePath(testPath);
@@ -62,13 +62,13 @@ async function isPathAccessible(testPath) {
   }
 }
 
-// 3. Is path inside ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Is path inside -------------------------------------------------------------------------------
 function isPathInside(parentPath, childPath) {
   const relativePath = path.relative(path.resolve(parentPath), path.resolve(childPath));
   return relativePath.length === 0 || (!relativePath.startsWith("..") && !path.isAbsolute(relativePath));
 }
 
-// 3. Setup function to prepare the test environment ―――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Setup function to prepare the test environment -----------------------------------------------
 async function setup() {
   // Clean up before tests
   await cleanupTestDirectories();
@@ -86,7 +86,7 @@ async function setup() {
   return origCfg;
 }
 
-// 4. Teardown function to clean up after tests ――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Teardown function to clean up after tests ----------------------------------------------------
 async function teardown(origCfg) {
   // Reset configuration to original
   await cfgMgr.updateConfig(origCfg);
@@ -95,7 +95,7 @@ async function teardown(origCfg) {
   await cleanupTestDirectories();
 }
 
-// 5. Test empty allowedDirectories array (should allow full access) ―――――――――――――――――――――――――――――――
+// 5. Test empty allowedDirectories array (should allow full access) -------------------------------
 async function testEmptyAllowedDirectories() {
   // Set empty allowedDirectories
   await cfgMgr.setValue("allowedDirectories", []);
@@ -117,7 +117,7 @@ async function testEmptyAllowedDirectories() {
   assert.strictEqual(rootAccess, true, "Root path should be accessible with empty allowedDirectories");
 }
 
-// 6. Test empty allowedDirectories values from config tool input ――――――――――――――――――――――――――――――――――
+// 6. Test empty allowedDirectories values from config tool input ----------------------------------
 async function testEmptyAllowedDirectoriesInputValues() {
   for (const emptyValue of ["", "   ", null]) {
     // biome-ignore lint/performance/noAwaitInLoops: Config mutation assertions must stay sequential.
@@ -136,7 +136,7 @@ async function testEmptyAllowedDirectoriesInputValues() {
   }
 }
 
-// 7. Test with specific directory in allowedDirectories ―――――――――――――――――――――――――――――――――――――――――――
+// 7. Test with specific directory in allowedDirectories -------------------------------------------
 async function testSpecificAllowedDirectory() {
   // Set allowedDirectories to just the test directory
   await cfgMgr.setValue("allowedDirectories", [TEST_DIR]);
@@ -162,11 +162,11 @@ async function testSpecificAllowedDirectory() {
   assert.strictEqual(rootAccess, false, "Root path should not be accessible");
 }
 
-// 8. Test with root directory in allowedDirectories ―――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Test with root directory in allowedDirectories -----------------------------------------------
 // NOTE: Windows drive wildcard coverage is handled separately in
 // testWindowsDriveWildcardAllowedDirectories().
 
-// 9. Test root in allowed directories ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Test root in allowed directories -------------------------------------------------------------
 async function testRootInAllowedDirectories() {
   // Set allowedDirectories to include root path
   await cfgMgr.setValue("allowedDirectories", [TST_RT_PTH]);
@@ -199,7 +199,7 @@ async function testRootInAllowedDirectories() {
   }
 }
 
-// 9. Test with Windows drive wildcard in allowedDirectories ―――――――――――――――――――――――――――――――――――――――
+// 9. Test with Windows drive wildcard in allowedDirectories ---------------------------------------
 async function testWindowsDriveWildcardAllowedDirectories() {
   if (!isWindows || !TST_RT_WLDC) {
     return;
@@ -221,7 +221,7 @@ async function testWindowsDriveWildcardAllowedDirectories() {
   assert.strictEqual(otsdDrAccs, true, "Outside directory should be accessible with Windows drive wildcard");
 }
 
-// 10. Test with home directory in allowedDirectories ――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Test with home directory in allowedDirectories ----------------------------------------------
 async function testHomeAllowedDirectory() {
   // Set allowedDirectories to just the home directory
   await cfgMgr.setValue("allowedDirectories", [HOME_DIR]);
@@ -258,7 +258,7 @@ async function testHomeAllowedDirectory() {
   assert.strictEqual(rootAccess, false, "Root path should not be accessible");
 }
 
-// 11. Specific allowed directory with slash ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11. Specific allowed directory with slash -------------------------------------------------------
 async function testSpecificAllowedDirectoryWithSlash() {
   // Set allowedDirectories to just the test directory
   await cfgMgr.setValue("allowedDirectories", [TDWS]);
@@ -285,7 +285,7 @@ async function testSpecificAllowedDirectoryWithSlash() {
   assert.strictEqual(rootAccess, false, "Root path should not be accessible");
 }
 
-// 12. Prefix path blocking ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 12. Prefix path blocking ------------------------------------------------------------------------
 async function testPrefixPathBlocking() {
   // Create a directory with a name that would be caught by string prefix matching
   // Deliberately use path names that are clearly not subdirectories of each other
@@ -331,7 +331,7 @@ async function testPrefixPathBlocking() {
   }
 }
 
-// 13. Main test function ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 13. Main test function --------------------------------------------------------------------------
 async function testAllowedDirectories() {
   // Test 1: Empty allowedDirectories array
   await testEmptyAllowedDirectories();
@@ -360,7 +360,7 @@ async function testAllowedDirectories() {
 
 // Export the main test function
 
-// 15. Run tests ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 15. Run tests -----------------------------------------------------------------------------------
 export default async function runTests() {
   let origCfg;
   try {

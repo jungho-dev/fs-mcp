@@ -36,7 +36,7 @@ export const AT_EXCL_PATS = [
 export const PRTC_BRNC = new Set(["main", "master", "production", "prod", "release"]);
 export const CNF_STA_CDS = new Set(["DD", "AU", "UD", "UA", "DU", "AA", "UU"]);
 
-// 1. Run git command ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Run git command ------------------------------------------------------------------------------
 export async function runGitCommand(args: string[], options: { cwd?: string; allowFailure?: boolean } = {}): Promise<GtCmdRes> {
   let cmdRes: GtCmdRes;
 
@@ -69,7 +69,7 @@ export async function runGitCommand(args: string[], options: { cwd?: string; all
   return cmdRes;
 }
 
-// 2. Resolve git text argument ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Resolve git text argument --------------------------------------------------------------------
 export async function resolveGitTextArgument(value: string | undefined, filePath: string | undefined, offset: number, length: number | undefined, label: string): Promise<string | undefined> {
   if (value !== undefined) {
     return value;
@@ -84,7 +84,7 @@ export async function resolveGitTextArgument(value: string | undefined, filePath
   return text;
 }
 
-// 3. Require git text argument ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Require git text argument --------------------------------------------------------------------
 export async function requireGitTextArgument(value: string | undefined, filePath: string | undefined, offset: number, length: number | undefined, label: string): Promise<string> {
   const text = await resolveGitTextArgument(value, filePath, offset, length, label);
   if (text === undefined) {
@@ -93,13 +93,13 @@ export async function requireGitTextArgument(value: string | undefined, filePath
   return text;
 }
 
-// 4. Split lines ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Split lines ----------------------------------------------------------------------------------
 export function splitLines(text: string): string[] {
   const splitResult = text.replace(/\r\n/g, "\n").replace(/\r/g, "\n").split("\n").filter((line) => line.length > 0);
   return splitResult;
 }
 
-// 5. Normalize commit message ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Normalize commit message ---------------------------------------------------------------------
 export function normalizeCommitMessage(message: string): string {
   const normMsg = message.replace(/\\n/g, "\n").replace(/\\r/g, "\r").replace(/\\t/g, "\t");
   return normMsg;

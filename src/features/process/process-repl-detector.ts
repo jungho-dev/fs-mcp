@@ -5,7 +5,7 @@
  * @since 2026-05-02
  */
 
-// 1. REPL and Process State Detection Utilities ―――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. REPL and Process State Detection Utilities ---------------------------------------------------
 // Detects when processes are waiting for input vs finished vs running
 
 export declare interface ProcessState {
@@ -53,7 +53,7 @@ const PRM_CLN_PAT = [/^>>>\s*/gm, /^>\s*/gm, /^\.{3}\s*/gm, /^\+\s*/gm];
 const TRL_PRM_PAT = [/\n>>>\s*$/, /\n>\s*$/, /\n\+\s*$/];
 const RSCP = /[.*+?^${}()|[\]\\]/g;
 
-// 1. Analyze process state ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Analyze process state ------------------------------------------------------------------------
 export function analyzeProcessState(output: string, _pid?: number): ProcessState {
   if (!output || output.trim().length === 0) {
     return {
@@ -112,7 +112,7 @@ export function analyzeProcessState(output: string, _pid?: number): ProcessState
   };
 }
 
-// 2. Clean process output ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Clean process output -------------------------------------------------------------------------
 export function cleanProcessOutput(output: string, inputSent?: string): string {
   let cleaned = output;
 
@@ -134,12 +134,12 @@ export function cleanProcessOutput(output: string, inputSent?: string): string {
   return cleaned.trim();
 }
 
-// 3. Escape reg exp ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Escape reg exp -------------------------------------------------------------------------------
 function escapeRegExp(string: string): string {
   return string.replace(RSCP, "\\$&");
 }
 
-// 4. Format process state message ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Format process state message -----------------------------------------------------------------
 export function formatProcessStateMessage(state: ProcessState, pid: number): string {
   if (state.isWaitingForInput) {
     return `Process ${pid} is waiting for input${state.detectedPrompt ? ` (detected: "${state.detectedPrompt.trim()}")` : ""}`;

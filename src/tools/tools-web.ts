@@ -9,7 +9,7 @@ import { withArgsPathSchema as wthArPtSc } from "@schemas/schemas-args-ref";
 import { DwFlArSc, WbExArSc, WbFtArSc, WbRnArSc } from "@schemas/schemas-web";
 import { BTCH_GDNC, CMD_PRF_DSC, createToolCatalogEntry as crtTlCtEn, PTH_GDNC, type ToolCatalogEntryConfig as TlCtEnCf, type ToolCatalogEntry as TlCtlgEntr } from "@tools/tools-const";
 
-// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// -------------------------------------------------------------------------------------------------
 const WEB_TL_DFNT = [
   {
     name: "web-fetch",
@@ -76,7 +76,7 @@ const WEB_TL_DFNT = [
   },
 ] satisfies TlCtEnCf[];
 
-// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// -------------------------------------------------------------------------------------------------
 export const WEB_TL_CTLG: TlCtlgEntr[] = WEB_TL_DFNT.map((entry) => crtTlCtEn(entry));
 
 export const WEB_TL_CTL2 = WEB_TL_CTLG;

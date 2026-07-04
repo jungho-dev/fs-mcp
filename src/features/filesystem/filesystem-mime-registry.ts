@@ -7,7 +7,7 @@
 
 // Simple MIME type detection based on file extension
 
-// 1. Get MIME type ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Get MIME type --------------------------------------------------------------------------------
 export function getMimeType(filePath: string): string {
   const extension = filePath.toLowerCase().split(".").pop() || "";
 
@@ -28,7 +28,7 @@ export function getMimeType(filePath: string): string {
   return "text/plain";
 }
 
-// 2. Is image file ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Is image file --------------------------------------------------------------------------------
 export function isImageFile(mimeType: string): boolean {
   return mimeType.startsWith("image/");
 }

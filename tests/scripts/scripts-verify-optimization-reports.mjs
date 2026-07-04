@@ -7,7 +7,7 @@ const projectRoot = path.resolve(path.dirname(scriptPath), "..", "..");
 const docsPath = path.join(projectRoot, ".docs", "optimization");
 const rprtPat = /^fs-mcp-optimization-(v\d+)-\d{4}-\d{2}-\d{2}\.md$/;
 
-// 1. report discovery ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. report discovery -----------------------------------------------------------------------------
 async function collectOptimizationReports() {
   const reports = new Map();
   let entries;
@@ -42,7 +42,7 @@ async function collectOptimizationReports() {
   return reports;
 }
 
-// 2. report accumulation check ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. report accumulation check --------------------------------------------------------------------
 async function main() {
   const reports = await collectOptimizationReports();
   const failures = [];

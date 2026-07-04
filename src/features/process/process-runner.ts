@@ -22,7 +22,7 @@ type DiagnosticTimingInfo = Omit<TimingInfo, "exitReason"> & {
 const PSAWC = 120_000;
 const PSAWL = 5000;
 
-// 1. Resolve process text argument ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Resolve process text argument ----------------------------------------------------------------
 async function resolveProcessTextArgument(value: string | undefined, filePath: string | undefined, offset: number, length: number | undefined, label: string): Promise<string> {
   if (value !== undefined) {
     return value;
@@ -33,9 +33,9 @@ async function resolveProcessTextArgument(value: string | undefined, filePath: s
   return rdFlInt(filePath, offset, length);
 }
 
-// 1. Start a new process (renamed from execute_command) ―――――――――――――――――――――――――――――――――――――――――――
+// 1. Start a new process (renamed from execute_command) -------------------------------------------
 // Includes early detection of process waiting for input
-// 1. Start process ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Start process --------------------------------------------------------------------------------
 export async function startProcess(args: unknown): Promise<ServerResult> {
   const parsed = StrPrArSc.safeParse(args);
   if (!parsed.success) {
@@ -122,7 +122,7 @@ export async function startProcess(args: unknown): Promise<ServerResult> {
   };
 }
 
-// 2. Format initial output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Format initial output ------------------------------------------------------------------------
 function formatInitialOutput(output: string): string {
   const normOtpt = output
     .replace(/\r\n/g, "\n")
@@ -132,7 +132,7 @@ function formatInitialOutput(output: string): string {
   return normOtpt || "(no initial output)";
 }
 
-// 3. Format start process message ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Format start process message -----------------------------------------------------------------
 function formatStartProcessMessage(pid: number, shell: string | undefined, output: string, statMsg: string, tmngMsg: string): string {
   const messageParts = [`Process started with PID ${pid}`, `PID: ${pid}`, `Shell: ${shell ?? "(default)"}`, "", "Output:", formatInitialOutput(output)];
 
@@ -145,7 +145,7 @@ function formatStartProcessMessage(pid: number, shell: string | undefined, outpu
   return messageParts.join("\n");
 }
 
-// 4. Format timing info ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Format timing info ---------------------------------------------------------------------------
 function formatTimingInfo(timing: DiagnosticTimingInfo): string {
   let msg = "\n\nTiming Information:\n";
   msg += `  Exit Reason: ${timing.exitReason}\n`;
@@ -170,9 +170,9 @@ function formatTimingInfo(timing: DiagnosticTimingInfo): string {
   return msg;
 }
 
-// 2. Read output from a running process with file-like pagination ―――――――――――――――――――――――――――――――――
+// 2. Read output from a running process with file-like pagination ---------------------------------
 // Supports offset/length parameters for controlled reading
-// 5. Read process output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Read process output --------------------------------------------------------------------------
 export async function readProcessOutput(args: unknown): Promise<ServerResult> {
   const parsed = RdPrOtArSc.safeParse(args);
   if (!parsed.success) {
@@ -309,9 +309,9 @@ export async function readProcessOutput(args: unknown): Promise<ServerResult> {
   };
 }
 
-// 3. Interact with a running process (renamed from send_input) ――――――――――――――――――――――――――――――――――――
+// 3. Interact with a running process (renamed from send_input) ------------------------------------
 // Automatically detects when process is ready and returns output
-// 6. Interact with process ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Interact with process ------------------------------------------------------------------------
 export async function interactWithProcess(args: unknown): Promise<ServerResult> {
   const parsed = IntWtPrArSc2.safeParse(args);
   if (!parsed.success) {
@@ -553,7 +553,7 @@ export async function interactWithProcess(args: unknown): Promise<ServerResult> 
   }
 }
 
-// 7. Force terminate ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Force terminate ------------------------------------------------------------------------------
 export async function forceTerminate(args: unknown): Promise<ServerResult> {
   const parsed = FrcTrArSc.safeParse(args);
   if (!parsed.success) {
@@ -586,7 +586,7 @@ export async function forceTerminate(args: unknown): Promise<ServerResult> {
   };
 }
 
-// 8. List sessions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. List sessions --------------------------------------------------------------------------------
 export async function listSessions(_args: unknown): Promise<ServerResult> {
   const sessions = trmnMgr.listActiveSessions();
 

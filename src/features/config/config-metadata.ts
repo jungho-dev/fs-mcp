@@ -88,12 +88,12 @@ export declare type ConfigQueryKey = keyof typeof CFG_QRY_DFNT;
 
 export const CFG_QRY_KYS = Object.keys(CFG_QRY_DFNT) as ConfigQueryKey[];
 
-// 1. Is config field key ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Is config field key --------------------------------------------------------------------------
 export function isConfigFieldKey(value: string): value is ConfigFieldKey {
   return Object.hasOwn(CFG_FLD_DFNT, value);
 }
 
-// 2. Is config query key ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Is config query key --------------------------------------------------------------------------
 export function isConfigQueryKey(value: string): value is ConfigQueryKey {
   return Object.hasOwn(CFG_QRY_DFNT, value);
 }

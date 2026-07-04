@@ -18,7 +18,7 @@ const TXT_FILE = path.join(SRC_DIR, "a.txt");
 const MD_FILE = path.join(SRC_DIR, "b.md");
 const JSON_FILE = path.join(TEST_DIR, "data.json");
 
-// 1. Extract inspect payload ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Extract inspect payload ----------------------------------------------------------------------
 function extractInspectPayload(result) {
   const output = result.structuredContent;
 
@@ -27,7 +27,7 @@ function extractInspectPayload(result) {
   return output.data.structuredContent;
 }
 
-// 2. Setup ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Setup ----------------------------------------------------------------------------------------
 async function setup() {
   const origCfg = await cfgMgr.getConfig();
 
@@ -44,13 +44,13 @@ async function setup() {
   return origCfg;
 }
 
-// 3. Teardown ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Teardown -------------------------------------------------------------------------------------
 async function teardown(origCfg) {
   await cfgMgr.updateConfig(origCfg);
   await fs.rm(TEST_DIR, { recursive: true, force: true });
 }
 
-// 4. Composite request answers ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Composite request answers --------------------------------------------------------------------
 async function testCompositeRequestAnswers() {
   const result = await dsptTlCll("fs-inspect", {
     root: TEST_DIR,
@@ -95,7 +95,7 @@ async function testCompositeRequestAnswers() {
   assert.equal(payload.metrics.truncated, false);
 }
 
-// 5. Snippet budget truncates evidence ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Snippet budget truncates evidence ------------------------------------------------------------
 async function testSnippetBudgetTruncates() {
   const result = await dsptTlCll("fs-inspect", {
     root: TEST_DIR,
@@ -110,7 +110,7 @@ async function testSnippetBudgetTruncates() {
   assert.equal(payload.metrics.snippetChars <= 8, true);
 }
 
-// 6. Unknown root rejected ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Unknown root rejected ------------------------------------------------------------------------
 async function testUnknownRootRejected() {
   const result = await dsptTlCll("fs-inspect", {
     root: path.join(TEST_DIR, "does-not-exist"),
@@ -120,7 +120,7 @@ async function testUnknownRootRejected() {
   assert.equal(result.isError, true);
 }
 
-// 7. Git status answer resolves ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Git status answer resolves -------------------------------------------------------------------
 // TEST_DIR is not a git repository, so the answer must be a per-request error while the call
 // itself still succeeds with a normal envelope.
 async function testGitStatusAnswerResolves() {
@@ -139,7 +139,7 @@ async function testGitStatusAnswerResolves() {
   assert.equal(["ok", "error"].includes(gitAnswer.status), true);
 }
 
-// 8. Main ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Main -----------------------------------------------------------------------------------------
 async function main() {
   const origCfg = await setup();
 

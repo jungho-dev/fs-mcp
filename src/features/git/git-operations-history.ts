@@ -14,7 +14,7 @@ const BLM_HDR_PAT = /^[0-9a-f]{40}\\s+\\d+\\s+\\d+/;
 const RFLG_FRMT = "%gD%x1f%H%x1f%gs%x1f%ct";
 const CHN_CMM_FRM = "%h%x1f%an%x1f%ct%x1f%d%x1f%s%x1e";
 
-// 1. Run git blame ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Run git blame --------------------------------------------------------------------------------
 export async function runGitBlame(input: GitArgsMap["git_blame"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
   const blameResult = await rnGtCmd(["blame", "--line-porcelain", ...(input.ignoreWhitespace ? ["-w"] : []), ...(input.startLine && input.endLine ? ["-L", `${String(input.startLine)},${String(input.endLine)}`] : []), input.filePath], { cwd });
@@ -55,7 +55,7 @@ export async function runGitBlame(input: GitArgsMap["git_blame"]): Promise<GtTlO
   };
 }
 
-// 2. Run git reflog ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Run git reflog -------------------------------------------------------------------------------
 export async function runGitReflog(input: GitArgsMap["git_reflog"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
   const ref = input.ref ?? "HEAD";
@@ -80,7 +80,7 @@ export async function runGitReflog(input: GitArgsMap["git_reflog"]): Promise<GtT
   };
 }
 
-// 3. Run git changelog analyze ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Run git changelog analyze --------------------------------------------------------------------
 export async function runGitChangelogAnalyze(input: GitArgsMap["git_changelog_analyze"]): Promise<GtTlOtpt> {
   const cwd = await rslvRepoPth(input.path);
   const branch = input.branch ?? "HEAD";

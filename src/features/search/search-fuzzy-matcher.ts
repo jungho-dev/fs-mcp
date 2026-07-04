@@ -7,7 +7,7 @@
 
 import {distance} from "fastest-levenshtein";
 
-// 1. Recursive fuzzy matcher ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Recursive fuzzy matcher ----------------------------------------------------------------------
 // @param text The text to search within
 // @param query The query string to find
 // @param start Start index in the text (default: 0)
@@ -15,7 +15,7 @@ import {distance} from "fastest-levenshtein";
 // @param parentDistance Best distance found so far (default: Infinity)
 // @returns Object with start and end indices, matched value, and Levenshtein distance
 
-// 1. Recursive fuzzy index of ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Recursive fuzzy index of ---------------------------------------------------------------------
 export function recursiveFuzzyIndexOf(
   text: string,
   query: string,
@@ -61,7 +61,7 @@ export function recursiveFuzzyIndexOf(
   }
 }
 
-// 2. Iteratively refines the best match by reducing the search area ―――――――――――――――――――――――――――――――
+// 2. Iteratively refines the best match by reducing the search area -------------------------------
 // @param text The text to search within
 // @param query The query string to find
 // @param start Start index in the text
@@ -69,7 +69,7 @@ export function recursiveFuzzyIndexOf(
 // @param parentDistance Best distance found so far
 // @returns Object with start and end indices, matched value, and Levenshtein distance
 
-// 2. Iterative reduction ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Iterative reduction --------------------------------------------------------------------------
 function iterativeReduction(
   text: string,
   query: string,
@@ -113,12 +113,12 @@ function iterativeReduction(
   };
 }
 
-// 3. Calculates the similarity ratio between two strings ――――――――――――――――――――――――――――――――――――――――――
+// 3. Calculates the similarity ratio between two strings ------------------------------------------
 // @param a First string
 // @param b Second string
 // @returns Similarity ratio (0-1)
 
-// 3. Get similarity ratio ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Get similarity ratio -------------------------------------------------------------------------
 export function getSimilarityRatio(a: string, b: string): number {
   const maxLength = Math.max(a.length, b.length);
   if (maxLength === 0) {

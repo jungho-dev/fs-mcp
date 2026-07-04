@@ -17,7 +17,7 @@ import {normalizeToolResult as nrmlTlRes} from "@cores/responses/responses-tool-
 import {readTextSliceInternal as rdTxtSlcInt} from "@features/filesystem/filesystem-service";
 import {EGTN} from "@schemas/schemas-git";
 
-// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// -------------------------------------------------------------------------------------------------
 export declare type ToolDispatchHandler = (args: unknown) => Promise<ServerResult> | ServerResult;
 
 type ToolArgsReference = {
@@ -36,12 +36,12 @@ const APFN = new Set(["args_path", "args_offset", "args_length"]);
 const ASMF = "__fs_mcp_args_source";
 const APIPTN = new Set(["file-write"]);
 
-// 1. Is record ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Is record ------------------------------------------------------------------------------------
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-// 1. Resolve args path number ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Resolve args path number ---------------------------------------------------------------------
 function resolveArgsPathNumber(value: unknown, fieldName: string): number | undefined {
   if (value === undefined) {
     return undefined;
@@ -52,7 +52,7 @@ function resolveArgsPathNumber(value: unknown, fieldName: string): number | unde
   return value;
 }
 
-// 2. Resolve tool args reference ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Resolve tool args reference ------------------------------------------------------------------
 async function resolveToolArgsReference(args: unknown): Promise<ResolvedToolArgs> {
   if (!isRecord(args)) {
     return {
@@ -107,7 +107,7 @@ async function resolveToolArgsReference(args: unknown): Promise<ResolvedToolArgs
   };
 }
 
-// 3. Decorate resolved args for dispatch ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Decorate resolved args for dispatch -----------------------------------------------------------
 function decorateResolvedArgsForDispatch(name: string, resolvedArgs: ResolvedToolArgs): unknown {
   if (
     resolvedArgs.source !== "args_path"
@@ -127,7 +127,7 @@ const GT_TL_DSPT = Object.fromEntries(
   EGTN.map((toolName) => [toolName, (args: unknown) => hndlGtTl(toolName, args)]),
 ) as Record<(typeof EGTN)[number], ToolDispatchHandler>;
 
-// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// -------------------------------------------------------------------------------------------------
 export const TL_DSPT: Readonly<Record<string, ToolDispatchHandler>> = {
   "file-read": (args: unknown) => hndlRdFls(args),
   "file-read-line-range": (args: unknown) => hndRdFlLn(args),
@@ -149,12 +149,12 @@ export const TL_DSPT: Readonly<Record<string, ToolDispatchHandler>> = {
   ...GT_TL_DSPT,
 };
 
-// 1. Get dispatchable tool names ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Get dispatchable tool names ------------------------------------------------------------------
 export function getDispatchableToolNames(): string[] {
   return Object.keys(TL_DSPT);
 }
 
-// 2. Dispatch tool call ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Dispatch tool call ---------------------------------------------------------------------------
 export async function dispatchToolCall(name: string, args: unknown): Promise<ServerResult> {
   const startTime = Date.now();
   const nrmlDsptRes = (result: ServerResult): ServerResult => nrmlTlRes(name, result, Date.now() - startTime);

@@ -15,7 +15,7 @@ import {dispatchToolCall as dsptTlCll} from "../../../out/tools/tools-dispatcher
 
 const excFlAsyn = promisify(execFile);
 
-// 1. standard output parser ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. standard output parser -----------------------------------------------------------------------
 function parseStandardOutput(result) {
   assert.notEqual(result.isError, true);
   assert.equal(Array.isArray(result.content), true);
@@ -25,13 +25,13 @@ function parseStandardOutput(result) {
   return result.structuredContent.data.structuredContent;
 }
 
-// 2. git fixture setup ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. git fixture setup ----------------------------------------------------------------------------
 async function setupRepository(repoPath) {
   await excFlAsyn("git", ["config", "user.name", "fs-mcp-test"], {cwd: repoPath, windowsHide: true});
   await excFlAsyn("git", ["config", "user.email", "fs-mcp@example.com"], {cwd: repoPath, windowsHide: true});
 }
 
-// 3. smoke flow ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. smoke flow -----------------------------------------------------------------------------------
 async function testGitBasicFlow() {
   const repoPath = await fs.mkdtemp(path.join(os.tmpdir(), "fs-mcp-git-basic-"));
   const cmmtMsg2 = `feat: add demo file
@@ -85,7 +85,7 @@ async function testGitBasicFlow() {
   }
 }
 
-// 4. test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. test runner ----------------------------------------------------------------------------------
 async function main() {
   await testGitBasicFlow();
 }

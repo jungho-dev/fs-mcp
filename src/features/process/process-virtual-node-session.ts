@@ -24,7 +24,7 @@ const mcpRoot = path.resolve(__dirname, "..", "..");
 const vrtlNdSssn = new Map<number, VirtualNodeSession>();
 let vrtlPdCntr = -1000;
 
-// 1. Start virtual node session ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Start virtual node session -------------------------------------------------------------------
 export function startVirtualNodeSession(timeoutMs: number): ServerResult {
   const session: VirtualNodeSession = {
     pid: vrtlPdCntr--,
@@ -52,22 +52,22 @@ export function startVirtualNodeSession(timeoutMs: number): ServerResult {
   };
 }
 
-// 2. Get virtual node session ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Get virtual node session ---------------------------------------------------------------------
 export function getVirtualNodeSession(pid: number): VirtualNodeSession | undefined {
   return vrtlNdSssn.get(pid);
 }
 
-// 3. Clear virtual node session ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Clear virtual node session -------------------------------------------------------------------
 export function clearVirtualNodeSession(pid: number): boolean {
   return vrtlNdSssn.delete(pid);
 }
 
-// 4. List virtual node sessions ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. List virtual node sessions -------------------------------------------------------------------
 export function listVirtualNodeSessions(): VirtualNodeSession[] {
   return Array.from(vrtlNdSssn.values());
 }
 
-// 5. Execute virtual node code ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Execute virtual node code --------------------------------------------------------------------
 export async function executeVirtualNodeCode(code: string, timeoutMs: number=30_000): Promise<ServerResult> {
   const tempFile = path.join(mcpRoot, `.mcp-exec-${Date.now()}-${Math.random().toString(36).slice(2)}.mjs`);
 

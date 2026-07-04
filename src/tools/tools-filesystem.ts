@@ -12,7 +12,7 @@ import { InspArSc } from "@schemas/schemas-inspect";
 import { RgxSrArSc2 } from "@schemas/schemas-search";
 import { APPG, BTCH_GDNC, CMD_PRF_DSC, createToolCatalogEntry as crtTlCtEn, PTH_GDNC, type ToolCatalogEntryConfig as TlCtEnCf, type ToolCatalogEntry as TlCtlgEntr } from "@tools/tools-const";
 
-// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// -------------------------------------------------------------------------------------------------
 const FLSY_TL_DFNT = [
   {
     name: "file-read",
@@ -228,7 +228,7 @@ const FLSY_TL_DFNT = [
   },
 ] satisfies TlCtEnCf[];
 
-// ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// -------------------------------------------------------------------------------------------------
 export const FLSY_TL_CTLG: TlCtlgEntr[] = FLSY_TL_DFNT.map((entry) => crtTlCtEn(entry));
 
 export const FLSY_TL_CTL2 = FLSY_TL_CTLG;

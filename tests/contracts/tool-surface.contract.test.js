@@ -23,13 +23,13 @@ const EGTN2 = [
   "git-status",
 ];
 
-// 1. Sorted difference ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Sorted difference ----------------------------------------------------------------------------
 function sortedDifference(left, right) {
   const rightSet = new Set(right);
   return left.filter((value) => !rightSet.has(value)).sort();
 }
 
-// 1. catalog and dispatcher alignment ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. catalog and dispatcher alignment -------------------------------------------------------------
 function testCatalogAndDispatcherAlignment() {
   const catalogNames = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG, ...GT_TL_CTLG, ...WEB_TL_CTLG]
     .map((tool) => tool.name)
@@ -41,7 +41,7 @@ function testCatalogAndDispatcherAlignment() {
   assert.equal(new Set(catalogNames).size, catalogNames.length);
 }
 
-// 2. shared args_path schema exposure ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. shared args_path schema exposure -------------------------------------------------------------
 function testArgsPathSchemaExposure() {
   const tools = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG, ...GT_TL_CTLG, ...WEB_TL_CTLG];
 
@@ -50,14 +50,14 @@ function testArgsPathSchemaExposure() {
   }
 }
 
-// 3. essential git surface ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. essential git surface ------------------------------------------------------------------------
 function testEssentialGitSurface() {
   const gitToolNames = GT_TL_CTLG.map((tool) => tool.name).sort();
 
   assert.deepEqual(gitToolNames, EGTN2.toSorted());
 }
 
-// 4. test runner ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. test runner --------------------------------------------------------------------------------
 function main() {
   testCatalogAndDispatcherAlignment();
   testArgsPathSchemaExposure();

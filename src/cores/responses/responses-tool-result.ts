@@ -55,12 +55,12 @@ function resolveCompactEnabled(): boolean {
 }
 const CMPC_ENVL = resolveCompactEnabled();
 
-// 0. Compact envelope flag ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 0. Compact envelope flag ------------------------------------------------------------------------
 export function isCompactEnvelopeEnabled(): boolean {
   return CMPC_ENVL;
 }
 
-// 1. Normalize content item ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Normalize content item -----------------------------------------------------------------------
 function normalizeContentItem(item: SrvrResCont): SrvrResCont {
   const itemType = typeof item.type === "string" && item.type.length > 0 ? item.type : "text";
   const normItm: SrvrResCont = {
@@ -77,7 +77,7 @@ function normalizeContentItem(item: SrvrResCont): SrvrResCont {
   return normItm;
 }
 
-// 2. Normalize content ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Normalize content ----------------------------------------------------------------------------
 function normalizeContent(content: SrvrResCont[]): SrvrResCont[] {
   let normCont2 = content.map((item) => normalizeContentItem(item));
 
@@ -87,17 +87,17 @@ function normalizeContent(content: SrvrResCont[]): SrvrResCont[] {
   return normCont2;
 }
 
-// 3. Create combined text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Create combined text -------------------------------------------------------------------------
 function createCombinedText(content: SrvrResCont[]): string {
   return content.map((item) => item.text ?? "").join("\n");
 }
 
-// 3-1. Sanitize text ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3-1. Sanitize text ---------------------------------------------------------------------------
 function sanitizeText(value: string): string {
   return value.includes(DST) ? value.replace(DSTP, DSTR) : value;
 }
 
-// 3-2. Sanitize JSON value ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3-2. Sanitize JSON value ------------------------------------------------------------------
 function sanitizeJson(value: unknown): unknown {
   if (typeof value === "string") {
     return sanitizeText(value);
@@ -125,7 +125,7 @@ function sanitizeJson(value: unknown): unknown {
   return value;
 }
 
-// 4. Create error details ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Create error details -------------------------------------------------------------------------
 function createErrorDetails(status: ToolResultStatus, content: SrvrResCont[]): ToolResultError | null {
   if (status !== "error") {
     return null;
@@ -135,7 +135,7 @@ function createErrorDetails(status: ToolResultStatus, content: SrvrResCont[]): T
   };
 }
 
-// 5. Create result metadata ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Create result metadata -----------------------------------------------------------------------
 function createResultMetadata(toolName: string, result: ServerResult, content: SrvrResCont[], durationMs?: number): ToolResultMetadata {
   const status: ToolResultStatus = result.isError === true ? "error" : "success";
   const errorDetails = createErrorDetails(status, content);
@@ -152,7 +152,7 @@ function createResultMetadata(toolName: string, result: ServerResult, content: S
   return resMeta;
 }
 
-// 6. Create standard output ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 6. Create standard output -----------------------------------------------------------------------
 // Compact envelope keeps data.content as the single full-text source; data.text is only added
 // when FS_MCP_COMPACT is disabled to restore the duplicated combined-text field.
 function createStandardOutput(toolName: string, result: ServerResult, content: SrvrResCont[], durationMs?: number): StandardToolOutput {
@@ -178,7 +178,7 @@ function createStandardOutput(toolName: string, result: ServerResult, content: S
   return stndOtpt;
 }
 
-// 7. Is standard tool output ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 7. Is standard tool output ----------------------------------------------------------------------
 export function isStandardToolOutput(value: unknown): value is StandardToolOutput {
   if (typeof value !== "object" || value === null) {
     return false;
@@ -200,12 +200,12 @@ export function isStandardToolOutput(value: unknown): value is StandardToolOutpu
   );
 }
 
-// 8. Is normalized tool result ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 8. Is normalized tool result --------------------------------------------------------------------
 export function isNormalizedToolResult(result: ServerResult): boolean {
   return isStandardToolOutput(result.structuredContent);
 }
 
-// 9. Create tool text response ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 9. Create tool text response -------------------------------------------------------------------
 export function createToolTextResponse(text: string, options: ToolResponseOptions = {}): ServerResult {
   const response: ServerResult = {
     content: [{ text: sanitizeText(text), type: "text" }],
@@ -220,7 +220,7 @@ export function createToolTextResponse(text: string, options: ToolResponseOption
   return response;
 }
 
-// 10. Create tool error response ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 10. Create tool error response ------------------------------------------------------------------
 export function createToolErrorResponse(message: string, options: ToolResponseOptions = {}): ServerResult {
   const response = createToolTextResponse(`Error: ${message}`, options);
   response.isError = true;
@@ -228,7 +228,7 @@ export function createToolErrorResponse(message: string, options: ToolResponseOp
   return response;
 }
 
-// 11. Normalize tool result ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 11. Normalize tool result -----------------------------------------------------------------------
 export function normalizeToolResult(toolName: string, result: ServerResult, durationMs?: number): ServerResult {
   if (isNormalizedToolResult(result)) {
     const prevOutput = result.structuredContent as StandardToolOutput;

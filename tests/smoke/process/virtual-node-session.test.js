@@ -1,14 +1,14 @@
 import assert from "node:assert/strict";
 import { forceTerminate as frcTrmn, interactWithProcess as intrWthProc, listSessions, startProcess } from "../../../out/features/process/process-runner.js";
 
-// 1. Extract pid ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Extract pid ----------------------------------------------------------------------------------
 function extractPid(result) {
   const pidPattern = /PID (-?\d+)/;
   const match = result.content[0].text.match(pidPattern);
   return match ? Number.parseInt(match[1], 10) : null;
 }
 
-// 2. Test virtual node session lifecycle ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Test virtual node session lifecycle ----------------------------------------------------------
 async function testVirtualNodeSessionLifecycle() {
   let pid = null;
 
@@ -56,7 +56,7 @@ async function testVirtualNodeSessionLifecycle() {
   }
 }
 
-// 3. Run all tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Run all tests --------------------------------------------------------------------------------
 async function runAllTests() {
   try {
     await testVirtualNodeSessionLifecycle();

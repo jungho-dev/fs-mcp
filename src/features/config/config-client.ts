@@ -18,17 +18,17 @@ export declare type ClientInfoUpdate = {
 const DEF_CLNT: CurrentClient = {name: "uninitialized", version: "uninitialized"};
 export let curClnt: CurrentClient = {...DEF_CLNT};
 
-// 1. Get current client snapshot ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Get current client snapshot ---------------------------------------------------------------------
 export function getCurrentClient(): CurrentClient {
   return {...curClnt};
 }
 
-// 2. Build current client session key ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Build current client session key --------------------------------------------------------------
 export function buildCurrentClientSessionKey(): string {
   return `${curClnt.name}@${curClnt.version}`;
 }
 
-// 3. Update current client ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Update current client ---------------------------------------------------------------------------
 export function updateCurrentClient(clientInfo: ClientInfoUpdate): {changed: boolean; nameChanged: boolean} {
   const nextClient: CurrentClient = {
     name: clientInfo.name ?? curClnt.name,

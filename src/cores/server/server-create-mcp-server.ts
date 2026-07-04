@@ -29,17 +29,17 @@ type RequestMetadata = {
 
 const dfrrMsgs: Array<{level: LogLevel; message: string}> = [];
 
-// 1. Defer log ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Defer log ------------------------------------------------------------------------------------
 function deferLog(level: LogLevel, message: string): void {
   dfrrMsgs.push({level, message});
 }
 
-// 2. Has request metadata ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Has request metadata -------------------------------------------------------------------------
 function hasRequestMetadata(value: unknown): value is RequestMetadata {
   return typeof value === "object" && value !== null;
 }
 
-// 3. Create tool catalog ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Create tool catalog ----------------------------------------------------------------------------
 // FS_MCP_TOOL_PROFILE=fast-coding narrows tools/list to fs-inspect while dispatch compatibility stays full.
 function createToolCatalog(): TlCtlgEntr[] {
   const fullCatalog = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG, ...GT_TL_CTLG, ...WEB_TL_CTLG];
@@ -55,7 +55,7 @@ const TOOL_CATALOG = createToolCatalog();
 
 // Function to flush deferred messages after initialization
 
-// 4. Flush deferred messages ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Flush deferred messages ----------------------------------------------------------------------
 export function flushDeferredMessages(): void {
   while (dfrrMsgs.length > 0) {
     const msg = dfrrMsgs.shift();
@@ -82,7 +82,7 @@ export const server = new Server(
   },
 );
 
-// 5. Update current client ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 5. Update current client ------------------------------------------------------------------------
 function applyCurrentClientUpdate(clientInfo: ClntInfUpdt): void {
   const clientUpdate = updtCurClnt(clientInfo);
 

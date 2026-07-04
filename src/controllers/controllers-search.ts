@@ -13,12 +13,12 @@ import { RgxSrArSc, RgxSrArSc2 } from "@schemas/schemas-search";
 
 const RGX_POLL_MS = 50;
 
-// 1. Sleep ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Sleep ----------------------------------------------------------------------------------------------
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// 2. Handle regex search ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 2. Handle regex search ----------------------------------------------------------------------------
 export async function handleRegexSearch(args: unknown): Promise<ServerResult> {
   const parsed = RgxSrArSc.safeParse(args);
   if (!parsed.success) {
@@ -104,7 +104,7 @@ export async function handleRegexSearch(args: unknown): Promise<ServerResult> {
   }
 }
 
-// 3. Handle regex searches ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Handle regex searches --------------------------------------------------------------------------
 export async function handleRegexSearches(args: unknown): Promise<ServerResult> {
   const parsed = RgxSrArSc2.parse(args);
   const results = await rnPrllBtch(parsed.items, (item) => handleRegexSearch(item));
