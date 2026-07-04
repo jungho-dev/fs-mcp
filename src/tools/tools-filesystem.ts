@@ -7,9 +7,9 @@
 
 import { withArgsPathSchema as wthArPtSc } from "@schemas/schemas-args-ref";
 import { EdtBlArSc, EdtLnArSc } from "@schemas/schemas-edit";
-import { CpyFlArSc, CrtDrArSc, GtFlInArSc2, LstDrArSc, MvFlsArgsSch, RdFlsArgsSch, RmvFlArSc, WrtFlArSc } from "@schemas/schemas-filesystem";
+import { CpyFlArSc, CrtDrArSc, GtFlInArSc2, LstDrArSc, MvFlsArgsSch, RdFlsArgsSch, RdLnRngArSc, RmvFlArSc, WrtFlArSc } from "@schemas/schemas-filesystem";
 import { InspArSc } from "@schemas/schemas-inspect";
-import { GtFlSrReArSc, RgxSrArSc2, StpSrArSc2, StrSrArSc2 } from "@schemas/schemas-search";
+import { RgxSrArSc2 } from "@schemas/schemas-search";
 import { APPG, BTCH_GDNC, CMD_PRF_DSC, createToolCatalogEntry as crtTlCtEn, PTH_GDNC, type ToolCatalogEntryConfig as TlCtEnCf, type ToolCatalogEntry as TlCtlgEntr } from "@tools/tools-const";
 
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
@@ -18,6 +18,7 @@ const FLSY_TL_DFNT = [
     name: "file-read",
     description: `
       Read files in parallel.
+      When a task needs 2+ files, put them all in one paths[] (or items) call instead of calling file-read once per file.
       Use paths for simple reads or items for offset, length, headers, or URL reads.
       Set allowMissing true to return missing local paths as non-error missing results.
       ${BTCH_GDNC}
@@ -26,26 +27,27 @@ const FLSY_TL_DFNT = [
     `,
     inputSchema: wthArPtSc(RdFlsArgsSch),
     annotations: {
-      title: "Read Files",
+      title: "file-read",
       readOnlyHint: true,
       openWorldHint: true,
     },
   },
   {
-    name: "file-lines",
+    name: "file-read-line-range",
     description: `
-      Read text files in parallel with 1-based line numbers.
-      Use paths for simple reads or items for offset and length.
+      Read ranges from local text files and return each line with its 1-based line number.
+      When a task needs ranges from 2+ files, put them all in one items call instead of one call per file.
+      Use paths to read complete files or items with start_line and line_count for bounded ranges.
       Set allowMissing true to return missing local paths as non-error missing results.
       ${BTCH_GDNC}
       ${PTH_GDNC}
       ${CMD_PRF_DSC}
     `,
-    inputSchema: wthArPtSc(RdFlsArgsSch),
+    inputSchema: wthArPtSc(RdLnRngArSc),
     annotations: {
-      title: "Read Files With Line Numbers",
+      title: "file-read-line-range",
       readOnlyHint: true,
-      openWorldHint: true,
+      openWorldHint: false,
     },
   },
   {
@@ -59,14 +61,14 @@ const FLSY_TL_DFNT = [
     `),
     inputSchema: wthArPtSc(WrtFlArSc),
     annotations: {
-      title: "Write Files",
+      title: "file-write",
       readOnlyHint: false,
       destructiveHint: true,
       openWorldHint: false,
     },
   },
   {
-    name: "dir-mk",
+    name: "dir-create",
     description: (`
       Create one or many directories in parallel.
       ${BTCH_GDNC}
@@ -75,7 +77,7 @@ const FLSY_TL_DFNT = [
     `),
     inputSchema: wthArPtSc(CrtDrArSc),
     annotations: {
-      title: "Create Directories",
+      title: "dir-create",
       readOnlyHint: false,
       destructiveHint: false,
     },
@@ -92,12 +94,12 @@ const FLSY_TL_DFNT = [
     `),
     inputSchema: wthArPtSc(LstDrArSc),
     annotations: {
-      title: "List Directories",
+      title: "dir-list",
       readOnlyHint: true,
     },
   },
   {
-    name: "file-copy",
+    name: "path-copy",
     description: (`
       Copy one or many files or directories in parallel.
       Use items: [{ source, destination, recursive?, force? }].
@@ -107,14 +109,14 @@ const FLSY_TL_DFNT = [
     `),
     inputSchema: wthArPtSc(CpyFlArSc),
     annotations: {
-      title: "Copy Files",
+      title: "path-copy",
       readOnlyHint: false,
       destructiveHint: false,
       openWorldHint: false,
     },
   },
   {
-    name: "file-move",
+    name: "path-move",
     description: (`
       Move or rename one or many files in parallel.
       ${BTCH_GDNC}
@@ -123,14 +125,14 @@ const FLSY_TL_DFNT = [
     `),
     inputSchema: wthArPtSc(MvFlsArgsSch),
     annotations: {
-      title: "Move/Rename Files",
+      title: "path-move",
       readOnlyHint: false,
       destructiveHint: true,
       openWorldHint: false,
     },
   },
   {
-    name: "file-remove",
+    name: "path-remove",
     description: (`
       Delete one or many files or directories in parallel.
       Use items: [{ path, recursive?, force? }].
@@ -140,29 +142,14 @@ const FLSY_TL_DFNT = [
     `),
     inputSchema: wthArPtSc(RmvFlArSc),
     annotations: {
-      title: "Remove Files",
+      title: "path-remove",
       readOnlyHint: false,
       destructiveHint: true,
       openWorldHint: false,
     },
   },
   {
-    name: "search-start",
-    description: (`
-      Start searches in parallel.
-      pattern_path can reduce transport overhead, and filePattern can narrow the target set.
-      ${BTCH_GDNC}
-      ${PTH_GDNC}
-      ${CMD_PRF_DSC}
-    `),
-    inputSchema: wthArPtSc(StrSrArSc2),
-    annotations: {
-      title: "Start Searches",
-      readOnlyHint: true,
-    },
-  },
-  {
-    name: "search-regex",
+    name: "fs-search",
     description: (`
       Run ripgrep-compatible regular-expression content searches directly.
       Prefer this over shell rg when regex search is needed.
@@ -173,42 +160,14 @@ const FLSY_TL_DFNT = [
     `),
     inputSchema: wthArPtSc(RgxSrArSc2),
     annotations: {
-      title: "Regex Searches",
+      title: "fs-search",
       readOnlyHint: true,
     },
   },
   {
-    name: "search-get",
+    name: "path-stat",
     description: (`
-      Read one or many active search sessions in parallel with full per-item result text.
-      Use offset or length for pagination.
-      ${BTCH_GDNC}
-      ${CMD_PRF_DSC}
-    `),
-    inputSchema: wthArPtSc(GtFlSrReArSc),
-    annotations: {
-      title: "Get Full Search Results",
-      readOnlyHint: true,
-    },
-  },
-  {
-    name: "search-stop",
-    description: (`
-      Stop one or many active searches in parallel.
-      ${BTCH_GDNC}
-      ${CMD_PRF_DSC}
-    `),
-    inputSchema: wthArPtSc(StpSrArSc2),
-    annotations: {
-      title: "Stop Searches",
-      readOnlyHint: false,
-      destructiveHint: false,
-    },
-  },
-  {
-    name: "file-infos",
-    description: (`
-      Retrieve metadata for one or many files in parallel.
+      Retrieve metadata for one or many filesystem paths in parallel.
       Set allowMissing true to return missing local paths as non-error missing results.
       ${BTCH_GDNC}
       ${PTH_GDNC}
@@ -216,7 +175,7 @@ const FLSY_TL_DFNT = [
     `),
     inputSchema: wthArPtSc(GtFlInArSc2),
     annotations: {
-      title: "Get File Information",
+      title: "path-stat",
       readOnlyHint: true,
     },
   },
@@ -232,7 +191,7 @@ const FLSY_TL_DFNT = [
     `),
     inputSchema: wthArPtSc(EdtBlArSc),
     annotations: {
-      title: "Edit Blocks",
+      title: "file-edit",
       readOnlyHint: false,
       destructiveHint: true,
       openWorldHint: false,

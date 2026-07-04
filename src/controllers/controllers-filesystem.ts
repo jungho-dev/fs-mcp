@@ -14,7 +14,7 @@ import { type BatchToolItemResult as BtchTlItmRes, createBatchToolResponse as cr
 import { createErrorResponse as crtErrRes } from "@cores/responses/responses-error";
 import { resolveAbsolutePath as rslvAbslPth } from "@features/filesystem/filesystem-path-resolver";
 import { copyFile, createDirectory as crtDir, getFileInfo, listDirectory as lstDir, moveFile, readFileInternal as rdFlInt, readTextSliceInternal as rdTxtSlcInt, readFile, removePath, writeFile } from "@features/filesystem/filesystem-service";
-import { CpyFlArgsSch, CpyFlArSc, CrtDiArSc, CrtDrArSc, GtFlInArSc, GtFlInArSc2, LstDiArSc, LstDrArSc, MvFlArgsSch, MvFlsArgsSch, RdFlArgsSch, RdFlsArgsSch, RmvFlArSc, RmvPtArSc, WrtFlArFrAr2, WrtFlArFrArP, WrtFlArgsSch, WrtFlArSc } from "@schemas/schemas-filesystem";
+import { CpyFlArgsSch, CpyFlArSc, CrtDiArSc, CrtDrArSc, GtFlInArSc, GtFlInArSc2, LstDiArSc, LstDrArSc, MvFlArgsSch, MvFlsArgsSch, RdFlArgsSch, RdFlsArgsSch, RdLnRngArSc, RmvFlArSc, RmvPtArSc, WrtFlArFrAr2, WrtFlArFrArP, WrtFlArgsSch, WrtFlArSc } from "@schemas/schemas-filesystem";
 
 const DLEP = /^(?:\[(F|D|W|X)\]|(□|■))\s*(.*)$/;
 const LN_SPLT_PAT = /\r\n|\r|\n/;
@@ -619,11 +619,12 @@ export async function handleReadFiles(args: unknown): Promise<ServerResult> {
 }
 
 // 14-1. Handle read files with line number ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// file-read-line-range items use a 1-based start_line and a line_count budget.
 export async function handleReadFilesWithLineNumber(args: unknown): Promise<ServerResult> {
-  const parsed = RdFlsArgsSch.parse(args);
-  const items = parsed.items ?? parsed.paths?.map((filePath) => ({ isUrl: false, offset: 0, path: filePath })) ?? [];
-  const results = await rnPrllBtch(items, (item) => handleParsedLineNumReadWithMissing(item, parsed.allowMissing));
-  const response = crtBtchTlRes("file-lines", results, { resultMode: "full" });
+  const parsed = RdLnRngArSc.parse(args);
+  const items = parsed.items ?? parsed.paths?.map((filePath) => ({ line_count: undefined, path: filePath, start_line: 1 })) ?? [];
+  const results = await rnPrllBtch(items, (item) => handleParsedLineNumReadWithMissing({ isUrl: false, length: item.line_count, offset: item.start_line - 1, path: item.path }, parsed.allowMissing));
+  const response = crtBtchTlRes("file-read-line-range", results, { resultMode: "full" });
 
   return response;
 }
@@ -718,7 +719,7 @@ export async function handleWriteFiles(args: unknown): Promise<ServerResult> {
 export async function handleCreateDirectories(args: unknown): Promise<ServerResult> {
   const parsed = CrtDrArSc.parse(args);
   const results = await rnPrllBtch(parsed.paths, (dirPath) => handleParsedCreateDirectory({ path: dirPath }));
-  const response = crtBtchTlRes("dir-mk", results);
+  const response = crtBtchTlRes("dir-create", results);
 
   return response;
 }
@@ -736,7 +737,7 @@ export async function handleListDirectories(args: unknown): Promise<ServerResult
 export async function handleCopyFiles(args: unknown): Promise<ServerResult> {
   const parsed = CpyFlArSc.parse(args);
   const results = await rnPrllBtch(parsed.items, (item) => handleParsedCopyFile(item));
-  const response = crtBtchTlRes("file-copy", results);
+  const response = crtBtchTlRes("path-copy", results);
 
   return response;
 }
@@ -745,7 +746,7 @@ export async function handleCopyFiles(args: unknown): Promise<ServerResult> {
 export async function handleMoveFiles(args: unknown): Promise<ServerResult> {
   const parsed = MvFlsArgsSch.parse(args);
   const results = await rnLmPrBt(parsed.items, MFBC, (item) => handleParsedMoveFile(item));
-  const response = crtBtchTlRes("file-move", results);
+  const response = crtBtchTlRes("path-move", results);
 
   return response;
 }
@@ -754,7 +755,7 @@ export async function handleMoveFiles(args: unknown): Promise<ServerResult> {
 export async function handleRemoveFiles(args: unknown): Promise<ServerResult> {
   const parsed = RmvFlArSc.parse(args);
   const results = await rnPrllBtch(parsed.items, (item) => handleParsedRemovePath(item));
-  const response = crtBtchTlRes("file-remove", results);
+  const response = crtBtchTlRes("path-remove", results);
 
   return response;
 }
@@ -763,7 +764,7 @@ export async function handleRemoveFiles(args: unknown): Promise<ServerResult> {
 export async function handleGetFileInfos(args: unknown): Promise<ServerResult> {
   const parsed = GtFlInArSc2.parse(args);
   const results = await rnPrllBtch(parsed.paths, (filePath) => handleParsedGetFileInfoWithMissing({ path: filePath }, parsed.allowMissing));
-  const response = crtBtchTlRes("file-infos", results);
+  const response = crtBtchTlRes("path-stat", results);
 
   return response;
 }

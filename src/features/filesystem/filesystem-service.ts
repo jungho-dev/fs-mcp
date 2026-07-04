@@ -16,6 +16,7 @@ import { TextFileHandler as TxtFlHdl } from "@assets/readers/readers-text";
 import { withTimeout } from "@assets/utils/utils-timeout";
 import { cfgMgr } from "@features/config/config-store";
 import { FL_OP_TMTS } from "@features/filesystem/filesystem-limits";
+import { allowPrivateUrls as alwPrvUrls, httpFetch, WEB_DFLT_MAX_BYTS, WEB_DFLT_MAX_RDRS, WEB_DFLT_TMT_MS, WEB_DFLT_UA } from "@features/web/web-service";
 
 const DIR_WLD_SFF = `${path.sep}*`;
 const GREP = /[.+^${}()|[\]\\]/g;
@@ -298,7 +299,7 @@ export async function validatePath(rqstPth: string): Promise<string> {
 }
 
 // 10-1. Validate target path ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-async function validateTargetPath(rqstPth: string): Promise<string> {
+export async function validateTargetPath(rqstPth: string): Promise<string> {
   const valOp = async (): Promise<string> => {
     const abslOrig = resolveRequestedPath(rqstPth);
 
@@ -337,54 +338,27 @@ export async function readFileFromUrl(url: string): Promise<FileResult> {
   // Import the MIME type utilities
   const { isImageFile } = await import("@features/filesystem/filesystem-mime-registry");
 
-  // Set up fetch with timeout
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), FL_OP_TMTS.URL_FETCH);
+  // Route through the shared web tier: SSRF-guarded, per-hop redirect checks, and body-capped.
+  const page = await httpFetch(
+    url,
+    { maxBytes: WEB_DFLT_MAX_BYTS, maxRedirects: WEB_DFLT_MAX_RDRS, timeoutMs: WEB_DFLT_TMT_MS, userAgent: WEB_DFLT_UA },
+    alwPrvUrls(),
+  );
+  const contentType = page.contentType.length > 0 ? page.contentType : "text/plain";
+  const isImage = isImageFile(contentType);
+  const isText = contentType.startsWith("text/") || contentType.includes("json") || contentType.includes("xml") || contentType.includes("javascript");
 
-  try {
-    const response = await fetch(url, {
-      signal: controller.signal,
-    });
-
-    // Clear the timeout since fetch completed
-    clearTimeout(timeoutId);
-
-    if (!response.ok) {
-      throw new Error(`HTTP error! Status: ${response.status}`);
-    }
-    // Get MIME type from Content-Type header or infer from URL
-    const contentType = response.headers.get("content-type") || "text/plain";
-    const isImage = isImageFile(contentType);
-    const isText = contentType.startsWith("text/") || contentType.includes("json") || contentType.includes("xml") || contentType.includes("javascript");
-
-    if (isImage) {
-      // For images, convert to base64
-      const buffer = await response.arrayBuffer();
-      const content = Buffer.from(buffer).toString("base64");
-
-      return { content, mimeType: contentType, metadata: { isImage } };
-    }
-    else if (isText) {
-      // For text content
-      const content = await response.text();
-
-      return { content, mimeType: contentType, metadata: { isImage } };
-    }
-    return {
-      content: `Cannot read remote binary content as text: ${url}\n\nUse start_process with appropriate tools to process this URL.`,
-      mimeType: "text/plain",
-      metadata: { isImage: false, isBinary: true },
-    };
+  if (isImage) {
+    return { content: page.body.toString("base64"), mimeType: contentType, metadata: { isImage } };
   }
-  catch (error) {
-    // Clear the timeout to prevent memory leaks
-    clearTimeout(timeoutId);
-
-    // Return error information instead of throwing
-    const errorMessage = error instanceof DOMException && error.name === "AbortError" ? `URL fetch timed out after ${FL_OP_TMTS.URL_FETCH}ms: ${url}` : `Failed to fetch URL: ${error instanceof Error ? error.message : String(error)}`;
-
-    throw new Error(errorMessage);
+  if (isText) {
+    return { content: page.body.toString("utf8"), mimeType: contentType, metadata: { isImage } };
   }
+  return {
+    content: `Cannot read remote binary content as text: ${url}`,
+    mimeType: "text/plain",
+    metadata: { isImage: false, isBinary: true },
+  };
 }
 
 // 9. Read file content from the local filesystem ――――――――――――――――――――――――――――――――――――――――――――――――――

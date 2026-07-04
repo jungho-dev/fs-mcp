@@ -15,13 +15,26 @@ export const RdFlArgsSch = z.object({
   isUrl: z.boolean().optional().default(false),
   offset: z.number().optional().default(0),
   length: z.number().optional(),
-  options: z.record(z.any()).optional(),
 });
 
 export const RdFlsArgsSch = z.object({
   allowMissing: z.boolean().optional().default(false).describe("When true, missing local paths are returned as non-error missing results."),
   paths: z.array(z.string()).min(1).optional(),
   items: z.array(RdFlArgsSch).min(1).optional(),
+}).refine((args) => args.paths !== undefined || args.items !== undefined, {
+  message: "Either paths or items is required",
+});
+
+export const RdLnRngItmSc = z.object({
+  path: z.string(),
+  start_line: z.number().int().min(1).optional().default(1).describe("First line to return, using 1-based line numbers."),
+  line_count: z.number().int().min(1).optional().describe("Maximum number of lines to return. Omit to read through end of file."),
+});
+
+export const RdLnRngArSc = z.object({
+  allowMissing: z.boolean().optional().default(false).describe("When true, missing local paths are returned as non-error missing results."),
+  paths: z.array(z.string()).min(1).optional(),
+  items: z.array(RdLnRngItmSc).min(1).optional(),
 }).refine((args) => args.paths !== undefined || args.items !== undefined, {
   message: "Either paths or items is required",
 });

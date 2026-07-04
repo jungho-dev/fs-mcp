@@ -8,53 +8,55 @@ import {fileURLToPath as flUrlTPth2} from "node:url";
 import {CONFIG_TOOL_CATALOG as CFG_TL_CTLG} from "../../out/tools/tools-config.js";
 import {FILESYSTEM_TOOL_CATALOG as FLSY_TL_CTLG} from "../../out/tools/tools-filesystem.js";
 import {PROCESS_TOOL_CATALOG as PROC_TL_CTLG} from "../../out/tools/tools-process.js";
+import {WEB_TOOL_CATALOG as WEB_TL_CTLG} from "../../out/tools/tools-web.js";
 
 const __filename = flUrlTPth2(import.meta.url);
 
 const EXP_TL_NMS = [
   "file-read",
-  "file-lines",
+  "file-read-line-range",
   "file-write",
-  "dir-mk",
+  "dir-create",
   "dir-list",
-  "file-copy",
-  "file-move",
-  "file-remove",
-  "search-start",
-  "search-regex",
-  "search-get",
-  "search-stop",
-  "file-infos",
+  "path-copy",
+  "path-move",
+  "path-remove",
+  "fs-search",
+  "path-stat",
   "file-edit",
   "file-edit-lines",
   "fs-inspect",
+  "web-fetch",
+  "web-render",
+  "web-extract",
+  "download-to-file",
 ];
 
 const BFTN = [
   "file-read",
-  "file-lines",
+  "file-read-line-range",
   "file-write",
-  "dir-mk",
+  "dir-create",
   "dir-list",
-  "file-copy",
-  "file-move",
-  "file-remove",
-  "search-start",
-  "search-regex",
-  "search-get",
-  "search-stop",
-  "file-infos",
+  "path-copy",
+  "path-move",
+  "path-remove",
+  "fs-search",
+  "path-stat",
   "file-edit",
   "file-edit-lines",
+  "web-fetch",
+  "web-extract",
+  "download-to-file",
 ];
 
 const APPTN = [
   "file-edit",
 ];
 
-// 1. Test tool catalog shape ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 1. Test tool catalog shape ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testToolCatalogShape() {
-  const tools = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG];
+  const tools = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG, ...WEB_TL_CTLG];
 
   assert.strictEqual(tools.length, EXP_TL_NMS.length);
   assert.deepStrictEqual(
@@ -65,7 +67,7 @@ function testToolCatalogShape() {
 
 // 2. Test batch first descriptions ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testBatchFirstDescriptions() {
-  const tools = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG];
+  const tools = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG, ...WEB_TL_CTLG];
   const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
 
   for (const toolName of BFTN) {
@@ -76,9 +78,9 @@ function testBatchFirstDescriptions() {
   }
 }
 
-// 3. Test large edit guidance ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 3. Test large edit guidance ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function testLargeEditGuidance() {
-  const tools = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG];
+  const tools = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG, ...WEB_TL_CTLG];
   const toolsByName = new Map(tools.map((tool) => [tool.name, tool]));
 
   for (const toolName of APPTN) {
@@ -90,7 +92,7 @@ function testLargeEditGuidance() {
   }
 }
 
-// 4. Run all tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
+// 4. Run all tests ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function runAllTests() {
   testToolCatalogShape();
   testBatchFirstDescriptions();

@@ -11,12 +11,13 @@ import {runGitBranch, runGitCheckout as rnGtChck, runGitCherryPick as rnGtChrrPc
 import {runGitBlame, runGitChangelogAnalyze as rnGtChngAnly, runGitReflog} from "@features/git/git-operations-history";
 import {runGitFetch, runGitPull, runGitPush, runGitRemote} from "@features/git/git-operations-remotes";
 import {runGitClone, runGitInit, runGitSetWorkingDir as rnGtStWrknDr, runGitStatus} from "@features/git/git-operations-repository";
-import {runGitAdd, runGitCommit, runGitDiff, runGitShow} from "@features/git/git-operations-working-tree";
+import {runGitAdd, runGitAmend, runGitCommit, runGitDiff, runGitShow} from "@features/git/git-operations-working-tree";
 import type {GitArgsMap, GitToolOutput as GtTlOtpt} from "@features/git/git-types";
 import type {GitToolName} from "@schemas/schemas-git";
 
 const GT_TL_HNDL = {
   "git-add": runGitAdd,
+  "git-amend": runGitAmend,
   "git_blame": runGitBlame,
   "git_branch": runGitBranch,
   "git_changelog_analyze": rnGtChngAnly,
@@ -35,7 +36,7 @@ const GT_TL_HNDL = {
   "git_reflog": runGitReflog,
   "git_remote": runGitRemote,
   "git_reset": runGitReset,
-  "git-cwd": rnGtStWrknDr,
+  "git-set-workdir": rnGtStWrknDr,
   "git-show": runGitShow,
   "git_stash": runGitStash,
   "git-status": runGitStatus,

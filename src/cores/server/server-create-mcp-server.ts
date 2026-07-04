@@ -21,6 +21,7 @@ import {dispatchToolCall as dsptTlCll} from "@tools/tools-dispatcher";
 import {FLSY_TL_CTLG} from "@tools/tools-filesystem";
 import {GT_TL_CTLG} from "@tools/tools-git";
 import {PROC_TL_CTLG} from "@tools/tools-process";
+import {WEB_TL_CTLG} from "@tools/tools-web";
 
 type RequestMetadata = {
   clientInfo?: ClntInfUpdt;
@@ -41,7 +42,7 @@ function hasRequestMetadata(value: unknown): value is RequestMetadata {
 // 3. Create tool catalog ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 // FS_MCP_TOOL_PROFILE=fast-coding narrows tools/list to fs-inspect while dispatch compatibility stays full.
 function createToolCatalog(): TlCtlgEntr[] {
-  const fullCatalog = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG, ...GT_TL_CTLG];
+  const fullCatalog = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...PROC_TL_CTLG, ...GT_TL_CTLG, ...WEB_TL_CTLG];
   const profile = process.env.FS_MCP_TOOL_PROFILE ?? "full";
 
   if (profile === "fast-coding") {

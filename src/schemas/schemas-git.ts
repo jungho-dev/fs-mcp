@@ -22,6 +22,25 @@ export const GT_INPT_SCHS = {
       force: z.boolean().optional(),
     })
     .strict(),
+  "git-amend": z
+    .object({
+      path: OptnRpPthSch,
+      message: z.string().optional(),
+      messagePath: z.string().optional(),
+      messageOffset: z.number().optional().default(0),
+      messageLength: z.number().optional(),
+      author: z
+        .object({
+          name: z.string().min(1),
+          email: z.string().email(),
+        })
+        .optional(),
+      resetAuthor: z.boolean().optional(),
+      allowEmpty: z.boolean().optional(),
+      noVerify: z.boolean().optional(),
+      filesToStage: z.array(z.string()).optional(),
+    })
+    .strict(),
   git_blame: z
     .object({
       path: OptnRpPthSch,
@@ -115,10 +134,7 @@ export const GT_INPT_SCHS = {
       noVerify: z.boolean().optional(),
       filesToStage: z.array(z.string()).optional(),
     })
-    .strict()
-    .refine((args) => args.message !== undefined || args.messagePath !== undefined, {
-      message: "Either message or messagePath is required",
-    }),
+    .strict(),
   "git-diff": z
     .object({
       path: OptnRpPthSch,
@@ -126,11 +142,10 @@ export const GT_INPT_SCHS = {
       source: CmmtRfSch.optional(),
       paths: z.array(z.string()).optional(),
       staged: z.boolean().optional(),
-      includeUntracked: z.boolean().optional(),
       nameOnly: z.boolean().optional(),
       stat: z.boolean().optional(),
+      check: z.boolean().optional(),
       contextLines: z.number().int().min(0).optional(),
-      autoExclude: z.boolean().optional(),
     })
     .strict(),
   git_fetch: z
@@ -223,7 +238,7 @@ export const GT_INPT_SCHS = {
       confirmed: z.boolean().optional(),
     })
     .strict(),
-  "git-cwd": z
+  "git-set-workdir": z
     .object({
       path: z.string(),
       validateGitRepo: z.boolean().optional(),
@@ -233,7 +248,8 @@ export const GT_INPT_SCHS = {
   "git-show": z
     .object({
       path: OptnRpPthSch,
-      object: z.string(),
+      object: z.string().optional(),
+      objects: z.array(z.string()).min(1).optional(),
       filePath: z.string().optional(),
       format: z.enum(["raw"]).optional(),
       stat: z.boolean().optional(),
@@ -293,10 +309,11 @@ export const GT_INPT_SCHS = {
 export declare type GitToolName = keyof typeof GT_INPT_SCHS;
 
 export const EGTN = [
-  "git-cwd",
+  "git-set-workdir",
   "git-status",
   "git-diff",
   "git-show",
   "git-add",
   "git-commit",
+  "git-amend",
 ] as const satisfies readonly GitToolName[];

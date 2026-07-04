@@ -81,17 +81,18 @@ tests -> out
 
 ## Public Tool Assembly
 
-`server-create-mcp-server.ts` builds one catalog from four modules. Config and process catalogs are currently empty:
+`server-create-mcp-server.ts` builds one catalog from five modules. Config and process catalogs are currently empty:
 
 | Module | Count | Public tools |
 |--------|------:|--------------|
 | `tools-config.ts` | 0 | none |
-| `tools-filesystem.ts` | 16 | `file-read`, `file-lines`, `file-write`, `dir-mk`, `dir-list`, `file-copy`, `file-move`, `file-remove`, `search-start`, `search-regex`, `search-get`, `search-stop`, `file-infos`, `file-edit`, `file-edit-lines`, `fs-inspect` |
+| `tools-filesystem.ts` | 13 | `file-read`, `file-read-line-range`, `file-write`, `dir-create`, `dir-list`, `path-copy`, `path-move`, `path-remove`, `fs-search`, `path-stat`, `file-edit`, `file-edit-lines`, `fs-inspect` |
 | `tools-process.ts` | 0 | none |
-| `tools-git.ts` | 6 | `git-cwd`, `git-status`, `git-diff`, `git-show`, `git-add`, `git-commit` |
+| `tools-git.ts` | 7 | `git-set-workdir`, `git-status`, `git-diff`, `git-show`, `git-add`, `git-commit`, `git-amend` |
+| `tools-web.ts` | 4 | `web-fetch`, `web-render`, `web-extract`, `download-to-file` |
 
-Total public catalog size: `22` tools. `FS_MCP_TOOL_PROFILE=fast-coding` narrows `tools/list` to `fs-inspect`
-while dispatch compatibility keeps the full surface.
+Total public catalog size: `24` tools, matching the rust-fs-mcp surface. `FS_MCP_TOOL_PROFILE=fast-coding`
+narrows `tools/list` to `fs-inspect` while dispatch compatibility keeps the full surface.
 
 `tools-dispatcher.ts` owns the matching `call_tool` registry. The catalog and dispatcher must expose the same
 names. `tests/scripts/scripts-verify-tool-surface.mjs` checks name equality, uniqueness, essential git filtering,
@@ -137,12 +138,11 @@ resolve in one round-trip. A per-call `maxSnippetChars` budget (default 6000) ca
 
 ### Search
 
-Search behavior is delegated to bundled `@vscode/ripgrep`, with system ripgrep as a fallback. `search-regex` runs
-direct content scans. `search-start` creates paged sessions for broader file or content searches, and `search-get`
-returns result slices with offset and length. `search-stop` stops active sessions.
+Search behavior is delegated to bundled `@vscode/ripgrep`, with system ripgrep as a fallback. `fs-search` runs
+direct ripgrep-compatible content scans and waits for completion inside the call, so no session tools are exposed.
 
-Search session responses can expose `sessionId`, `nextOffset`, `wasLimited`, and `wasIncomplete`. Sessions only apply
-a result cap when callers provide `maxResults`.
+`fs-search` responses can expose `wasLimited` and `wasIncomplete`. A result cap applies only when callers provide
+`maxResults`.
 
 ### Config
 
@@ -156,11 +156,23 @@ policy, session, terminal, and virtual-node behavior used by runtime boundaries.
 
 ### Git
 
-Git calls run inside a client-scoped git session. `git-cwd` pins the working repository, `git-status` and `git-diff`
-inspect state, `git-show` reads git objects or revision files, `git-add` stages paths, and `git-commit` creates
-commits. Commit descriptions guide clients toward English multi-line Conventional Commit messages. `git-commit`
-always injects `-c user.name=fs-mcp` and `-c user.email=fs-mcp@example.invalid` so commits work without local git
-config; a provided `author` object overrides only the author through `--author`.
+Git calls run inside a client-scoped git session. `git-set-workdir` pins the working repository, `git-status` and
+`git-diff` inspect state (`git-diff` supports `check` for whitespace/conflict-marker scans and rejects option-like
+revisions), `git-show` reads one or many revisions through `objects[]` with optional `stat`, `git-add` stages
+explicit paths (staging everything requires `all` or `update`), `git-commit` creates commits, and `git-amend`
+rewrites HEAD (`--no-edit` message reuse, `resetAuthor`, HEAD precheck). Commit descriptions guide clients toward
+English Conventional Commit messages. `git-commit` and `git-amend` always inject `-c user.name=fs-mcp` and
+`-c user.email=fs-mcp@example.invalid` so commits work without local git config; a provided `author` object
+overrides only the author through `--author`.
+
+### Web
+
+The web tier mirrors rust-fs-mcp: `web-fetch` is the TIER-1 native fetch path with a per-hop SSRF guard, manual
+redirect checks, and a body-size cap; `web-render` shells out to the obscura headless browser for JS/SPA pages
+(`FS_MCP_OBSCURA_BIN` overrides the binary, and `evalScript` requires `FS_MCP_ALLOW_PRIVATE_URLS=1`);
+`web-extract` converts already-held HTML into text, markdown, links, or readability main-content offline; and
+`download-to-file` writes fetched bodies inside `allowedDirectories`. `file-read` with `isUrl` routes through the
+same guarded fetch tier.
 
 ## Tool Response Contract
 
@@ -180,8 +192,8 @@ With the default-on compact envelope, `data.content` is the single full-text sou
 omitted; `FS_MCP_COMPACT=0` (or `false`) restores `data.text` with the combined text. Batch responses follow the
 same flag: in compact mode each per-item `result` carries only `structuredContent` and `isError`, body-copy keys
 such as `textContent`/`listing` are dropped, and echoed `input` string values above 256 bytes are replaced with
-`<N bytes elided>`. The body lives once in the batch text of full-mode tools (`file-read`, `file-lines`,
-`dir-list`, `search-regex`, `search-get`).
+`<N bytes elided>`. The body lives once in the batch text of full-mode tools (`file-read`,
+`file-read-line-range`, `dir-list`, `fs-search`, `web-fetch`, `web-extract`, `download-to-file`).
 
 The default display rows are `tool`, `items`, `status`, `duration`, `tokens`, `contents`, and `structuredText`.
 The `tokens` row is a character-based estimate so large results do not load tokenizer vocabularies during response

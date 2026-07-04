@@ -10,12 +10,14 @@ import { getDispatchableToolNames as gtDsptTlNms } from "../../out/tools/tools-d
 import { FILESYSTEM_TOOL_CATALOG as FLSY_TL_CTLG } from "../../out/tools/tools-filesystem.js";
 import { GIT_TOOL_CATALOG as GT_TL_CTLG } from "../../out/tools/tools-git.js";
 import { PROCESS_TOOL_CATALOG as PROC_TL_CTLG } from "../../out/tools/tools-process.js";
+import { WEB_TOOL_CATALOG as WEB_TL_CTLG } from "../../out/tools/tools-web.js";
 
 const EGTN2 = [
   "git-add",
+  "git-amend",
   "git-commit",
   "git-diff",
-  "git-cwd",
+  "git-set-workdir",
   "git-show",
   "git-status",
 ];
@@ -45,7 +47,7 @@ function difference(left, right) {
 
 // 2. tool surface check ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 function verifyToolSurface() {
-  const catalogNames = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...GT_TL_CTLG, ...PROC_TL_CTLG]
+  const catalogNames = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...GT_TL_CTLG, ...PROC_TL_CTLG, ...WEB_TL_CTLG]
     .map((tool) => tool.name)
     .sort();
   const dsptNms = gtDsptTlNms().sort();
@@ -73,7 +75,7 @@ function verifyToolSurface() {
     failures.push(`Git tool surface mismatch. Missing: ${mssnGtTls.join(", ") || "none"}; Extra: ${extrGtTls.join(", ") || "none"}`);
   }
 
-  const tlsMsArPt = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...GT_TL_CTLG, ...PROC_TL_CTLG]
+  const tlsMsArPt = [...CFG_TL_CTLG, ...FLSY_TL_CTLG, ...GT_TL_CTLG, ...PROC_TL_CTLG, ...WEB_TL_CTLG]
     .filter((tool) => !JSON.stringify(tool.inputSchema).includes("args_path"))
     .map((tool) => tool.name)
     .sort();

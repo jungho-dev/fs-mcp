@@ -7,32 +7,29 @@
 
 import path from "node:path";
 import { runGitCommand as rnGtCmd } from "@features/git/git-runtime";
-import { ensureDirectoryExists as ensrDirExst, getCurrentBranch as gtCurBrnc, getCurrentGitWorkingDirectory as gtCuGtWrDi, getHeadCommit as gtHdCmmt, getRepositoryRoot as gtRepoRt, resolveCreationBasePath as rslCrBsPt, resolveCreationPath as rslvCrtnPth, resolveRepositoryPath as rslvRepoPth, setCurrentGitWorkingDirectory as stCuGtWrDi } from "@features/git/git-session";
+import { ensureDirectoryExists as ensrDirExst, getCurrentBranch as gtCurBrnc, getCurrentGitWorkingDirectory as gtCuGtWrDi, getHeadCommit as gtHdCmmt, resolveCreationBasePath as rslCrBsPt, resolveCreationPath as rslvCrtnPth, resolveRepositoryPath as rslvRepoPth, setCurrentGitWorkingDirectory as stCuGtWrDi } from "@features/git/git-session";
 import { gatherRepositorySnapshot as gthrRepoSnps, getStatusSummary as gtStatSmmr } from "@features/git/git-status-support";
 import type { GitArgsMap, GitToolOutput as GtTlOtpt } from "@features/git/git-types";
 
 // 1. Run git set working dir ――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
-export async function runGitSetWorkingDir(input: GitArgsMap["git-cwd"]): Promise<GtTlOtpt> {
+export async function runGitSetWorkingDir(input: GitArgsMap["git-set-workdir"]): Promise<GtTlOtpt> {
   const resolvedPath = await rslvCrtnPth(input.path);
   const shldValRepo = input.validateGitRepo ?? true;
   const shldIntlRepo = input.initializeIfNotPresent ?? false;
-  let repoRt = resolvedPath;
 
   await ensrDirExst(resolvedPath);
 
+  // Initialization runs independently of validation so a fresh directory can be pinned in one call.
+  let repoCheck = await rnGtCmd(["rev-parse", "--show-toplevel"], { cwd: resolvedPath, allowFailure: true });
+  if (repoCheck.exitCode !== 0 && shldIntlRepo) {
+    await rnGtCmd(["init", "--initial-branch=main"], { cwd: resolvedPath });
+    repoCheck = await rnGtCmd(["rev-parse", "--show-toplevel"], { cwd: resolvedPath, allowFailure: true });
+  }
   if (shldValRepo) {
-    const repoCheck = await rnGtCmd(["rev-parse", "--show-toplevel"], { cwd: resolvedPath, allowFailure: true });
-
     if (repoCheck.exitCode !== 0) {
-      if (shldIntlRepo) {
-        await rnGtCmd(["init", "--initial-branch=main"], { cwd: resolvedPath });
-      }
-      else {
-        throw new Error(`Path is not a git repository: ${resolvedPath}. Pass initializeIfNotPresent: true to run git init here.`);
-      }
+      throw new Error(`Path is not a git repository: ${resolvedPath}. Pass initializeIfNotPresent: true to run git init here.`);
     }
-    repoRt = repoCheck.exitCode === 0 ? repoCheck.stdout.trim() : await gtRepoRt(resolvedPath);
-    stCuGtWrDi(repoRt);
+    stCuGtWrDi(repoCheck.stdout.trim());
   }
   else {
     stCuGtWrDi(resolvedPath);

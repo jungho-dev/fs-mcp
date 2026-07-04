@@ -7,7 +7,7 @@
 
 import { withArgsPathSchema as wthArPtSc } from "@schemas/schemas-args-ref";
 import { EGTN, GT_INPT_SCHS, type GitToolName } from "@schemas/schemas-git";
-import { CMD_PRF_DSC, PTH_GDNC, createToolCatalogEntry as crtTlCtEn, type ToolCatalogEntry as TlCtlgEntr } from "@tools/tools-const";
+import { BTCH_GDNC, CMD_PRF_DSC, PTH_GDNC, createToolCatalogEntry as crtTlCtEn, type ToolCatalogEntry as TlCtlgEntr } from "@tools/tools-const";
 
 type GitToolDescription = {
   name: GitToolName;
@@ -29,7 +29,8 @@ const CMM_MSG_GDN = [
 const EGTNS = new Set<GitToolName>(EGTN);
 
 const GT_TL_DSCR: GitToolDescription[] = [
-  { name: "git-add", title: "Git Add", description: ["Stage files for commit.", CMD_PRF_DSC].join("\n"), readOnlyHint: false },
+  { name: "git-add", title: "git-add", description: ["Stage files for commit.", "Pass multiple files in one paths[] call.", CMD_PRF_DSC].join("\n"), readOnlyHint: false },
+  { name: "git-amend", title: "git-amend", description: ["Amend the last commit.", "Omit message to keep it (--no-edit); pass an English Conventional Commit message to rewrite it.", "Use filesToStage to add changes and resetAuthor to reset authorship.", CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
   { name: "git_blame", title: "Git Blame", description: ["Show line-by-line authorship for a file.", CMD_PRF_DSC].join("\n"), readOnlyHint: true },
   { name: "git_branch", title: "Git Branch", description: ["List, create, delete, rename, or inspect branches.", CMD_PRF_DSC].join("\n"), readOnlyHint: false },
   { name: "git_changelog_analyze", title: "Git Changelog Analyze", description: ["Collect git history context and changelog review guidance.", CMD_PRF_DSC].join("\n"), readOnlyHint: true },
@@ -37,8 +38,8 @@ const GT_TL_DSCR: GitToolDescription[] = [
   { name: "git_cherry_pick", title: "Git Cherry Pick", description: ["Apply commits from another branch.", CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
   { name: "git_clean", title: "Git Clean", description: ["Remove untracked files or preview cleanup.", CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
   { name: "git_clone", title: "Git Clone", description: ["Clone a repository from a remote or local source.", PTH_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true, openWorldHint: true },
-  { name: "git-commit", title: "Git Commit", description: ["Create a commit from staged changes.", CMM_MSG_GDN, LNG_MSG_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
-  { name: "git-diff", title: "Git Diff", description: ["Show differences between commits, branches, or working tree state.", CMD_PRF_DSC].join("\n"), readOnlyHint: true },
+  { name: "git-commit", title: "git-commit", description: ["Create a commit from staged changes.", CMM_MSG_GDN, LNG_MSG_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
+  { name: "git-diff", title: "git-diff", description: ["Show differences between commits, branches, or working tree state.", "Use paths[] to scope the diff to specific files in one call, nameOnly for a changed-file list, and check to flag whitespace errors and leftover conflict markers.", CMD_PRF_DSC].join("\n"), readOnlyHint: true },
   { name: "git_fetch", title: "Git Fetch", description: ["Fetch updates from a remote repository.", CMD_PRF_DSC].join("\n"), readOnlyHint: false, openWorldHint: true },
   { name: "git_init", title: "Git Init", description: ["Initialize a new git repository.", PTH_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
   { name: "git_merge", title: "Git Merge", description: ["Merge a branch into the current branch.", LNG_MSG_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
@@ -48,10 +49,10 @@ const GT_TL_DSCR: GitToolDescription[] = [
   { name: "git_reflog", title: "Git Reflog", description: ["Inspect reference update history.", CMD_PRF_DSC].join("\n"), readOnlyHint: true },
   { name: "git_remote", title: "Git Remote", description: ["Manage git remotes and remote URLs.", CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true, openWorldHint: true },
   { name: "git_reset", title: "Git Reset", description: ["Reset HEAD or unstage paths.", CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
-  { name: "git-cwd", title: "Git Set Working Directory", description: ["Pin the session git working directory and return a repository snapshot.", PTH_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
-  { name: "git-show", title: "Git Show", description: ["Show a git object or file content at a revision.", CMD_PRF_DSC].join("\n"), readOnlyHint: true },
+  { name: "git-set-workdir", title: "git-set-workdir", description: ["Set the session Git working directory and return a repository snapshot.", PTH_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
+  { name: "git-show", title: "git-show", description: ["Show git objects or file content at one or many revisions.", "Use objects[] to fetch several revisions in one call, and stat true for a diffstat instead of the full patch.", BTCH_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: true },
   { name: "git_stash", title: "Git Stash", description: ["List, save, apply, pop, or drop stashes.", LNG_MSG_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
-  { name: "git-status", title: "Git Status", description: ["Show working tree status, staging, and conflicts.", CMD_PRF_DSC].join("\n"), readOnlyHint: true },
+  { name: "git-status", title: "git-status", description: ["Show working tree status, staging, and conflicts.", CMD_PRF_DSC].join("\n"), readOnlyHint: true },
   { name: "git_tag", title: "Git Tag", description: ["List, create, delete, or verify tags.", LNG_MSG_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
   { name: "git_worktree", title: "Git Worktree", description: ["Manage additional git worktrees.", PTH_GDNC, CMD_PRF_DSC].join("\n"), readOnlyHint: false, destructiveHint: true },
 ];

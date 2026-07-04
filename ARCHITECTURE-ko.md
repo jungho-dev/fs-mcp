@@ -80,17 +80,18 @@ tests -> out
 
 ## Public Tool 조립
 
-`server-create-mcp-server.ts`는 네 module의 catalog를 합쳐 public surface를 구성합니다. Config와 process catalog는 현재 비어 있습니다.
+`server-create-mcp-server.ts`는 다섯 module의 catalog를 합쳤 public surface를 구성합니다. Config와 process catalog는 현재 비어 있습니다.
 
 | Module | Count | Public tools |
 |--------|------:|--------------|
 | `tools-config.ts` | 0 | none |
-| `tools-filesystem.ts` | 16 | `file-read`, `file-lines`, `file-write`, `dir-mk`, `dir-list`, `file-copy`, `file-move`, `file-remove`, `search-start`, `search-regex`, `search-get`, `search-stop`, `file-infos`, `file-edit`, `file-edit-lines`, `fs-inspect` |
+| `tools-filesystem.ts` | 13 | `file-read`, `file-read-line-range`, `file-write`, `dir-create`, `dir-list`, `path-copy`, `path-move`, `path-remove`, `fs-search`, `path-stat`, `file-edit`, `file-edit-lines`, `fs-inspect` |
 | `tools-process.ts` | 0 | none |
-| `tools-git.ts` | 6 | `git-cwd`, `git-status`, `git-diff`, `git-show`, `git-add`, `git-commit` |
+| `tools-git.ts` | 7 | `git-set-workdir`, `git-status`, `git-diff`, `git-show`, `git-add`, `git-commit`, `git-amend` |
+| `tools-web.ts` | 4 | `web-fetch`, `web-render`, `web-extract`, `download-to-file` |
 
-전체 public catalog 크기는 `22`개 tool입니다. `FS_MCP_TOOL_PROFILE=fast-coding`은 `tools/list`를
-`fs-inspect` 하나로 좁히며 dispatch 호환성은 전체 surface를 유지합니다.
+전체 public catalog 크기는 rust-fs-mcp 표면과 동일한 `24`개 tool입니다. `FS_MCP_TOOL_PROFILE=fast-coding`은
+`tools/list`를 `fs-inspect` 하나로 좁히며 dispatch 호환성은 전체 surface를 유지합니다.
 
 `tools-dispatcher.ts`는 대응되는 `call_tool` registry를 담당합니다. Catalog와 dispatcher는 같은 이름을
 노출해야 합니다. `tests/scripts/scripts-verify-tool-surface.mjs`는 name equality, uniqueness, essential git
@@ -135,12 +136,11 @@ flag를 설정합니다. 각 answer는 `id`, `op`, `status`, `value`, `confidenc
 
 ### Search
 
-Search는 bundled `@vscode/ripgrep`에 위임하고 system ripgrep을 fallback으로 사용합니다. `search-regex`는 direct
-content scan을 실행합니다. `search-start`는 더 넓은 file/content search를 위한 paged session을 만들고,
-`search-get`은 offset/length로 result slice를 반환합니다. `search-stop`은 active session을 중지합니다.
+Search는 bundled `@vscode/ripgrep`에 위임하고 system ripgrep을 fallback으로 사용합니다. `fs-search`는 direct
+ripgrep-compatible content scan을 실행하고 호출 안에서 완료까지 대기하므로 session tool은 노출하지 않습니다.
 
-Search session response는 `sessionId`, `nextOffset`, `wasLimited`, `wasIncomplete`를 노출할 수 있습니다. Session은
-caller가 `maxResults`를 제공한 경우에만 result cap을 적용합니다.
+`fs-search` response는 `wasLimited`와 `wasIncomplete`를 노출할 수 있습니다. Result cap은 caller가
+`maxResults`를 제공한 경우에만 적용됩니다.
 
 ### Config
 
@@ -153,12 +153,23 @@ caller가 `maxResults`를 제공한 경우에만 result cap을 적용합니다.
 
 ### Git
 
-Git call은 client-scoped git session 안에서 실행됩니다. `git-cwd`는 working repository를 pin하고, `git-status`와
-`git-diff`는 상태를 검사하며, `git-show`는 git object 또는 revision file을 읽습니다. `git-add`는 path를 stage하고
-`git-commit`은 commit을 생성합니다. Commit description은 English multi-line Conventional Commit message를
-권장합니다. `git-commit`은 local git config 없이도 commit이 되도록 `-c user.name=fs-mcp`와
-`-c user.email=fs-mcp@example.invalid`를 항상 주입하며, `author` object가 주어지면 `--author`로 author만
-override합니다.
+Git call은 client-scoped git session 안에서 실행됩니다. `git-set-workdir`는 working repository를 pin하고,
+`git-status`와 `git-diff`는 상태를 검사하며(`git-diff`는 whitespace/conflict-marker를 검사하는 `check`를
+지원하고 option 형태의 revision을 거부합니다), `git-show`는 `objects[]`와 선택적 `stat`으로 여러 revision을 한
+번에 읽습니다. `git-add`는 명시적 path를 stage하고(전체 staging은 `all`/`update` 필요), `git-commit`은
+commit을 생성하며, `git-amend`는 HEAD를 재작성합니다(`--no-edit` message 재사용, `resetAuthor`, HEAD 사전검증).
+Commit description은 English Conventional Commit message를 권장합니다. `git-commit`과 `git-amend`는 local git
+config 없이도 동작하도록 `-c user.name=fs-mcp`와 `-c user.email=fs-mcp@example.invalid`를 항상 주입하며,
+`author` object가 주어지면 `--author`로 author만 override합니다.
+
+### Web
+
+Web tier는 rust-fs-mcp를 미러링합니다. `web-fetch`는 per-hop SSRF guard, 수동 redirect 검사, body-size cap을
+갖춘 TIER-1 native fetch 경로입니다. `web-render`는 JS/SPA page를 위해 obscura headless browser를 호출합니다
+(`FS_MCP_OBSCURA_BIN`으로 binary override, `evalScript`는 `FS_MCP_ALLOW_PRIVATE_URLS=1` 필요).
+`web-extract`는 보유 HTML을 offline으로 text, markdown, links, readability로 변환하고, `download-to-file`은
+fetch한 body를 `allowedDirectories` 안에 기록합니다. `isUrl`을 쓰는 `file-read`도 동일한 guarded fetch tier를
+경유합니다.
 
 ## Tool Response Contract
 
@@ -178,8 +189,8 @@ override합니다.
 `FS_MCP_COMPACT=0`(또는 `false`)으로 끄면 `data.text`에 combined text가 복원됩니다. Batch 응답도 같은 flag를
 따릅니다. compact에서 per-item `result`는 `structuredContent`와 `isError`만 담고 content 복제와
 `textContent`/`listing` 같은 본문 복제 key를 제거하며, echo되는 `input`의 256 byte 초과 문자열 값은
-`<N bytes elided>`로 대체됩니다. 본문은 full mode tool(`file-read`, `file-lines`, `dir-list`, `search-regex`,
-`search-get`)의 batch text에 한 번만 담깁니다.
+`<N bytes elided>`로 대체됩니다. 본문은 full mode tool(`file-read`, `file-read-line-range`, `dir-list`,
+`fs-search`, `web-fetch`, `web-extract`, `download-to-file`)의 batch text에 한 번만 담깁니다.
 
 기본 display row는 `tool`, `items`, `status`, `duration`, `tokens`, `contents`, `structuredText`입니다. `tokens` row는
 큰 결과에서 tokenizer vocabulary를 load하지 않도록 문자 수 기반 추정치를 사용합니다. Gemini client는 같은

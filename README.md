@@ -78,17 +78,18 @@ If a client cannot resolve global binaries, set `command` to the absolute `fs-mc
 
 ## Current Public Tool Surface
 
-The current source and compiled runtime expose 22 public tools. Tool names are intentionally short,
-hyphenated for filesystem/search/git surfaces, and stable for clients that cache MCP catalogs.
+The current source and compiled runtime expose 24 public tools that mirror the rust-fs-mcp surface. Tool names
+are intentionally short, hyphenated, and stable for clients that cache MCP catalogs.
 
 | Domain | Tools | Purpose |
 |--------|-------|---------|
-| Filesystem | `file-read`, `file-lines`, `file-write`, `file-infos` | Read, line-read, write, and inspect files. |
-| Directories | `dir-list`, `dir-mk` | List directory trees and create directories. |
-| File operations | `file-copy`, `file-move`, `file-remove`, `file-edit`, `file-edit-lines` | Copy, move, remove, exact-edit, and line-range-edit files or directories. |
+| Filesystem | `file-read`, `file-read-line-range`, `file-write`, `path-stat` | Read, line-range-read, write, and inspect files. |
+| Directories | `dir-list`, `dir-create` | List directory trees and create directories. |
+| File operations | `path-copy`, `path-move`, `path-remove`, `file-edit`, `file-edit-lines` | Copy, move, remove, exact-edit, and line-range-edit files or directories. |
 | Inspect | `fs-inspect` | Bundle count-files, search, json-pick, snippet, and git-status lookups into one read-only call. |
-| Search | `search-regex`, `search-start`, `search-get`, `search-stop` | Run direct regex scans or manage paged search sessions. |
-| Git | `git-cwd`, `git-status`, `git-diff`, `git-show`, `git-add`, `git-commit` | Pin repo state, inspect changes, stage, and commit. |
+| Search | `fs-search` | Run direct ripgrep-compatible regex scans. |
+| Web | `web-fetch`, `web-render`, `web-extract`, `download-to-file` | Fetch URLs, render JS/SPA pages through obscura, extract held HTML, and download files. |
+| Git | `git-set-workdir`, `git-status`, `git-diff`, `git-show`, `git-add`, `git-commit`, `git-amend` | Pin repo state, inspect changes, stage, commit, and amend. |
 
 `src/schemas/schemas-git.ts` contains schemas for additional git operations, but `src/tools/tools-git.ts`
 exports only the essential git set above in this version. Config tools and process controls are outside the current
@@ -100,7 +101,9 @@ public catalog.
   deletion, exact block replacement, and 1-based line range edits.
 - `fs-inspect` composite lookups that bundle count-files, search, json-pick, snippet, and git-status into one
   round-trip.
-- Direct ripgrep-compatible regex search and asynchronous search sessions with pagination and stop controls.
+- Direct ripgrep-compatible regex search through `fs-search`.
+- SSRF-guarded web tier: `web-fetch` for static pages, `web-render` for JS/SPA pages via the obscura headless
+  browser, `web-extract` for offline HTML conversion, and `download-to-file` for sandboxed downloads.
 - Optional DOCX text extraction for content searches when the target inputs or patterns include `.docx`.
 - Essential git session workflows for repository pinning, status, diff, show, staging, and commit.
 - Normalized tool responses with a visible display block, machine-readable `structuredContent`, and compact
@@ -113,30 +116,31 @@ one multi-item call. This applies to:
 
 - File reads through `paths` or `items`.
 - Directory and file operations through `items` or `paths` arrays.
-- Search work through `search-regex.items`, `search-start.items`, `search-get.items`, and `search-stop.sessionIds`.
+- Search work through `fs-search.items`.
+- Web work through `web-fetch.items`, `web-extract.items`, and `download-to-file.items`.
 
 Large arguments can be moved into a UTF-8 JSON file and passed with `args_path`. Inline fields supplied beside
 `args_path` override fields from the referenced JSON object. Large text payloads can also use path-backed fields
 such as `content_path`, `old_string_path`, `new_string_path`, `pattern_path`, and `messagePath`.
 
-`file-read`, `file-lines`, `dir-list`, and `file-infos` accept `allowMissing=true` so exploratory candidate reads
-can return missing local paths as non-error results.
+`file-read`, `file-read-line-range`, `dir-list`, and `path-stat` accept `allowMissing=true` so exploratory
+candidate reads can return missing local paths as non-error results.
 
 ## Runtime Notes
 
 Current compiled catalog metrics from this checkout:
 
-- Tool count: `22`.
-- `list_tools` payload: `27,707` characters.
-- Tool descriptions: `6,606` characters.
-- Tool schemas: `17,988` characters.
+- Tool count: `24`.
+- `list_tools` payload: `32,048` characters.
+- Tool descriptions: `8,544` characters.
+- Tool schemas: `20,097` characters.
 
 Runtime behavior:
 
 - Tool catalogs are assembled once during server creation.
 - Zod-to-JSON-schema conversion is lazy-cached per tool entry.
 - Tool calls resolve `args_path`, `args_offset`, and `args_length` before controller validation.
-- Search sessions have no implicit `maxResults` cap. Set `maxResults` explicitly when a bounded scan is needed.
+- `fs-search` has no implicit `maxResults` cap. Set `maxResults` explicitly when a bounded scan is needed.
 - With the default-on compact envelope the body lives once in `data.content` and the `data.text` copy is omitted;
   `FS_MCP_COMPACT=0` restores it.
 - Stdio filtering captures accidental console output before it can corrupt MCP JSON-RPC frames.

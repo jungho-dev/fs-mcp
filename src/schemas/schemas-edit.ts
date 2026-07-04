@@ -30,8 +30,8 @@ export const EdtBlArSc = z.object({
 
 export const EdtLnItmSc = z.object({
   file_path: z.string(),
-  start_line: z.number(),
-  end_line: z.number().optional(),
+  start_line: z.number().int().min(1),
+  end_line: z.number().int().min(1).optional(),
   replacement: z.string().optional(),
   replacement_path: z.string().optional(),
   replacement_offset: z.number().optional().default(0),

@@ -43,10 +43,10 @@ const TEST_GROUPS = {
     "./smoke/process/list-processes.test.js",
     "./smoke/process/virtual-node-session.test.js",
     "./smoke/search/search-code.test.js",
-    "./smoke/search/search-truncation.test.js",
     "./smoke/security/blocked-commands.test.js",
     "./smoke/security/blocklist-bypass.test.js",
     "./smoke/security/symlink-security.test.js",
+    "./smoke/web/web-extract-basic.test.js",
   ],
 };
 const RNNB_TSTS = Object.values(TEST_GROUPS).flat();

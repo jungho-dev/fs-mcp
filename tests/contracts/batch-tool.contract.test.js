@@ -200,7 +200,7 @@ async function testReadFilesSurface() {
   assert.equal(allwMssnPyld.results[1].ok, true);
   assert.equal(allwMssnPyld.results[1].result.structuredContent.missing, true);
 
-  const mssnInfRes = await dsptTlCll("file-infos", {
+  const mssnInfRes = await dsptTlCll("path-stat", {
     allowMissing: true,
     paths: [missingFile],
   });
@@ -216,13 +216,13 @@ async function testReadFilesSurface() {
   assert.equal(mssnDirPyld.failedCount, 0);
   assert.equal(mssnDirPyld.results[0].result.structuredContent.missing, true);
 
-  const lnNumRes = await dsptTlCll("file-lines", {
-    items: [{ length: 2, offset: 1, path: LINE_FILE }],
+  const lnNumRes = await dsptTlCll("file-read-line-range", {
+    items: [{ line_count: 2, path: LINE_FILE, start_line: 2 }],
   });
   const lnNumOtpt = parseToolOutput(lnNumRes);
   const lnNumBody = batchBodyText(lnNumOtpt);
   const lnNumPyld = lnNumOtpt.data.structuredContent;
-  assert.equal(lnNumPyld.toolName, "file-lines");
+  assert.equal(lnNumPyld.toolName, "file-read-line-range");
   assert.equal(lnNumPyld.results[0].ok, true);
   assert.equal(lnNumPyld.results[0].result.structuredContent.startLine, 2);
   assert.equal(lnNumPyld.results[0].result.structuredContent.endLine, 3);
@@ -230,7 +230,7 @@ async function testReadFilesSurface() {
   assert.equal(lnNumBody.includes("2: second"), true);
   assert.equal(lnNumBody.includes("3: third"), true);
 
-  const lnMssnRes = await dsptTlCll("file-lines", {
+  const lnMssnRes = await dsptTlCll("file-read-line-range", {
     allowMissing: true,
     paths: [missingFile],
   });
@@ -285,7 +285,7 @@ async function testLargeInputStringsElided() {
 
 // 8. Test create and list directory surface ―――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testCreateAndListDirectorySurface() {
-  const createResult = await dsptTlCll("dir-mk", {
+  const createResult = await dsptTlCll("dir-create", {
     paths: [CREATED_DIR],
   });
   const crtBtchRess = extractBatchResults(createResult);
@@ -313,7 +313,7 @@ async function testCreateAndListDirectorySurface() {
 
 // 9. Test copy files surface ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 async function testCopyFilesSurface() {
-  const copyResult = await dsptTlCll("file-copy", {
+  const copyResult = await dsptTlCll("path-copy", {
     items: [
       {
         destination: COPIED_FILE,
@@ -342,7 +342,7 @@ async function testCopyFilesSurface() {
   assert.equal(await fs.readFile(path.join(COPIED_DIR, "nested.txt"), "utf8"), "nested copy\n");
   assert.equal(await fs.readFile(CPY_SRC_FL, "utf8"), "copy value\n");
 
-  const ovrwRes = await dsptTlCll("file-copy", {
+  const ovrwRes = await dsptTlCll("path-copy", {
     items: [
       {
         destination: COPIED_FILE,
@@ -534,7 +534,7 @@ async function testWriteMoveInfoAndEditSurface() {
   assert.equal(lrgRdBody.includes(TN_THSN_B), true);
   assert.equal(JSON.stringify(lrgRdBtRe[0].result).includes("previewOnly"), false);
 
-  const renameResult = await dsptTlCll("file-move", {
+  const renameResult = await dsptTlCll("path-move", {
     items: [
       {
         destination: RENAMED_FILE,
@@ -545,7 +545,7 @@ async function testWriteMoveInfoAndEditSurface() {
   const rnmBtchRess = extractBatchResults(renameResult);
   assert.equal(rnmBtchRess[0].ok, true);
 
-  const moveResult = await dsptTlCll("file-move", {
+  const moveResult = await dsptTlCll("path-move", {
     items: [
       {
         destination: MOVED_FILE,
@@ -556,7 +556,7 @@ async function testWriteMoveInfoAndEditSurface() {
   const mvBtchRess = extractBatchResults(moveResult);
   assert.equal(mvBtchRess[0].ok, true);
 
-  const infoResult = await dsptTlCll("file-infos", {
+  const infoResult = await dsptTlCll("path-stat", {
     paths: [SOURCE_FILE, MOVED_FILE],
   });
   const infBtchRess = extractBatchResults(infoResult);
@@ -572,7 +572,7 @@ async function testWriteMoveInfoAndEditSurface() {
   assert.equal(lrgEdtdTxt, MLRT);
   assert.equal(movedText, "written value\n");
 
-  const removeResult = await dsptTlCll("file-remove", {
+  const removeResult = await dsptTlCll("path-remove", {
     items: [
       { path: MOVED_FILE },
       { path: CREATED_DIR },

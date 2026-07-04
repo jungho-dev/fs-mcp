@@ -72,7 +72,7 @@ export async function resolveRepositoryPath(rqstPth?: string): Promise<string> {
   const basePath = rqstPth ?? getCurrentGitWorkingDirectory();
 
   if (!basePath) {
-    throw new Error("No git working directory set. Pass path or call git-cwd first.");
+    throw new Error("No git working directory set. Pass path or call git-set-workdir first.");
   }
 
   return await getRepositoryRoot(await resolveExistingPath(basePath));

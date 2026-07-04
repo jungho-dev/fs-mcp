@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+* align the public tool surface with rust-fs-mcp (24 tools): rename `file-lines`/`dir-mk`/`file-copy`/`file-move`/`file-remove`/`file-infos`/`search-regex`/`git-cwd` to `file-read-line-range`/`dir-create`/`path-copy`/`path-move`/`path-remove`/`path-stat`/`fs-search`/`git-set-workdir`, and drop the `search-start`/`search-get`/`search-stop` session tools
+* switch `file-read-line-range` to rust-fs-mcp semantics (1-based `start_line` plus `line_count`), drop the dead `options` field from `file-read` items, and enforce integer `start_line`/`end_line` on `file-edit-lines`
+* add `web-fetch`, `web-render` (obscura headless browser), `web-extract`, and `download-to-file` with a shared SSRF guard (`FS_MCP_ALLOW_PRIVATE_URLS`), manual per-hop redirect checks, and body-size caps; `file-read` with `isUrl` now routes through the same guarded fetch tier
+* add `git-amend` (`--no-edit` message reuse, `resetAuthor`, HEAD precheck) and align git tools with rust-fs-mcp: `git-diff` gains `check` and drops `autoExclude`/`includeUntracked`, `git-show` accepts `objects[]` with `stat`, `git-add` requires explicit paths or `all`/`update`, and option-like (`-` prefixed) revisions/objects are rejected
+
 * add `file-edit-lines` for 1-based inclusive line range replace, insert (`after: true`), and delete with dominant EOL (CRLF/LF) detection, EOL-normalized replacements, and `expected_lines` validation
 * add `fs-inspect`, a read-only composite inspection tool bundling count-files, search, json-pick, snippet, and git-status requests into one call with a per-call `maxSnippetChars` evidence budget and `scannedFiles`/`bytesRead`/`snippetChars`/`truncated` metrics
 * always inject `-c user.name=fs-mcp -c user.email=fs-mcp@example.invalid` into `git-commit` so commits work without local git config while `author` still overrides the author only
@@ -389,43 +394,6 @@
 ## \[ 1.7.5 \]
 
 - 2026-05-26 (17:59:05)
-
 ## \[ 1.7.6 \]
 
-- 2026-05-27 (01:07:38)
-
-## \[ 1.7.7 \]
-
-- 2026-05-28 (22:54:17)
-
-## \[ 1.7.8 \]
-
-- 2026-05-30 (19:35:42)
-
-## \[ 1.7.9 \]
-
-- 2026-05-31 (23:21:30)
-
-## \[ 1.8.0 \]
-
-- 2026-06-03 (23:52:08)
-
-## \[ 1.8.1 \]
-
-- 2026-06-04 (00:22:58)
-
-## \[ 1.8.2 \]
-
-- 2026-06-04 (18:11:35)
-
-## \[ 1.8.3 \]
-
-- 2026-06-04 (21:27:46)
-
-## \[ 1.8.4 \]
-
-- 2026-06-14 (23:02:24)
-
-## \[ 1.8.5 \]
-
-- 2026-06-15 (18:10:43)
+- 2026-07-04T05:04:33.136Z

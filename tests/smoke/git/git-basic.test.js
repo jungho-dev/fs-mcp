@@ -40,12 +40,12 @@ async function testGitBasicFlow() {
 - Verify git smoke flow.`;
 
   try {
-    const wrknDrOtpt = parseStandardOutput(await dsptTlCll("git-cwd", {path: repoPath, initializeIfNotPresent: true}));
+    const wrknDrOtpt = parseStandardOutput(await dsptTlCll("git-set-workdir", {path: repoPath, initializeIfNotPresent: true}));
     assert.equal(wrknDrOtpt.success, true);
 
     await setupRepository(repoPath);
 
-    const rfrWrDrOt = parseStandardOutput(await dsptTlCll("git-cwd", {path: repoPath}));
+    const rfrWrDrOt = parseStandardOutput(await dsptTlCll("git-set-workdir", {path: repoPath}));
     assert.equal(rfrWrDrOt.success, true);
     assert.equal(rfrWrDrOt.repository.status.branch, "main");
 
@@ -64,6 +64,20 @@ async function testGitBasicFlow() {
     assert.equal(commitOutput.success, true);
     assert.equal(commitOutput.message, "feat: add demo file");
     assert.equal(commitOutput.status.is_clean, true);
+
+    const amendOutput = parseStandardOutput(await dsptTlCll("git-amend", {}));
+    assert.equal(amendOutput.success, true);
+    assert.equal(amendOutput.message, "feat: add demo file");
+    assert.equal(typeof amendOutput.commitHash, "string");
+    assert.equal(amendOutput.commitHash.length > 0, true);
+
+    const showOutput = parseStandardOutput(await dsptTlCll("git-show", {objects: ["HEAD"], stat: true}));
+    assert.equal(showOutput.success, true);
+    assert.equal(showOutput.content.includes("demo.txt"), true);
+
+    const checkOutput = parseStandardOutput(await dsptTlCll("git-diff", {check: true}));
+    assert.equal(checkOutput.success, true);
+    assert.equal(checkOutput.clean, true);
 
   }
   finally {

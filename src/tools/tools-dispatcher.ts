@@ -10,7 +10,8 @@ import {handleEditBlocks as hndlEdtBlck2, handleEditLines as hndlEdtLns} from "@
 import {handleCopyFiles as hndlCpyFls, handleCreateDirectories as hndlCrtDrct, handleGetFileInfos as hndlGtFlInfs, handleListDirectories as hndlLstDrct, handleMoveFiles as hndlMvFls, handleReadFiles as hndlRdFls, handleRemoveFiles as hndlRmvFls, handleWriteFiles as hndlWrtFls, handleReadFilesWithLineNumber as hndRdFlLn} from "@controllers/controllers-filesystem";
 import {handleGitTool as hndlGtTl} from "@controllers/controllers-git";
 import {handleFsInspect as hndlFsInsp} from "@controllers/controllers-inspect";
-import {handleGetFullSearchResults as hndGtFlSrRe, handleRegexSearches as hndlRgxSrch, handleStopSearches as hndlStpSrch, handleStartSearches as hndlStrtSrch} from "@controllers/controllers-search";
+import {handleRegexSearches as hndlRgxSrch} from "@controllers/controllers-search";
+import {handleDownloadToFile as hndlDwnlFl, handleWebExtract as hndlWbExtr, handleWebFetch as hndlWbFtch, handleWebRender as hndlWbRndr} from "@controllers/controllers-web";
 import {createErrorResponse as crtErrRes} from "@cores/responses/responses-error";
 import {normalizeToolResult as nrmlTlRes} from "@cores/responses/responses-tool-result";
 import {readTextSliceInternal as rdTxtSlcInt} from "@features/filesystem/filesystem-service";
@@ -129,21 +130,22 @@ const GT_TL_DSPT = Object.fromEntries(
 // ―――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――――
 export const TL_DSPT: Readonly<Record<string, ToolDispatchHandler>> = {
   "file-read": (args: unknown) => hndlRdFls(args),
-  "file-lines": (args: unknown) => hndRdFlLn(args),
+  "file-read-line-range": (args: unknown) => hndRdFlLn(args),
   "file-write": (args: unknown) => hndlWrtFls(args),
-  "dir-mk": (args: unknown) => hndlCrtDrct(args),
+  "dir-create": (args: unknown) => hndlCrtDrct(args),
   "dir-list": (args: unknown) => hndlLstDrct(args),
-  "file-copy": (args: unknown) => hndlCpyFls(args),
-  "file-move": (args: unknown) => hndlMvFls(args),
-  "file-remove": (args: unknown) => hndlRmvFls(args),
-  "file-infos": (args: unknown) => hndlGtFlInfs(args),
+  "path-copy": (args: unknown) => hndlCpyFls(args),
+  "path-move": (args: unknown) => hndlMvFls(args),
+  "path-remove": (args: unknown) => hndlRmvFls(args),
+  "path-stat": (args: unknown) => hndlGtFlInfs(args),
   "file-edit": (args: unknown) => hndlEdtBlck2(args),
   "file-edit-lines": (args: unknown) => hndlEdtLns(args),
   "fs-inspect": (args: unknown) => hndlFsInsp(args),
-  "search-start": (args: unknown) => hndlStrtSrch(args),
-  "search-regex": (args: unknown) => hndlRgxSrch(args),
-  "search-get": (args: unknown) => hndGtFlSrRe(args),
-  "search-stop": (args: unknown) => hndlStpSrch(args),
+  "fs-search": (args: unknown) => hndlRgxSrch(args),
+  "web-fetch": (args: unknown) => hndlWbFtch(args),
+  "web-render": (args: unknown) => hndlWbRndr(args),
+  "web-extract": (args: unknown) => hndlWbExtr(args),
+  "download-to-file": (args: unknown) => hndlDwnlFl(args),
   ...GT_TL_DSPT,
 };
 

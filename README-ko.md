@@ -77,17 +77,18 @@ client가 전역 binary를 찾지 못하면 `command`를 절대 경로의 `fs-mc
 
 ## 현재 Public Tool Surface
 
-현재 source와 compiled runtime은 22개 public tool을 노출합니다. Filesystem/search/git 표면은 짧은
-hyphen 이름을 사용하고, client가 MCP catalog를 cache해도 안정적으로 동작하도록 public 이름을 고정합니다.
+현재 source와 compiled runtime은 rust-fs-mcp 표면과 동일한 24개 public tool을 노출합니다. Tool 이름은 짧은
+hyphen 형식을 사용하고, client가 MCP catalog를 cache해도 안정적으로 동작하도록 public 이름을 고정합니다.
 
 | Domain | Tools | Purpose |
 |--------|-------|---------|
-| Filesystem | `file-read`, `file-lines`, `file-write`, `file-infos` | 파일 읽기, line read, 쓰기, metadata 확인. |
-| Directories | `dir-list`, `dir-mk` | directory tree 조회 및 directory 생성. |
-| File operations | `file-copy`, `file-move`, `file-remove`, `file-edit`, `file-edit-lines` | copy, move, remove, exact edit, 1-based line range edit. |
+| Filesystem | `file-read`, `file-read-line-range`, `file-write`, `path-stat` | 파일 읽기, line range read, 쓰기, metadata 확인. |
+| Directories | `dir-list`, `dir-create` | directory tree 조회 및 directory 생성. |
+| File operations | `path-copy`, `path-move`, `path-remove`, `file-edit`, `file-edit-lines` | copy, move, remove, exact edit, 1-based line range edit. |
 | Inspect | `fs-inspect` | count-files, search, json-pick, snippet, git-status를 한 호출에 묶는 read-only 조회. |
-| Search | `search-regex`, `search-start`, `search-get`, `search-stop` | direct regex scan 및 paged search session 관리. |
-| Git | `git-cwd`, `git-status`, `git-diff`, `git-show`, `git-add`, `git-commit` | repo pinning, inspect, stage, commit. |
+| Search | `fs-search` | direct ripgrep-compatible regex scan. |
+| Web | `web-fetch`, `web-render`, `web-extract`, `download-to-file` | URL fetch, obscura JS/SPA rendering, 보유 HTML 변환, sandbox download. |
+| Git | `git-set-workdir`, `git-status`, `git-diff`, `git-show`, `git-add`, `git-commit`, `git-amend` | repo pinning, inspect, stage, commit, amend. |
 
 `src/schemas/schemas-git.ts`에는 추가 git operation schema가 있지만, 이번 버전의
 `src/tools/tools-git.ts`는 위 essential git set만 export합니다. Config tool과 process control은 현재 public catalog 밖에 있습니다.
@@ -97,7 +98,9 @@ hyphen 이름을 사용하고, client가 MCP catalog를 cache해도 안정적으
 - 파일 read, write, list, metadata, directory create, copy, move, remove, exact block replacement,
   1-based line range edit의 batch-first 처리.
 - count-files, search, json-pick, snippet, git-status를 한 round-trip에 묶는 `fs-inspect` composite 조회.
-- Ripgrep-compatible direct regex search와 pagination/stop control을 갖춘 asynchronous search session.
+- `fs-search`를 통한 ripgrep-compatible direct regex search.
+- SSRF guard를 갖춘 web tier: static page용 `web-fetch`, obscura headless browser를 통한 JS/SPA rendering용
+  `web-render`, 보유 HTML 변환용 `web-extract`, sandbox download용 `download-to-file`.
 - `.docx` 입력 또는 pattern을 대상으로 할 때 선택적으로 병합되는 DOCX text extraction.
 - Repository pinning, status, diff, show, staging, commit 중심의 essential git session workflow.
 - 표시용 display block, machine-readable `structuredContent`, compact `_meta.fsMcpResult`를 포함하는
@@ -110,31 +113,32 @@ multi-item call로 묶도록 안내합니다. 적용 대상은 다음과 같습�
 
 - `paths` 또는 `items`를 쓰는 file read.
 - `items` 또는 `paths` 배열을 쓰는 directory/file operation.
-- `search-regex.items`, `search-start.items`, `search-get.items`, `search-stop.sessionIds`를 쓰는 search 작업.
+- `fs-search.items`를 쓰는 search 작업.
+- `web-fetch.items`, `web-extract.items`, `download-to-file.items`를 쓰는 web 작업.
 
 큰 argument는 UTF-8 JSON 파일로 옮긴 뒤 `args_path`로 전달할 수 있습니다. `args_path` 옆에 제공한 inline
 field는 참조 JSON object의 field를 override합니다. 큰 text payload는 `content_path`, `old_string_path`,
 `new_string_path`, `pattern_path`, `messagePath` 같은 path-backed field도 사용할 수
 있습니다.
 
-`file-read`, `file-lines`, `dir-list`, `file-infos`는 `allowMissing=true`를 받아 탐색용 후보 경로 중 누락된
-local path를 실패가 아닌 missing 결과로 반환할 수 있습니다.
+`file-read`, `file-read-line-range`, `dir-list`, `path-stat`는 `allowMissing=true`를 받아 탐색용 후보 경로 중
+누락된 local path를 실패가 아닌 missing 결과로 반환할 수 있습니다.
 
 ## 런타임 참고
 
 현재 checkout의 compiled catalog metric입니다.
 
-- Tool count: `22`.
-- `list_tools` payload: `27,707` chars.
-- Tool description: `6,606` chars.
-- Tool schema: `17,988` chars.
+- Tool count: `24`.
+- `list_tools` payload: `32,048` chars.
+- Tool description: `8,544` chars.
+- Tool schema: `20,097` chars.
 
 Runtime 동작:
 
 - Tool catalog는 server creation 시 한 번 조립합니다.
 - Zod-to-JSON-schema 변환은 tool entry별 lazy cache로 수행합니다.
 - Tool call은 controller validation 전에 `args_path`, `args_offset`, `args_length`를 해석합니다.
-- Search session에는 암묵적 `maxResults` cap이 없습니다. 제한된 scan이 필요하면 `maxResults`를 명시합니다.
+- `fs-search`에는 암묵적 `maxResults` cap이 없습니다. 제한된 scan이 필요하면 `maxResults`를 명시합니다.
 - 기본값인 compact envelope에서 본문은 `data.content`에 한 번만 담기고 `data.text` 복제는 생략됩니다.
   `FS_MCP_COMPACT=0`으로 끄면 `data.text`가 복원됩니다.
 - Stdio filtering은 우발적 console output이 MCP JSON-RPC frame을 오염시키기 전에 capture합니다.
