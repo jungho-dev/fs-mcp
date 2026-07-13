@@ -22,7 +22,7 @@ Current benchmarks show where `fs-mcp` reduces that overhead while keeping full 
 |----------|---------------|----------|-----------------|
 | Read 12 files, 4 KB each | One `file-read` batch: `3.11 ms` avg, `1.86 ms` median | Sequential PowerShell reads: `2,617.42 ms` avg, `2,579.75 ms` median | About `842x` faster by average time and `1,387x` faster by median time |
 | Write 20 files, 4 KB each | `args_path` reference: `140` transport chars, `35` token est | Inline JSON payload: `82,911` transport chars, `20,728` token est | `99.83%` fewer transport chars and `20,693` estimated tokens avoided |
-| Normalize one 128 KB text result | Visible display: `498` chars; duplicated `content` slots: `817` chars | Raw text body: `131,072` chars | Full text stays in `data.text` while repeated visible text is kept to a preview |
+| Normalize one 128 KB text result | Visible display: `498` chars; duplicated `content` slots: `817` chars | Raw text body: `131,072` chars | Full text stays in `data.content` while repeated visible text is kept to a preview |
 
 Numbers above were generated on `2026-05-24` from this checkout with seven runs per timed scenario:
 
@@ -128,12 +128,7 @@ candidate reads can return missing local paths as non-error results.
 
 ## Runtime Notes
 
-Current compiled catalog metrics from this checkout:
-
-- Tool count: `24`.
-- `list_tools` payload: `32,048` characters.
-- Tool descriptions: `8,544` characters.
-- Tool schemas: `20,097` characters.
+The full source catalog exposes `24` public tools. Serialized catalog size is build-dependent; measure it from the compiled `out` catalog before using it for token or latency comparisons.
 
 Runtime behavior:
 
@@ -141,8 +136,7 @@ Runtime behavior:
 - Zod-to-JSON-schema conversion is lazy-cached per tool entry.
 - Tool calls resolve `args_path`, `args_offset`, and `args_length` before controller validation.
 - `fs-search` has no implicit `maxResults` cap. Set `maxResults` explicitly when a bounded scan is needed.
-- With the default-on compact envelope the body lives once in `data.content` and the `data.text` copy is omitted;
-  `FS_MCP_COMPACT=0` restores it.
+- The fixed compact envelope keeps the body once in `data.content`; it does not add a `data.text` copy.
 - Stdio filtering captures accidental console output before it can corrupt MCP JSON-RPC frames.
 
 ## Runtime Configuration
@@ -155,9 +149,7 @@ Internal runtime configuration keys are:
 - `blockedCommands`
 - `defaultShell`
 
-`FS_MCP_ALLOWED_DIRECTORIES` can seed allowed directories. On Windows, entries are separated by semicolons.
-`FS_MCP_COMPACT=0` disables the compact envelope and restores the `data.text` copy.
-`FS_MCP_TOOL_PROFILE=fast-coding` narrows `tools/list` to `fs-inspect` only.
+Allowed directories, blocked commands, and default shell are runtime-only values; no environment variable changes their behavior.
 
 ## Client Compatibility
 
@@ -191,9 +183,8 @@ Every dispatched tool result is normalized by `src/cores/responses/responses-too
 - `tokens` uses a lightweight character-based estimate over content text plus serialized structured content.
 - `structuredContent` stores schema version, tool name, status, duration, error detail, original normalized content,
   and original structured payload.
-- With the default-on compact envelope the body lives once in `data.content` and the `data.text` copy is omitted.
-  Batch per-item results carry only `structuredContent` and `isError`, and echoed input strings above 256 bytes
-  become `<N bytes elided>`. `FS_MCP_COMPACT=0` restores the previous shape.
+- The fixed compact envelope keeps the body once in `data.content`. Batch per-item results carry only
+  `structuredContent` and `isError`, and echoed input strings above 256 bytes become `<N bytes elided>`.
 - `_meta.fsMcpResult` stores compact status, duration, content type, error, schema, and tool metadata.
 - Already normalized results are not wrapped again; the visible display text is regenerated.
 
@@ -217,7 +208,7 @@ bun tests/scripts/scripts-verify-optimization-reports.mjs
 bun tests/scripts/scripts-verify-doc-sync.mjs
 ```
 
-`tests/run-all-tests.js` rebuilds `out` unless `FS_MCP_SKIP_BUILD=1` is set, then runs contract and smoke tests.
+`tests/run-all-tests.js` rebuilds `out`, then runs contract and smoke tests.
 Verification scripts under `tests/scripts/` check release shape, source boundaries, optimization reports, and the
 compiled tool surface.
 

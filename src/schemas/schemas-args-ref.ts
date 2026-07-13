@@ -5,7 +5,7 @@
  * @since 2026-05-06
  */
 
-import { z } from "zod";
+import { z } from "zod/v3";
 
 const ArgPtExSh = {
   args_path: z.string().optional().describe("Path to a UTF-8 JSON file containing the complete arguments for this tool."),

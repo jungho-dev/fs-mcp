@@ -15,7 +15,7 @@ import {validatePath} from "@features/filesystem/filesystem-service";
 import {executeGitTool as exctGtTl} from "@features/git/git-service";
 import {GT_INPT_SCHS} from "@schemas/schemas-git";
 import {InspArSc, type InspReqSc} from "@schemas/schemas-inspect";
-import type {z} from "zod";
+import type {z} from "zod/v3";
 
 type InspectRequest = z.infer<typeof InspReqSc>;
 type InspectStatus = "ok" | "partial" | "error";

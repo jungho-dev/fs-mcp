@@ -5,7 +5,7 @@
  * @since 2026-07-04
  */
 
-import {z} from "zod";
+import {z} from "zod/v3";
 
 const WbDmpSch = z.enum(["html", "text", "markdown", "links", "readability"]);
 const WbExDmpSch = z.enum(["text", "markdown", "links", "readability"]);

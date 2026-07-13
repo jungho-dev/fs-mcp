@@ -21,7 +21,7 @@ AI file 작업의 기본 경로는 반복 shell call이 되는 경우가 많고,
 |----------|---------------|----------|-----------|
 | 4 KB 파일 12개 읽기 | 단일 `file-read` batch: 평균 `3.11 ms`, median `1.86 ms` | 순차 PowerShell read: 평균 `2,617.42 ms`, median `2,579.75 ms` | 평균 기준 약 `842x`, median 기준 약 `1,387x` 빠름 |
 | 4 KB 파일 20개 쓰기 | `args_path` reference: transport `140` chars, `35` token est | Inline JSON payload: transport `82,911` chars, `20,728` token est | transport chars `99.83%` 감소, estimated token `20,693`개 회피 |
-| 128 KB text result 정규화 | 표시 display `498` chars, duplicated `content` slot `817` chars | Raw text body `131,072` chars | Full text는 `data.text`에 보존하고 반복 표시 text는 preview로 제한 |
+| 128 KB text result 정규화 | 표시 display `498` chars, duplicated `content` slot `817` chars | Raw text body `131,072` chars | Full text는 `data.content`에 보존하고 반복 표시 text는 preview로 제한 |
 
 위 수치는 현재 checkout에서 `2026-05-24`에 timed scenario별 7회 실행으로 생성했습니다.
 
@@ -126,12 +126,7 @@ field는 참조 JSON object의 field를 override합니다. 큰 text payload는 `
 
 ## 런타임 참고
 
-현재 checkout의 compiled catalog metric입니다.
-
-- Tool count: `24`.
-- `list_tools` payload: `32,048` chars.
-- Tool description: `8,544` chars.
-- Tool schema: `20,097` chars.
+전체 source catalog는 `24`개 public tool을 노출합니다. Serialized catalog 크기는 build에 따라 달라지므로 token 또는 latency 비교에는 compiled `out` catalog를 측정해 사용합니다.
 
 Runtime 동작:
 
@@ -139,8 +134,7 @@ Runtime 동작:
 - Zod-to-JSON-schema 변환은 tool entry별 lazy cache로 수행합니다.
 - Tool call은 controller validation 전에 `args_path`, `args_offset`, `args_length`를 해석합니다.
 - `fs-search`에는 암묵적 `maxResults` cap이 없습니다. 제한된 scan이 필요하면 `maxResults`를 명시합니다.
-- 기본값인 compact envelope에서 본문은 `data.content`에 한 번만 담기고 `data.text` 복제는 생략됩니다.
-  `FS_MCP_COMPACT=0`으로 끄면 `data.text`가 복원됩니다.
+- 고정 compact envelope에서 본문은 `data.content`에 한 번만 담기고 `data.text` 복제는 추가하지 않습니다.
 - Stdio filtering은 우발적 console output이 MCP JSON-RPC frame을 오염시키기 전에 capture합니다.
 
 ## Runtime Configuration
@@ -153,9 +147,7 @@ Runtime configuration은 in-memory only입니다. 서버는 first-run config fil
 - `blockedCommands`
 - `defaultShell`
 
-`FS_MCP_ALLOWED_DIRECTORIES`로 allowed directory를 초기화할 수 있습니다. Windows에서는 semicolon으로
-entry를 구분합니다. `FS_MCP_COMPACT=0`은 compact envelope를 끄고 `data.text` 복제를 복원합니다.
-`FS_MCP_TOOL_PROFILE=fast-coding`은 `tools/list`를 `fs-inspect`로만 좁힙니다.
+Allowed directory, blocked command, default shell은 runtime-only 값이며 환경변수로 동작을 바꾸지 않습니다.
 
 ## Client 호환성
 
@@ -189,9 +181,8 @@ project root/
 - `tokens`는 content text와 serialized structured content를 문자 수 기반 경량 추정치로 표시합니다.
 - `structuredContent`는 schema version, tool name, status, duration, error detail, 원본 normalized content,
   원본 structured payload를 저장합니다.
-- 기본값인 compact envelope에서 본문은 `data.content`에 한 번만 담기고 `data.text` 복제는 생략됩니다.
-  Batch per-item result는 `structuredContent`와 `isError`만 담고 256 byte 초과 input 문자열은
-  `<N bytes elided>`로 echo됩니다. `FS_MCP_COMPACT=0`으로 끄면 이전 형태가 복원됩니다.
+- 고정 compact envelope에서 본문은 `data.content`에 한 번만 담깁니다. Batch per-item result는
+  `structuredContent`와 `isError`만 담고 256 byte 초과 input 문자열은 `<N bytes elided>`로 echo됩니다.
 - `_meta.fsMcpResult`는 status, duration, content type, error, schema, tool metadata를 compact하게 저장합니다.
 - 이미 정규화된 result는 다시 감싸지 않고 표시 text만 재생성합니다.
 
@@ -215,8 +206,7 @@ bun tests/scripts/scripts-verify-optimization-reports.mjs
 bun tests/scripts/scripts-verify-doc-sync.mjs
 ```
 
-`tests/run-all-tests.js`는 `FS_MCP_SKIP_BUILD=1`이 설정되지 않은 경우 `out`을 다시 build한 뒤 contract 및
-smoke test를 실행합니다. `tests/scripts/`의 verification script는 release shape, source boundary,
+`tests/run-all-tests.js`는 `out`을 다시 build한 뒤 contract 및 smoke test를 실행합니다. `tests/scripts/`의 verification script는 release shape, source boundary,
 optimization report, compiled tool surface를 확인합니다.
 
 ## 문서

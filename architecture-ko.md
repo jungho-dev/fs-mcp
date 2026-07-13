@@ -90,8 +90,7 @@ tests -> out
 | `tools-git.ts` | 7 | `git-set-workdir`, `git-status`, `git-diff`, `git-show`, `git-add`, `git-commit`, `git-amend` |
 | `tools-web.ts` | 4 | `web-fetch`, `web-render`, `web-extract`, `download-to-file` |
 
-전체 public catalog 크기는 rust-fs-mcp 표면과 동일한 `24`개 tool입니다. `FS_MCP_TOOL_PROFILE=fast-coding`은
-`tools/list`를 `fs-inspect` 하나로 좁히며 dispatch 호환성은 전체 surface를 유지합니다.
+전체 public catalog 크기는 rust-fs-mcp 표면과 동일한 `24`개 tool입니다. `tools/list`는 항상 전체 catalog를 반환합니다.
 
 `tools-dispatcher.ts`는 대응되는 `call_tool` registry를 담당합니다. Catalog와 dispatcher는 같은 이름을
 노출해야 합니다. `tests/scripts/scripts-verify-tool-surface.mjs`는 name equality, uniqueness, essential git
@@ -165,8 +164,8 @@ config 없이도 동작하도록 `-c user.name=fs-mcp`와 `-c user.email=fs-mcp@
 ### Web
 
 Web tier는 rust-fs-mcp를 미러링합니다. `web-fetch`는 per-hop SSRF guard, 수동 redirect 검사, body-size cap을
-갖춘 TIER-1 native fetch 경로입니다. `web-render`는 JS/SPA page를 위해 obscura headless browser를 호출합니다
-(`FS_MCP_OBSCURA_BIN`으로 binary override, `evalScript`는 `FS_MCP_ALLOW_PRIVATE_URLS=1` 필요).
+갖춘 TIER-1 native fetch 경로입니다. `web-render`는 JS/SPA page를 위해 obscura headless browser를 호출합니다.
+`evalScript`는 SSRF guard를 우회할 수 있어 비활성화합니다.
 `web-extract`는 보유 HTML을 offline으로 text, markdown, links, readability로 변환하고, `download-to-file`은
 fetch한 body를 `allowedDirectories` 안에 기록합니다. `isUrl`을 쓰는 `file-read`도 동일한 guarded fetch tier를
 경유합니다.
@@ -185,9 +184,8 @@ fetch한 body를 `allowedDirectories` 안에 기록합니다. `isUrl`을 쓰는 
   machine-readable `structuredContent`.
 - Status, duration, content type, error text, schema version, tool name을 담는 compact `_meta.fsMcpResult`.
 
-기본값인 compact envelope에서 `data.content`는 전체 본문을 담는 단일 source이고 `data.text` 복제는 생략됩니다.
-`FS_MCP_COMPACT=0`(또는 `false`)으로 끄면 `data.text`에 combined text가 복원됩니다. Batch 응답도 같은 flag를
-따릅니다. compact에서 per-item `result`는 `structuredContent`와 `isError`만 담고 content 복제와
+고정 compact envelope에서 `data.content`는 전체 본문을 담는 단일 source이고 `data.text` 복제는 생략됩니다.
+Batch per-item `result`는 `structuredContent`와 `isError`만 담고 content 복제와
 `textContent`/`listing` 같은 본문 복제 key를 제거하며, echo되는 `input`의 256 byte 초과 문자열 값은
 `<N bytes elided>`로 대체됩니다. 본문은 full mode tool(`file-read`, `file-read-line-range`, `dir-list`,
 `fs-search`, `web-fetch`, `web-extract`, `download-to-file`)의 batch text에 한 번만 담깁니다.
@@ -200,9 +198,7 @@ display에서 ANSI escape sequence를 제거한 text를 받습니다.
 
 - Runtime configuration은 in-memory only입니다.
 - Mutable key는 `allowedDirectories`, `blockedCommands`, `defaultShell`입니다.
-- `FS_MCP_ALLOWED_DIRECTORIES`로 allowed directory를 초기화할 수 있습니다. Windows entry는 semicolon으로 구분합니다.
-- `FS_MCP_COMPACT=0`은 compact envelope를 끄고 `data.text` 복제와 batch per-item content를 복원합니다.
-- `FS_MCP_TOOL_PROFILE=fast-coding`은 `tools/list`를 `fs-inspect`로만 좁힙니다.
+- Runtime 값은 프로젝트 환경변수로 초기화하거나 override하지 않습니다.
 - Windows 기본 shell 선택은 PowerShell 7, `ComSpec`, system `cmd.exe` 순서를 따릅니다. Non-Windows 기본값은
   `$SHELL`, macOS의 `/bin/zsh`, 또는 `/bin/sh`입니다.
 - Current client state는 `config-client.ts`에서 추적하며 git-session scoping에 사용됩니다.
@@ -219,14 +215,12 @@ display에서 ANSI escape sequence를 제거한 text를 받습니다.
 
 ## Performance And Safety Design
 
-- 현재 compiled catalog는 `20`개 tool을 노출합니다.
-- 현재 checkout에서 측정한 `list_tools` payload는 `24,003` chars입니다.
-- Tool description은 총 `5,613` chars, schema는 총 `15,568` chars입니다.
+- 전체 source catalog는 `24`개 public tool을 노출하며, build 후 compiled release surface를 검증합니다.
+- Serialized catalog 크기는 build에 따라 달라지므로 token 또는 latency 비교에는 compiled `out` catalog를 측정해 사용합니다.
 - Tool catalog는 한 번 조립하고 input schema JSON은 lazy cache로 생성합니다.
-- Batch-capable tool은 `paths`, `items`, `sessionIds` 같은 array를 받습니다.
+- Batch-capable tool은 `paths`, `items` 같은 array를 받습니다.
 - 큰 inline argument는 `args_path` 또는 tool-specific path-backed field로 전달할 수 있습니다.
-- Batch summary와 duplicated normalized `content` slot은 큰 text를 preview로 줄이고 full text는 `data.text` 또는
-  중첩 `structuredContent.textContent`에 보존합니다.
+- Batch summary와 duplicated normalized `content` slot은 큰 text를 preview로 줄이고 full body는 `data.content`에 한 번 보존합니다.
 - File operation은 configured timeout boundary와 feature-layer path resolution을 사용합니다.
 - Stdio transport는 MCP JSON output을 오염시키기 전에 우발적 output을 capture합니다.
 - 테스트는 npm에 배포되는 런타임 표면과 같은 compiled `out` tree를 검증합니다.
@@ -248,7 +242,7 @@ heuristic을 사용하므로 client-visible saving은 MCP host가 `content`와 `
 
 - `bun x tsc --noEmit`는 source TypeScript contract를 검증합니다.
 - `bun tests/run-all-tests.js`는 contract 및 smoke test를 실행합니다.
-- `tests/run-all-tests.js`는 `FS_MCP_SKIP_BUILD=1`이 설정되지 않은 경우 `out`을 다시 build합니다.
+- `tests/run-all-tests.js`는 contract 및 smoke test 전에 `out`을 다시 build합니다.
 - `tests/scripts/performance-benchmark.mjs`는 pure Bun read, sequential shell read, fs-mcp batch read,
   list-tools payload size, large-result normalization을 비교합니다.
 - `tests/scripts/write-files-args-path-benchmark.mjs`는 inline payload transport와 `args_path` reference를 비교합니다.

@@ -6,7 +6,7 @@
  */
 
 import type {GT_INPT_SCHS, GitToolName} from "@schemas/schemas-git";
-import type {z} from "zod";
+import type {z} from "zod/v3";
 
 export declare type GitArgsMap = {
   [K in GitToolName]: z.infer<(typeof GT_INPT_SCHS)[K]>;

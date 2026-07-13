@@ -17,15 +17,10 @@ import {readFileInternal as rdFlInt} from "@features/filesystem/filesystem-servi
 import {GtCfVaArSc, StCfVaArSc2} from "@schemas/schemas-config";
 
 const ALLW_CFG_KYS = new Set(CFG_FLD_KYS);
-const CDLO = process.env.FS_MCP_DEBUG_CONFIG === "1";
 const SLSR = /\r?\n/;
 
 // 1. Log config debug -----------------------------------------------------------------------------
-function logConfigDebug(message: string): void {
-  if (CDLO) {
-    console.error(message);
-  }
-}
+function logConfigDebug(_message: string): void {}
 
 // 1. Normalize array config value -----------------------------------------------------------------
 function normalizeArrayConfigValue(key: string, value: unknown): unknown {

@@ -91,8 +91,7 @@ tests -> out
 | `tools-git.ts` | 7 | `git-set-workdir`, `git-status`, `git-diff`, `git-show`, `git-add`, `git-commit`, `git-amend` |
 | `tools-web.ts` | 4 | `web-fetch`, `web-render`, `web-extract`, `download-to-file` |
 
-Total public catalog size: `24` tools, matching the rust-fs-mcp surface. `FS_MCP_TOOL_PROFILE=fast-coding`
-narrows `tools/list` to `fs-inspect` while dispatch compatibility keeps the full surface.
+Total public catalog size is `24` tools, matching the rust-fs-mcp surface. `tools/list` always returns the full catalog.
 
 `tools-dispatcher.ts` owns the matching `call_tool` registry. The catalog and dispatcher must expose the same
 names. `tests/scripts/scripts-verify-tool-surface.mjs` checks name equality, uniqueness, essential git filtering,
@@ -168,8 +167,8 @@ overrides only the author through `--author`.
 ### Web
 
 The web tier mirrors rust-fs-mcp: `web-fetch` is the TIER-1 native fetch path with a per-hop SSRF guard, manual
-redirect checks, and a body-size cap; `web-render` shells out to the obscura headless browser for JS/SPA pages
-(`FS_MCP_OBSCURA_BIN` overrides the binary, and `evalScript` requires `FS_MCP_ALLOW_PRIVATE_URLS=1`);
+redirect checks, and a body-size cap; `web-render` shells out to the obscura headless browser for JS/SPA pages.
+`evalScript` is disabled because it can bypass the SSRF guard.
 `web-extract` converts already-held HTML into text, markdown, links, or readability main-content offline; and
 `download-to-file` writes fetched bodies inside `allowedDirectories`. `file-read` with `isUrl` routes through the
 same guarded fetch tier.
@@ -188,9 +187,8 @@ The normalized contract has three layers:
   content, and original structured payload.
 - Compact `_meta.fsMcpResult` with status, duration, content types, error text, schema version, and tool name.
 
-With the default-on compact envelope, `data.content` is the single full-text source and the `data.text` copy is
-omitted; `FS_MCP_COMPACT=0` (or `false`) restores `data.text` with the combined text. Batch responses follow the
-same flag: in compact mode each per-item `result` carries only `structuredContent` and `isError`, body-copy keys
+The fixed compact envelope keeps `data.content` as the single full-text source and omits the `data.text` copy.
+Each per-item `result` carries only `structuredContent` and `isError`; body-copy keys
 such as `textContent`/`listing` are dropped, and echoed `input` string values above 256 bytes are replaced with
 `<N bytes elided>`. The body lives once in the batch text of full-mode tools (`file-read`,
 `file-read-line-range`, `dir-list`, `fs-search`, `web-fetch`, `web-extract`, `download-to-file`).
@@ -203,9 +201,7 @@ normalization. Gemini clients receive the same display without ANSI escape seque
 
 - Runtime configuration is in-memory only.
 - Mutable keys are `allowedDirectories`, `blockedCommands`, and `defaultShell`.
-- `FS_MCP_ALLOWED_DIRECTORIES` can seed allowed directories. Windows entries are semicolon-separated.
-- `FS_MCP_COMPACT=0` disables the compact envelope and restores the `data.text` copy plus batch per-item content.
-- `FS_MCP_TOOL_PROFILE=fast-coding` narrows `tools/list` to `fs-inspect` only.
+- Runtime values are not seeded or overridden through project environment variables.
 - Default shell selection prefers PowerShell 7 on Windows, then `ComSpec`, then system `cmd.exe`; non-Windows
   defaults use `$SHELL`, `/bin/zsh` on macOS, or `/bin/sh`.
 - Current client state is tracked in `config-client.ts` and contributes to git-session scoping.
@@ -222,14 +218,12 @@ normalization. Gemini clients receive the same display without ANSI escape seque
 
 ## Performance And Safety Design
 
-- Current compiled catalog exposes `20` tools.
-- Current measured `list_tools` payload is `24,003` characters in this checkout.
-- Tool descriptions total `5,613` characters and schemas total `15,568` characters in this checkout.
+- The full source catalog exposes `24` public tools; verify the compiled release surface after a build.
+- Serialized catalog size is build-dependent, so measure the compiled `out` catalog before using it for token or latency comparisons.
 - Tool catalogs are assembled once and input schema JSON is generated through lazy cache.
-- Batch-capable tools accept arrays such as `paths`, `items`, and `sessionIds`.
+- Batch-capable tools accept arrays such as `paths` and `items`.
 - Large inline arguments can be passed through `args_path` or specific path-backed fields.
-- Batch summaries and duplicated normalized `content` slots preview large text while retaining full text in
-  `data.text` or nested `structuredContent.textContent`.
+- Batch summaries and duplicated normalized `content` slots preview large text while retaining the full body once in `data.content`.
 - File operations use configured timeout boundaries and feature-layer path resolution.
 - Stdio transport captures accidental output before it can corrupt MCP JSON output.
 - Tests exercise the compiled `out` tree, which is the runtime surface published to npm.
@@ -250,7 +244,7 @@ heuristic, so client-visible savings depend on how the MCP host forwards `conten
 
 - `bun x tsc --noEmit` validates the source TypeScript contract.
 - `bun tests/run-all-tests.js` runs contract and smoke tests.
-- `tests/run-all-tests.js` rebuilds `out` unless `FS_MCP_SKIP_BUILD=1` is set.
+- `tests/run-all-tests.js` rebuilds `out` before running contract and smoke tests.
 - `tests/scripts/performance-benchmark.mjs` compares pure Bun reads, sequential shell reads, fs-mcp batch reads,
   list-tools payload size, and large-result normalization.
 - `tests/scripts/write-files-args-path-benchmark.mjs` compares inline payload transport with `args_path` references.

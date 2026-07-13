@@ -6,7 +6,7 @@
  */
 
 import { CFG_QRY_KYS, isConfigQueryKey as isCfgQryKy } from "@features/config/config-metadata";
-import { z } from "zod";
+import { z } from "zod/v3";
 
 export const GtCfVaArSc = z.object({
   key: z.string().refine((value) => isCfgQryKy(value), {

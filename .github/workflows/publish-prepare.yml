@@ -47,6 +47,10 @@ jobs:
           set -euo pipefail
           package_name="$(bun -e 'const pkg = await Bun.file("package.json").json(); console.log(pkg.name);')"
           package_version="$(bun -e 'const pkg = await Bun.file("package.json").json(); console.log(pkg.version);')"
+          if [ "$package_name" != "@jungho-dev/fs-mcp" ]; then
+            echo "Unexpected package name: $package_name" >&2
+            exit 1
+          fi
           echo "package_name=$package_name" >> "$GITHUB_OUTPUT"
           echo "package_version=$package_version" >> "$GITHUB_OUTPUT"
           echo "Prepared $package_name@$package_version."

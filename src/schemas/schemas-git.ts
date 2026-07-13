@@ -5,7 +5,7 @@
  * @since 2026-05-03
  */
 
-import { z } from "zod";
+import { z } from "zod/v3";
 
 const OptnRpPthSch = z.string().optional();
 const CmmtRfSch = z.string();

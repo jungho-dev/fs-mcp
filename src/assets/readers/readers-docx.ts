@@ -47,7 +47,7 @@ type DocxEditContent = {
   expected_replacements?: number;
 };
 
-// 1. Is docx edit content ------------------------------------------------------------------------―
+// 1. Is docx edit content -------------------------------------------------------------------------
 function isDocxEditContent(value: unknown): value is DocxEditContent {
   return typeof value === "object" && value !== null;
 }
@@ -57,7 +57,7 @@ const HFXP = ["word/header1.xml", "word/header2.xml", "word/header3.xml", "word/
 
 // 1. Pretty-print XML: split tags onto separate lines with indentation ----------------------------
 // Preserves text node content exactly. compact→pretty→compact is lossless.
-// 2. Pretty print XML ----------------------------------------------------------------------------―
+// 2. Pretty print XML -----------------------------------------------------------------------------
 function prettyPrintXml(xml: string): string {
   const parts = xml.split(XTBP);
   const lines: string[] = [];
@@ -85,7 +85,7 @@ function prettyPrintXml(xml: string): string {
   return lines.join("\n");
 }
 
-// 2. Compact pretty XML lines --------------------------------------------------------------------―
+// 2. Compact pretty XML lines ---------------------------------------------------------------------
 // Does NOT touch whitespace inside <w:t> text nodes.
 // 3. Compact XML ----------------------------------------------------------------------------------
 function compactXml(prettyXml: string): string {
@@ -95,7 +95,7 @@ function compactXml(prettyXml: string): string {
     .join("");
 }
 
-// 2. DOCX ZIP helpers ----------------------------------------------------------------------------―
+// 2. DOCX ZIP helpers -----------------------------------------------------------------------------
 
 interface DocxZipContents {
   documentXml: string;
@@ -130,9 +130,9 @@ function loadDocxZip(buf: Buffer): DocxZipContents {
   };
 }
 
-// 3. Outline extraction --------------------------------------------------------------------------―
+// 3. Outline extraction ---------------------------------------------------------------------------
 
-// 3. Extract a text-bearing outline from document.xml --------------------------------------------―
+// 3. Extract a text-bearing outline from document.xml ---------------------------------------------
 // Walks direct children of <w:body> and for each:
 // - w:p (paragraph): extracts text from <w:t> elements, shows style
 // - w:tbl (table): extracts cell text for each row
@@ -264,7 +264,7 @@ function extractOutline(xml: string): string {
 
 // 4. XML text extraction helpers ------------------------------------------------------------------
 
-// 6. Extract all text ----------------------------------------------------------------------------―
+// 6. Extract all text -----------------------------------------------------------------------------
 function extractAllText(xml: string): string {
   const texts: string[] = [];
 
@@ -276,7 +276,7 @@ function extractAllText(xml: string): string {
   return texts.join("").trim();
 }
 
-// 7. Extract text fragments ----------------------------------------------------------------------―
+// 7. Extract text fragments -----------------------------------------------------------------------
 function extractTextFragments(xml: string): string[] {
   const fragments: string[] = [];
 
@@ -320,7 +320,7 @@ function extractTableRows(tableXml: string): string[][] {
 
 // 9. Extract nested XML elements ------------------------------------------------------------------
 // Returns array of full element strings including open/close tags.
-// 11. Extract nested elements --------------------------------------------------------------------―
+// 11. Extract nested elements ---------------------------------------------------------------------
 function extractNestedElements(xml: string, tagName: string): string[] {
   const results: string[] = [];
   const openTag = `<${tagName}`;
@@ -446,7 +446,7 @@ function splitTopLevelElements(xml: string): string[] {
   return elements.filter((e) => e.length > 0);
 }
 
-// 13. Extract header footer outline --------------------------------------------------------------―
+// 13. Extract header footer outline ---------------------------------------------------------------
 function extractHeaderFooterOutline(zip: PizZip): string {
   const parts: string[] = [];
   const zipFiles = zip.files;
@@ -472,16 +472,16 @@ function extractHeaderFooterOutline(zip: PizZip): string {
   return parts.length > 0 ? `\n\nHeaders/Footers:\n${parts.join("\n")}` : "";
 }
 
-// ------------------------------------------------------------------------------------------------―
+// -------------------------------------------------------------------------------------------------
 // DOCX creation helpers
-// ------------------------------------------------------------------------------------------------―
+// -------------------------------------------------------------------------------------------------
 
 // 14. Escape XML ----------------------------------------------------------------------------------
 function escapeXml(text: string): string {
   return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&apos;");
 }
 
-// 15. Create minimal docx zip --------------------------------------------------------------------―
+// 15. Create minimal docx zip ---------------------------------------------------------------------
 function createMinimalDocxZip(documentXml: string): PizZip {
   const zip = new PizZip();
 
@@ -532,11 +532,11 @@ function createMinimalDocxZip(documentXml: string): PizZip {
   return zip;
 }
 
-// ------------------------------------------------------------------------------------------------―
+// -------------------------------------------------------------------------------------------------
 // Count occurrences helper
-// ------------------------------------------------------------------------------------------------―
+// -------------------------------------------------------------------------------------------------
 
-// 16. Count occurrences --------------------------------------------------------------------------―
+// 16. Count occurrences ---------------------------------------------------------------------------
 function countOccurrences(haystack: string, needle: string): number {
   let count = 0;
   let pos = haystack.indexOf(needle);
@@ -547,11 +547,11 @@ function countOccurrences(haystack: string, needle: string): number {
   return count;
 }
 
-// ------------------------------------------------------------------------------------------------―
+// -------------------------------------------------------------------------------------------------
 // DocxFileHandler — implements FileHandler
-// ------------------------------------------------------------------------------------------------―
+// -------------------------------------------------------------------------------------------------
 
-// 17. Docx file handler --------------------------------------------------------------------------―
+// 17. Docx file handler ---------------------------------------------------------------------------
 export class DocxFileHandler implements FileHandler {
   private readonly extensions = [".docx"];
 
@@ -560,7 +560,7 @@ export class DocxFileHandler implements FileHandler {
     return this.extensions.some((e) => path.toLowerCase().endsWith(e));
   }
 
-  // 12. Read DOCX content ------------------------------------------------------------------------―
+  // 12. Read DOCX content -------------------------------------------------------------------------
   // Default (offset=0, no explicit length or default length): returns outline
   // With offset/length: returns raw pretty-printed XML with line pagination
 
@@ -615,7 +615,7 @@ export class DocxFileHandler implements FileHandler {
   // Content is plain text — each line becomes a paragraph.
   // Lines starting with # become headings (# = Heading1, ## = Heading2, etc.)
 
-  // 20. Write ------------------------------------------------------------------------------------―
+  // 20. Write -------------------------------------------------------------------------------------
   async write(path: string, content: unknown, mode?: "rewrite" | "append"): Promise<void> {
     if (mode === "append") {
       throw new Error("DOCX append not supported. Use edit_block to modify existing DOCX files.");

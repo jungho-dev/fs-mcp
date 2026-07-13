@@ -25,19 +25,7 @@ interface SearchReplace {
 
 // Threshold for fuzzy matching - similarity must be at least this value to be considered
 // (0-1 scale where 1 is perfect match and 0 is completely different).
-// Override via env FS_MCP_EDIT_FUZZY_THRESHOLD when callers need a stricter or looser bound.
-function resolveFuzzyThreshold(): number {
-  const raw = process.env.FS_MCP_EDIT_FUZZY_THRESHOLD;
-  if (raw === undefined || raw === "") {
-    return 0.7;
-  }
-  const parsed = Number.parseFloat(raw);
-  if (!Number.isFinite(parsed) || parsed <= 0 || parsed > 1) {
-    return 0.7;
-  }
-  return parsed;
-}
-const FZZY_THRS = resolveFuzzyThreshold();
+const FZZY_THRS = 0.7;
 
 // 1. Extract character code data from diff --------------------------------------------------------
 // @param expected The string that was searched for

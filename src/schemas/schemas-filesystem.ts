@@ -5,7 +5,7 @@
  * @since 2026-05-02
  */
 
-import {z} from "zod";
+import {z} from "zod/v3";
 
 const IWCD = "Inline text accepted. For very large generated or pasted payloads, content_path or args_path can still reduce transport overhead.";
 const WCPD = "Read UTF-8 content from this file. Preferred for large generated or pasted text.";

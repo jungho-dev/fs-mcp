@@ -116,7 +116,7 @@ export async function handleWebRender(args: unknown): Promise<ServerResult> {
   // evalScript runs arbitrary JS in the browser and can reach internal hosts, bypassing the IP
   // guard, so it is gated behind the same private-access opt-in as the SSRF boundary.
   if (parsed.evalScript !== undefined && parsed.evalScript.length > 0 && !alwPrvUrls()) {
-    return crtErrRes("web-render evalScript can reach internal networks and bypass the SSRF guard; set FS_MCP_ALLOW_PRIVATE_URLS=1 to enable it");
+    return crtErrRes("web-render evalScript is disabled because it can bypass the SSRF guard");
   }
   try {
     await ensrUrlAlw(parsed.url, alwPrvUrls());

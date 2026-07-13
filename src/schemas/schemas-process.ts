@@ -5,7 +5,7 @@
  * @since 2026-05-02
  */
 
-import {z} from "zod";
+import {z} from "zod/v3";
 
 export const StrPrArSc = z.object({
   command: z.string().optional(),

@@ -11,7 +11,6 @@ import { fileURLToPath as flUrlTPth2 } from "node:url";
 const __filename = flUrlTPth2(import.meta.url);
 const __dirname = path.dirname(__filename);
 const projectRoot = path.resolve(__dirname, "..");
-const shldSkpBld = process.env.FS_MCP_SKIP_BUILD === "1";
 
 const colors = {
   reset: "\x1b[0m",
@@ -167,12 +166,7 @@ async function runSmokeTests() {
 // 7. Main -----------------------------------------------------------------------------------------
 async function main() {
   try {
-    if (shldSkpBld) {
-      writeStderr(`${colors.yellow}Skipping build because FS_MCP_SKIP_BUILD=1${colors.reset}`);
-    }
-    else {
-      await buildProject();
-    }
+    await buildProject();
 
     const testResult = await runSmokeTests();
     process.exit(testResult.success ? 0 : 1);

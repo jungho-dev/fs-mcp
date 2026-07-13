@@ -2,22 +2,25 @@
 
 ## [Unreleased]
 
+* remove project environment-variable overrides; compact responses, tool catalog, SSRF policy, edit threshold, runtime settings, test build, and benchmark settings now use fixed behavior
+* restore the published npm package name to `@jungho-dev/fs-mcp` with the `fs-mcp` binary
+* lock npm publish workflows to `@jungho-dev/fs-mcp` and the `jungho-dev/fs-mcp` repository guard
 * align the public tool surface with rust-fs-mcp (24 tools): rename `file-lines`/`dir-mk`/`file-copy`/`file-move`/`file-remove`/`file-infos`/`search-regex`/`git-cwd` to `file-read-line-range`/`dir-create`/`path-copy`/`path-move`/`path-remove`/`path-stat`/`fs-search`/`git-set-workdir`, and drop the `search-start`/`search-get`/`search-stop` session tools
 * switch `file-read-line-range` to rust-fs-mcp semantics (1-based `start_line` plus `line_count`), drop the dead `options` field from `file-read` items, and enforce integer `start_line`/`end_line` on `file-edit-lines`
-* add `web-fetch`, `web-render` (obscura headless browser), `web-extract`, and `download-to-file` with a shared SSRF guard (`FS_MCP_ALLOW_PRIVATE_URLS`), manual per-hop redirect checks, and body-size caps; `file-read` with `isUrl` now routes through the same guarded fetch tier
+* add `web-fetch`, `web-render` (obscura headless browser), `web-extract`, and `download-to-file` with a permanent SSRF guard, manual per-hop redirect checks, and body-size caps; `file-read` with `isUrl` now routes through the same guarded fetch tier
 * add `git-amend` (`--no-edit` message reuse, `resetAuthor`, HEAD precheck) and align git tools with rust-fs-mcp: `git-diff` gains `check` and drops `autoExclude`/`includeUntracked`, `git-show` accepts `objects[]` with `stat`, `git-add` requires explicit paths or `all`/`update`, and option-like (`-` prefixed) revisions/objects are rejected
 
 * add `file-edit-lines` for 1-based inclusive line range replace, insert (`after: true`), and delete with dominant EOL (CRLF/LF) detection, EOL-normalized replacements, and `expected_lines` validation
 * add `fs-inspect`, a read-only composite inspection tool bundling count-files, search, json-pick, snippet, and git-status requests into one call with a per-call `maxSnippetChars` evidence budget and `scannedFiles`/`bytesRead`/`snippetChars`/`truncated` metrics
-* always inject `-c user.name=fs-mcp -c user.email=fs-mcp@example.invalid` into `git-commit` so commits work without local git config while `author` still overrides the author only
-* add `FS_MCP_TOOL_PROFILE=fast-coding` to narrow `tools/list` to `fs-inspect` while dispatch compatibility keeps the full surface
-* adopt the default-on compact envelope matching the rust-fs-mcp contract: drop the `data.text` copy, keep the full body once in `data.content`, reduce batch per-item results to `structuredContent` plus `isError`, drop `textContent`/`listing` body copies, and elide echoed input strings above 256 bytes; `FS_MCP_COMPACT=0` restores the previous shape
-* run `file-read`, `file-lines`, and `dir-list` batches in full text mode so the complete body lands in the batch text like `search-regex` and `search-get`
+* inject `-c user.name=fs-mcp -c user.email=fs-mcp@example.invalid` into `git-commit` and `git-amend` so commits work without local git config while `author` still overrides the author only
+* always return the full public catalog from `tools/list`
+* fix the compact envelope contract: drop the `data.text` copy, keep the full body once in `data.content`, reduce batch per-item results to `structuredContent` plus `isError`, drop `textContent`/`listing` body copies, and elide echoed input strings above 256 bytes
+* run `file-read`, `file-read-line-range`, and `dir-list` batches in full text mode so the complete body lands in the batch text
 * graceful SIGINT/SIGTERM shutdown that terminates active ripgrep sessions and closes the MCP server before exit
 * surface git tool validation failures with structured `Validation error for <tool>: ...` messages and tag transport failures with the tool name
 * clear early-termination timers when a search session closes, errors out, or is terminated explicitly so no orphaned timers remain
 * replace the ad-hoc `__ERROR__:` string rejection in `withTimeout` with a `TimeoutError` carrying `code = "ETIMEDOUT"` for consistent error branching
-* allow overriding the edit fuzzy match threshold through the `FS_MCP_EDIT_FUZZY_THRESHOLD` environment variable
+* fix the edit fuzzy match threshold at `0.7`
 * replace exact `gpt-tokenizer` result token counts with lightweight estimates to remove cold large-payload stalls
 * preview duplicate large text in batch and normalized envelopes while preserving full text in structured payloads
 * add `tests/scripts/performance-benchmark.mjs` for repeatable pure-shell, pure-Bun, fs-mcp, catalog, and normalization benchmarks
@@ -405,3 +408,7 @@
 ## \[ 1.7.9 \]
 
 - 2026-07-04T05:18:49.468Z
+
+## \[ 1.8.0 \]
+
+- 2026-07-13T14:10:28.954Z

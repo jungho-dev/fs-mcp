@@ -26,7 +26,6 @@ export declare interface StandardToolOutput {
   data: {
     content: SrvrResCont[];
     structuredContent: ServerResult["structuredContent"] | null;
-    text?: string;
   };
   durationMs: number | null;
   error: ToolResultError | null;
@@ -43,21 +42,10 @@ const DSTP = /<\|endoftext\|>/g;
 const DST = "<|endoftext|>";
 const DSTR = "<|endoftext |>";
 
-// Default-on compact envelope: drops the data.text copy that duplicates data.content for
-// token-sensitive clients. Opt out with FS_MCP_COMPACT=0 (or false) to restore data.text.
-function resolveCompactEnabled(): boolean {
-  const raw = process.env.FS_MCP_COMPACT;
-
-  if (raw === undefined || raw === "") {
-    return true;
-  }
-  return raw !== "0" && raw !== "false";
-}
-const CMPC_ENVL = resolveCompactEnabled();
-
 // 0. Compact envelope flag ------------------------------------------------------------------------
+// The compact envelope is the fixed response contract.
 export function isCompactEnvelopeEnabled(): boolean {
-  return CMPC_ENVL;
+  return true;
 }
 
 // 1. Normalize content item -----------------------------------------------------------------------
@@ -153,8 +141,7 @@ function createResultMetadata(toolName: string, result: ServerResult, content: S
 }
 
 // 6. Create standard output -----------------------------------------------------------------------
-// Compact envelope keeps data.content as the single full-text source; data.text is only added
-// when FS_MCP_COMPACT is disabled to restore the duplicated combined-text field.
+// The compact envelope keeps data.content as the single full-text source.
 function createStandardOutput(toolName: string, result: ServerResult, content: SrvrResCont[], durationMs?: number): StandardToolOutput {
   const status: ToolResultStatus = result.isError === true ? "error" : "success";
   const strcCont = sanitizeJson(result.structuredContent ?? null) as ServerResult["structuredContent"] | null;
@@ -163,9 +150,6 @@ function createStandardOutput(toolName: string, result: ServerResult, content: S
     structuredContent: strcCont,
   };
 
-  if (!CMPC_ENVL) {
-    data.text = createCombinedText(content);
-  }
   const stndOtpt: StandardToolOutput = {
     data,
     durationMs: durationMs ?? null,
@@ -194,7 +178,6 @@ export function isStandardToolOutput(value: unknown): value is StandardToolOutpu
     (candidate.error === null || typeof candidate.error === "object") &&
     typeof data === "object" &&
     data !== null &&
-    (data.text === undefined || typeof data.text === "string") &&
     Array.isArray(data.content) &&
     Object.hasOwn(data, "structuredContent")
   );

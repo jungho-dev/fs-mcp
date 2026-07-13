@@ -6,7 +6,7 @@
  */
 
 import {getSystemInfo as gtSystInf} from "@cores/runtime/runtime-info";
-import type {ZodTypeAny} from "zod";
+import type {ZodTypeAny} from "zod/v3";
 import {zodToJsonSchema as zdTJsnSch} from "zod-to-json-schema";
 
 const systemInfo = gtSystInf();

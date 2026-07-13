@@ -67,36 +67,18 @@ async function testWebExtractRequiresInput() {
 
 // 6. web-fetch blocks loopback ------------------------------------------------------------------------
 async function testWebFetchBlocksLoopback() {
-  const previous = process.env.FS_MCP_ALLOW_PRIVATE_URLS;
-  delete process.env.FS_MCP_ALLOW_PRIVATE_URLS;
+  const result = await dsptTlCll("web-fetch", { url: "http://127.0.0.1/" });
 
-  try {
-    const result = await dsptTlCll("web-fetch", { url: "http://127.0.0.1/" });
-    assert.equal(result.isError, true);
-    assert.equal(JSON.stringify(result.structuredContent).includes("Blocked non-public address"), true);
-  }
-  finally {
-    if (previous !== undefined) {
-      process.env.FS_MCP_ALLOW_PRIVATE_URLS = previous;
-    }
-  }
+  assert.equal(result.isError, true);
+  assert.equal(JSON.stringify(result.structuredContent).includes("Blocked non-public address"), true);
 }
 
 // 7. web-render rejects eval without allow-private ---------------------------------------------------
 async function testWebRenderRejectsEval() {
-  const previous = process.env.FS_MCP_ALLOW_PRIVATE_URLS;
-  delete process.env.FS_MCP_ALLOW_PRIVATE_URLS;
+  const result = await dsptTlCll("web-render", { url: "http://example.invalid/", evalScript: "return 1" });
 
-  try {
-    const result = await dsptTlCll("web-render", { url: "http://example.invalid/", evalScript: "return 1" });
-    assert.equal(result.isError, true);
-    assert.equal(JSON.stringify(result.structuredContent).includes("evalScript"), true);
-  }
-  finally {
-    if (previous !== undefined) {
-      process.env.FS_MCP_ALLOW_PRIVATE_URLS = previous;
-    }
-  }
+  assert.equal(result.isError, true);
+  assert.equal(JSON.stringify(result.structuredContent).includes("evalScript"), true);
 }
 
 // 8. download-to-file requires url and path ------------------------------------------------------------

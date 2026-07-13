@@ -22,7 +22,6 @@ export declare interface ClientInfo {
   version: string;
 }
 
-const WADS = ";";
 const WPCS = "-NoLogo -NoProfile -ExecutionPolicy Bypass -Command";
 const PCKG_JSN_PT2 = path.resolve(path.dirname(flUrlTPth2(import.meta.url)), "..", "..", "..", "package.json");
 
@@ -38,26 +37,8 @@ function readPackageVersion(): string {
 export const PCKG_VRSN = readPackageVersion();
 export {PCKG_VRSN as PACKAGE_VERSION};
 
-// 1. Get configured allowed directories -----------------------------------------------------------
-function getConfiguredAllowedDirectories(): string[] | undefined {
-  const rwAllwDrct = process.env.FS_MCP_ALLOWED_DIRECTORIES;
-
-  if (rwAllwDrct === undefined) {
-    return undefined;
-  }
-  return rwAllwDrct
-    .split(os.platform() === "win32" ? WADS : path.delimiter)
-    .map((directory) => directory.trim())
-    .filter((directory) => directory.length > 0);
-}
-
-// 2. Get default allowed directories --------------------------------------------------------------
+// 1. Get default allowed directories --------------------------------------------------------------
 function getDefaultAllowedDirectories(): string[] {
-  const cnfgDrct = getConfiguredAllowedDirectories();
-
-  if (cnfgDrct !== undefined) {
-    return cnfgDrct;
-  }
   return [];
 }
 

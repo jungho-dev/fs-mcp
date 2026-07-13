@@ -67,6 +67,10 @@ jobs:
             echo "Expected $PACKAGE_NAME@$PACKAGE_VERSION, got $actual_name@$actual_version."
             exit 1
           fi
+          if [ "$actual_name" != "@jungho-dev/fs-mcp" ]; then
+            echo "::error::Unexpected package name: $actual_name"
+            exit 1
+          fi
           npm_user="$(npm whoami --registry https://registry.npmjs.org/)"
           echo "Authenticated to npm as $npm_user."
           published_version="$(npm view "$PACKAGE_NAME@$PACKAGE_VERSION" version --registry https://registry.npmjs.org/ 2>/dev/null || true)"

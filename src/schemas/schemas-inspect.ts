@@ -5,7 +5,7 @@
  * @since 2026-06-03
  */
 
-import {z} from "zod";
+import {z} from "zod/v3";
 
 export const InspExtrSc = z.object({
   name: z.string(),

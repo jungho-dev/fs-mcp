@@ -41,14 +41,9 @@ const WEB_MAX_ALLW_BYTS = 200_000_000;
 const OBSC_DFLT_BIN = "C:/JUNGHO/0.Tools/obscura.exe";
 
 // 1. Allow private urls --------------------------------------------------------------------------
-// FS_MCP_ALLOW_PRIVATE_URLS=1 disables the private-address block (local testing only).
+// Private and non-public addresses are always blocked.
 export function allowPrivateUrls(): boolean {
-  const value = process.env.FS_MCP_ALLOW_PRIVATE_URLS;
-
-  if (value === undefined) {
-    return false;
-  }
-  return value !== "0" && value !== "false" && value.length > 0;
+  return false;
 }
 
 // 2. Parse web url --------------------------------------------------------------------------------
@@ -194,7 +189,7 @@ export async function ensureUrlAllowed(url: string, allowPrivate: boolean): Prom
   const host = parts.host.startsWith("[") && parts.host.endsWith("]") ? parts.host.slice(1, -1) : parts.host;
   if (net.isIP(host) !== 0) {
     if (!isPublicIp(host)) {
-      throw new Error(`Blocked non-public address ${host} for host ${host} (set FS_MCP_ALLOW_PRIVATE_URLS=1 to allow)`);
+      throw new Error(`Blocked non-public address ${host} for host ${host} (private and non-public addresses are not allowed)`);
     }
     return;
   }
@@ -211,7 +206,7 @@ export async function ensureUrlAllowed(url: string, allowPrivate: boolean): Prom
   }
   for (const entry of resolved) {
     if (!isPublicIp(entry.address)) {
-      throw new Error(`Blocked non-public address ${entry.address} for host ${host} (set FS_MCP_ALLOW_PRIVATE_URLS=1 to allow)`);
+      throw new Error(`Blocked non-public address ${entry.address} for host ${host} (private and non-public addresses are not allowed)`);
     }
   }
 }
@@ -323,14 +318,7 @@ export async function httpFetch(url: string, opts: WebFetchOptions, allowPrivate
 }
 
 // 11. Resolve obscura bin -------------------------------------------------------------------------
-// obscura is a fixed-path headless-browser CLI, not a PATH tool. Prefer the env override, then
-// the known install path, then fall back to a bare PATH lookup for portability.
 function resolveObscuraBin(): string {
-  const override = process.env.FS_MCP_OBSCURA_BIN;
-
-  if (override !== undefined && override.trim().length > 0) {
-    return override;
-  }
   return existsSync(OBSC_DFLT_BIN) ? OBSC_DFLT_BIN : "obscura";
 }
 
